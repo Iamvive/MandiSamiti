@@ -1,0 +1,249 @@
+-- Shop Profile / Multi-Tenancy
+CREATE TABLE shopProfileEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_name TEXT NOT NULL,
+    owner_name TEXT NOT NULL,
+    mandi_name TEXT NOT NULL,
+    shop_number TEXT,
+    phone_number TEXT NOT NULL,
+    pin_hash TEXT NOT NULL,
+    default_monthly_interest_rate REAL NOT NULL DEFAULT 1.5,
+    is_sound_enabled INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0
+);
+
+-- Party Master (Farmers & Buyers)
+CREATE TABLE partyEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT,
+    village TEXT,
+    party_type TEXT NOT NULL, -- 'FARMER' | 'BUYER'
+    monthly_interest_rate REAL,
+    photo_uri TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(shop_id) REFERENCES shopProfileEntity(id)
+);
+
+CREATE INDEX idx_party_shop ON partyEntity(shop_id, is_deleted);
+CREATE INDEX idx_party_name ON partyEntity(name);
+
+-- Commodity Master
+CREATE TABLE commodityEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    name_hi TEXT NOT NULL,
+    name_en TEXT NOT NULL,
+    default_unit TEXT NOT NULL DEFAULT 'QUINTAL',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(shop_id) REFERENCES shopProfileEntity(id)
+);
+
+-- Deal / Crop Sale (Two-Stage Settlement with Full Editability)
+CREATE TABLE dealEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    farmer_id TEXT NOT NULL,
+    buyer_id TEXT,
+    commodity_id TEXT NOT NULL,
+    deal_status TEXT NOT NULL, -- 'PENDING_SETTLEMENT' | 'SETTLED' | 'CANCELLED'
+    deal_date INTEGER NOT NULL,
+
+    -- Weight details (Grams)
+    bags_count INTEGER NOT NULL,
+    gross_weight_grams INTEGER NOT NULL,
+    cut_weight_grams INTEGER NOT NULL DEFAULT 0,
+    net_weight_grams INTEGER NOT NULL,
+
+    -- Pricing details (Paisa)
+    rate_paisa_per_unit INTEGER,
+    gross_amount_paisa INTEGER NOT NULL DEFAULT 0,
+
+    -- Manual Deductions (Paisa)
+    farmer_commission_paisa INTEGER NOT NULL DEFAULT 0,
+    buyer_commission_paisa INTEGER NOT NULL DEFAULT 0,
+    labour_charge_paisa INTEGER NOT NULL DEFAULT 0,
+    weighing_charge_paisa INTEGER NOT NULL DEFAULT 0,
+    other_deductions_paisa INTEGER NOT NULL DEFAULT 0,
+
+    -- Final Settlements (Paisa)
+    net_farmer_payable_paisa INTEGER NOT NULL DEFAULT 0,
+    net_buyer_receivable_paisa INTEGER NOT NULL DEFAULT 0,
+
+    receipt_photo_uri TEXT,
+    voice_note_uri TEXT,
+    remarks TEXT,
+
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
+);
+
+CREATE INDEX idx_deal_farmer ON dealEntity(farmer_id, is_deleted);
+CREATE INDEX idx_deal_buyer ON dealEntity(buyer_id, is_deleted);
+CREATE INDEX idx_deal_date ON dealEntity(deal_date);
+
+-- Direct Cash, Interest & Discount Transactions (उधार / जमा / ब्याज / छूट)
+CREATE TABLE cashTransactionEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    party_id TEXT NOT NULL,
+    deal_id TEXT,
+    transaction_type TEXT NOT NULL, -- 'UDHAR_GIVEN', 'JAMA_RECEIVED', 'INTEREST_ADDED', 'DISCOUNT_GIVEN'
+    amount_paisa INTEGER NOT NULL,
+    payment_mode TEXT NOT NULL DEFAULT 'CASH',
+    transaction_date INTEGER NOT NULL,
+    voice_note_uri TEXT,
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(party_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(deal_id) REFERENCES dealEntity(id)
+);
+
+CREATE INDEX idx_tx_party ON cashTransactionEntity(party_id, is_deleted);
+CREATE INDEX idx_tx_date ON cashTransactionEntity(transaction_date);
+
+-- ================= QUERIES =================
+
+-- Shop Profile Queries
+getShopProfile:
+SELECT * FROM shopProfileEntity LIMIT 1;
+
+insertShopProfile:
+INSERT OR REPLACE INTO shopProfileEntity(id, shop_name, owner_name, mandi_name, shop_number, phone_number, pin_hash, default_monthly_interest_rate, is_sound_enabled, created_at, updated_at, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateSoundSetting:
+UPDATE shopProfileEntity SET is_sound_enabled = ?, updated_at = ? WHERE id = ?;
+
+-- Party Queries
+getAllParties:
+SELECT * FROM partyEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY name ASC;
+
+getPartyById:
+SELECT * FROM partyEntity WHERE id = ? AND is_deleted = 0;
+
+insertParty:
+INSERT OR REPLACE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+softDeleteParty:
+UPDATE partyEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
+
+-- Commodity Queries
+getAllCommodities:
+SELECT * FROM commodityEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY name_hi ASC;
+
+insertCommodity:
+INSERT OR REPLACE INTO commodityEntity(id, shop_id, name_hi, name_en, default_unit, is_active, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Deal Queries
+getDealsByShop:
+SELECT * FROM dealEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY deal_date DESC;
+
+getDealsByFarmer:
+SELECT * FROM dealEntity WHERE farmer_id = ? AND is_deleted = 0 ORDER BY deal_date DESC;
+
+getDealsByBuyer:
+SELECT * FROM dealEntity WHERE buyer_id = ? AND is_deleted = 0 ORDER BY deal_date DESC;
+
+getDealById:
+SELECT * FROM dealEntity WHERE id = ?;
+
+getPendingDeals:
+SELECT * FROM dealEntity WHERE shop_id = ? AND deal_status = 'PENDING_SETTLEMENT' AND is_deleted = 0 ORDER BY deal_date DESC;
+
+insertDeal:
+INSERT OR REPLACE INTO dealEntity(
+    id, shop_id, farmer_id, buyer_id, commodity_id, deal_status, deal_date,
+    bags_count, gross_weight_grams, cut_weight_grams, net_weight_grams,
+    rate_paisa_per_unit, gross_amount_paisa,
+    farmer_commission_paisa, buyer_commission_paisa, labour_charge_paisa, weighing_charge_paisa, other_deductions_paisa,
+    net_farmer_payable_paisa, net_buyer_receivable_paisa,
+    receipt_photo_uri, voice_note_uri, remarks,
+    created_at, updated_at, is_deleted, sync_status
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+softDeleteDeal:
+UPDATE dealEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
+
+-- Cash Transaction Queries
+getCashTransactionsByParty:
+SELECT * FROM cashTransactionEntity WHERE party_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC;
+
+getCashTransactionsByShop:
+SELECT * FROM cashTransactionEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC;
+
+insertCashTransaction:
+INSERT OR REPLACE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+softDeleteCashTransaction:
+UPDATE cashTransactionEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
+
+-- Party Running Balance Aggregation Query
+-- Positive = लेना है (Receivable), Negative = देना है (Payable)
+getPartyBalance:
+SELECT
+    p.id AS party_id,
+    p.name AS party_name,
+    p.village AS party_village,
+    p.party_type AS party_type,
+    (
+        -- 1. Cash Advances given to party (+)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0), 0)
+        +
+        -- 2. Interest added to party (+)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0), 0)
+        -
+        -- 3. Cash Received from party (-)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0), 0)
+        -
+        -- 4. Discounts given to party (-)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'DISCOUNT_GIVEN' AND is_deleted = 0), 0)
+        +
+        -- 5. Deals where party is BUYER: Buyer owes shop (+)
+        COALESCE((SELECT SUM(net_buyer_receivable_paisa) FROM dealEntity WHERE buyer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0), 0)
+        -
+        -- 6. Deals where party is FARMER: Shop owes farmer (-)
+        COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0), 0)
+    ) AS balance_paisa
+FROM partyEntity p
+WHERE p.id = ? AND p.is_deleted = 0;
+
+-- Sync Outbox Queries
+getPendingSyncParties:
+SELECT * FROM partyEntity WHERE sync_status = 0;
+
+getPendingSyncDeals:
+SELECT * FROM dealEntity WHERE sync_status = 0;
+
+getPendingSyncTransactions:
+SELECT * FROM cashTransactionEntity WHERE sync_status = 0;
+
+markPartySynced:
+UPDATE partyEntity SET sync_status = 1 WHERE id = ?;
+
+markDealSynced:
+UPDATE dealEntity SET sync_status = 1 WHERE id = ?;
+
+markTransactionSynced:
+UPDATE cashTransactionEntity SET sync_status = 1 WHERE id = ?;
