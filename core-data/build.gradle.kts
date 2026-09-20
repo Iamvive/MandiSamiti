@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -22,12 +23,16 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.coreDomain)
             implementation(projects.coreDatabase)
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.kotlinx.serialization.json)
             implementation(libs.koin.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
