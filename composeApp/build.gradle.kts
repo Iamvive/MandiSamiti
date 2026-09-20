@@ -7,6 +7,7 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
+    jvm()
     androidTarget()
     listOf(
         iosX64(),
@@ -43,6 +44,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
