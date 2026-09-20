@@ -1,3 +1,5 @@
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 pluginManagement {
     repositories {
         google {
@@ -22,5 +24,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Velo"
-include(":app")
+rootProject.name = "MandiSamiti"
+include(":core-domain")
+include(":core-database")
+include(":core-data")
+include(":composeApp")
