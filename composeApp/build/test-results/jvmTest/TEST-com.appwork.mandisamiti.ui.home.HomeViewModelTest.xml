@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.appwork.mandisamiti.ui.home.HomeViewModelTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:48:28" hostname="192.168.0.105" time="0.011">
+<testsuite name="com.appwork.mandisamiti.ui.home.HomeViewModelTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:51:10" hostname="192.168.0.105" time="0.007">
   <properties/>
-  <testcase name="testHomeViewModelSearchAndFilter[jvm]" classname="com.appwork.mandisamiti.ui.home.HomeViewModelTest" time="0.011"/>
+  <testcase name="testHomeViewModelSearchAndFilter[jvm]" classname="com.appwork.mandisamiti.ui.home.HomeViewModelTest" time="0.007"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

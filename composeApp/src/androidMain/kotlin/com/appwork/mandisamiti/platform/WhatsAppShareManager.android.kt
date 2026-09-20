@@ -47,4 +47,26 @@ actual class WhatsAppShareManager(private val context: Context) {
             context.startActivity(Intent.createChooser(genericIntent, "शेयर करें"))
         }
     }
+
+    actual fun shareText(
+        text: String,
+        phoneNumber: String?
+    ) {
+        try {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+                setPackage("com.whatsapp")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(shareIntent)
+        } catch (e: Exception) {
+            val genericIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(genericIntent, "पर्ची शेयर करें"))
+        }
+    }
 }

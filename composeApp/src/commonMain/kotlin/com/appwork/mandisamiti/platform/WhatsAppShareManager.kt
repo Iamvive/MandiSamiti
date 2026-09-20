@@ -6,4 +6,9 @@ expect class WhatsAppShareManager {
         phoneNumber: String?,
         caption: String
     )
+
+    fun shareText(
+        text: String,
+        phoneNumber: String?
+    )
 }

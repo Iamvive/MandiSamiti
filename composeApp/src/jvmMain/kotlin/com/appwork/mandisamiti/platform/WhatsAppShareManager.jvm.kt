@@ -6,6 +6,13 @@ actual class WhatsAppShareManager {
         phoneNumber: String?,
         caption: String
     ) {
-        println("[WhatsAppShare JVM]: sharing receipt (${imageBytes.size} bytes) - $caption")
+        // No-op on JVM desktop testing
+    }
+
+    actual fun shareText(
+        text: String,
+        phoneNumber: String?
+    ) {
+        // No-op on JVM desktop testing
     }
 }

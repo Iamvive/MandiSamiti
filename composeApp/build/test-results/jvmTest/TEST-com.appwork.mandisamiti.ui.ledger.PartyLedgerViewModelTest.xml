@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModelTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:48:28" hostname="192.168.0.105" time="0.386">
+<testsuite name="com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModelTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:51:10" hostname="192.168.0.105" time="0.016">
   <properties/>
-  <testcase name="testPartyLedgerCashEntryAndInterestAddition[jvm]" classname="com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModelTest" time="0.386"/>
+  <testcase name="testPartyLedgerCashEntryAndInterestAddition[jvm]" classname="com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModelTest" time="0.016"/>
   <system-out><![CDATA[[MandiSoundbox JVM]: रामवीर सिंह, ₹5,000 उधार दिया गया।
 [MandiSoundbox JVM]: रामवीर सिंह, ₹75 ब्याज खाते में जोड़ा गया।
 ]]></system-out>
-  <system-err><![CDATA[SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
-SLF4J: Defaulting to no-operation (NOP) logger implementation
-SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
-]]></system-err>
+  <system-err><![CDATA[]]></system-err>
 </testsuite>
