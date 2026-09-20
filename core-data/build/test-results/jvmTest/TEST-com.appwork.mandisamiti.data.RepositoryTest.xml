@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.appwork.mandisamiti.data.RepositoryTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:31:21" hostname="192.168.0.105" time="0.469">
+<testsuite name="com.appwork.mandisamiti.data.RepositoryTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:53:08" hostname="192.168.0.105" time="0.522">
   <properties/>
-  <testcase name="testRepositoriesReactiveFlowsAndSyncEngine[jvm]" classname="com.appwork.mandisamiti.data.RepositoryTest" time="0.469"/>
+  <testcase name="testRepositoriesReactiveFlowsAndSyncEngine[jvm]" classname="com.appwork.mandisamiti.data.RepositoryTest" time="0.522"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
 SLF4J: Defaulting to no-operation (NOP) logger implementation
