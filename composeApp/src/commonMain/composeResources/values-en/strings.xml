@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & General -->
+    <string name="app_name">MandiSamiti</string>
+    <string name="tagline">Aadhat Cash Ledger</string>
+    <string name="currency_symbol">₹</string>
+    <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="done">Done</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+
+    <!-- Soundbox -->
+    <string name="sound_on">🔊 Voice ON</string>
+    <string name="sound_off">🔇 Voice OFF</string>
+    <string name="replay_sound">🗣️ Replay Audio</string>
+
+    <!-- Home Screen -->
+    <string name="market_receivable">Market Credit (Receivable)</string>
+    <string name="farmer_payable">Farmer Deposits (Payable)</string>
+    <string name="search_hint">Search farmer or village...</string>
+    <string name="filter_all">All</string>
+    <string name="filter_receivable">🔴 Receivable</string>
+    <string name="filter_payable">🟢 Payable</string>
+    <string name="action_new_entry">⚡ New Crop Deal / Sale</string>
+    <string name="day_closing_btn">📊 Daily Cash Summary</string>
+
+    <!-- Deal / Entry Screen -->
+    <string name="new_deal_title">Record New Deal</string>
+    <string name="edit_deal_title">Edit Deal</string>
+    <string name="step_select_farmer">1. Select Farmer</string>
+    <string name="step_select_commodity">2. Select Commodity</string>
+    <string name="step_weight_rate">3. Weight &amp; Rate</string>
+    <string name="bags_count_label">Bags (Count)</string>
+    <string name="weight_quintals_label">Weight (Quintals)</string>
+    <string name="cut_weight_label">Deduction (Kg)</string>
+    <string name="rate_per_quintal_label">Rate (₹/Quintal)</string>
+    <string name="buyer_label">Select Buyer / Mill</string>
+    <string name="gross_amount_label">Gross Amount</string>
+    <string name="aadhat_commission_label">Commission (₹)</string>
+    <string name="labour_charge_label">Labour / Palledari (₹)</string>
+    <string name="weighing_charge_label">Weighing (₹)</string>
+    <string name="other_deductions_label">Other Cuts (₹)</string>
+    <string name="net_farmer_payable_label">Net Farmer Payable</string>
+    <string name="net_buyer_receivable_label">Net Buyer Receivable</string>
+    <string name="camera_slip_btn">📷 Scale Slip Photo</string>
+    <string name="photo_attached">✅ Photo Attached</string>
+    <string name="create_bill_btn">✅ Save Deal</string>
+
+    <!-- Party Ledger -->
+    <string name="khata_title">Ledger Statement</string>
+    <string name="give_cash_btn">🔴 Give Cash / Advance</string>
+    <string name="receive_cash_btn">🟢 Receive Cash / Payment</string>
+    <string name="interest_calc_btn">📈 Rural Interest Calc</string>
+    <string name="settlement_waiver_btn">🤝 Discount / Waiver</string>
+    <string name="interest_rate_label">Monthly Interest Rate (%)</string>
+    <string name="accrued_interest_label">Accrued Interest</string>
+    <string name="add_interest_to_ledger">➕ Add Interest to Ledger</string>
+
+    <!-- Daily Closing -->
+    <string name="daily_closing_title">Daily Cash Register</string>
+    <string name="total_cash_in">Total Cash Received</string>
+    <string name="total_cash_out">Total Cash Paid</string>
+    <string name="total_traded_volume">Total Volume (Quintals)</string>
+    <string name="galla_balance">Cash Drawer Balance</string>
+
+    <!-- WhatsApp Share -->
+    <string name="share_whatsapp_btn">Share Slip on WhatsApp</string>
+</resources>

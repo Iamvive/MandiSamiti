@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & General -->
+    <string name="app_name">मंडी समिति</string>
+    <string name="tagline">आढ़त बही-खाता</string>
+    <string name="currency_symbol">₹</string>
+    <string name="back">वापस</string>
+    <string name="save">सुरक्षित करें</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="done">पूर्ण</string>
+    <string name="edit">संपादित करें</string>
+    <string name="delete">हटाएं</string>
+
+    <!-- Soundbox -->
+    <string name="sound_on">🔊 आवाज़ चालू</string>
+    <string name="sound_off">🔇 आवाज़ बंद</string>
+    <string name="replay_sound">🗣️ दोबारा सुनें</string>
+
+    <!-- Home Screen -->
+    <string name="market_receivable">बाजार में बाकी (लेना है)</string>
+    <string name="farmer_payable">किसान जमा (देना है)</string>
+    <string name="search_hint">किसान या गाँव का नाम खोजें...</string>
+    <string name="filter_all">सभी</string>
+    <string name="filter_receivable">🔴 लेना है</string>
+    <string name="filter_payable">🟢 देना है</string>
+    <string name="action_new_entry">⚡ नया पर्चा / बिक्री दर्ज करें</string>
+    <string name="day_closing_btn">📊 आज का गल्ला हिसाब</string>
+
+    <!-- Deal / Entry Screen -->
+    <string name="new_deal_title">नया पर्चा दर्ज करें</string>
+    <string name="edit_deal_title">पर्चा संशोधित करें</string>
+    <string name="step_select_farmer">1. किसान चुनें</string>
+    <string name="step_select_commodity">2. फसल चुनें</string>
+    <string name="step_weight_rate">3. तौल व भाव</string>
+    <string name="bags_count_label">बोरी (कट्टे)</string>
+    <string name="weight_quintals_label">वजन (क्विंटल)</string>
+    <string name="cut_weight_label">काट / बारदाना (किलो)</string>
+    <string name="rate_per_quintal_label">भाव (₹/क्विंटल)</string>
+    <string name="buyer_label">खरीदार / मिल चुनें</string>
+    <string name="gross_amount_label">कुल माल की रकम</string>
+    <string name="aadhat_commission_label">आढ़त कमीशन (₹)</string>
+    <string name="labour_charge_label">पल्लेदारी (₹)</string>
+    <string name="weighing_charge_label">कांटा / तुलाई (₹)</string>
+    <string name="other_deductions_label">अन्य काट (₹)</string>
+    <string name="net_farmer_payable_label">किसान को शुद्ध देय रकम</string>
+    <string name="net_buyer_receivable_label">खरीदार से कुल वसूली</string>
+    <string name="camera_slip_btn">📷 कच्ची पर्ची फोटो</string>
+    <string name="photo_attached">✅ पर्ची फोटो संलग्न</string>
+    <string name="create_bill_btn">✅ पर्चा सुरक्षित करें</string>
+
+    <!-- Party Ledger -->
+    <string name="khata_title">खाता विवरण</string>
+    <string name="give_cash_btn">🔴 रुपये दिए / उधार</string>
+    <string name="receive_cash_btn">🟢 रुपये मिले / जमा</string>
+    <string name="interest_calc_btn">📈 देसी ब्याज गणना</string>
+    <string name="settlement_waiver_btn">🤝 छूट / समझौता</string>
+    <string name="interest_rate_label">मासिक ब्याज दर (सैकड़ा %)</string>
+    <string name="accrued_interest_label">संचित ब्याज</string>
+    <string name="add_interest_to_ledger">➕ ब्याज खाते में जोड़ें</string>
+
+    <!-- Daily Closing -->
+    <string name="daily_closing_title">दैनिक गल्ला रोकड़ सारांश</string>
+    <string name="total_cash_in">कुल नकद आया</string>
+    <string name="total_cash_out">कुल नकद गया</string>
+    <string name="total_traded_volume">कुल बिका माल (क्विंटल)</string>
+    <string name="galla_balance">गल्ला शेष रोकड़</string>
+
+    <!-- WhatsApp Share -->
+    <string name="share_whatsapp_btn">व्हाट्सएप पर पर्ची भेजें</string>
+</resources>
