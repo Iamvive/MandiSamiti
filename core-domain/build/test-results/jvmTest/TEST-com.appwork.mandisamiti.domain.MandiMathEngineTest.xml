@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.appwork.mandisamiti.domain.MandiMathEngineTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:53:09" hostname="192.168.0.105" time="0.014">
-  <properties/>
-  <testcase name="testPaisaToRupeesFormatting[jvm]" classname="com.appwork.mandisamiti.domain.MandiMathEngineTest" time="0.012"/>
-  <testcase name="testGramsToQuintalsDisplayConversion[jvm]" classname="com.appwork.mandisamiti.domain.MandiMathEngineTest" time="0.0"/>
-  <testcase name="testStandardSettlementCalculation[jvm]" classname="com.appwork.mandisamiti.domain.MandiMathEngineTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

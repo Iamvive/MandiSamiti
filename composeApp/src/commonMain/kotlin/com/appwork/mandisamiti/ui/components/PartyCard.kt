@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,11 +25,17 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
-import com.appwork.mandisamiti.ui.theme.MandiNavy
+import com.appwork.mandisamiti.ui.theme.MandiGreenText
+import com.appwork.mandisamiti.ui.theme.MandiNeutralBorder
+import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
+import com.appwork.mandisamiti.ui.theme.MandiNeutralText
+import com.appwork.mandisamiti.ui.theme.MandiRedBorder
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
@@ -41,34 +49,52 @@ fun PartyCard(
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(12.dp)
+    val chipShape = RoundedCornerShape(6.dp)
+
     val isReceivable = balancePaisa > 0 // लेना है (Red)
     val isPayable = balancePaisa < 0    // देना है (Green)
     val isSettled = balancePaisa == 0L
 
-    val balanceColor = when {
+    val balanceTextColor = when {
         isReceivable -> MandiRedReceivable
         isPayable -> MandiGreenPayable
-        else -> MandiTextMuted
+        else -> MandiTextSecondary
     }
 
-    val balanceTagText = when {
-        isReceivable -> "🔴 लेना है"
-        isPayable -> "🟢 देना है"
-        else -> "⚪ बराबर"
-    }
-
-    val badgeBg = when {
+    val chipBg = when {
         isReceivable -> MandiRedLight
         isPayable -> MandiGreenLight
-        else -> Color(0xFFF1F5F9)
+        else -> MandiNeutralLight
     }
+
+    val chipBorder = when {
+        isReceivable -> MandiRedBorder
+        isPayable -> MandiGreenBorder
+        else -> MandiNeutralBorder
+    }
+
+    val chipText = when {
+        isReceivable -> "लेना है"
+        isPayable -> "देना है"
+        else -> "हिसाब चुकता"
+    }
+
+    val chipTextColor = when {
+        isReceivable -> MandiRedText
+        isPayable -> MandiGreenText
+        else -> MandiNeutralText
+    }
+
+    val roleLabel = if (party.partyType == PartyType.FARMER) "किसान" else "व्यापारी"
+    val avatarInitial = party.name.firstOrNull()?.toString() ?: "प"
+    val village = party.village
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(cardShape)
             .background(MandiSurface)
-            .border(1.5.dp, MandiBorder, cardShape)
+            .border(1.dp, MandiBorder, cardShape)
             .clickable { onClick() }
             .padding(14.dp)
     ) {
@@ -77,72 +103,94 @@ fun PartyCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left: Party Details with Village Badge
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            // Left: Avatar + Details
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Monogram Avatar
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(MandiNeutralLight)
+                        .border(1.dp, MandiBorder, CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = party.name,
-                        fontSize = 19.sp,
+                        text = avatarInitial,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
-                    if (!party.village.isNullOrBlank()) {
-                        Text(
-                            text = "(${party.village})",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MandiNavy
-                        )
-                    }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    Text(
-                        text = if (party.partyType == PartyType.FARMER) "🌾 किसान" else "🏭 व्यापारी",
-                        fontSize = 13.sp,
-                        color = MandiTextSecondary
-                    )
-                    if (!party.phone.isNullOrBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         Text(
-                            text = "📞 ${party.phone}",
+                            text = party.name,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        // Role Pill
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MandiNeutralLight)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = roleLabel,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MandiTextSecondary
+                            )
+                        }
+                    }
+
+                    if (!village.isNullOrBlank()) {
+                        Text(
+                            text = village,
                             fontSize = 13.sp,
-                            color = MandiTextMuted
+                            color = MandiTextSecondary
                         )
                     }
                 }
             }
 
-            // Right: Bold High-Contrast Balance & Tag
+            // Right: Clean Financial Amount & Status Badge
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                val displayAmount = if (balancePaisa < 0) -balancePaisa else balancePaisa
                 Text(
-                    text = "₹ ${MandiMathEngine.paisaToRupeesString(if (balancePaisa < 0) -balancePaisa else balancePaisa)}",
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = balanceColor
+                    text = "₹${MandiMathEngine.paisaToRupeesString(displayAmount)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = balanceTextColor
                 )
+
+                // Semantic Pill Badge (No emojis)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(badgeBg)
+                        .clip(chipShape)
+                        .background(chipBg)
+                        .border(1.dp, chipBorder, chipShape)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = balanceTagText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = balanceColor
+                        text = chipText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = chipTextColor
                     )
                 }
             }

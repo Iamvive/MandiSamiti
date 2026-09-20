@@ -1,1 +1,0 @@
-com.appwork.mandisamiti.data

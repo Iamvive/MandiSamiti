@@ -9,7 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,10 +25,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiNavy
-import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 
 @Composable
 fun SoundboxTopBar(
@@ -45,7 +52,7 @@ fun SoundboxTopBar(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
             if (navigationIcon != null) {
@@ -55,7 +62,7 @@ fun SoundboxTopBar(
                 Text(
                     text = shopName,
                     color = Color.White,
-                    fontSize = 19.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
@@ -67,25 +74,32 @@ fun SoundboxTopBar(
             }
         }
 
-        // Persistent 1-Tap Soundbox Toggle Button
-        Box(
+        // Clean Enterprise Voice Soundbox Status Pill (No emojis, vector icon)
+        Row(
             modifier = Modifier
                 .clip(soundBtnShape)
-                .background(if (isSoundEnabled) MandiGreenLight else Color.White.copy(alpha = 0.15f))
+                .background(if (isSoundEnabled) MandiGreenLight else Color.White.copy(alpha = 0.12f))
                 .border(
                     width = 1.dp,
-                    color = if (isSoundEnabled) MandiGreenPayable else Color.White.copy(alpha = 0.3f),
+                    color = if (isSoundEnabled) MandiGreenBorder else Color.White.copy(alpha = 0.25f),
                     shape = soundBtnShape
                 )
                 .clickable { onToggleSound() }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            Icon(
+                imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                contentDescription = "वॉइस साउंडबॉक्स स्थिति",
+                tint = if (isSoundEnabled) MandiGreenText else Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(16.dp)
+            )
             Text(
-                text = if (isSoundEnabled) "🔊 आवाज़ चालू" else "🔇 आवाज़ बंद",
-                color = if (isSoundEnabled) MandiGreenPayable else Color.White.copy(alpha = 0.8f),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+                text = if (isSoundEnabled) "वॉइस ऑन" else "म्यूट",
+                color = if (isSoundEnabled) MandiGreenText else Color.White.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }

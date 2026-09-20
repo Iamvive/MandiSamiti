@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.appwork.mandisamiti.domain.RuralInterestEngineTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:53:09" hostname="192.168.0.105" time="0.001">
-  <properties/>
-  <testcase name="testAccruedInterestCalculation[jvm]" classname="com.appwork.mandisamiti.domain.RuralInterestEngineTest" time="0.001"/>
-  <testcase name="testZeroDaysInterest[jvm]" classname="com.appwork.mandisamiti.domain.RuralInterestEngineTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

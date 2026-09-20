@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModelTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-20T13:52:09" hostname="192.168.0.105" time="0.007">
-  <properties/>
-  <testcase name="testPartyLedgerCashEntryAndInterestAddition[jvm]" classname="com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModelTest" time="0.007"/>
-  <system-out><![CDATA[[MandiSoundbox JVM]: रामवीर सिंह, ₹5,000 उधार दिया गया।
-[MandiSoundbox JVM]: रामवीर सिंह, ₹75 ब्याज खाते में जोड़ा गया।
-]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -28,6 +28,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
@@ -35,6 +36,9 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+        }
+        jvmMain.dependencies {
+            implementation(compose.desktop.currentOs)
         }
         androidMain.dependencies {
             implementation(libs.androidx.core.ktx)
@@ -78,4 +82,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+compose.desktop {
+    application {
+        mainClass = "com.appwork.mandisamiti.MainKt"
+    }
+}
+
+tasks.register<JavaExec>("runDemo") {
+    group = "application"
+    description = "Runs the MandiSamiti live interactive scenario demo"
+    val jvmTarget = kotlin.targets.getByName("jvm") as org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+    val compilation = jvmTarget.compilations.getByName("main")
+    classpath = compilation.output.allOutputs + compilation.runtimeDependencyFiles
+    mainClass.set("com.appwork.mandisamiti.DemoSimulator")
 }

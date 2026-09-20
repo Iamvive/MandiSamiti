@@ -12,23 +12,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,17 +47,17 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.platform.rememberCameraSlipPicker
 import com.appwork.mandisamiti.ui.components.MandiCalculatorKeypad
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
+import com.appwork.mandisamiti.ui.theme.MandiAccent
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGold
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiNavy
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
-import com.appwork.mandisamiti.ui.theme.MandiSlate
+import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun DealEntryScreen(
@@ -61,13 +68,30 @@ fun DealEntryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val cameraPicker = rememberCameraSlipPicker()
 
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            if (event is DealEntryEvent.DealSavedSuccess) {
+                onDealSavedSuccess(event.deal.id)
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             SoundboxTopBar(
-                shopName = if (uiState.isEditMode) "✏️ सौदा संशोधन" else "🌾 नई आवक व सौदा",
+                shopName = if (uiState.isEditMode) "सौदा संशोधन" else "नई आवक व सौदा",
                 mandiLocation = "मथुरा मंडी • पक्का हिसाब",
                 isSoundEnabled = uiState.isSoundEnabled,
-                onToggleSound = {}
+                onToggleSound = {},
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "पीछे जाएं",
+                            tint = Color.White
+                        )
+                    }
+                }
             )
         },
         containerColor = MandiBackground
@@ -77,77 +101,285 @@ fun DealEntryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Scrollable upper content
+            // Upper Scrollable Section
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Stage Tabs
+                // 1. Sleek 2-Stage Breadcrumb Tabs (No Emojis)
                 TabRow(
                     selectedTabIndex = if (uiState.isSettledStage) 1 else 0,
                     containerColor = MandiSurface,
-                    contentColor = MandiNavy
+                    contentColor = MandiNavy,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, MandiBorder, RoundedCornerShape(10.dp))
                 ) {
                     Tab(
                         selected = !uiState.isSettledStage,
                         onClick = { viewModel.toggleSettlementStage(false) },
                         text = {
-                            Text(
-                                "⚖️ स्टेज 1: आवक / तौल",
-                                fontWeight = if (!uiState.isSettledStage) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Scale,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "स्टेज 1: आवक व तौल",
+                                    fontWeight = if (!uiState.isSettledStage) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     )
                     Tab(
                         selected = uiState.isSettledStage,
                         onClick = { viewModel.toggleSettlementStage(true) },
                         text = {
-                            Text(
-                                "💰 स्टेज 2: भाव व पक्का हिसाब",
-                                fontWeight = if (uiState.isSettledStage) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Gavel,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "स्टेज 2: नीलामी व भाव",
+                                    fontWeight = if (uiState.isSettledStage) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Farmer Selection Card
+                // 2. Party Selector Cards
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(containerColor = MandiSurface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
+                    )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column {
+                        Text(
+                            text = "पार्टी विवरण",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+
+                        // Farmer Selector
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (uiState.availableFarmers.isNotEmpty()) {
+                                        val nextIdx = ((uiState.availableFarmers.indexOf(uiState.selectedFarmer) + 1) % uiState.availableFarmers.size)
+                                        viewModel.onSelectFarmer(uiState.availableFarmers[nextIdx])
+                                    }
+                                },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                "👨‍🌾 किसान (विक्रेता)",
-                                fontSize = 13.sp,
-                                color = MandiTextMuted
+                                text = "किसान (विक्रेता):",
+                                fontSize = 14.sp,
+                                color = MandiTextSecondary
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                uiState.selectedFarmer?.name ?: "किसान चुनें",
-                                fontSize = 17.sp,
+                                text = uiState.selectedFarmer?.name ?: "किसान चुनें ▾",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiNavy
+                            )
+                        }
+
+                        // Commodity Selector
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "जिंस (फसल):",
+                                fontSize = 14.sp,
+                                color = MandiTextSecondary
+                            )
+                            Text(
+                                text = uiState.selectedCommodity?.nameHi ?: "गेहूं (Wheat)",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiNavy
+                            )
+                        }
+
+                        if (uiState.isSettledStage) {
+                            // Buyer Selector
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (uiState.availableBuyers.isNotEmpty()) {
+                                            val nextIdx = ((uiState.availableBuyers.indexOf(uiState.selectedBuyer) + 1) % uiState.availableBuyers.size)
+                                            viewModel.onSelectBuyer(uiState.availableBuyers[nextIdx])
+                                        }
+                                    },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "व्यापारी (खरीदार):",
+                                    fontSize = 14.sp,
+                                    color = MandiTextSecondary
+                                )
+                                Text(
+                                    text = uiState.selectedBuyer?.name ?: "व्यापारी चुनें ▾",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiAccent
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3. Stage 1 Inputs (Weighment & Cut)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MandiSurface),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "तौल व बारदाना विवरण",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            FintechInputField(
+                                label = "बोरी संख्या",
+                                value = uiState.bagsCountText,
+                                isFocused = uiState.activeField == ActiveInputField.BAGS_COUNT,
+                                onClick = { viewModel.onFocusField(ActiveInputField.BAGS_COUNT) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FintechInputField(
+                                label = "सकल वजन (Qtl)",
+                                value = uiState.grossWeightText,
+                                isFocused = uiState.activeField == ActiveInputField.GROSS_WEIGHT,
+                                onClick = { viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FintechInputField(
+                                label = "काट (Qtl)",
+                                value = uiState.tareWeightText,
+                                isFocused = uiState.activeField == ActiveInputField.TARE_WEIGHT,
+                                onClick = { viewModel.onFocusField(ActiveInputField.TARE_WEIGHT) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Calculated Net Weight Banner
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MandiNeutralLight)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "शुद्ध वजन (Net Weight):",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MandiTextSecondary
+                            )
+                            Text(
+                                text = "${uiState.netWeightQuintals} क्विंटल",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiNavy
+                            )
+                        }
+                    }
+                }
+
+                // 4. Stage 2 Pricing & Deductions (If Settled Stage)
+                if (uiState.isSettledStage) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = MandiSurface),
+                        border = CardDefaults.outlinedCardBorder().copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "नीलामी भाव व आढ़त कटौतियां",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MandiTextPrimary
                             )
-                            if (uiState.selectedFarmer?.village != null) {
-                                Text(
-                                    "गांव: ${uiState.selectedFarmer?.village}",
-                                    fontSize = 12.sp,
+
+                            FintechInputField(
+                                label = "नीलामी भाव (₹ / क्विंटल)",
+                                value = uiState.ratePerQuintalText,
+                                isFocused = uiState.activeField == ActiveInputField.RATE_PER_QUINTAL,
+                                onClick = { viewModel.onFocusField(ActiveInputField.RATE_PER_QUINTAL) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Itemized Breakdown Table
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MandiBackground)
+                                    .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                                    .padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                InvoiceRow(label = "सकल माल मूल्य (Gross)", amountPaisa = uiState.grossAmountPaisa, isBold = false)
+                                InvoiceRow(
+                                    label = "किसान को शुद्ध देय",
+                                    amountPaisa = uiState.netFarmerPayablePaisa,
+                                    isBold = true,
+                                    color = MandiGreenPayable
+                                )
+                                InvoiceRow(
+                                    label = "व्यापारी से देय वसूली",
+                                    amountPaisa = uiState.netBuyerReceivablePaisa,
+                                    isBold = false,
                                     color = MandiNavy
                                 )
                             }
@@ -155,235 +387,137 @@ fun DealEntryScreen(
                     }
                 }
 
-                // If Stage 2, Buyer Selection Card
-                if (uiState.isSettledStage) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MandiSurface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    "🏭 खरीदार / व्यापारी (Buyer)",
-                                    fontSize = 13.sp,
-                                    color = MandiTextMuted
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    uiState.selectedBuyer?.name ?: "व्यापारी चुनें",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MandiTextPrimary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Pinned Data Input Grid
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Bags Count
-                    InputFieldCard(
-                        modifier = Modifier.weight(1f),
-                        label = "📦 बोरी (Bags)",
-                        value = if (uiState.bagsCountText.isEmpty()) "0" else uiState.bagsCountText,
-                        isActive = uiState.activeField == ActiveInputField.BAGS_COUNT,
-                        onClick = { viewModel.onFocusField(ActiveInputField.BAGS_COUNT) }
-                    )
-                    // Gross Weight
-                    InputFieldCard(
-                        modifier = Modifier.weight(1.5f),
-                        label = "⚖️ कुल वजन (कुंतल)",
-                        value = if (uiState.grossWeightText.isEmpty()) "0.00" else uiState.grossWeightText,
-                        isActive = uiState.activeField == ActiveInputField.GROSS_WEIGHT,
-                        onClick = { viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT) }
-                    )
-                    // Tare Weight
-                    InputFieldCard(
-                        modifier = Modifier.weight(1f),
-                        label = "कटौती (कुंतल)",
-                        value = if (uiState.tareWeightText.isEmpty()) "0.00" else uiState.tareWeightText,
-                        isActive = uiState.activeField == ActiveInputField.TARE_WEIGHT,
-                        onClick = { viewModel.onFocusField(ActiveInputField.TARE_WEIGHT) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Rate and Deductions (Stage 2)
-                if (uiState.isSettledStage) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        InputFieldCard(
-                            modifier = Modifier.weight(1.3f),
-                            label = "₹ भाव / कुंतल",
-                            value = if (uiState.ratePerQuintalText.isEmpty()) "₹ 0" else "₹ ${uiState.ratePerQuintalText}",
-                            isActive = uiState.activeField == ActiveInputField.RATE_PER_QUINTAL,
-                            onClick = { viewModel.onFocusField(ActiveInputField.RATE_PER_QUINTAL) }
-                        )
-                        InputFieldCard(
-                            modifier = Modifier.weight(1f),
-                            label = "पल्लेदारी (₹)",
-                            value = if (uiState.labourChargesText.isEmpty()) "0" else "₹ ${uiState.labourChargesText}",
-                            isActive = uiState.activeField == ActiveInputField.LABOUR_CHARGES,
-                            onClick = { viewModel.onFocusField(ActiveInputField.LABOUR_CHARGES) }
-                        )
-                        InputFieldCard(
-                            modifier = Modifier.weight(0.9f),
-                            label = "आढ़त %",
-                            value = "${uiState.commissionPercentText}%",
-                            isActive = uiState.activeField == ActiveInputField.COMMISSION_PERCENT,
-                            onClick = { viewModel.onFocusField(ActiveInputField.COMMISSION_PERCENT) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Calculation Summary Banner
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MandiSlate),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("शुद्ध वजन (Net Weight):", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("${uiState.netWeightQuintals} कुंतल", color = MandiGold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-
-                        if (uiState.isSettledStage && uiState.netFarmerPayablePaisa > 0L) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("🟢 किसान को भुगतान:", color = MandiGreenPayable, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                Text("₹ ${MandiMathEngine.paisaToRupeesString(uiState.netFarmerPayablePaisa)}", color = MandiGreenPayable, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("🔴 व्यापारी से वसूली:", color = MandiRedReceivable, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text("₹ ${MandiMathEngine.paisaToRupeesString(uiState.netBuyerReceivablePaisa)}", color = MandiRedReceivable, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Camera slip attachment button
+                // 5. Slip Camera Attachment Button
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = {
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MandiSurface)
+                        .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                        .clickable {
                             cameraPicker.launchCamera { uri ->
                                 if (uri != null) viewModel.onReceiptPhotoCaptured(uri)
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MandiSurface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            if (uiState.receiptPhotoUri != null) "📷 पर्ची फोटो संलग्न ✅" else "📷 कांटा पर्ची फोटो खींचें",
-                            color = MandiNavy,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        tint = MandiTextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = if (uiState.receiptPhotoUri != null) "कांटा पर्ची संलग्न (बदलें)" else "कांटा पर्ची फोटो संलग्न करें",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MandiTextSecondary
+                    )
                 }
-            }
 
-            // Bottom Calculator Keypad & Save Button
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MandiSurface)
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                MandiCalculatorKeypad(
-                    onKeyPressed = { action -> viewModel.onKeypadAction(action) },
-                    showSubmitInsteadOfNext = uiState.isSettledStage
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                // 6. Action Save Button
                 Button(
                     onClick = { viewModel.saveDeal() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(58.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiNavy)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (uiState.isSettledStage) MandiNavy else MandiGreenPayable
+                    )
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
                     Text(
-                        if (uiState.isSettledStage) "💾 सौदा पक्का करें [ 🔊 साउंडबॉक्स ]" else "💾 आवक तौल पर्ची दर्ज करें",
-                        fontSize = 18.sp,
+                        text = if (uiState.isSettledStage) "पक्का सौदा दर्ज करें" else "तौल पर्ची सेव करें (भाव बाद में)",
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
             }
+
+            // Lower Section: Integrated Mandi Keypad
+            MandiCalculatorKeypad(
+                onKeyPressed = { action ->
+                    viewModel.onKeypadAction(action)
+                },
+                showSubmitInsteadOfNext = uiState.isSettledStage && uiState.activeField == ActiveInputField.RATE_PER_QUINTAL
+            )
         }
     }
 }
 
 @Composable
-private fun InputFieldCard(
-    modifier: Modifier = Modifier,
+private fun FintechInputField(
     label: String,
     value: String,
-    isActive: Boolean,
-    onClick: () -> Unit
+    isFocused: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .border(
-                width = if (isActive) 2.5.dp else 1.dp,
-                color = if (isActive) MandiNavy else MandiBorder,
-                shape = RoundedCornerShape(10.dp)
-            )
-            .clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) MandiNavy.copy(alpha = 0.06f) else MandiSurface
-        )
+    val shape = RoundedCornerShape(8.dp)
+    Column(
+        modifier = modifier.clickable { onClick() },
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isFocused) MandiNavy else MandiTextSecondary
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(shape)
+                .background(if (isFocused) MandiNeutralLight else MandiSurface)
+                .border(1.5.dp, if (isFocused) MandiNavy else MandiBorder, shape)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Text(label, fontSize = 11.sp, color = MandiTextMuted, maxLines = 1)
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                value,
-                fontSize = 18.sp,
+                text = if (value.isBlank()) "-" else value,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isActive) MandiNavy else MandiTextPrimary,
-                maxLines = 1
+                color = if (value.isBlank()) MandiTextMuted else MandiTextPrimary
             )
         }
+    }
+}
+
+@Composable
+private fun InvoiceRow(
+    label: String,
+    amountPaisa: Long,
+    isBold: Boolean,
+    color: Color = MandiTextPrimary
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+            color = if (isBold) MandiTextPrimary else MandiTextSecondary
+        )
+        val formatted = if (amountPaisa < 0) "-₹${MandiMathEngine.paisaToRupeesString(-amountPaisa)}" else "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}"
+        Text(
+            text = formatted,
+            fontSize = 14.sp,
+            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Medium,
+            color = color
+        )
     }
 }
