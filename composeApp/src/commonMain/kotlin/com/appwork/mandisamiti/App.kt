@@ -130,8 +130,14 @@ fun App(
         }
     }
 
-    // Starts directly from Register / Login Screen for testing
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Register) }
+
+    LaunchedEffect(Unit) {
+        val existingProfile = shopRepo.getShopProfileStream().firstOrNull()
+        if (existingProfile != null) {
+            currentScreen = Screen.Home
+        }
+    }
 
     MandiSamitiTheme {
         when (val screen = currentScreen) {

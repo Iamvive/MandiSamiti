@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -45,9 +50,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +80,7 @@ fun RegisterScreen(
     onRegistrationSuccess: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(uiState.isRegistrationComplete) {
         if (uiState.isRegistrationComplete) {
@@ -86,7 +95,8 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .verticalScroll(scrollState)
         ) {
             // Saffron Top Brand Header
             Box(
@@ -97,12 +107,13 @@ fun RegisterScreen(
                             listOf(MandiAmberDark, MandiAmberPrimary)
                         )
                     )
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 22.dp)
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (uiState.step != AuthStep.PHONE_AND_SHOP) {
                         Row(
@@ -126,7 +137,7 @@ fun RegisterScreen(
 
                     Box(
                         modifier = Modifier
-                            .size(54.dp)
+                            .size(52.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f))
                             .border(2.dp, MandiAmberLight, CircleShape),
@@ -136,7 +147,7 @@ fun RegisterScreen(
                             imageVector = Icons.Default.Store,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(26.dp)
                         )
                     }
 
@@ -156,7 +167,7 @@ fun RegisterScreen(
 
                     // Step Indicator
                     Row(
-                        modifier = Modifier.padding(top = 10.dp),
+                        modifier = Modifier.padding(top = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -169,14 +180,14 @@ fun RegisterScreen(
                 }
             }
 
-            // Main Card Container
+            // Main Content Area
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (uiState.errorMessage != null) {
+                if (uiState.generalErrorMessage != null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
@@ -186,7 +197,7 @@ fun RegisterScreen(
                         )
                     ) {
                         Text(
-                            text = uiState.errorMessage!!,
+                            text = uiState.generalErrorMessage!!,
                             color = MandiRedReceivable,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
@@ -203,6 +214,7 @@ fun RegisterScreen(
                             onShopChange = viewModel::onShopNameChanged,
                             onOwnerChange = viewModel::onOwnerNameChanged,
                             onMandiChange = viewModel::onMandiNameChanged,
+                            onFillSample = viewModel::fillSampleUser,
                             onSubmit = viewModel::proceedToOtp
                         )
                     }
@@ -211,9 +223,12 @@ fun RegisterScreen(
                         OtpVerificationSection(
                             phoneNumber = uiState.phoneNumber,
                             otp = uiState.otp,
+                            otpError = uiState.otpError,
+                            cooldownSeconds = uiState.resendCooldownSeconds,
+                            isResendEnabled = uiState.isResendEnabled,
                             onOtpChange = viewModel::onOtpChanged,
                             onSubmit = viewModel::verifyOtp,
-                            onResend = viewModel::proceedToOtp
+                            onResend = viewModel::resendOtp
                         )
                     }
 
@@ -221,12 +236,17 @@ fun RegisterScreen(
                         MpinSetupSection(
                             mpin = uiState.mpin,
                             confirmMpin = uiState.confirmMpin,
+                            confirmError = uiState.confirmMpinError,
+                            isLoading = uiState.isLoading,
+                            isMpinValid = uiState.isMpinValid,
                             onMpinChange = viewModel::onMpinChanged,
                             onConfirmMpinChange = viewModel::onConfirmMpinChanged,
                             onSubmit = viewModel::completeRegistration
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
@@ -239,8 +259,11 @@ private fun ShopDetailsSection(
     onShopChange: (String) -> Unit,
     onOwnerChange: (String) -> Unit,
     onMandiChange: (String) -> Unit,
+    onFillSample: () -> Unit,
     onSubmit: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -253,21 +276,51 @@ private fun ShopDetailsSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "दुकान व फर्म का विवरण",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MandiTextPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "दुकान व फर्म का विवरण",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary
+                )
+                Text(
+                    text = "⚡ नमूना डेटा भरें",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiAmberDark,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MandiAmberLight.copy(alpha = 0.4f))
+                        .clickable { onFillSample() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
 
             // Mobile Number
             OutlinedTextField(
                 value = uiState.phoneNumber,
                 onValueChange = onPhoneChange,
-                label = { Text("मोबाइल नंबर") },
+                label = { Text("मोबाइल नंबर *") },
+                placeholder = { Text("उदा. 9837123456", color = MandiTextMuted) },
                 prefix = { Text("+91 ", fontWeight = FontWeight.Bold, color = MandiAmberDark) },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MandiAmberPrimary) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = uiState.phoneError != null,
+                supportingText = {
+                    if (uiState.phoneError != null) {
+                        Text(uiState.phoneError!!, color = MandiRedReceivable, fontSize = 11.sp)
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
@@ -277,8 +330,22 @@ private fun ShopDetailsSection(
             OutlinedTextField(
                 value = uiState.shopName,
                 onValueChange = onShopChange,
-                label = { Text("दुकान / फर्म का नाम") },
+                label = { Text("दुकान / फर्म का नाम *") },
+                placeholder = { Text("उदा. श्री गणेश ट्रेडिंग", color = MandiTextMuted) },
                 leadingIcon = { Icon(Icons.Default.Store, contentDescription = null, tint = MandiAmberPrimary) },
+                isError = uiState.shopNameError != null,
+                supportingText = {
+                    if (uiState.shopNameError != null) {
+                        Text(uiState.shopNameError!!, color = MandiRedReceivable, fontSize = 11.sp)
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
@@ -288,8 +355,22 @@ private fun ShopDetailsSection(
             OutlinedTextField(
                 value = uiState.ownerName,
                 onValueChange = onOwnerChange,
-                label = { Text("व्यापारी / मुनीम का नाम") },
+                label = { Text("व्यापारी / मुनीम का नाम *") },
+                placeholder = { Text("उदा. लाला मदन लाल जी", color = MandiTextMuted) },
                 leadingIcon = { Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = MandiAmberPrimary) },
+                isError = uiState.ownerNameError != null,
+                supportingText = {
+                    if (uiState.ownerNameError != null) {
+                        Text(uiState.ownerNameError!!, color = MandiRedReceivable, fontSize = 11.sp)
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
@@ -300,20 +381,38 @@ private fun ShopDetailsSection(
                 value = uiState.mandiName,
                 onValueChange = onMandiChange,
                 label = { Text("मंडी प्रांगण का नाम") },
+                placeholder = { Text("उदा. मथुरा कृषि उपज मंडी", color = MandiTextMuted) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        if (uiState.isStep1Valid) onSubmit()
+                    }
+                ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Button(
-                onClick = onSubmit,
+                onClick = {
+                    focusManager.clearFocus()
+                    onSubmit()
+                },
+                enabled = uiState.isStep1Valid,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MandiAmberPrimary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MandiAmberPrimary,
+                    disabledContainerColor = MandiBorder
+                )
             ) {
                 Text("आगे बढ़ें (OTP प्राप्त करें)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.size(8.dp))
@@ -327,10 +426,15 @@ private fun ShopDetailsSection(
 private fun OtpVerificationSection(
     phoneNumber: String,
     otp: String,
+    otpError: String?,
+    cooldownSeconds: Int,
+    isResendEnabled: Boolean,
     onOtpChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onResend: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -348,7 +452,7 @@ private fun OtpVerificationSection(
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(MandiGreenLight),
+                    .background(MandiGreenLight.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -360,14 +464,14 @@ private fun OtpVerificationSection(
             }
 
             Text(
-                text = "OTP सत्यापन",
+                text = "सुरक्षा कोड दर्ज करें",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MandiTextPrimary
             )
 
             Text(
-                text = "+91 $phoneNumber पर 6-अंकीय सुरक्षा कोड भेजा गया है",
+                text = "+91 $phoneNumber पर 6-अंकों का OTP भेजा गया है",
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
                 color = MandiTextSecondary
@@ -375,40 +479,73 @@ private fun OtpVerificationSection(
 
             OutlinedTextField(
                 value = otp,
-                onValueChange = onOtpChange,
-                label = { Text("6-अंकीय OTP दर्ज करें") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = { if (it.length <= 6) onOtpChange(it) },
+                label = { Text("6-अंकीय OTP कोड") },
+                placeholder = { Text("1 2 3 4 5 6", color = MandiTextMuted, textAlign = TextAlign.Center) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        if (otp.length == 6) onSubmit()
+                    }
+                ),
                 singleLine = true,
+                isError = otpError != null,
+                supportingText = {
+                    if (otpError != null) {
+                        Text(otpError, color = MandiRedReceivable, fontSize = 11.sp)
+                    }
+                },
                 textStyle = androidx.compose.ui.text.TextStyle(
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    letterSpacing = 4.sp
+                    letterSpacing = 6.sp
                 ),
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
             )
 
             Button(
-                onClick = onSubmit,
+                onClick = {
+                    focusManager.clearFocus()
+                    onSubmit()
+                },
+                enabled = otp.length == 6,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MandiGreenPayable)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MandiGreenPayable,
+                    disabledContainerColor = MandiBorder
+                )
             ) {
                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(8.dp))
                 Text("OTP सत्यापित करें", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
 
-            Text(
-                text = "OTP पुनः भेजें",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MandiAmberDark,
-                modifier = Modifier.clickable { onResend() }
-            )
+            // Resend Countdown Throttler
+            if (isResendEnabled) {
+                Text(
+                    text = "OTP पुनः भेजें",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiAmberDark,
+                    modifier = Modifier.clickable { onResend() }
+                )
+            } else {
+                Text(
+                    text = "OTP पुनः भेजें (${cooldownSeconds}s)",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MandiTextMuted
+                )
+            }
         }
     }
 }
@@ -417,10 +554,15 @@ private fun OtpVerificationSection(
 private fun MpinSetupSection(
     mpin: String,
     confirmMpin: String,
+    confirmError: String?,
+    isLoading: Boolean,
+    isMpinValid: Boolean,
     onMpinChange: (String) -> Unit,
     onConfirmMpinChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -465,16 +607,23 @@ private fun MpinSetupSection(
 
             OutlinedTextField(
                 value = mpin,
-                onValueChange = onMpinChange,
-                label = { Text("नया 4-अंकीय MPIN") },
+                onValueChange = { if (it.length <= 4) onMpinChange(it) },
+                label = { Text("नया 4-अंकीय MPIN *") },
+                placeholder = { Text("• • • •", color = MandiTextMuted, textAlign = TextAlign.Center) },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
                 singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    letterSpacing = 6.sp
+                    letterSpacing = 8.sp
                 ),
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
@@ -482,32 +631,61 @@ private fun MpinSetupSection(
 
             OutlinedTextField(
                 value = confirmMpin,
-                onValueChange = onConfirmMpinChange,
-                label = { Text("MPIN पुनः दर्ज करें") },
+                onValueChange = { if (it.length <= 4) onConfirmMpinChange(it) },
+                label = { Text("MPIN पुनः दर्ज करें *") },
+                placeholder = { Text("• • • •", color = MandiTextMuted, textAlign = TextAlign.Center) },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                isError = confirmError != null,
+                supportingText = {
+                    if (confirmError != null) {
+                        Text(confirmError, color = MandiRedReceivable, fontSize = 11.sp)
+                    } else if (confirmMpin.length == 4 && confirmMpin == mpin) {
+                        Text("✓ MPIN मेल खा गया है", color = MandiGreenPayable, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        if (isMpinValid && !isLoading) onSubmit()
+                    }
+                ),
                 singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    letterSpacing = 6.sp
+                    letterSpacing = 8.sp
                 ),
                 modifier = Modifier.fillMaxWidth(),
                 colors = textFieldColors()
             )
 
             Button(
-                onClick = onSubmit,
+                onClick = {
+                    focusManager.clearFocus()
+                    onSubmit()
+                },
+                enabled = isMpinValid && !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MandiAmberPrimary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MandiAmberPrimary,
+                    disabledContainerColor = MandiBorder
+                )
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.size(8.dp))
-                Text("पंजीयन पूर्ण करें व खाता खोलें", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text("पंजीयन पूर्ण करें व खाता खोलें", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
