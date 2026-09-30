@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: mandisamiti_staging_api
+    restart: always
+    ports:
+      - "8060:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://mandi_staging_user:mandi_staging_secret_2026@db:5432/mandisamiti_staging
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=mandisamiti-staging-jwt-mock-key-2026
+      - OTP_MOCK_MODE=True
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    container_name: mandisamiti_staging_db
+    restart: always
+    environment:
+      - POSTGRES_USER=mandi_staging_user
+      - POSTGRES_PASSWORD=mandi_staging_secret_2026
+      - POSTGRES_DB=mandisamiti_staging
+    volumes:
+      - mandisamiti_staging_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: mandisamiti_staging_redis
+    restart: always
+    volumes:
+      - mandisamiti_staging_redis_data:/data
+
+volumes:
+  mandisamiti_staging_postgres_data:
+  mandisamiti_staging_redis_data:
