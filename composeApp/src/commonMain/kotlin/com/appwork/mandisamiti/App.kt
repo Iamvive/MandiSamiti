@@ -18,6 +18,9 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
+import com.appwork.mandisamiti.platform.rememberCameraSlipPicker
+import com.appwork.mandisamiti.ui.auth.RegisterScreen
+import com.appwork.mandisamiti.ui.auth.RegisterViewModel
 import com.appwork.mandisamiti.ui.deal.DealEntryScreen
 import com.appwork.mandisamiti.ui.deal.DealEntryViewModel
 import com.appwork.mandisamiti.ui.home.HomeScreen
@@ -28,9 +31,11 @@ import com.appwork.mandisamiti.ui.register.DailyCashRegisterScreen
 import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
 import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
+    data object Register : Screen
     data object Home : Screen
     data class DealEntry(val existingDealId: String? = null) : Screen
     data class PartyLedger(val partyId: String) : Screen
@@ -49,29 +54,15 @@ fun App(
     val partyRepo = remember { OfflineFirstPartyRepository(database) }
     val dealRepo = remember { OfflineFirstDealRepository(database) }
     val cashRepo = remember { OfflineFirstCashTransactionRepository(database) }
+    val cameraPicker = rememberCameraSlipPicker()
 
-    val shopId = "shop_mathura_default"
+    val shopId = "shop_default"
 
-    // Seed default shop and sample farmers/buyers on first launch
+    // Demo dataset seeding for parties
     LaunchedEffect(Unit) {
-        launch {
-            shopRepo.saveShopProfile(
-                ShopProfile(
-                    id = shopId,
-                    shopName = "श्री गणेश ट्रेडिंग",
-                    ownerName = "लाला मदन लाल जी",
-                    mandiName = "मथुरा कृषि उपज मंडी",
-                    shopNumber = "B-42",
-                    phoneNumber = "9837123456",
-                    pinHash = "1234",
-                    isSoundEnabled = true,
-                    createdAt = 1000L,
-                    updatedAt = 1000L
-                )
-            )
-
-            val existingParty = partyRepo.getPartyById("farmer_1")
-            if (existingParty == null) {
+        coroutineScope.launch {
+            val parties = partyRepo.getPartiesStream(shopId).firstOrNull()
+            if (parties.isNullOrEmpty()) {
                 partyRepo.saveParty(
                     Party(
                         id = "farmer_1",
@@ -139,10 +130,27 @@ fun App(
         }
     }
 
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
+    // Starts directly from Register / Login Screen for testing
+    var currentScreen by remember { mutableStateOf<Screen>(Screen.Register) }
 
     MandiSamitiTheme {
         when (val screen = currentScreen) {
+            is Screen.Register -> {
+                val registerViewModel = remember {
+                    RegisterViewModel(
+                        shopProfileRepository = shopRepo,
+                        ttsManager = ttsManager,
+                        viewModelScope = coroutineScope
+                    )
+                }
+                RegisterScreen(
+                    viewModel = registerViewModel,
+                    onRegistrationSuccess = {
+                        currentScreen = Screen.Home
+                    }
+                )
+            }
+
             is Screen.Home -> {
                 val homeViewModel = remember {
                     HomeViewModel(
@@ -225,6 +233,7 @@ fun App(
                             shopName = "श्री गणेश ट्रेडिंग",
                             ownerName = "लाला मदन लाल जी",
                             mandiName = "मथुरा मंडी",
+                            shopNumber = "A-1",
                             phoneNumber = "9837123456",
                             pinHash = "1234",
                             createdAt = 1000L,

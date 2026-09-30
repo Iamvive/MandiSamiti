@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -7,9 +8,16 @@ from app.api.v1.api import api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Auto-create tables on startup in development mode
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Database initialization with retry loop for Docker / production startup
+    for attempt in range(1, 15):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            print("Database connected and schema initialized successfully.")
+            break
+        except Exception as e:
+            print(f"Waiting for database connection (attempt {attempt}/15)... error: {e}")
+            await asyncio.sleep(2)
     yield
 
 app = FastAPI(
