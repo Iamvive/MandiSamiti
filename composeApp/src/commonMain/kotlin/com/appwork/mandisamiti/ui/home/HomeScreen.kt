@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,14 +46,17 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
-import com.appwork.mandisamiti.ui.theme.MandiAccent
+import com.appwork.mandisamiti.ui.theme.MandiAmber50
+import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
+import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
-import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiNeutralBorder
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiNeutralText
@@ -73,6 +79,9 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    val receivableCount = uiState.allParties.count { it.balancePaisa > 0 }
+    val payableCount = uiState.allParties.count { it.balancePaisa < 0 }
+
     Scaffold(
         topBar = {
             SoundboxTopBar(
@@ -83,7 +92,7 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            // High-Trust Fintech Action Bar (56dp target, vector icon, crisp styling)
+            // Mandi Saffron Action Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,8 +104,12 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MandiNavy)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(MandiAmberDark, MandiAmberPrimary)
+                            )
+                        )
                         .clickable { onNavigateToNewEntry() },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -123,44 +136,80 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(MandiBackground)
                 .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Executive Balance Overview Cards (Receivables & Payables)
+            // 1. Warm Greeting & Mandi Date Banner
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MandiAmber50)
+                        .border(1.dp, MandiAmberBorder, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Store,
+                            contentDescription = null,
+                            tint = MandiAmberDark,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "नमस्ते, ${uiState.shopProfile?.shopName ?: "आढ़ती जी"}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiAmberDark
+                        )
+                    }
+                    Text(
+                        text = "आज का बहीखाता",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiAmberPrimary
+                    )
+                }
+            }
+
+            // 2. High-Trust Metric Cards
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Market Receivable (लेना है)
                     FintechMetricCard(
-                        title = "बाजार में बाकी",
-                        subtitle = "कुल लेना",
+                        title = "कुल लेना (Receivable)",
+                        subtitle = "$receivableCount खातों से",
                         amountPaisa = uiState.totalMarketReceivablePaisa,
                         textColor = MandiRedReceivable,
-                        bgColor = MandiSurface,
+                        bgColor = MandiRedLight,
                         borderColor = MandiRedBorder,
-                        icon = Icons.Default.TrendingDown,
+                        icon = Icons.Default.TrendingUp,
                         iconTint = MandiRedReceivable,
                         modifier = Modifier.weight(1f)
                     )
 
-                    // Farmer Payable (देना है)
                     FintechMetricCard(
-                        title = "किसान जमा",
-                        subtitle = "कुल देय",
+                        title = "कुल देना (Payable)",
+                        subtitle = "$payableCount खातों को",
                         amountPaisa = uiState.totalFarmerPayablePaisa,
                         textColor = MandiGreenPayable,
-                        bgColor = MandiSurface,
+                        bgColor = MandiGreenLight,
                         borderColor = MandiGreenBorder,
-                        icon = Icons.Default.TrendingUp,
+                        icon = Icons.Default.TrendingDown,
                         iconTint = MandiGreenPayable,
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
 
-            // 2. Daily Cash Drawer Banner (Stripe / Google Pay Style)
+            // 3. Quick Cash Register (गल्ला हिसाब) Strip
             item {
                 Box(
                     modifier = Modifier
@@ -182,15 +231,16 @@ fun HomeScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MandiNeutralLight),
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MandiAmberLight)
+                                    .border(1.dp, MandiAmberBorder, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.AccountBalanceWallet,
                                     contentDescription = null,
-                                    tint = MandiNavy,
+                                    tint = MandiAmberDark,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -219,7 +269,7 @@ fun HomeScreen(
                 }
             }
 
-            // 3. Search Bar with Vector Search Icon
+            // 4. Search Bar
             item {
                 OutlinedTextField(
                     value = uiState.searchQuery,
@@ -245,13 +295,13 @@ fun HomeScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MandiSurface,
                         unfocusedContainerColor = MandiSurface,
-                        focusedBorderColor = MandiNavy,
+                        focusedBorderColor = MandiAmberPrimary,
                         unfocusedBorderColor = MandiBorder
                     )
                 )
             }
 
-            // 4. Clean Filter Segmented Control (No Emojis)
+            // 5. Filter Segmented Control
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -278,7 +328,7 @@ fun HomeScreen(
                 }
             }
 
-            // 5. Party Ledger Stream
+            // 6. Party Ledger Stream
             items(uiState.filteredParties, key = { it.party.id }) { partyWithBalance ->
                 PartyCard(
                     party = partyWithBalance.party,
@@ -352,7 +402,7 @@ private fun FintechMetricCard(
 
             Text(
                 text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
@@ -378,8 +428,8 @@ private fun SegmentFilterChip(
     Box(
         modifier = modifier
             .clip(shape)
-            .background(if (isSelected) MandiNavy else MandiSurface)
-            .border(1.dp, if (isSelected) MandiNavy else MandiBorder, shape)
+            .background(if (isSelected) MandiAmberPrimary else MandiSurface)
+            .border(1.dp, if (isSelected) MandiAmberPrimary else MandiBorder, shape)
             .clickable { onClick() }
             .padding(vertical = 9.dp),
         contentAlignment = Alignment.Center

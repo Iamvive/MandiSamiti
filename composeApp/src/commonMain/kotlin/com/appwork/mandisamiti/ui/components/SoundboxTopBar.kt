@@ -21,15 +21,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
+import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
-import com.appwork.mandisamiti.ui.theme.MandiNavy
 
 @Composable
 fun SoundboxTopBar(
@@ -41,22 +43,44 @@ fun SoundboxTopBar(
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
     val soundBtnShape = RoundedCornerShape(20.dp)
+    val monogramInitial = shopName.trim().take(1).ifEmpty { "मं" }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MandiNavy)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(MandiAmberDark, MandiAmberPrimary)
+                )
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.weight(1f)
         ) {
             if (navigationIcon != null) {
                 navigationIcon()
+            } else {
+                // Shop Monogram Avatar
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(MandiAmberLight)
+                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = monogramInitial,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiAmberDark
+                    )
+                }
             }
             Column {
                 Text(
@@ -68,20 +92,20 @@ fun SoundboxTopBar(
                 )
                 Text(
                     text = mandiLocation,
-                    color = Color.White.copy(alpha = 0.75f),
-                    fontSize = 13.sp
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 12.sp
                 )
             }
         }
 
-        // Clean Enterprise Voice Soundbox Status Pill (No emojis, vector icon)
+        // Clean Enterprise Voice Soundbox Status Pill
         Row(
             modifier = Modifier
                 .clip(soundBtnShape)
-                .background(if (isSoundEnabled) MandiGreenLight else Color.White.copy(alpha = 0.12f))
+                .background(if (isSoundEnabled) MandiGreenLight else Color.White.copy(alpha = 0.15f))
                 .border(
                     width = 1.dp,
-                    color = if (isSoundEnabled) MandiGreenBorder else Color.White.copy(alpha = 0.25f),
+                    color = if (isSoundEnabled) MandiGreenBorder else Color.White.copy(alpha = 0.35f),
                     shape = soundBtnShape
                 )
                 .clickable { onToggleSound() }
@@ -92,12 +116,12 @@ fun SoundboxTopBar(
             Icon(
                 imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
                 contentDescription = "वॉइस साउंडबॉक्स स्थिति",
-                tint = if (isSoundEnabled) MandiGreenText else Color.White.copy(alpha = 0.85f),
+                tint = if (isSoundEnabled) MandiGreenText else Color.White,
                 modifier = Modifier.size(16.dp)
             )
             Text(
                 text = if (isSoundEnabled) "वॉइस ऑन" else "म्यूट",
-                color = if (isSoundEnabled) MandiGreenText else Color.White.copy(alpha = 0.85f),
+                color = if (isSoundEnabled) MandiGreenText else Color.White,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )

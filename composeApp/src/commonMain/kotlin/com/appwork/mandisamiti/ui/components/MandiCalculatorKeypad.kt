@@ -20,9 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.appwork.mandisamiti.ui.theme.MandiAmber50
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
+import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
-import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
@@ -40,12 +43,11 @@ fun MandiCalculatorKeypad(
     onKeyPressed: (KeypadAction) -> Unit,
     showSubmitInsteadOfNext: Boolean = false
 ) {
-    val shape = RoundedCornerShape(8.dp)
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MandiNavy.copy(alpha = 0.04f))
+            .background(MandiAmber50.copy(alpha = 0.6f))
+            .border(width = 1.dp, color = MandiBorder)
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -91,7 +93,7 @@ fun MandiCalculatorKeypad(
             KeypadButton(text = "9", modifier = Modifier.weight(1f)) { onKeyPressed(KeypadAction.DIGIT_9) }
             KeypadButton(
                 text = if (showSubmitInsteadOfNext) "✅ पूर्ण" else "अगला ➔",
-                backgroundColor = if (showSubmitInsteadOfNext) MandiGreenPayable else MandiNavy,
+                backgroundColor = if (showSubmitInsteadOfNext) MandiGreenPayable else MandiAmberPrimary,
                 textColor = Color.White,
                 modifier = Modifier.weight(1.2f)
             ) {
