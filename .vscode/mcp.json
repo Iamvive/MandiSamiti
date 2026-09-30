@@ -1,0 +1,59 @@
+{
+  "mcpServers": {
+    "penpot": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@penpot/mcp@latest"
+      ],
+      "env": {
+        "PENPOT_ACCESS_TOKEN": "",
+        "PATH": "/opt/homebrew/bin:/Users/appworx/.bun/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/opt/homebrew/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Users/appworx/.gemini/antigravity-ide/bin:/Users/appworx/.local/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "",
+        "PATH": "/opt/homebrew/bin:/Users/appworx/.bun/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/opt/homebrew/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Users/appworx/.gemini/antigravity-ide/bin:/Users/appworx/.local/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      }
+    },
+    "headroom": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "headroom-mcp"
+      ],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/Users/appworx/.bun/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/opt/homebrew/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Users/appworx/.gemini/antigravity-ide/bin:/Users/appworx/.local/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      }
+    },
+    "mobile": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mobile-mcp-server"
+      ],
+      "env": {
+        "ANDROID_SDK_ROOT": "",
+        "IOS_SIMULATOR_ID": "",
+        "PATH": "/opt/homebrew/bin:/Users/appworx/.bun/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/opt/homebrew/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Users/appworx/.gemini/antigravity-ide/bin:/Users/appworx/.local/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      }
+    },
+    "neosapien": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://api.neosapien.xyz/mcp"
+      ],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/Users/appworx/.bun/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/opt/homebrew/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Users/appworx/.gemini/antigravity-ide/bin:/Users/appworx/.local/bin:/Users/appworx/.bun/bin:/Users/appworx/.antigravity-ide/antigravity-ide/bin:/Users/appworx/.antigravity/antigravity/bin:/Users/appworx/.nvm/versions/node/v24.4.0/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin:/Users/appworx/Library/Android/sdk/platform-tools:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      }
+    }
+  }
+}

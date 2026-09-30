@@ -1,0 +1,22 @@
+{
+  "active_session_id": "sess_tmp_1790763731",
+  "sessions": {
+    "sess_tmp_1790763731": {
+      "session_id": "sess_tmp_1790763731",
+      "project_path": "/tmp",
+      "project_name": "tmp",
+      "status": "ACTIVE",
+      "engine_session_id": "accec53e-07b3-4a3c-a6f2-0e1dcd0cf5ed",
+      "created_at": 1790763731.864199,
+      "updated_at": 1790763731.8745432,
+      "current_task": null,
+      "history": [
+        {
+          "prompt": "list files",
+          "response": "total 104\ndrwxrwxrwt  11 root      wheel   352B Sep 30 15:51 .\ndrwxr-xr-x   6 root      wheel   192B Apr  1  1976 ..\nsrwxrwxrwx@  1 postgres  wheel     0B Sep 30 15:19 .s.PGSQL.5432\n-rw-------   1 postgres  wheel    53B Sep 30 15:19 .s.PGSQL.5432.lock\n-rw-------@  1 appworx   wheel   1.0K Sep 30 12:03 __KMP_REGISTERED_LIB_33374\n-rw-------@  1 appworx   wheel   1.0K Sep 30 12:04 __KMP_REGISTERED_LIB_33444\n-rw-r--r--@  1 appworx   wheel     0B Sep 30 15:45 bot_launchd.log\n-rw-r--r--@  1 appworx   wheel    39K Sep 30 15:51 bot_launchd_error.log\ndrwx------@  4 appworx   wheel   128B Sep 30 12:04 claude-501\ndrwx------@  3 appworx   wheel    96B Sep 30 09:18 claude-mcp-browser-bridge-appworx\ndrwxr-xr-x   2 root      wheel    64B Sep 28 23:40 powerlog",
+          "timestamp": 1790763731.874542
+        }
+      ]
+    }
+  }
+}

@@ -48,6 +48,9 @@ import com.appwork.mandisamiti.platform.rememberCameraSlipPicker
 import com.appwork.mandisamiti.ui.components.MandiCalculatorKeypad
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiAccent
+import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
@@ -425,7 +428,7 @@ fun DealEntryScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (uiState.isSettledStage) MandiNavy else MandiGreenPayable
+                        containerColor = if (uiState.isSettledStage) MandiAmberPrimary else MandiGreenPayable
                     )
                 ) {
                     Icon(
@@ -472,15 +475,15 @@ private fun FintechInputField(
             text = label,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            color = if (isFocused) MandiNavy else MandiTextSecondary
+            color = if (isFocused) MandiAmberDark else MandiTextSecondary
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(shape)
-                .background(if (isFocused) MandiNeutralLight else MandiSurface)
-                .border(1.5.dp, if (isFocused) MandiNavy else MandiBorder, shape)
+                .background(if (isFocused) MandiAmberLight.copy(alpha = 0.3f) else MandiSurface)
+                .border(1.5.dp, if (isFocused) MandiAmberPrimary else MandiBorder, shape)
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.CenterStart
         ) {

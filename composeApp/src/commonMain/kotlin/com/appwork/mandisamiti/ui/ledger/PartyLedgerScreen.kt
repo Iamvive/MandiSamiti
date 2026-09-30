@@ -55,6 +55,9 @@ import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiAccent
+import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
@@ -219,7 +222,7 @@ fun PartyLedgerScreen(
                 FintechActionButton(
                     label = "ब्याज हिसाब",
                     icon = Icons.Default.Calculate,
-                    color = MandiNavy,
+                    color = MandiAmberDark,
                     onClick = { viewModel.openInterestDialog() },
                     modifier = Modifier.weight(1f)
                 )
@@ -374,7 +377,7 @@ fun PartyLedgerScreen(
                         text = "मूलधन: ₹${MandiMathEngine.paisaToRupeesString(principal)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MandiNavy
+                        color = MandiAmberDark
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -414,7 +417,7 @@ fun PartyLedgerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("कुल देय:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
-                            Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.totalPayablePaisa)}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MandiNavy)
+                            Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.totalPayablePaisa)}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MandiAmberDark)
                         }
                     }
                 }
@@ -428,7 +431,7 @@ fun PartyLedgerScreen(
                             viewModel.closeInterestDialog()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiNavy)
+                    colors = ButtonDefaults.buttonColors(containerColor = MandiAmberPrimary)
                 ) {
                     Text("ब्याज खाते में जोड़ें")
                 }
@@ -504,7 +507,7 @@ private fun FintechDealCard(
                     Icon(
                         imageVector = Icons.Default.ReceiptLong,
                         contentDescription = null,
-                        tint = MandiNavy,
+                        tint = MandiAmberPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
@@ -541,7 +544,7 @@ private fun FintechDealCard(
                     text = "₹${MandiMathEngine.paisaToRupeesString(deal.netFarmerPayablePaisa)}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MandiNavy
+                    color = MandiAmberDark
                 )
             }
         }
