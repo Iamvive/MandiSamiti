@@ -32,6 +32,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +75,17 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showAddPartyDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (showAddPartyDialog) {
+        com.appwork.mandisamiti.ui.components.AddPartyDialog(
+            onDismiss = { showAddPartyDialog = false },
+            onSaveParty = { name, phone, village, partyType, interestRate ->
+                viewModel.addNewParty(name, phone, village, partyType, interestRate)
+                showAddPartyDialog = false
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -83,37 +97,70 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            // High-Trust Fintech Action Bar (56dp target, vector icon, crisp styling)
+            // High-Trust Fintech Action Bar (Split 2-Action: Add Party & Add Deal)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MandiSurface)
                     .border(1.dp, MandiBorder)
-                    .padding(14.dp)
+                    .padding(12.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MandiNavy)
-                        .clickable { onNavigateToNewEntry() },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(
-                        text = "नया सौदा / आवक दर्ज करें",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // 1. Add Party (किसान / व्यापारी जोड़ें)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MandiBackground)
+                            .border(1.dp, MandiNavy, RoundedCornerShape(10.dp))
+                            .clickable { showAddPartyDialog = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MandiNavy,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text(
+                            text = "नया खाता",
+                            color = MandiNavy,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // 2. New Deal Entry (नया सौदा दर्ज करें)
+                    Row(
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MandiNavy)
+                            .clickable { onNavigateToNewEntry() },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text(
+                            text = "नया सौदा दर्ज करें",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

@@ -115,4 +115,56 @@ class DealEntryViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun testAddNewPartyFromDealEntryViewModel() = runTest {
+        val database = createTestDatabase()
+        val shopRepo = OfflineFirstShopProfileRepository(database)
+        val partyRepo = OfflineFirstPartyRepository(database)
+        val dealRepo = OfflineFirstDealRepository(database)
+        val ttsManager = SoundboxTtsManager()
+
+        val shopId = "shop-deal-entry-add"
+        shopRepo.saveShopProfile(
+            ShopProfile(
+                id = shopId,
+                shopName = "श्री गणेश ट्रेडिंग",
+                ownerName = "लाला जी",
+                mandiName = "मथुरा मंडी",
+                phoneNumber = "9837000000",
+                pinHash = "1234",
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val viewModel = DealEntryViewModel(
+            shopId = shopId,
+            existingDealId = null,
+            dealRepository = dealRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = ttsManager,
+            viewModelScope = backgroundScope
+        )
+
+        viewModel.addNewParty(
+            name = "दयाराम चौधरी",
+            phone = "9837554433",
+            village = "छाता",
+            partyType = PartyType.FARMER,
+            monthlyInterestRate = 1.5
+        )
+
+        viewModel.uiState.test {
+            var state = awaitItem()
+            while (state.selectedFarmer?.name != "दयाराम चौधरी") {
+                state = awaitItem()
+            }
+            assertEquals("दयाराम चौधरी", state.selectedFarmer?.name)
+            assertEquals("छाता", state.selectedFarmer?.village)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
+

@@ -36,6 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +70,63 @@ fun DealEntryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val cameraPicker = rememberCameraSlipPicker()
+
+    var showFarmerPicker by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showBuyerPicker by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showAddFarmerDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showAddBuyerDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (showFarmerPicker) {
+        com.appwork.mandisamiti.ui.components.PartySelectionDialog(
+            title = "किसान (विक्रेता) चुनें",
+            partyType = com.appwork.mandisamiti.domain.model.PartyType.FARMER,
+            parties = uiState.availableFarmers,
+            selectedParty = uiState.selectedFarmer,
+            onSelectParty = { viewModel.onSelectFarmer(it) },
+            onAddNewPartyClick = {
+                showFarmerPicker = false
+                showAddFarmerDialog = true
+            },
+            onDismiss = { showFarmerPicker = false }
+        )
+    }
+
+    if (showBuyerPicker) {
+        com.appwork.mandisamiti.ui.components.PartySelectionDialog(
+            title = "व्यापारी (खरीदार) चुनें",
+            partyType = com.appwork.mandisamiti.domain.model.PartyType.BUYER,
+            parties = uiState.availableBuyers,
+            selectedParty = uiState.selectedBuyer,
+            onSelectParty = { viewModel.onSelectBuyer(it) },
+            onAddNewPartyClick = {
+                showBuyerPicker = false
+                showAddBuyerDialog = true
+            },
+            onDismiss = { showBuyerPicker = false }
+        )
+    }
+
+    if (showAddFarmerDialog) {
+        com.appwork.mandisamiti.ui.components.AddPartyDialog(
+            initialPartyType = com.appwork.mandisamiti.domain.model.PartyType.FARMER,
+            onDismiss = { showAddFarmerDialog = false },
+            onSaveParty = { name, phone, village, partyType, rate ->
+                viewModel.addNewParty(name, phone, village, partyType, rate)
+                showAddFarmerDialog = false
+            }
+        )
+    }
+
+    if (showAddBuyerDialog) {
+        com.appwork.mandisamiti.ui.components.AddPartyDialog(
+            initialPartyType = com.appwork.mandisamiti.domain.model.PartyType.BUYER,
+            onDismiss = { showAddBuyerDialog = false },
+            onSaveParty = { name, phone, village, partyType, rate ->
+                viewModel.addNewParty(name, phone, village, partyType, rate)
+                showAddBuyerDialog = false
+            }
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -186,12 +246,11 @@ fun DealEntryScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    if (uiState.availableFarmers.isNotEmpty()) {
-                                        val nextIdx = ((uiState.availableFarmers.indexOf(uiState.selectedFarmer) + 1) % uiState.availableFarmers.size)
-                                        viewModel.onSelectFarmer(uiState.availableFarmers[nextIdx])
-                                    }
-                                },
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MandiBackground)
+                                .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                                .clickable { showFarmerPicker = true }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -201,7 +260,7 @@ fun DealEntryScreen(
                                 color = MandiTextSecondary
                             )
                             Text(
-                                text = uiState.selectedFarmer?.name ?: "किसान चुनें ▾",
+                                text = uiState.selectedFarmer?.let { "${it.name} ▾" } ?: "किसान चुनें ▾",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MandiNavy
@@ -232,12 +291,11 @@ fun DealEntryScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        if (uiState.availableBuyers.isNotEmpty()) {
-                                            val nextIdx = ((uiState.availableBuyers.indexOf(uiState.selectedBuyer) + 1) % uiState.availableBuyers.size)
-                                            viewModel.onSelectBuyer(uiState.availableBuyers[nextIdx])
-                                        }
-                                    },
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MandiBackground)
+                                    .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                                    .clickable { showBuyerPicker = true }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -247,7 +305,7 @@ fun DealEntryScreen(
                                     color = MandiTextSecondary
                                 )
                                 Text(
-                                    text = uiState.selectedBuyer?.name ?: "व्यापारी चुनें ▾",
+                                    text = uiState.selectedBuyer?.let { "${it.name} ▾" } ?: "व्यापारी चुनें ▾",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MandiAccent

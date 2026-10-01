@@ -148,6 +148,7 @@ fun App(
                     HomeViewModel(
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
+                        ttsManager = ttsManager,
                         viewModelScope = coroutineScope
                     )
                 }

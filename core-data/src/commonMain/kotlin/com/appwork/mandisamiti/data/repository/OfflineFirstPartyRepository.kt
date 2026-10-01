@@ -30,20 +30,20 @@ class OfflineFirstPartyRepository(
     }
 
     override fun getPartyBalanceStream(partyId: String): Flow<PartyBalance?> {
-        return queries.getPartyBalance(partyId)
-            .asFlow()
-            .mapToOneOrNull(ioDispatcher)
-            .map { row ->
-                if (row == null) return@map null
-                val party = queries.getPartyById(partyId).executeAsOneOrNull()?.toDomain()
-                if (party != null) {
-                    PartyBalance(
-                        party = party,
-                        balancePaisa = row.balance_paisa ?: 0L,
-                        lastTransactionDate = null
-                    )
-                } else null
-            }
+        return kotlinx.coroutines.flow.combine(
+            queries.getPartyById(partyId).asFlow().mapToOneOrNull(ioDispatcher),
+            queries.getDealsByFarmer(partyId).asFlow().mapToList(ioDispatcher),
+            queries.getDealsByBuyer(partyId).asFlow().mapToList(ioDispatcher),
+            queries.getCashTransactionsByParty(partyId).asFlow().mapToList(ioDispatcher)
+        ) { partyRow, _, _, _ ->
+            if (partyRow == null || partyRow.is_deleted == 1L) return@combine null
+            val row = queries.getPartyBalance(partyId).executeAsOneOrNull()
+            PartyBalance(
+                party = partyRow.toDomain(),
+                balancePaisa = row?.balance_paisa ?: 0L,
+                lastTransactionDate = null
+            )
+        }
     }
 
     override suspend fun getPartyById(partyId: String): Party? = withContext(ioDispatcher) {

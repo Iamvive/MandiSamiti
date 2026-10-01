@@ -154,6 +154,41 @@ class DealEntryViewModel(
         recalculate()
     }
 
+    fun addNewParty(
+        name: String,
+        phone: String?,
+        village: String?,
+        partyType: PartyType,
+        monthlyInterestRate: Double? = null
+    ) {
+        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        val randomSuffix = (1000..9999).random()
+        val prefix = if (partyType == PartyType.FARMER) "farmer" else "buyer"
+        val newParty = Party(
+            id = "${prefix}_${now}_$randomSuffix",
+            shopId = shopId,
+            name = name.trim(),
+            phone = phone?.trim()?.takeIf { it.isNotEmpty() },
+            village = village?.trim()?.takeIf { it.isNotEmpty() },
+            partyType = partyType,
+            monthlyInterestRate = monthlyInterestRate,
+            createdAt = now,
+            updatedAt = now
+        )
+
+        viewModelScope.launch {
+            partyRepository.saveParty(newParty)
+            if (partyType == PartyType.FARMER) {
+                _uiState.value = _uiState.value.copy(selectedFarmer = newParty)
+            } else {
+                _uiState.value = _uiState.value.copy(selectedBuyer = newParty)
+                recalculate()
+            }
+            val roleHindi = if (partyType == PartyType.FARMER) "किसान" else "व्यापारी"
+            ttsManager.speak("${newParty.name} जी का नया $roleHindi खाता जोड़ दिया गया है", _uiState.value.isSoundEnabled)
+        }
+    }
+
     fun onSelectCommodity(commodity: Commodity) {
         _uiState.value = _uiState.value.copy(selectedCommodity = commodity)
     }
