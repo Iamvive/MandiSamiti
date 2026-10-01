@@ -135,7 +135,7 @@ fun PartySelectionDialog(
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
-                        text = if (partyType == PartyType.FARMER) "+ नया किसान जोड़ें" else "+ नया व्यापारी जोड़ें",
+                        text = if (partyType == PartyType.FARMER) "नया किसान जोड़ें" else "नया व्यापारी जोड़ें",
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
