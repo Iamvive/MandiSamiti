@@ -1,0 +1,770 @@
+{
+  ".vscode/mcp.json": {
+    "mtime": 1790750643.0,
+    "seen": 1791393585.158905,
+    "ast_hash": "7f4867209db9487da74ac3d9f345ccc4",
+    "semantic_hash": "7f4867209db9487da74ac3d9f345ccc4"
+  },
+  ".vscode/settings.json": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158908,
+    "ast_hash": "abe3c3baa78fb9dfdd3db2a32abb776e",
+    "semantic_hash": "abe3c3baa78fb9dfdd3db2a32abb776e"
+  },
+  "app/build.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589088,
+    "ast_hash": "7cf6ab2ab65d6e5b3651fc30169ad254",
+    "semantic_hash": "7cf6ab2ab65d6e5b3651fc30169ad254"
+  },
+  "app/src/main/java/com/interview/kit/App.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.15891,
+    "ast_hash": "751d5e0b28ac50b0909ac226b86dd11b",
+    "semantic_hash": "751d5e0b28ac50b0909ac226b86dd11b"
+  },
+  "app/src/main/java/com/interview/kit/MainActivity.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.15891,
+    "ast_hash": "a0ae5adec722e7f667d55f2cea83bdd2",
+    "semantic_hash": "a0ae5adec722e7f667d55f2cea83bdd2"
+  },
+  "app/src/main/java/com/interview/kit/data/api/ApiService.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158911,
+    "ast_hash": "81a00a1100f85a0739134bef78fa2fe9",
+    "semantic_hash": "81a00a1100f85a0739134bef78fa2fe9"
+  },
+  "app/src/main/java/com/interview/kit/data/model/Post.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158912,
+    "ast_hash": "274bcedde6dc35d0b794294266d14bb6",
+    "semantic_hash": "274bcedde6dc35d0b794294266d14bb6"
+  },
+  "app/src/main/java/com/interview/kit/data/repository/PostRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158912,
+    "ast_hash": "00d40ad51a35328b9b800e69948aebd7",
+    "semantic_hash": "00d40ad51a35328b9b800e69948aebd7"
+  },
+  "app/src/main/java/com/interview/kit/di/NetworkModule.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589131,
+    "ast_hash": "7e0778b8660a487b8d6fa223a98201bb",
+    "semantic_hash": "7e0778b8660a487b8d6fa223a98201bb"
+  },
+  "app/src/main/java/com/interview/kit/di/RepositoryModule.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158914,
+    "ast_hash": "b2d2b12da82964c4fb44ebe8c9e6342b",
+    "semantic_hash": "b2d2b12da82964c4fb44ebe8c9e6342b"
+  },
+  "app/src/main/java/com/interview/kit/domain/model/Post.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158914,
+    "ast_hash": "8b0c7a0c0a91a1f3ebb5fd236d639be7",
+    "semantic_hash": "8b0c7a0c0a91a1f3ebb5fd236d639be7"
+  },
+  "app/src/main/java/com/interview/kit/launchmodes/ActivityA.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158915,
+    "ast_hash": "a386b8fab5d0104c1d944fc165ab95da",
+    "semantic_hash": "a386b8fab5d0104c1d944fc165ab95da"
+  },
+  "app/src/main/java/com/interview/kit/launchmodes/ActivityB.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158916,
+    "ast_hash": "cfcbb982d64cc566660e7e712ef47114",
+    "semantic_hash": "cfcbb982d64cc566660e7e712ef47114"
+  },
+  "app/src/main/java/com/interview/kit/launchmodes/ActivityC.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158916,
+    "ast_hash": "a9502c2fd8a1ef5155ccafd36b54405b",
+    "semantic_hash": "a9502c2fd8a1ef5155ccafd36b54405b"
+  },
+  "app/src/main/java/com/interview/kit/launchmodes/ActivityD.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589172,
+    "ast_hash": "19906c0c2e60f46f3662ab7f25386dbb",
+    "semantic_hash": "19906c0c2e60f46f3662ab7f25386dbb"
+  },
+  "app/src/main/java/com/interview/kit/launchmodes/LaunchModePlaygroundUi.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158918,
+    "ast_hash": "4278b7ccdc04f5752141a4db5cfdb2c1",
+    "semantic_hash": "4278b7ccdc04f5752141a4db5cfdb2c1"
+  },
+  "app/src/main/java/com/interview/kit/launchmodes/TaskStackTracker.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158918,
+    "ast_hash": "a725bbb2213aa5ea8978736f83d6016a",
+    "semantic_hash": "a725bbb2213aa5ea8978736f83d6016a"
+  },
+  "app/src/main/java/com/interview/kit/ui/home/HomeScreen.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589189,
+    "ast_hash": "bef89339ec60516c19025283337906c3",
+    "semantic_hash": "bef89339ec60516c19025283337906c3"
+  },
+  "app/src/main/java/com/interview/kit/ui/home/HomeViewModel.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589189,
+    "ast_hash": "7beaafef177258bb001626342653499f",
+    "semantic_hash": "7beaafef177258bb001626342653499f"
+  },
+  "app/src/main/java/com/interview/kit/ui/navigation/AppNavGraph.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.15892,
+    "ast_hash": "addc678d6b5e92e0390d717495f944ac",
+    "semantic_hash": "addc678d6b5e92e0390d717495f944ac"
+  },
+  "app/src/main/java/com/interview/kit/ui/theme/Color.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158921,
+    "ast_hash": "90d358bde3dd2a83e8f21bdfb4c72bb8",
+    "semantic_hash": "90d358bde3dd2a83e8f21bdfb4c72bb8"
+  },
+  "app/src/main/java/com/interview/kit/ui/theme/Theme.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158921,
+    "ast_hash": "ae0cbcb0efb44550ce04aa221fe7c6d1",
+    "semantic_hash": "ae0cbcb0efb44550ce04aa221fe7c6d1"
+  },
+  "app/src/main/java/com/interview/kit/ui/theme/Type.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158922,
+    "ast_hash": "fae9a53be7a5a85e4a8e01734276f4c7",
+    "semantic_hash": "fae9a53be7a5a85e4a8e01734276f4c7"
+  },
+  "app/src/test/java/com/interview/kit/data/repository/PostRepositoryTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158923,
+    "ast_hash": "f72ad5b3111514af0de75a68120575eb",
+    "semantic_hash": "f72ad5b3111514af0de75a68120575eb"
+  },
+  "app/src/test/java/com/interview/kit/ui/home/HomeViewModelTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158924,
+    "ast_hash": "a046dcdf3eb8cd4b464c3fbf287c215a",
+    "semantic_hash": "a046dcdf3eb8cd4b464c3fbf287c215a"
+  },
+  "backend/app/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.158924,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/app/api/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.158925,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/app/api/v1/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.158925,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/app/api/v1/api.py": {
+    "mtime": 1790763645.0,
+    "seen": 1791393585.158926,
+    "ast_hash": "e27f5a838069dcc01e919c9fe45fb790",
+    "semantic_hash": "e27f5a838069dcc01e919c9fe45fb790"
+  },
+  "backend/app/api/v1/endpoints/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.1589272,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/app/api/v1/endpoints/auth.py": {
+    "mtime": 1790763623.0,
+    "seen": 1791393585.1589272,
+    "ast_hash": "d79d2d0d9811db235809ad91c8668acb",
+    "semantic_hash": "d79d2d0d9811db235809ad91c8668acb"
+  },
+  "backend/app/api/v1/endpoints/soundbox.py": {
+    "mtime": 1790763641.0,
+    "seen": 1791393585.158928,
+    "ast_hash": "fa1084555fd9198b0461b1ec8eb78cd2",
+    "semantic_hash": "fa1084555fd9198b0461b1ec8eb78cd2"
+  },
+  "backend/app/api/v1/endpoints/sync.py": {
+    "mtime": 1790763634.0,
+    "seen": 1791393585.158928,
+    "ast_hash": "534ccf5bcb77741e1f16a2450d5c8c34",
+    "semantic_hash": "534ccf5bcb77741e1f16a2450d5c8c34"
+  },
+  "backend/app/config.py": {
+    "mtime": 1790768059.0,
+    "seen": 1791393585.1589289,
+    "ast_hash": "ff6d55962e096d55c94b1ca236746b1b",
+    "semantic_hash": "ff6d55962e096d55c94b1ca236746b1b"
+  },
+  "backend/app/core/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.1589289,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/app/core/otp_service.py": {
+    "mtime": 1790763591.0,
+    "seen": 1791393585.1589298,
+    "ast_hash": "270ed56879e0deaaad4b839b69644aa2",
+    "semantic_hash": "270ed56879e0deaaad4b839b69644aa2"
+  },
+  "backend/app/core/security.py": {
+    "mtime": 1790763704.0,
+    "seen": 1791393585.158931,
+    "ast_hash": "1ba2f0b0d7099dd4bd79d112b9788e5f",
+    "semantic_hash": "1ba2f0b0d7099dd4bd79d112b9788e5f"
+  },
+  "backend/app/database.py": {
+    "mtime": 1790763554.0,
+    "seen": 1791393585.158931,
+    "ast_hash": "3011247253e821b1e12cd32f2d419734",
+    "semantic_hash": "3011247253e821b1e12cd32f2d419734"
+  },
+  "backend/app/main.py": {
+    "mtime": 1790768458.0,
+    "seen": 1791393585.158932,
+    "ast_hash": "4585d5fb08d320d4661b56b4f51a32c7",
+    "semantic_hash": "4585d5fb08d320d4661b56b4f51a32c7"
+  },
+  "backend/app/models/__init__.py": {
+    "mtime": 1790763581.0,
+    "seen": 1791393585.158933,
+    "ast_hash": "1f95f937025c7082a0d629c7a3bd3525",
+    "semantic_hash": "1f95f937025c7082a0d629c7a3bd3525"
+  },
+  "backend/app/models/deal.py": {
+    "mtime": 1790763572.0,
+    "seen": 1791393585.158933,
+    "ast_hash": "34f5c67224e301d1872c3d8116708dd8",
+    "semantic_hash": "34f5c67224e301d1872c3d8116708dd8"
+  },
+  "backend/app/models/party.py": {
+    "mtime": 1790763566.0,
+    "seen": 1791393585.158934,
+    "ast_hash": "99f6e341b0874e2b5b2b1fb90a5bce34",
+    "semantic_hash": "99f6e341b0874e2b5b2b1fb90a5bce34"
+  },
+  "backend/app/models/transaction.py": {
+    "mtime": 1790763577.0,
+    "seen": 1791393585.158934,
+    "ast_hash": "a105d8e6c2c7f8ab3549bf1cd66d0be4",
+    "semantic_hash": "a105d8e6c2c7f8ab3549bf1cd66d0be4"
+  },
+  "backend/app/models/user.py": {
+    "mtime": 1790763559.0,
+    "seen": 1791393585.158935,
+    "ast_hash": "99c32d341a4f859fb40f188599b91617",
+    "semantic_hash": "99c32d341a4f859fb40f188599b91617"
+  },
+  "backend/app/schemas/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.158936,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/app/schemas/auth.py": {
+    "mtime": 1790763597.0,
+    "seen": 1791393585.158936,
+    "ast_hash": "9601d4e292e8459f72af5c4ac77736d5",
+    "semantic_hash": "9601d4e292e8459f72af5c4ac77736d5"
+  },
+  "backend/app/schemas/deal.py": {
+    "mtime": 1790763690.0,
+    "seen": 1791393585.158937,
+    "ast_hash": "2c8fd8ee0e7a58cf5aeb9e877bb41744",
+    "semantic_hash": "2c8fd8ee0e7a58cf5aeb9e877bb41744"
+  },
+  "backend/app/schemas/party.py": {
+    "mtime": 1790763690.0,
+    "seen": 1791393585.158937,
+    "ast_hash": "d35eb7197ac6441c1a97dd75412d079b",
+    "semantic_hash": "d35eb7197ac6441c1a97dd75412d079b"
+  },
+  "backend/app/schemas/sync.py": {
+    "mtime": 1790763615.0,
+    "seen": 1791393585.1589382,
+    "ast_hash": "a2e110137554b9b1fd9dfac9f68dd20f",
+    "semantic_hash": "a2e110137554b9b1fd9dfac9f68dd20f"
+  },
+  "backend/app/schemas/transaction.py": {
+    "mtime": 1790763690.0,
+    "seen": 1791393585.158939,
+    "ast_hash": "57beaac312d69ff7fb0bdbbe2e973530",
+    "semantic_hash": "57beaac312d69ff7fb0bdbbe2e973530"
+  },
+  "backend/app/services/__init__.py": {
+    "mtime": 1790763654.0,
+    "seen": 1791393585.158939,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/scripts/deploy_prod.sh": {
+    "mtime": 1790768557.0,
+    "seen": 1791393585.1589398,
+    "ast_hash": "9d5a81493f44b4b4dbc6171aaa6d9759",
+    "semantic_hash": "9d5a81493f44b4b4dbc6171aaa6d9759"
+  },
+  "backend/scripts/deploy_staging.sh": {
+    "mtime": 1790768557.0,
+    "seen": 1791393585.1589398,
+    "ast_hash": "56391c67cbcb1cd83691da418d8ff21c",
+    "semantic_hash": "56391c67cbcb1cd83691da418d8ff21c"
+  },
+  "backend/scripts/smoke_test.sh": {
+    "mtime": 1790768587.0,
+    "seen": 1791393585.158941,
+    "ast_hash": "891e101240d431203e8b1d2f4f30c303",
+    "semantic_hash": "891e101240d431203e8b1d2f4f30c303"
+  },
+  "backend/tests/test_auth.py": {
+    "mtime": 1790763677.0,
+    "seen": 1791393585.158942,
+    "ast_hash": "032560c36731485184eb92768eb4e3c8",
+    "semantic_hash": "032560c36731485184eb92768eb4e3c8"
+  },
+  "backend/tests/test_sync.py": {
+    "mtime": 1790763677.0,
+    "seen": 1791393585.158942,
+    "ast_hash": "faed91152616a358d62043cc9cc59cd3",
+    "semantic_hash": "faed91152616a358d62043cc9cc59cd3"
+  },
+  "build.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158943,
+    "ast_hash": "4be6fc35510c0f85972b96f02c307eb0",
+    "semantic_hash": "4be6fc35510c0f85972b96f02c307eb0"
+  },
+  "composeApp/build.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158943,
+    "ast_hash": "7742c29ecd900961bf6b7c0865a79926",
+    "semantic_hash": "7742c29ecd900961bf6b7c0865a79926"
+  },
+  "composeApp/src/androidMain/kotlin/com/appwork/mandisamiti/MainActivity.kt": {
+    "mtime": 1790770766.0,
+    "seen": 1791393585.158944,
+    "ast_hash": "8d9b8ee2814d864d7276cfd883b050e0",
+    "semantic_hash": "8d9b8ee2814d864d7276cfd883b050e0"
+  },
+  "composeApp/src/androidMain/kotlin/com/appwork/mandisamiti/platform/CameraSlipPicker.android.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158944,
+    "ast_hash": "c341ee82e151c209dfc6507bd0f40068",
+    "semantic_hash": "c341ee82e151c209dfc6507bd0f40068"
+  },
+  "composeApp/src/androidMain/kotlin/com/appwork/mandisamiti/platform/SoundboxTtsManager.android.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158945,
+    "ast_hash": "2a275cf0b84bf71c94ab0df8031a2c0a",
+    "semantic_hash": "2a275cf0b84bf71c94ab0df8031a2c0a"
+  },
+  "composeApp/src/androidMain/kotlin/com/appwork/mandisamiti/platform/WhatsAppShareManager.android.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158946,
+    "ast_hash": "af216fad4e9037defec50c5e2a20cfbb",
+    "semantic_hash": "af216fad4e9037defec50c5e2a20cfbb"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/App.kt": {
+    "mtime": 1790772108.0,
+    "seen": 1791393585.158946,
+    "ast_hash": "266629c1fb2833b84448084cbe00e92c",
+    "semantic_hash": "266629c1fb2833b84448084cbe00e92c"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/platform/CameraSlipPicker.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158947,
+    "ast_hash": "139b5af8e3ef25497abbfdf20c11fc78",
+    "semantic_hash": "139b5af8e3ef25497abbfdf20c11fc78"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/platform/SoundboxTtsManager.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158947,
+    "ast_hash": "1777b1755ca68489d25de0cd30bf5629",
+    "semantic_hash": "1777b1755ca68489d25de0cd30bf5629"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/platform/WhatsAppShareManager.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589482,
+    "ast_hash": "a07b0e480d82e2252f842e4462582036",
+    "semantic_hash": "a07b0e480d82e2252f842e4462582036"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/auth/RegisterScreen.kt": {
+    "mtime": 1791393475.6782525,
+    "seen": 1791393585.1589491,
+    "ast_hash": "bd62bb296aa562716b8a19f879ad29ba",
+    "semantic_hash": "bd62bb296aa562716b8a19f879ad29ba"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/auth/RegisterViewModel.kt": {
+    "mtime": 1790771404.0,
+    "seen": 1791393585.1589491,
+    "ast_hash": "1c6b9ae7b939af0b3a105cd3d661045d",
+    "semantic_hash": "1c6b9ae7b939af0b3a105cd3d661045d"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/components/MandiCalculatorKeypad.kt": {
+    "mtime": 1791393432.2289116,
+    "seen": 1791393585.1589499,
+    "ast_hash": "37ed4de971fc152d7854be17c9296c86",
+    "semantic_hash": "37ed4de971fc152d7854be17c9296c86"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/components/PartyCard.kt": {
+    "mtime": 1790751151.0,
+    "seen": 1791393585.1589499,
+    "ast_hash": "46cd16056c627a5d2a976852e7379b06",
+    "semantic_hash": "46cd16056c627a5d2a976852e7379b06"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/components/SoundboxTopBar.kt": {
+    "mtime": 1790771967.0,
+    "seen": 1791393585.1589508,
+    "ast_hash": "d3ed0d4b9caad968a929f298eb27fb52",
+    "semantic_hash": "d3ed0d4b9caad968a929f298eb27fb52"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/deal/DealEntryScreen.kt": {
+    "mtime": 1790764132.0,
+    "seen": 1791393585.158952,
+    "ast_hash": "b7fafda79ca87fab048e50eb79007219",
+    "semantic_hash": "b7fafda79ca87fab048e50eb79007219"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/deal/DealEntryViewModel.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158952,
+    "ast_hash": "122d2e2e1162859960738d13396308dc",
+    "semantic_hash": "122d2e2e1162859960738d13396308dc"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/home/HomeScreen.kt": {
+    "mtime": 1791393534.95688,
+    "seen": 1791393585.158953,
+    "ast_hash": "154665f941cd5be0757bf5f5cedd9ccc",
+    "semantic_hash": "154665f941cd5be0757bf5f5cedd9ccc"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/home/HomeViewModel.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158953,
+    "ast_hash": "632378427fb4d9bb871eee68fb594cc9",
+    "semantic_hash": "632378427fb4d9bb871eee68fb594cc9"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerScreen.kt": {
+    "mtime": 1791393500.7011614,
+    "seen": 1791393585.158954,
+    "ast_hash": "e54b993995114da42607386a25069e9b",
+    "semantic_hash": "e54b993995114da42607386a25069e9b"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModel.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158955,
+    "ast_hash": "6a14d0a76634f8f93cd4e021c2face4e",
+    "semantic_hash": "6a14d0a76634f8f93cd4e021c2face4e"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyCashRegisterScreen.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158956,
+    "ast_hash": "f6bd544d8c0b730f6ca8fbc6beda312a",
+    "semantic_hash": "f6bd544d8c0b730f6ca8fbc6beda312a"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterViewModel.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158957,
+    "ast_hash": "304b5a6bc43aa540cae58c222064435f",
+    "semantic_hash": "304b5a6bc43aa540cae58c222064435f"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/slip/DigitalSlipRenderer.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589582,
+    "ast_hash": "d27efce50891990972eeb2874032039b",
+    "semantic_hash": "d27efce50891990972eeb2874032039b"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/slip/ReceiptPreviewScreen.kt": {
+    "mtime": 1790772050.0,
+    "seen": 1791393585.1589582,
+    "ast_hash": "bfe48045256dec37e0ebd5244efc0aa1",
+    "semantic_hash": "bfe48045256dec37e0ebd5244efc0aa1"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/theme/Color.kt": {
+    "mtime": 1791393514.9521074,
+    "seen": 1791393585.1589592,
+    "ast_hash": "8ae324905804b295fb9e9865f3d90fe9",
+    "semantic_hash": "8ae324905804b295fb9e9865f3d90fe9"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/theme/Theme.kt": {
+    "mtime": 1791100158.788043,
+    "seen": 1791393585.15896,
+    "ast_hash": "1047ef1ca1d35e5d774b3785779a398a",
+    "semantic_hash": "1047ef1ca1d35e5d774b3785779a398a"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/theme/Type.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.15896,
+    "ast_hash": "588d9ca66398c4092029581683c001ea",
+    "semantic_hash": "588d9ca66398c4092029581683c001ea"
+  },
+  "composeApp/src/iosMain/kotlin/com/appwork/mandisamiti/platform/CameraSlipPicker.ios.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589608,
+    "ast_hash": "4fb6e9b03b195c3ea059d223b6f19279",
+    "semantic_hash": "4fb6e9b03b195c3ea059d223b6f19279"
+  },
+  "composeApp/src/iosMain/kotlin/com/appwork/mandisamiti/platform/SoundboxTtsManager.ios.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158962,
+    "ast_hash": "643eed5f7da63936d298de8ed42f6734",
+    "semantic_hash": "643eed5f7da63936d298de8ed42f6734"
+  },
+  "composeApp/src/iosMain/kotlin/com/appwork/mandisamiti/platform/WhatsAppShareManager.ios.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158963,
+    "ast_hash": "8c9d8da32ee68f4729d80f3d48eb5201",
+    "semantic_hash": "8c9d8da32ee68f4729d80f3d48eb5201"
+  },
+  "composeApp/src/jvmMain/kotlin/com/appwork/mandisamiti/DemoSimulator.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158963,
+    "ast_hash": "70c902870b32cfebc97515f356b2fe21",
+    "semantic_hash": "70c902870b32cfebc97515f356b2fe21"
+  },
+  "composeApp/src/jvmMain/kotlin/com/appwork/mandisamiti/main.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158964,
+    "ast_hash": "7061ea2b46d5c774d2b81c4c66125c69",
+    "semantic_hash": "7061ea2b46d5c774d2b81c4c66125c69"
+  },
+  "composeApp/src/jvmMain/kotlin/com/appwork/mandisamiti/platform/CameraSlipPicker.jvm.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158965,
+    "ast_hash": "4c6043fd1e6c18e3ddc271048caa7e35",
+    "semantic_hash": "4c6043fd1e6c18e3ddc271048caa7e35"
+  },
+  "composeApp/src/jvmMain/kotlin/com/appwork/mandisamiti/platform/SoundboxTtsManager.jvm.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158965,
+    "ast_hash": "e30cb7920a56f7771bad4a54195ebadf",
+    "semantic_hash": "e30cb7920a56f7771bad4a54195ebadf"
+  },
+  "composeApp/src/jvmMain/kotlin/com/appwork/mandisamiti/platform/WhatsAppShareManager.jvm.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158966,
+    "ast_hash": "ffaf81121fcf65c032daba00d282837e",
+    "semantic_hash": "ffaf81121fcf65c032daba00d282837e"
+  },
+  "composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/e2e/MandiSamitiE2ETest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158966,
+    "ast_hash": "0acd278311ba5fc1ed9e1ad47d15fc7d",
+    "semantic_hash": "0acd278311ba5fc1ed9e1ad47d15fc7d"
+  },
+  "composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/deal/DealEntryViewModelTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158967,
+    "ast_hash": "e591fd9d7f0bde61cd392cfec941e8c9",
+    "semantic_hash": "e591fd9d7f0bde61cd392cfec941e8c9"
+  },
+  "composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/home/HomeViewModelTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158968,
+    "ast_hash": "be359bc7fc0b5b7f03704d342de736e7",
+    "semantic_hash": "be359bc7fc0b5b7f03704d342de736e7"
+  },
+  "composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModelTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158968,
+    "ast_hash": "991e1e9c96ef0fc9f4ba9d26a37ec9b5",
+    "semantic_hash": "991e1e9c96ef0fc9f4ba9d26a37ec9b5"
+  },
+  "composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterViewModelTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589692,
+    "ast_hash": "d46b7e1e4a097cefac508ba9f58b75b7",
+    "semantic_hash": "d46b7e1e4a097cefac508ba9f58b75b7"
+  },
+  "core-data/build.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589692,
+    "ast_hash": "4e756188fdd717243b31d15209b42326",
+    "semantic_hash": "4e756188fdd717243b31d15209b42326"
+  },
+  "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstCashTransactionRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.15897,
+    "ast_hash": "9415d8a5b260e0ba454653b51a1c1c4e",
+    "semantic_hash": "9415d8a5b260e0ba454653b51a1c1c4e"
+  },
+  "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstDealRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589708,
+    "ast_hash": "2e44e14c260ab334a54224d3240826f4",
+    "semantic_hash": "2e44e14c260ab334a54224d3240826f4"
+  },
+  "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstPartyRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589708,
+    "ast_hash": "f666f7bfe02016cbd672948939941e07",
+    "semantic_hash": "f666f7bfe02016cbd672948939941e07"
+  },
+  "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstShopProfileRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589718,
+    "ast_hash": "fbb797cddb77f013d01719c98cc9df48",
+    "semantic_hash": "fbb797cddb77f013d01719c98cc9df48"
+  },
+  "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/sync/SyncEngine.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589718,
+    "ast_hash": "482f665a01df75446bc81031ee502fd6",
+    "semantic_hash": "482f665a01df75446bc81031ee502fd6"
+  },
+  "core-data/src/jvmTest/kotlin/com/appwork/mandisamiti/data/RepositoryTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158973,
+    "ast_hash": "37005fe4f4ab0d0462b7aaff265e57c5",
+    "semantic_hash": "37005fe4f4ab0d0462b7aaff265e57c5"
+  },
+  "core-database/build.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158973,
+    "ast_hash": "a327ac31d2ad548584a62b6babbcc6da",
+    "semantic_hash": "a327ac31d2ad548584a62b6babbcc6da"
+  },
+  "core-database/src/androidMain/kotlin/com/appwork/mandisamiti/database/DriverFactory.android.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158974,
+    "ast_hash": "e6beec26e57b9ab2ea872a33a3416ac7",
+    "semantic_hash": "e6beec26e57b9ab2ea872a33a3416ac7"
+  },
+  "core-database/src/commonMain/kotlin/com/appwork/mandisamiti/database/DriverFactory.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158975,
+    "ast_hash": "7bd8b34a52aa276a4453d1520df1c8ab",
+    "semantic_hash": "7bd8b34a52aa276a4453d1520df1c8ab"
+  },
+  "core-database/src/iosMain/kotlin/com/appwork/mandisamiti/database/DriverFactory.ios.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158975,
+    "ast_hash": "02743bac00173ae6d40f5bbea63855b8",
+    "semantic_hash": "02743bac00173ae6d40f5bbea63855b8"
+  },
+  "core-database/src/jvmMain/kotlin/com/appwork/mandisamiti/database/DriverFactory.jvm.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158976,
+    "ast_hash": "4e340d79d36af311118c3677cd5c72d6",
+    "semantic_hash": "4e340d79d36af311118c3677cd5c72d6"
+  },
+  "core-database/src/jvmMain/kotlin/com/appwork/mandisamiti/database/TestDatabaseFactory.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158976,
+    "ast_hash": "3737e485f1c8a8a3b0f5259b806e518c",
+    "semantic_hash": "3737e485f1c8a8a3b0f5259b806e518c"
+  },
+  "core-database/src/jvmTest/kotlin/com/appwork/mandisamiti/database/DatabaseTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158977,
+    "ast_hash": "e8d1ded6ddbccdbf08a78b6c7d63482b",
+    "semantic_hash": "e8d1ded6ddbccdbf08a78b6c7d63482b"
+  },
+  "core-domain/build.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158978,
+    "ast_hash": "c02ddb72afba03c3373085cc23b09c9d",
+    "semantic_hash": "c02ddb72afba03c3373085cc23b09c9d"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/math/MandiMathEngine.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158978,
+    "ast_hash": "592364770ad263a14b4e8589c3190d19",
+    "semantic_hash": "592364770ad263a14b4e8589c3190d19"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/math/RuralInterestEngine.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589792,
+    "ast_hash": "3bb591cfffa251ab469cfab20994617f",
+    "semantic_hash": "3bb591cfffa251ab469cfab20994617f"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/model/CashTransaction.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589792,
+    "ast_hash": "e4af070176a013df0f941f363455ce74",
+    "semantic_hash": "e4af070176a013df0f941f363455ce74"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/model/Commodity.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589801,
+    "ast_hash": "96d378a8761dae3dcdddb0623358810e",
+    "semantic_hash": "96d378a8761dae3dcdddb0623358810e"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/model/Deal.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158981,
+    "ast_hash": "dbba5ca2439265501cf435a1e456c475",
+    "semantic_hash": "dbba5ca2439265501cf435a1e456c475"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/model/Party.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158981,
+    "ast_hash": "1a13a7adc7a9b2d72f25f2c2cabf1949",
+    "semantic_hash": "1a13a7adc7a9b2d72f25f2c2cabf1949"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/model/ShopProfile.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.1589818,
+    "ast_hash": "c2f8258c84e74eb51dab6d3edd97154d",
+    "semantic_hash": "c2f8258c84e74eb51dab6d3edd97154d"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/CashTransactionRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158983,
+    "ast_hash": "983151b37fec9e01c4657e7d5b88fece",
+    "semantic_hash": "983151b37fec9e01c4657e7d5b88fece"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/DealRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158983,
+    "ast_hash": "bd40ab783ce9eb82f3aec6005925a7c0",
+    "semantic_hash": "bd40ab783ce9eb82f3aec6005925a7c0"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/PartyRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158984,
+    "ast_hash": "7dcf9606cbd91bb5af4b72b9418d55bb",
+    "semantic_hash": "7dcf9606cbd91bb5af4b72b9418d55bb"
+  },
+  "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/ShopProfileRepository.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158984,
+    "ast_hash": "b5105456c39b0e825e3e0061d22ee4a2",
+    "semantic_hash": "b5105456c39b0e825e3e0061d22ee4a2"
+  },
+  "core-domain/src/commonTest/kotlin/com/appwork/mandisamiti/domain/MandiMathEngineTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158985,
+    "ast_hash": "c93b48489b9eaf388f92906e6e6c70e7",
+    "semantic_hash": "c93b48489b9eaf388f92906e6e6c70e7"
+  },
+  "core-domain/src/commonTest/kotlin/com/appwork/mandisamiti/domain/RuralInterestEngineTest.kt": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158986,
+    "ast_hash": "79d3a8748a303ff4cb071cdba57a8378",
+    "semantic_hash": "79d3a8748a303ff4cb071cdba57a8378"
+  },
+  "data/sessions.json": {
+    "mtime": 1790763731.0,
+    "seen": 1791393585.158986,
+    "ast_hash": "4c3e48e14f45d5f8a2336bb06f6551c6",
+    "semantic_hash": "4c3e48e14f45d5f8a2336bb06f6551c6"
+  },
+  "gradlew": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158987,
+    "ast_hash": "266606e78242737ef3da02a80ea0564d",
+    "semantic_hash": "266606e78242737ef3da02a80ea0564d"
+  },
+  "settings.gradle.kts": {
+    "mtime": 1790748097.0,
+    "seen": 1791393585.158987,
+    "ast_hash": "0a710e940899aab6a27baaaec3bb0a4d",
+    "semantic_hash": "0a710e940899aab6a27baaaec3bb0a4d"
+  }
+}
