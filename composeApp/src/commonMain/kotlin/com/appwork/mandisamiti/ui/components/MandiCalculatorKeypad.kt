@@ -10,13 +10,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,7 +82,7 @@ fun MandiCalculatorKeypad(
             KeypadButton(text = "5", modifier = Modifier.weight(1f)) { onKeyPressed(KeypadAction.DIGIT_5) }
             KeypadButton(text = "6", modifier = Modifier.weight(1f)) { onKeyPressed(KeypadAction.DIGIT_6) }
             KeypadButton(
-                text = "⌫ काटें",
+                text = "काटें",
                 backgroundColor = MandiBorder,
                 textColor = MandiTextPrimary,
                 modifier = Modifier.weight(1.2f)
@@ -92,7 +98,8 @@ fun MandiCalculatorKeypad(
             KeypadButton(text = "8", modifier = Modifier.weight(1f)) { onKeyPressed(KeypadAction.DIGIT_8) }
             KeypadButton(text = "9", modifier = Modifier.weight(1f)) { onKeyPressed(KeypadAction.DIGIT_9) }
             KeypadButton(
-                text = if (showSubmitInsteadOfNext) "✅ पूर्ण" else "अगला ➔",
+                text = if (showSubmitInsteadOfNext) "पूर्ण" else "अगला",
+                icon = if (showSubmitInsteadOfNext) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
                 backgroundColor = if (showSubmitInsteadOfNext) MandiGreenPayable else MandiAmberPrimary,
                 textColor = Color.White,
                 modifier = Modifier.weight(1.2f)
@@ -116,7 +123,8 @@ fun MandiCalculatorKeypad(
 
 @Composable
 private fun KeypadButton(
-    text: String,
+    text: String = "",
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MandiSurface,
     textColor: Color = MandiTextPrimary,
@@ -132,11 +140,26 @@ private fun KeypadButton(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            color = textColor,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = textColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            if (text.isNotEmpty()) {
+                Text(
+                    text = text,
+                    color = textColor,
+                    fontSize = if (icon != null) 15.sp else 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }

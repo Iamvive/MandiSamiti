@@ -15,3 +15,8 @@ app/.agent/
 *.hprof
 *.apk
 *.aab
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.env

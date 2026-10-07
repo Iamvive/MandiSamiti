@@ -26,7 +26,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Security
@@ -287,17 +289,28 @@ private fun ShopDetailsSection(
                     fontWeight = FontWeight.Bold,
                     color = MandiTextPrimary
                 )
-                Text(
-                    text = "⚡ नमूना डेटा भरें",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiAmberDark,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(MandiAmberLight.copy(alpha = 0.4f))
                         .clickable { onFillSample() }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = null,
+                        tint = MandiAmberDark,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "नमूना डेटा भरें",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiAmberDark
+                    )
+                }
             }
 
             // Mobile Number
@@ -640,7 +653,18 @@ private fun MpinSetupSection(
                     if (confirmError != null) {
                         Text(confirmError, color = MandiRedReceivable, fontSize = 11.sp)
                     } else if (confirmMpin.length == 4 && confirmMpin == mpin) {
-                        Text("✓ MPIN मेल खा गया है", color = MandiGreenPayable, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MandiGreenPayable,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text("MPIN मेल खा गया है", color = MandiGreenPayable, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 keyboardOptions = KeyboardOptions(

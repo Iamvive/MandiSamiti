@@ -12,19 +12,19 @@
     <string name="delete">Delete</string>
 
     <!-- Soundbox -->
-    <string name="sound_on">🔊 Voice ON</string>
-    <string name="sound_off">🔇 Voice OFF</string>
-    <string name="replay_sound">🗣️ Replay Audio</string>
+    <string name="sound_on">Voice ON</string>
+    <string name="sound_off">Voice OFF</string>
+    <string name="replay_sound">Replay Audio</string>
 
     <!-- Home Screen -->
     <string name="market_receivable">Market Credit (Receivable)</string>
     <string name="farmer_payable">Farmer Deposits (Payable)</string>
     <string name="search_hint">Search farmer or village...</string>
     <string name="filter_all">All</string>
-    <string name="filter_receivable">🔴 Receivable</string>
-    <string name="filter_payable">🟢 Payable</string>
-    <string name="action_new_entry">⚡ New Crop Deal / Sale</string>
-    <string name="day_closing_btn">📊 Daily Cash Summary</string>
+    <string name="filter_receivable">Receivable</string>
+    <string name="filter_payable">Payable</string>
+    <string name="action_new_entry">New Crop Deal / Sale</string>
+    <string name="day_closing_btn">Daily Cash Summary</string>
 
     <!-- Deal / Entry Screen -->
     <string name="new_deal_title">Record New Deal</string>
@@ -44,19 +44,19 @@
     <string name="other_deductions_label">Other Cuts (₹)</string>
     <string name="net_farmer_payable_label">Net Farmer Payable</string>
     <string name="net_buyer_receivable_label">Net Buyer Receivable</string>
-    <string name="camera_slip_btn">📷 Scale Slip Photo</string>
-    <string name="photo_attached">✅ Photo Attached</string>
-    <string name="create_bill_btn">✅ Save Deal</string>
+    <string name="camera_slip_btn">Scale Slip Photo</string>
+    <string name="photo_attached">Photo Attached</string>
+    <string name="create_bill_btn">Save Deal</string>
 
     <!-- Party Ledger -->
     <string name="khata_title">Ledger Statement</string>
-    <string name="give_cash_btn">🔴 Give Cash / Advance</string>
-    <string name="receive_cash_btn">🟢 Receive Cash / Payment</string>
-    <string name="interest_calc_btn">📈 Rural Interest Calc</string>
-    <string name="settlement_waiver_btn">🤝 Discount / Waiver</string>
+    <string name="give_cash_btn">Give Cash / Advance</string>
+    <string name="receive_cash_btn">Receive Cash / Payment</string>
+    <string name="interest_calc_btn">Rural Interest Calc</string>
+    <string name="settlement_waiver_btn">Discount / Waiver</string>
     <string name="interest_rate_label">Monthly Interest Rate (%)</string>
     <string name="accrued_interest_label">Accrued Interest</string>
-    <string name="add_interest_to_ledger">➕ Add Interest to Ledger</string>
+    <string name="add_interest_to_ledger">Add Interest to Ledger</string>
 
     <!-- Daily Closing -->
     <string name="daily_closing_title">Daily Cash Register</string>

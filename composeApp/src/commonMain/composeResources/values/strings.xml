@@ -12,19 +12,19 @@
     <string name="delete">हटाएं</string>
 
     <!-- Soundbox -->
-    <string name="sound_on">🔊 आवाज़ चालू</string>
-    <string name="sound_off">🔇 आवाज़ बंद</string>
-    <string name="replay_sound">🗣️ दोबारा सुनें</string>
+    <string name="sound_on">आवाज़ चालू</string>
+    <string name="sound_off">आवाज़ बंद</string>
+    <string name="replay_sound">दोबारा सुनें</string>
 
     <!-- Home Screen -->
     <string name="market_receivable">बाजार में बाकी (लेना है)</string>
     <string name="farmer_payable">किसान जमा (देना है)</string>
     <string name="search_hint">किसान या गाँव का नाम खोजें...</string>
     <string name="filter_all">सभी</string>
-    <string name="filter_receivable">🔴 लेना है</string>
-    <string name="filter_payable">🟢 देना है</string>
-    <string name="action_new_entry">⚡ नया पर्चा / बिक्री दर्ज करें</string>
-    <string name="day_closing_btn">📊 आज का गल्ला हिसाब</string>
+    <string name="filter_receivable">लेना है</string>
+    <string name="filter_payable">देना है</string>
+    <string name="action_new_entry">नया पर्चा / बिक्री दर्ज करें</string>
+    <string name="day_closing_btn">आज का गल्ला हिसाब</string>
 
     <!-- Deal / Entry Screen -->
     <string name="new_deal_title">नया पर्चा दर्ज करें</string>
@@ -44,19 +44,19 @@
     <string name="other_deductions_label">अन्य काट (₹)</string>
     <string name="net_farmer_payable_label">किसान को शुद्ध देय रकम</string>
     <string name="net_buyer_receivable_label">खरीदार से कुल वसूली</string>
-    <string name="camera_slip_btn">📷 कच्ची पर्ची फोटो</string>
-    <string name="photo_attached">✅ पर्ची फोटो संलग्न</string>
-    <string name="create_bill_btn">✅ पर्चा सुरक्षित करें</string>
+    <string name="camera_slip_btn">कच्ची पर्ची फोटो</string>
+    <string name="photo_attached">पर्ची फोटो संलग्न</string>
+    <string name="create_bill_btn">पर्चा सुरक्षित करें</string>
 
     <!-- Party Ledger -->
     <string name="khata_title">खाता विवरण</string>
-    <string name="give_cash_btn">🔴 रुपये दिए / उधार</string>
-    <string name="receive_cash_btn">🟢 रुपये मिले / जमा</string>
-    <string name="interest_calc_btn">📈 देसी ब्याज गणना</string>
-    <string name="settlement_waiver_btn">🤝 छूट / समझौता</string>
+    <string name="give_cash_btn">रुपये दिए / उधार</string>
+    <string name="receive_cash_btn">रुपये मिले / जमा</string>
+    <string name="interest_calc_btn">देसी ब्याज गणना</string>
+    <string name="settlement_waiver_btn">छूट / समझौता</string>
     <string name="interest_rate_label">मासिक ब्याज दर (सैकड़ा %)</string>
     <string name="accrued_interest_label">संचित ब्याज</string>
-    <string name="add_interest_to_ledger">➕ ब्याज खाते में जोड़ें</string>
+    <string name="add_interest_to_ledger">ब्याज खाते में जोड़ें</string>
 
     <!-- Daily Closing -->
     <string name="daily_closing_title">दैनिक गल्ला रोकड़ सारांश</string>

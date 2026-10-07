@@ -3,29 +3,29 @@ package com.appwork.mandisamiti.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * MandiSamiti Theme Colors — Powered by NoGravity Design Language (NGDL)
- * True Dual-State Monochromatic Foundation with Calibrated Semantic Highlights
+ * MandiSamiti Theme Colors — Powered by NoGravity Design Language (NGDL v1.2)
+ * Conforms strictly to docs/design-system/DESIGN-SYSTEM.md §2.1
  */
 
 // NGDL Monochromatic Space Black & Graphite (Dark Theme)
 val DarkNgdlBackground = Color(0xFF08090A)
 val DarkNgdlSurface = Color(0xFF121316)
 val DarkNgdlSurfaceElevated = Color(0xFF1A1C20)
-val DarkNgdlBorder = Color(0x14FFFFFF)
-val DarkNgdlBorderActive = Color(0x38FFFFFF)
+val DarkNgdlBorder = Color(0x14FFFFFF) // 8% alpha
+val DarkNgdlBorderActive = Color(0x38FFFFFF) // 22% alpha
 val DarkNgdlTextPrimary = Color(0xFFFFFFFF)
 val DarkNgdlTextSecondary = Color(0xFFA0A5AE)
 val DarkNgdlTextTertiary = Color(0xFF5F6570)
 
-// NGDL Apple Cupertino / Studio Clean (Light Theme)
-val LightNgdlBackground = Color(0xFFF5F5F7)
+// NGDL Pure Alabaster & Milk White (Light Theme)
+val LightNgdlBackground = Color(0xFFF8F9FA)
 val LightNgdlSurface = Color(0xFFFFFFFF)
-val LightNgdlSurfaceElevated = Color(0xFFEBEBED)
-val LightNgdlBorder = Color(0x10000000)
-val LightNgdlBorderActive = Color(0x2E000000)
-val LightNgdlTextPrimary = Color(0xFF1D1D1F)
-val LightNgdlTextSecondary = Color(0xFF6E6E73)
-val LightNgdlTextTertiary = Color(0xFF86868B)
+val LightNgdlSurfaceElevated = Color(0xFFF1F3F5)
+val LightNgdlBorder = Color(0x14000000) // 8% alpha
+val LightNgdlBorderActive = Color(0x40000000) // 25% alpha
+val LightNgdlTextPrimary = Color(0xFF090A0C)
+val LightNgdlTextSecondary = Color(0xFF585E6B)
+val LightNgdlTextTertiary = Color(0xFF8C929E)
 
 // Mandi Domain Aliases (Mapped to NGDL Light Defaults)
 val MandiBackground = LightNgdlBackground
@@ -49,9 +49,9 @@ val MandiGold = Color(0xFFD97706)
 val MandiGoldLight = Color(0xFFFFFBEB)
 
 // Neutral Tokens
-val MandiNeutralLight = Color(0xFFEBEBED)
-val MandiNeutralBorder = Color(0x10000000)
-val MandiNeutralText = Color(0xFF1D1D1F)
+val MandiNeutralLight = Color(0xFFF1F3F5)
+val MandiNeutralBorder = Color(0x14000000)
+val MandiNeutralText = Color(0xFF090A0C)
 
 // High-Trust Financial Status Colors (Semantic Red / Green)
 val MandiRedReceivable = Color(0xFFDC2626)  // Receivable (लेना है)
