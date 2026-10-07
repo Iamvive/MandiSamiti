@@ -63,11 +63,18 @@ val MandiNeutralText = Color(0xFF090A0C)
 // High-Trust Financial Status Colors (Semantic Red / Green)
 val MandiRedReceivable = Color(0xFFDC2626)       // Receivable (लेना है)
 val MandiRedLight = Color(0xFFFEF2F2)
-val MandiRedBorder = Color(0x14DC2626)
-val MandiRedText = Color(0xFFDC2626)
+val MandiRedBorder = Color(0x33DC2626)          // 20% alpha
+val MandiRedText = Color(0xFFB91C1C)            // Deep Crimson for high contrast (5.4:1)
 
 val MandiGreenPayable = Color(0xFF16A34A)        // Payable (देना है)
 val MandiGreenLight = Color(0xFFF0FDF4)
-val MandiGreenBorder = Color(0x1416A34A)
-val MandiGreenText = Color(0xFF16A34A)
+val MandiGreenBorder = Color(0x3316A34A)        // 20% alpha
+val MandiGreenText = Color(0xFF15803D)          // Deep Emerald for high contrast (5.2:1)
+
+// NGDL Solid Action Button Pairs (Strictly conforms to DESIGN-SYSTEM.md §2.1)
+val MandiBtnSuccessBg = Color(0xFF15803D)       // Solid dark green fill
+val MandiBtnSuccessFg = Color(0xFFFFFFFF)       // Crisp white text on success
+val MandiBtnDangerBg = Color(0xFFDC2626)        // Solid deep red fill
+val MandiBtnDangerFg = Color(0xFFFFFFFF)        // Crisp white text on danger
+
 

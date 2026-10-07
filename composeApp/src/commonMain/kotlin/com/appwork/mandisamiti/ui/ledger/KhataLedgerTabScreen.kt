@@ -52,6 +52,8 @@ import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
+import androidx.compose.material3.ExtendedFloatingActionButton
+
 @Composable
 fun KhataLedgerTabScreen(
     uiState: HomeUiState,
@@ -64,30 +66,29 @@ fun KhataLedgerTabScreen(
 ) {
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { onAddNewPartyClick() },
                 containerColor = MandiPrimaryAction,
                 contentColor = MandiPrimaryActionText,
-                shape = CircleShape,
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
+                shape = RoundedCornerShape(14.dp),
+                icon = {
                     Icon(
                         imageVector = Icons.Default.PersonAdd,
-                        contentDescription = if (isEnglish) "Add Account" else "नया खाता",
+                        contentDescription = null,
+                        tint = MandiPrimaryActionText,
                         modifier = Modifier.size(20.dp)
                     )
+                },
+                text = {
                     Text(
-                        text = if (isEnglish) "Add Party" else "नया खाता",
+                        text = if (isEnglish) "+ Add Party" else "+ नया खाता",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MandiPrimaryActionText
                     )
-                }
-            }
+                },
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
         },
         containerColor = MandiBackground
     ) { paddingValues ->

@@ -16,6 +16,7 @@ import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.platform.rememberCameraSlipPicker
@@ -183,6 +184,7 @@ fun App(
             }
 
             is Screen.DealEntry -> {
+                MandiBackHandler { currentScreen = Screen.Home }
                 val dealViewModel = remember(screen.existingDealId) {
                     DealEntryViewModel(
                         shopId = shopId,
@@ -215,6 +217,7 @@ fun App(
             }
 
             is Screen.PartyLedger -> {
+                MandiBackHandler { currentScreen = Screen.Home }
                 val ledgerViewModel = remember(screen.partyId) {
                     PartyLedgerViewModel(
                         shopId = shopId,
@@ -235,6 +238,7 @@ fun App(
             }
 
             is Screen.ReceiptPreview -> {
+                MandiBackHandler { currentScreen = Screen.Home }
                 var shopProfile by remember {
                     mutableStateOf(
                         ShopProfile(
@@ -267,6 +271,7 @@ fun App(
             }
 
             is Screen.DailyRegister -> {
+                MandiBackHandler { currentScreen = Screen.Home }
                 val registerViewModel = remember {
                     DailyRegisterViewModel(
                         shopId = shopId,

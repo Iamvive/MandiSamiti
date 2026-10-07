@@ -53,6 +53,10 @@ import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiBtnDangerBg
+import com.appwork.mandisamiti.ui.theme.MandiBtnDangerFg
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessFg
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiNavy
@@ -162,34 +166,52 @@ fun DailyCashRegisterScreen(
                     onClick = { showDirectCashDialog = TransactionType.JAMA_RECEIVED },
                     modifier = Modifier
                         .weight(1f)
-                        .height(46.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiGreenPayable)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiBtnSuccessBg,
+                        contentColor = MandiBtnSuccessFg
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
+                        tint = MandiBtnSuccessFg,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text(text = "नकद आवक (जमा)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "नकद आवक (जमा)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiBtnSuccessFg
+                    )
                 }
 
                 Button(
                     onClick = { showDirectCashDialog = TransactionType.UDHAR_GIVEN },
                     modifier = Modifier
                         .weight(1f)
-                        .height(46.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiRedReceivable)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiBtnDangerBg,
+                        contentColor = MandiBtnDangerFg
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = null,
+                        tint = MandiBtnDangerFg,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text(text = "नकद निकासी (खर्च)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "नकद निकासी (खर्च)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiBtnDangerFg
+                    )
                 }
             }
 

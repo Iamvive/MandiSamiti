@@ -72,6 +72,7 @@ import com.appwork.mandisamiti.ui.theme.MandiRedLight
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
 import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
+import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
@@ -209,6 +210,9 @@ fun PartyLedgerScreen(
                     label = "जमा मिला",
                     icon = Icons.Default.ArrowDownward,
                     color = MandiGreenPayable,
+                    backgroundColor = MandiGreenLight,
+                    borderColor = MandiGreenBorder,
+                    textColor = MandiGreenText,
                     onClick = { showCashEntryType = TransactionType.JAMA_RECEIVED },
                     modifier = Modifier.weight(1f)
                 )
@@ -216,13 +220,19 @@ fun PartyLedgerScreen(
                     label = "भुगतान दिया",
                     icon = Icons.Default.ArrowUpward,
                     color = MandiRedReceivable,
+                    backgroundColor = MandiRedLight,
+                    borderColor = MandiRedBorder,
+                    textColor = MandiRedText,
                     onClick = { showCashEntryType = TransactionType.UDHAR_GIVEN },
                     modifier = Modifier.weight(1f)
                 )
                 FintechActionButton(
                     label = "ब्याज हिसाब",
                     icon = Icons.Default.Calculate,
-                    color = MandiAmberDark,
+                    color = MandiTextPrimary,
+                    backgroundColor = MandiSurfaceElevated,
+                    borderColor = MandiBorder,
+                    textColor = MandiTextPrimary,
                     onClick = { viewModel.openInterestDialog() },
                     modifier = Modifier.weight(1f)
                 )
@@ -451,14 +461,17 @@ private fun FintechActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     color: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MandiSurface,
+    borderColor: Color = MandiBorder,
+    textColor: Color = color
 ) {
     val shape = RoundedCornerShape(10.dp)
     Row(
         modifier = modifier
             .clip(shape)
-            .background(MandiSurface)
-            .border(1.dp, MandiBorder, shape)
+            .background(backgroundColor)
+            .border(1.dp, borderColor, shape)
             .clickable { onClick() }
             .padding(vertical = 10.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -475,7 +488,7 @@ private fun FintechActionButton(
             text = label,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = MandiTextPrimary
+            color = textColor
         )
     }
 }

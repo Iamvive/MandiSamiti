@@ -17,6 +17,7 @@ import com.appwork.mandisamiti.ui.ledger.KhataLedgerTabScreen
 import com.appwork.mandisamiti.ui.navigation.MandiBottomBar
 import com.appwork.mandisamiti.ui.navigation.NavigationTab
 import com.appwork.mandisamiti.ui.settings.SettingsScreen
+import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 
 @Composable
@@ -29,6 +30,11 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // When not on Dashboard, hardware/system back returns to Dashboard
+    MandiBackHandler(enabled = uiState.currentTab != NavigationTab.DASHBOARD) {
+        viewModel.selectTab(NavigationTab.DASHBOARD)
+    }
 
     Scaffold(
         topBar = {
