@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
+import com.appwork.mandisamiti.ui.navigation.NavigationTab
+
 enum class PartyFilter {
     ALL,
     RECEIVABLE, // 🔴 लेना है
@@ -33,8 +35,13 @@ data class HomeUiState(
     val activeFilter: PartyFilter = PartyFilter.ALL,
     val allParties: List<PartyWithBalance> = emptyList(),
     val filteredParties: List<PartyWithBalance> = emptyList(),
+    val currentTab: NavigationTab = NavigationTab.DASHBOARD,
+    val isEnglish: Boolean = false,
     val isLoading: Boolean = true
-)
+) {
+    val isSoundEnabled: Boolean get() = shopProfile?.isSoundEnabled ?: true
+    val allPartiesWithBalance: List<PartyWithBalance> get() = allParties
+}
 
 class HomeViewModel(
     private val shopProfileRepository: ShopProfileRepository,
@@ -129,6 +136,14 @@ class HomeViewModel(
             activeFilter = filter,
             filteredParties = filterList(_uiState.value.allParties, _uiState.value.searchQuery, filter)
         )
+    }
+
+    fun selectTab(tab: NavigationTab) {
+        _uiState.value = _uiState.value.copy(currentTab = tab)
+    }
+
+    fun setLanguage(isEnglish: Boolean) {
+        _uiState.value = _uiState.value.copy(isEnglish = isEnglish)
     }
 
     fun toggleSoundSetting() {

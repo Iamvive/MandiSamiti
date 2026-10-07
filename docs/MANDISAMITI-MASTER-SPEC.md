@@ -31,9 +31,9 @@ MandiSamiti is an enterprise-grade, high-trust accounting and trade execution sy
 | **Paisa-Precise Math Core** | Decimal-free integer arithmetic for all mandi calculations | 100% mathematical honesty | ✅ **Live on Phone** | Phase 0 (Done) |
 | **Voice Soundbox (TTS)** | Vernacular audio playback for settlements | Audio reassurance for busy/senior users | ✅ **Live on Phone** | Phase 0 (Done) |
 | **WhatsApp Slip Export** | 1-tap instant WhatsApp bill & receipt delivery | Pre-formatted Hindi slips for farmers | ✅ **Live on Phone** | Phase 0 (Done) |
-| **4-Tab Navigation Bar** | Screen decomposition (Dashboard, Khata, Galla, Settings) | Prevents single-screen overcrowding | 🟡 **In Progress** | Phase 1 |
-| **Language Switcher (हिन्दी/EN)** | Dynamic runtime toggle between Hindi & English | Easy switch for younger vs senior users | 🟡 **In Progress** | Phase 1 |
-| **Authentication & Sign Out** | Phone + 4-digit MPIN, Session Store & Sign Out | Simple PIN memory, no complex passwords | 🟡 **In Progress** | Phase 2 |
+| **4-Tab Navigation Bar** | Screen decomposition (Dashboard, Khata, Galla, Settings) | Prevents single-screen overcrowding | ✅ **Live on Phone** | Phase 1 (Done) |
+| **Language Switcher (हिन्दी/EN)** | Dynamic runtime toggle between Hindi & English | Easy switch for younger vs senior users | ✅ **Live on Phone** | Phase 1 (Done) |
+| **Authentication & Sign Out** | Phone + 4-digit MPIN, Session Store & Sign Out | Simple PIN memory, no complex passwords | ✅ **Live on Phone** | Phase 1 (Done) |
 | **Multi-Shop Management** | Switch between multiple mandi licenses/firms | 1-tap dropdown in Settings | ⚪ **Planned** | Phase 2 |
 | **Entry Deletion & Void Audit** | Soft-delete / Void with Reason & instant balance reversal | Mistake protection with audit trail | ⚪ **Planned** | Phase 3 |
 | **Camera Slip OCR / Attachment**| Attach or scan physical weighbridge slips (कांटा पर्ची) | Photo capture with thumbnail preview | 🟡 **Drafted** | Phase 3 |

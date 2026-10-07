@@ -1298,16 +1298,6 @@
       "degree": 28
     },
     {
-      "id": "core_domain_src_commonmain_kotlin_com_appwork_mandisamiti_domain_model_shopprofile_shopprofile",
-      "label": "ShopProfile",
-      "degree": 26
-    },
-    {
-      "id": "core_data_src_commonmain_kotlin_com_appwork_mandisamiti_data_repository_offlinefirstpartyrepository_offlinefirstpartyrepository",
-      "label": "OfflineFirstPartyRepository",
-      "degree": 26
-    },
-    {
       "id": "composeapp_src_commonmain_kotlin_com_appwork_mandisamiti_ui_auth_registerviewmodel_registerviewmodel",
       "label": "RegisterViewModel",
       "degree": 26
@@ -1315,6 +1305,16 @@
     {
       "id": "core_data_src_commonmain_kotlin_com_appwork_mandisamiti_data_repository_offlinefirstdealrepository_offlinefirstdealrepository",
       "label": "OfflineFirstDealRepository",
+      "degree": 26
+    },
+    {
+      "id": "core_domain_src_commonmain_kotlin_com_appwork_mandisamiti_domain_model_shopprofile_shopprofile",
+      "label": "ShopProfile",
+      "degree": 26
+    },
+    {
+      "id": "core_data_src_commonmain_kotlin_com_appwork_mandisamiti_data_repository_offlinefirstpartyrepository_offlinefirstpartyrepository",
+      "label": "OfflineFirstPartyRepository",
       "degree": 26
     },
     {
@@ -1335,33 +1335,33 @@
   ],
   "surprises": [
     {
-      "source": "PartyLedgerViewModel",
-      "target": "CashTransactionRepository",
+      "source": "RegisterViewModel",
+      "target": "ShopProfileRepository",
       "source_files": [
-        "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModel.kt",
-        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/CashTransactionRepository.kt"
+        "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/auth/RegisterViewModel.kt",
+        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/ShopProfileRepository.kt"
       ],
       "confidence": "EXTRACTED",
       "relation": "references",
       "why": "connects across different repos/directories; bridges separate communities"
     },
     {
-      "source": "OfflineFirstCashTransactionRepository",
-      "target": "CashTransactionRepository",
+      "source": "App()",
+      "target": "OfflineFirstDealRepository",
       "source_files": [
-        "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstCashTransactionRepository.kt",
-        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/CashTransactionRepository.kt"
+        "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/App.kt",
+        "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstDealRepository.kt"
       ],
       "confidence": "EXTRACTED",
-      "relation": "implements",
+      "relation": "calls",
       "why": "connects across different repos/directories; bridges separate communities"
     },
     {
       "source": "DealEntryViewModel",
-      "target": "PartyRepository",
+      "target": "DealRepository",
       "source_files": [
         "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/deal/DealEntryViewModel.kt",
-        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/PartyRepository.kt"
+        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/DealRepository.kt"
       ],
       "confidence": "EXTRACTED",
       "relation": "references",
@@ -1369,24 +1369,24 @@
     },
     {
       "source": "PartyLedgerViewModel",
-      "target": "PartyRepository",
+      "target": "DealRepository",
       "source_files": [
         "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModel.kt",
-        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/PartyRepository.kt"
+        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/DealRepository.kt"
       ],
       "confidence": "EXTRACTED",
       "relation": "references",
       "why": "connects across different repos/directories; bridges separate communities"
     },
     {
-      "source": "OfflineFirstPartyRepository",
-      "target": "PartyRepository",
+      "source": "PartyLedgerViewModel",
+      "target": "CashTransactionRepository",
       "source_files": [
-        "core-data/src/commonMain/kotlin/com/appwork/mandisamiti/data/repository/OfflineFirstPartyRepository.kt",
-        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/PartyRepository.kt"
+        "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModel.kt",
+        "core-domain/src/commonMain/kotlin/com/appwork/mandisamiti/domain/repository/CashTransactionRepository.kt"
       ],
       "confidence": "EXTRACTED",
-      "relation": "implements",
+      "relation": "references",
       "why": "connects across different repos/directories; bridges separate communities"
     }
   ],

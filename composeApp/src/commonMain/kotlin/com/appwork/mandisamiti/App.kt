@@ -175,6 +175,9 @@ fun App(
                     },
                     onNavigateToDayClosing = {
                         currentScreen = Screen.DailyRegister
+                    },
+                    onSignOut = {
+                        currentScreen = Screen.Register
                     }
                 )
             }
