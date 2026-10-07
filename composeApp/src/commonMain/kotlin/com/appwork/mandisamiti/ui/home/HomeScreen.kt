@@ -38,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,25 +46,14 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
-import com.appwork.mandisamiti.ui.theme.MandiAmber50
-import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
-import com.appwork.mandisamiti.ui.theme.MandiAmberDark
-import com.appwork.mandisamiti.ui.theme.MandiAmberLight
-import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
-import com.appwork.mandisamiti.ui.theme.MandiGreenText
-import com.appwork.mandisamiti.ui.theme.MandiNeutralBorder
-import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
-import com.appwork.mandisamiti.ui.theme.MandiNeutralText
-import com.appwork.mandisamiti.ui.theme.MandiRedBorder
-import com.appwork.mandisamiti.ui.theme.MandiRedLight
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
-import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
+import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
@@ -93,7 +81,7 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            // Mandi Saffron Action Bar
+            // Refined Modernist Deep Carbon Action Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,13 +93,9 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(MandiAmberDark, MandiAmberPrimary)
-                            )
-                        )
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MandiPrimaryAction)
                         .clickable { onNavigateToNewEntry() },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -119,14 +103,14 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        tint = MandiPrimaryActionText,
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(
                         text = "नया सौदा / आवक दर्ज करें",
-                        color = Color.White,
-                        fontSize = 17.sp,
+                        color = MandiPrimaryActionText,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -139,16 +123,16 @@ fun HomeScreen(
                 .background(MandiBackground)
                 .padding(paddingValues),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Warm Greeting & Mandi Date Banner
+            // 1. Sleek Greeting Banner
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(MandiAmber50)
-                        .border(1.dp, MandiAmberBorder, RoundedCornerShape(10.dp))
+                        .background(MandiSurfaceElevated)
+                        .border(1.dp, MandiBorder, RoundedCornerShape(10.dp))
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -160,21 +144,21 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Store,
                             contentDescription = null,
-                            tint = MandiAmberDark,
-                            modifier = Modifier.size(18.dp)
+                            tint = MandiTextPrimary,
+                            modifier = Modifier.size(17.dp)
                         )
                         Text(
                             text = "नमस्ते, ${uiState.shopProfile?.shopName ?: "आढ़ती जी"}",
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiAmberDark
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextPrimary
                         )
                     }
                     Text(
                         text = "आज का बहीखाता",
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiAmberPrimary
+                        fontWeight = FontWeight.Medium,
+                        color = MandiTextSecondary
                     )
                 }
             }
@@ -183,15 +167,13 @@ fun HomeScreen(
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     FintechMetricCard(
                         title = "कुल लेना (Receivable)",
                         subtitle = "$receivableCount खातों से",
                         amountPaisa = uiState.totalMarketReceivablePaisa,
                         textColor = MandiRedReceivable,
-                        bgColor = MandiRedLight,
-                        borderColor = MandiRedBorder,
                         icon = Icons.AutoMirrored.Filled.TrendingUp,
                         iconTint = MandiRedReceivable,
                         modifier = Modifier.weight(1f)
@@ -202,8 +184,6 @@ fun HomeScreen(
                         subtitle = "$payableCount खातों को",
                         amountPaisa = uiState.totalFarmerPayablePaisa,
                         textColor = MandiGreenPayable,
-                        bgColor = MandiGreenLight,
-                        borderColor = MandiGreenBorder,
                         icon = Icons.AutoMirrored.Filled.TrendingDown,
                         iconTint = MandiGreenPayable,
                         modifier = Modifier.weight(1f)
@@ -233,17 +213,17 @@ fun HomeScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(MandiAmberLight)
-                                    .border(1.dp, MandiAmberBorder, CircleShape),
+                                    .background(MandiSurfaceElevated)
+                                    .border(1.dp, MandiBorder, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.AccountBalanceWallet,
                                     contentDescription = null,
-                                    tint = MandiAmberDark,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = MandiTextPrimary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                             Column {
@@ -256,7 +236,7 @@ fun HomeScreen(
                                 Text(
                                     text = "आज की नकद आवक, निकासी व मिलान",
                                     color = MandiTextSecondary,
-                                    fontSize = 13.sp
+                                    fontSize = 12.sp
                                 )
                             }
                         }
@@ -265,7 +245,7 @@ fun HomeScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             tint = MandiTextSecondary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -279,7 +259,7 @@ fun HomeScreen(
                     placeholder = {
                         Text(
                             text = "किसान, व्यापारी या गाँव का नाम खोजें...",
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             color = MandiTextMuted
                         )
                     },
@@ -288,7 +268,7 @@ fun HomeScreen(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
                             tint = MandiTextMuted,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     },
                     singleLine = true,
@@ -297,7 +277,7 @@ fun HomeScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MandiSurface,
                         unfocusedContainerColor = MandiSurface,
-                        focusedBorderColor = MandiAmberPrimary,
+                        focusedBorderColor = MandiTextPrimary,
                         unfocusedBorderColor = MandiBorder
                     )
                 )
@@ -350,14 +330,14 @@ fun HomeScreen(
                         Text(
                             text = "कोई खाता नहीं मिला",
                             color = MandiTextMuted,
-                            fontSize = 15.sp
+                            fontSize = 14.sp
                         )
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -369,8 +349,6 @@ private fun FintechMetricCard(
     subtitle: String,
     amountPaisa: Long,
     textColor: Color,
-    bgColor: Color,
-    borderColor: Color,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconTint: Color,
     modifier: Modifier = Modifier
@@ -378,11 +356,11 @@ private fun FintechMetricCard(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(bgColor)
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .background(MandiSurface)
+            .border(1.dp, MandiBorder, RoundedCornerShape(12.dp))
             .padding(14.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -390,7 +368,7 @@ private fun FintechMetricCard(
             ) {
                 Text(
                     text = title,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = MandiTextSecondary
                 )
@@ -398,13 +376,13 @@ private fun FintechMetricCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
 
             Text(
                 text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
-                fontSize = 24.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
@@ -430,10 +408,10 @@ private fun SegmentFilterChip(
     Box(
         modifier = modifier
             .clip(shape)
-            .background(if (isSelected) MandiAmberPrimary else MandiSurface)
-            .border(1.dp, if (isSelected) MandiAmberPrimary else MandiBorder, shape)
+            .background(if (isSelected) MandiPrimaryAction else MandiSurface)
+            .border(1.dp, if (isSelected) MandiPrimaryAction else MandiBorder, shape)
             .clickable { onClick() }
-            .padding(vertical = 9.dp),
+            .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -444,3 +422,4 @@ private fun SegmentFilterChip(
         )
     }
 }
+

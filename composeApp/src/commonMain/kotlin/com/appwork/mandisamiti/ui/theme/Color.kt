@@ -32,21 +32,28 @@ val MandiBackground = LightNgdlBackground
 val MandiSurface = LightNgdlSurface
 val MandiSurfaceElevated = LightNgdlSurfaceElevated
 val MandiBorder = LightNgdlBorder
+val MandiBorderActive = LightNgdlBorderActive
 val MandiTextPrimary = LightNgdlTextPrimary
 val MandiTextSecondary = LightNgdlTextSecondary
 val MandiTextMuted = LightNgdlTextTertiary
 
-// Mandi Saffron / Gold Accents
-val MandiAmberPrimary = Color(0xFFB45309)
-val MandiAmberDark = Color(0xFF92400E)
-val MandiAmberLight = Color(0xFFFEF3C7)
-val MandiAmber50 = Color(0xFFFFFBEB)
-val MandiAmberBorder = Color(0xFFFDE68A)
-val MandiNavy = MandiAmberPrimary
-val MandiSlate = MandiAmberDark
-val MandiAccent = Color(0xFFD97706)
-val MandiGold = Color(0xFFD97706)
-val MandiGoldLight = Color(0xFFFFFBEB)
+// NGDL Refined Modernist Action Tokens (Deep Carbon & Emerald)
+val MandiPrimaryAction = Color(0xFF090A0C)
+val MandiPrimaryActionText = Color(0xFFFFFFFF)
+val MandiSecondaryAction = Color(0xFFF1F3F5)
+val MandiSecondaryActionText = Color(0xFF090A0C)
+
+// Legacy Aliases mapped to Clean NGDL Neutrals (Eliminates Loud Amber/Brown)
+val MandiAmberPrimary = Color(0xFF090A0C)       // Deep Carbon
+val MandiAmberDark = Color(0xFF090A0C)          // Deep Carbon
+val MandiAmberLight = Color(0xFFF1F3F5)         // Muted Sub-surface
+val MandiAmber50 = Color(0xFFF8F9FA)            // Alabaster Canvas
+val MandiAmberBorder = Color(0x14000000)        // 8% Border
+val MandiNavy = Color(0xFF090A0C)
+val MandiSlate = Color(0xFF585E6B)
+val MandiAccent = Color(0xFF090A0C)
+val MandiGold = Color(0xFF090A0C)
+val MandiGoldLight = Color(0xFFF1F3F5)
 
 // Neutral Tokens
 val MandiNeutralLight = Color(0xFFF1F3F5)
@@ -54,12 +61,13 @@ val MandiNeutralBorder = Color(0x14000000)
 val MandiNeutralText = Color(0xFF090A0C)
 
 // High-Trust Financial Status Colors (Semantic Red / Green)
-val MandiRedReceivable = Color(0xFFDC2626)  // Receivable (लेना है)
+val MandiRedReceivable = Color(0xFFDC2626)       // Receivable (लेना है)
 val MandiRedLight = Color(0xFFFEF2F2)
-val MandiRedBorder = Color(0xFFFECACA)
-val MandiRedText = Color(0xFF991B1B)
+val MandiRedBorder = Color(0x14DC2626)
+val MandiRedText = Color(0xFFDC2626)
 
-val MandiGreenPayable = Color(0xFF16A34A)   // Payable (देना है)
+val MandiGreenPayable = Color(0xFF16A34A)        // Payable (देना है)
 val MandiGreenLight = Color(0xFFF0FDF4)
-val MandiGreenBorder = Color(0xFFBBF7D0)
-val MandiGreenText = Color(0xFF166534)
+val MandiGreenBorder = Color(0x1416A34A)
+val MandiGreenText = Color(0xFF16A34A)
+

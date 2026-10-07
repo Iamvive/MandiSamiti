@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,15 +19,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
-import com.appwork.mandisamiti.ui.theme.MandiAmberDark
-import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
@@ -40,6 +38,7 @@ import com.appwork.mandisamiti.ui.theme.MandiRedLight
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
 import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
+import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
@@ -89,7 +88,7 @@ fun PartyCard(
     val leftAccentColor = when {
         isReceivable -> MandiRedReceivable
         isPayable -> MandiGreenPayable
-        else -> MandiNeutralBorder
+        else -> MandiBorder
     }
 
     val roleLabel = if (party.partyType == PartyType.FARMER) "किसान" else "व्यापारी"
@@ -104,13 +103,22 @@ fun PartyCard(
             .border(1.dp, MandiBorder, cardShape)
             .clickable { onClick() }
     ) {
-        // 4dp Left Status Accent Bar
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .matchParentSize()
-                .background(leftAccentColor)
-        )
+        // 3dp Subtle Left Status Accent Bar (Properly constrained)
+        if (isReceivable || isPayable) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .matchParentSize()
+                    .align(Alignment.CenterStart)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(3.dp)
+                        .fillMaxHeight()
+                        .background(leftAccentColor)
+                )
+            }
+        }
 
         Row(
             modifier = Modifier
@@ -125,20 +133,20 @@ fun PartyCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                // Warm Saffron Monogram Avatar
+                // Minimal Monogram Avatar
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
-                        .background(MandiAmberLight)
+                        .background(MandiSurfaceElevated)
                         .border(1.dp, MandiBorder, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = avatarInitial,
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MandiAmberDark
+                        color = MandiTextPrimary
                     )
                 }
 
@@ -151,7 +159,7 @@ fun PartyCard(
                     ) {
                         Text(
                             text = party.name,
-                            fontSize = 17.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary
                         )
@@ -159,8 +167,8 @@ fun PartyCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(MandiNeutralLight)
-                                .border(0.5.dp, MandiBorder, RoundedCornerShape(4.dp))
+                                .background(MandiSurfaceElevated)
+                                .border(1.dp, MandiBorder, RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -190,7 +198,7 @@ fun PartyCard(
                 val displayAmount = if (balancePaisa < 0) -balancePaisa else balancePaisa
                 Text(
                     text = "₹${MandiMathEngine.paisaToRupeesString(displayAmount)}",
-                    fontSize = 19.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = balanceTextColor
                 )
@@ -201,11 +209,11 @@ fun PartyCard(
                         .clip(chipShape)
                         .background(chipBg)
                         .border(1.dp, chipBorder, chipShape)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = chipText,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = chipTextColor
                     )
@@ -214,3 +222,4 @@ fun PartyCard(
         }
     }
 }
+

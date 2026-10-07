@@ -88,7 +88,7 @@ fun DailyCashRegisterScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "पीछे जाएं",
-                            tint = Color.White
+                            tint = MandiTextPrimary
                         )
                     }
                 }
