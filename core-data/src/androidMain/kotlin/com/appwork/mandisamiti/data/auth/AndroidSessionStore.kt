@@ -4,10 +4,14 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.security.keystore.KeyPermanentlyInvalidatedException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
+import java.security.UnrecoverableKeyException
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -21,9 +25,9 @@ class AndroidSessionStore(context: Context) : SessionStore {
     private val prefs = context.applicationContext
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    override fun current(): Session? {
+    override fun current(): Session? = synchronized(LOCK) {
         val stored = prefs.getString(KEY_BLOB, null) ?: return null
-        return try {
+        try {
             val raw = Base64.decode(stored, Base64.NO_WRAP)
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(
@@ -34,12 +38,18 @@ class AndroidSessionStore(context: Context) : SessionStore {
             val p = Json.decodeFromString<SessionPayload>(String(plain, Charsets.UTF_8))
             Session(p.shopId, p.accessToken, p.refreshToken)
         } catch (e: Exception) {
-            clear()
+            if (e.isPermanent()) clear()
             null
         }
     }
 
-    override fun save(session: Session) {
+    private fun Exception.isPermanent() = this is AEADBadTagException ||
+        this is KeyPermanentlyInvalidatedException ||
+        this is IllegalArgumentException ||
+        this is SerializationException ||
+        this is UnrecoverableKeyException
+
+    override fun save(session: Session) = synchronized(LOCK) {
         val json = Json.encodeToString(
             SessionPayload(session.shopId, session.accessToken, session.refreshToken)
         )
@@ -48,20 +58,23 @@ class AndroidSessionStore(context: Context) : SessionStore {
         val encrypted = cipher.doFinal(json.toByteArray(Charsets.UTF_8))
         prefs.edit()
             .putString(KEY_BLOB, Base64.encodeToString(cipher.iv + encrypted, Base64.NO_WRAP))
-            .apply()
+            .commit()
+        Unit
     }
 
-    override fun updateTokens(accessToken: String, refreshToken: String) {
+    override fun updateTokens(accessToken: String, refreshToken: String) = synchronized(LOCK) {
         current()?.let { save(it.copy(accessToken = accessToken, refreshToken = refreshToken)) }
+        Unit
     }
 
-    override fun clear() {
-        prefs.edit().clear().apply()
+    override fun clear() = synchronized(LOCK) {
+        prefs.edit().clear().commit()
+        Unit
     }
 
-    private fun secretKey(): SecretKey {
+    private fun secretKey(): SecretKey = synchronized(LOCK) {
         val ks = KeyStore.getInstance(PROVIDER).apply { load(null) }
-        (ks.getKey(ALIAS, null) as? SecretKey)?.let { return it }
+        (ks.getKey(ALIAS, null) as? SecretKey)?.let { return@synchronized it }
         val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, PROVIDER)
         gen.init(
             KeyGenParameterSpec.Builder(
@@ -72,10 +85,11 @@ class AndroidSessionStore(context: Context) : SessionStore {
                 .setKeySize(256)
                 .build()
         )
-        return gen.generateKey()
+        gen.generateKey()
     }
 
     private companion object {
+        val LOCK = Any()
         const val PROVIDER = "AndroidKeyStore"
         const val ALIAS = "mandisamiti_session"
         const val PREFS = "mandisamiti_session"
