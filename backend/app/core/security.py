@@ -1,20 +1,23 @@
 import time
-import hashlib
 from typing import Optional, Any
 import jwt
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from passlib.context import CryptContext
 from app.config import settings
 
 security_bearer = HTTPBearer()
 
+_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 def get_password_hash(password: str) -> str:
-    # Industry standard SHA-256 + salt fallback (compatible with passlib/bcrypt)
-    salt = "mandisamiti_salt_2026"
-    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+    return _pwd.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return get_password_hash(plain_password) == hashed_password
+    try:
+        return _pwd.verify(plain_password, hashed_password)
+    except ValueError:
+        return False
 
 def create_access_token(subject: str, shop_id: Optional[str] = None, role: str = "OWNER") -> str:
     expire = time.time() + (settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
