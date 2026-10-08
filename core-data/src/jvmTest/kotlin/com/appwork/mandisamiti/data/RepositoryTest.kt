@@ -16,6 +16,8 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.database.createTestDatabase
+import com.appwork.mandisamiti.domain.model.VoidReason
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -127,10 +129,46 @@ class RepositoryTest {
         assertEquals(1, syncSummary.pendingDealsCount)
         assertEquals(1, syncSummary.pendingTransactionsCount)
 
-        syncEngine.markAllBatchSynced(listOf(farmerId), listOf("deal-1"), listOf("tx-1"))
+        syncEngine.markAllBatchSynced(listOf(farmerId), listOf("deal-1" to 1), listOf("tx-1" to 1))
         val cleanSyncSummary = syncEngine.getPendingSyncSummary()
         assertEquals(0, cleanSyncSummary.pendingPartiesCount)
         assertEquals(0, cleanSyncSummary.pendingDealsCount)
         assertEquals(0, cleanSyncSummary.pendingTransactionsCount)
+    }
+
+    @Test
+    fun staleRevisionSyncMarkerLeavesEditedRowPending() = runTest {
+        val database = createTestDatabase()
+        val dealRepo = OfflineFirstDealRepository(database)
+        val cashRepo = OfflineFirstCashTransactionRepository(database)
+        val syncEngine = SyncEngine(database)
+        val deal = Deal(
+            id = "deal-1", shopId = "shop-1", farmerId = "f", buyerId = "b", commodityId = "c",
+            dealStatus = DealStatus.SETTLED, dealDate = 1L, bagsCount = 1,
+            grossWeightGrams = 1000L, netWeightGrams = 1000L, ratePaisaPerUnit = 100L,
+            grossAmountPaisa = 100L, netFarmerPayablePaisa = 90L, netBuyerReceivablePaisa = 100L,
+            createdAt = 1L, updatedAt = 1L
+        )
+        dealRepo.saveDeal(deal)
+        dealRepo.editDeal(deal.copy(netFarmerPayablePaisa = 80L))
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "tx-1", shopId = "shop-1", partyId = "f",
+                transactionType = TransactionType.UDHAR_GIVEN, amountPaisa = 10L,
+                transactionDate = 1L, createdAt = 1L, updatedAt = 1L
+            )
+        )
+        cashRepo.voidTransaction("tx-1", VoidReason.WRONG_ENTRY)
+
+        // A batch captured at revision 1 finishes after both rows reached revision 2.
+        syncEngine.markAllBatchSynced(emptyList(), listOf("deal-1" to 1), listOf("tx-1" to 1))
+        val stale = syncEngine.getPendingSyncSummary()
+        assertEquals(1, stale.pendingDealsCount)
+        assertEquals(1, stale.pendingTransactionsCount)
+
+        syncEngine.markAllBatchSynced(emptyList(), listOf("deal-1" to 2), listOf("tx-1" to 2))
+        val done = syncEngine.getPendingSyncSummary()
+        assertEquals(0, done.pendingDealsCount)
+        assertEquals(0, done.pendingTransactionsCount)
     }
 }

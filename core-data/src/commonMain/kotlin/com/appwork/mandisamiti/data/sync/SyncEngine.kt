@@ -30,9 +30,9 @@ class SyncEngine(
         )
     }
 
-    suspend fun markAllBatchSynced(partyIds: List<String>, dealIds: List<String>, txIds: List<String>) = withContext(ioDispatcher) {
+    suspend fun markAllBatchSynced(partyIds: List<String>, deals: List<Pair<String, Int>>, txs: List<Pair<String, Int>>) = withContext(ioDispatcher) {
         partyIds.forEach { queries.markPartySynced(it) }
-        dealIds.forEach { queries.markDealSynced(it) }
-        txIds.forEach { queries.markTransactionSynced(it) }
+        deals.forEach { (id, revision) -> queries.markDealSynced(id, revision.toLong()) }
+        txs.forEach { (id, revision) -> queries.markTransactionSynced(id, revision.toLong()) }
     }
 }

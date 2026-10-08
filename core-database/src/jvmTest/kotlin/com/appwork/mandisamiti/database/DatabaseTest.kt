@@ -155,7 +155,7 @@ class DatabaseTest {
         // 6. Test Outbox Sync Queries
         val pendingDeals = queries.getPendingSyncDeals().executeAsList()
         assertEquals(1, pendingDeals.size)
-        queries.markDealSynced("deal-1")
+        queries.markDealSynced("deal-1", 1L)
         val remainingPending = queries.getPendingSyncDeals().executeAsList()
         assertEquals(0, remainingPending.size)
     }
