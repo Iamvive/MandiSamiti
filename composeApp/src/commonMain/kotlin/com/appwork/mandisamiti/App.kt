@@ -194,7 +194,10 @@ fun App(
                 }
                 DailyCashRegisterScreen(
                     viewModel = registerViewModel,
-                    onNavigateBack = { currentScreen = Screen.Home }
+                    onNavigateBack = { currentScreen = Screen.Home },
+                    onShareWhatsApp = { reportText ->
+                        whatsAppShareManager.shareText(reportText, null)
+                    }
                 )
             }
         }

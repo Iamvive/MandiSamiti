@@ -180,4 +180,57 @@ class DailyRegisterViewModelTest {
         val state = viewModel.uiState.first { it.todayTransactions.isNotEmpty() && it.availableParties.isNotEmpty() }
         assertEquals("रामवीर सिंह", state.todayTransactions.single().partyName)
     }
+
+    @Test
+    fun testDayClosingReportGeneration() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val now = Instant.parse("2026-10-08T05:30:00Z")
+        val clock = object : Clock { override fun now() = now }
+
+        shopRepo.saveShopProfile(
+            ShopProfile(
+                id = "shop-1",
+                shopName = "श्री गणेश ट्रेडिंग",
+                ownerName = "लाला जी",
+                mandiName = "मथुरा मंडी",
+                phoneNumber = "9837000000",
+                pinHash = "1234",
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "t1", shopId = "shop-1", partyId = "farmer-1", transactionType = TransactionType.JAMA_RECEIVED,
+                amountPaisa = 150_000L, transactionDate = now.toEpochMilliseconds(), createdAt = 1L, updatedAt = 1L
+            )
+        )
+
+        val viewModel = DailyRegisterViewModel(
+            shopId = "shop-1", cashRepository = cashRepo, partyRepository = partyRepo,
+            shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope, clock = clock, timeZone = TimeZone.of("Asia/Kolkata")
+        )
+
+        val state = viewModel.uiState.first { it.todayTransactions.isNotEmpty() && it.shopProfile != null }
+        assertEquals(150000L, state.todayCashInPaisa)
+
+        viewModel.openDayClosingSummary()
+        assertTrue(viewModel.uiState.value.isDayClosingSummaryOpen)
+
+        val reportText = viewModel.generateDayClosingReportText()
+        assertTrue(reportText.contains("श्री गणेश ट्रेडिंग"))
+        assertTrue(reportText.contains("मथुरा मंडी"))
+        assertTrue(reportText.contains("1,500")) // Cash In
+        assertTrue(reportText.contains("2026-10-08"))
+
+        viewModel.closeDayClosingSummary()
+        assertEquals(false, viewModel.uiState.value.isDayClosingSummaryOpen)
+    }
 }

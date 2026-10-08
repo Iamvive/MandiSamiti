@@ -43,6 +43,7 @@ data class DailyRegisterUiState(
     val todayTransactions: List<TransactionWithParty> = emptyList(),
     val availableParties: List<Party> = emptyList(),
     val isAddEntryDialogOpen: Boolean = false,
+    val isDayClosingSummaryOpen: Boolean = false,
     val isSaving: Boolean = false
 )
 
@@ -116,6 +117,48 @@ class DailyRegisterViewModel(
 
     fun closeAddEntryDialog() {
         _uiState.value = _uiState.value.copy(isAddEntryDialogOpen = false)
+    }
+
+    fun openDayClosingSummary() {
+        _uiState.value = _uiState.value.copy(isDayClosingSummaryOpen = true)
+    }
+
+    fun closeDayClosingSummary() {
+        _uiState.value = _uiState.value.copy(isDayClosingSummaryOpen = false)
+    }
+
+    fun generateDayClosingReportText(): String {
+        val profile = _uiState.value.shopProfile
+        val shopName = profile?.shopName ?: "मंडी आढ़त"
+        val mandiLocation = profile?.mandiName ?: "मंडी समिति"
+        val opening = MandiMathEngine.paisaToRupeesString(_uiState.value.openingCashPaisa)
+        val cashIn = MandiMathEngine.paisaToRupeesString(_uiState.value.todayCashInPaisa)
+        val cashOut = MandiMathEngine.paisaToRupeesString(_uiState.value.todayCashOutPaisa)
+        val closing = MandiMathEngine.paisaToRupeesString(_uiState.value.inHandCashDrawerPaisa)
+        val txnCount = _uiState.value.todayTransactions.size
+
+        val dateStr = clock.now().toString().take(10)
+
+        return """
+            🌾 *दैनिक गल्ला रोकड़ बही — रोज़नामा*
+            🏪 *दुकान:* $shopName ($mandiLocation)
+            📅 *दिनांक:* $dateStr
+            ━━━━━━━━━━━━━━━━━━
+            💵 *पिछला शेष (Opening):* ₹$opening
+            🟢 *आज की कुल आवक (Cash In):* ₹$cashIn
+            🔴 *आज की कुल निकासी (Cash Out):* ₹$cashOut
+            ━━━━━━━━━━━━━━━━━━
+            💰 *गल्ले में शुद्ध नकदी (Closing In Hand):* ₹$closing
+            📝 *कुल लेन-देन संख्या:* $txnCount प्रविष्टियाँ
+            ━━━━━━━━━━━━━━━━━━
+            _मंडी समिति डिजिटल बहीखाता_
+        """.trimIndent()
+    }
+
+    fun announceDayClosingSummary() {
+        val closing = MandiMathEngine.paisaToRupeesString(_uiState.value.inHandCashDrawerPaisa)
+        val speech = "आज का दिन समाप्त। गल्ले में कुल नकदी ₹$closing है।"
+        ttsManager.speak(speech, _uiState.value.isSoundEnabled)
     }
 
     fun recordDailyEntry(
