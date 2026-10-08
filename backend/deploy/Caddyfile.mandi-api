@@ -1,0 +1,10 @@
+mandi-api.appworx.co.in {
+    encode gzip zstd
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+    }
+    reverse_proxy 127.0.0.1:8050 {
+        header_up X-Real-IP {remote_host}
+    }
+}

@@ -11,7 +11,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://mandi_staging_user:mandi_staging_secret_2026@db:5432/mandisamiti_staging
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=mandisamiti-staging-jwt-mock-key-2026
-      - OTP_MOCK_MODE=True
+      - OTP_STATIC_ENABLED=true
+      - OTP_STATIC_CODE=123456
     depends_on:
       - db
       - redis

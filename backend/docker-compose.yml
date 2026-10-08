@@ -11,7 +11,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://mandi_user:mandi_secure_pass_2026@db:5432/mandisamiti
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=mandisamiti-super-secret-production-vps-jwt-key-2026
-      - OTP_MOCK_MODE=True
+      - OTP_STATIC_ENABLED=true
+      - OTP_STATIC_CODE=123456
     depends_on:
       - db
       - redis

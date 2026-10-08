@@ -12,7 +12,7 @@ ssh appworx-core-vps "bash /opt/mandisamiti-staging/scripts/smoke_test.sh http:/
 
 # 2. Sync to VPS Prod directory
 echo "📦 Promoting verified code to /opt/mandisamiti-prod on VPS..."
-rsync -avz --delete --exclude '__pycache__' --exclude '.pytest_cache' --exclude '*.db' /Users/appworx/Desktop/MandiSamiti/backend/ appworx-core-vps:/opt/mandisamiti-prod/
+rsync -avz --delete --exclude '__pycache__' --exclude '.pytest_cache' --exclude '*.db' --exclude '.venv' --exclude '.env*' "$(cd "$(dirname "$0")/.." && pwd)/" appworx-core-vps:/opt/mandisamiti-prod/
 
 # 3. Build & Recreate Prod Containers with zero-downtime rolling restart
 echo "🐳 Rebuilding Production containers on VPS..."
@@ -22,4 +22,4 @@ ssh appworx-core-vps "cd /opt/mandisamiti-prod && docker compose -f docker-compo
 echo "🩺 Running live smoke tests on Production..."
 ssh appworx-core-vps "sleep 2 && bash /opt/mandisamiti-prod/scripts/smoke_test.sh http://127.0.0.1:8050"
 
-echo "🏆 [PRODUCTION SUCCESS] Production deployment is live and healthy at http://64.227.142.180:8050"
+echo "🏆 [PRODUCTION SUCCESS] Production deployment is live and healthy at https://mandi-api.appworx.co.in"
