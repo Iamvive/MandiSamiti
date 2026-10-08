@@ -608,13 +608,25 @@ private fun FintechDealCard(
                     fontSize = 13.sp,
                     color = MandiTextSecondary
                 )
-                Text(
-                    text = "₹${MandiMathEngine.paisaToRupeesString(deal.netFarmerPayablePaisa)}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiAmberDark,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
-                )
+                // A negative payable means the farmer owes the shop: say so instead of printing "₹-…".
+                val farmerOwesShop = deal.netFarmerPayablePaisa < 0
+                Column(horizontalAlignment = Alignment.End) {
+                    if (farmerOwesShop) {
+                        Text(
+                            text = "किसान से लेना है",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiRedReceivable
+                        )
+                    }
+                    Text(
+                        text = "₹${MandiMathEngine.paisaToRupeesString(kotlin.math.abs(deal.netFarmerPayablePaisa))}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (farmerOwesShop) MandiRedReceivable else MandiAmberDark,
+                        textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    )
+                }
             }
         }
 
