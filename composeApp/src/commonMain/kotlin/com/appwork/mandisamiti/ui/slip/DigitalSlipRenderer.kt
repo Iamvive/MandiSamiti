@@ -17,12 +17,12 @@ object DigitalSlipRenderer {
         deal: Deal
     ): String {
         val dateStr = "दिनांक: ${kotlinx.datetime.Instant.fromEpochMilliseconds(deal.dealDate)}"
-        val rateStr = deal.ratePaisaPerUnit?.let { "₹ ${it / 100L} / कुंतल" } ?: "बाजार भाव"
+        val rateStr = deal.ratePaisaPerUnit?.let { "₹ ${MandiMathEngine.paisaToRupeesString(it)} / कुंतल" } ?: "बाजार भाव"
         val grossQ = MandiMathEngine.gramsToQuintals(deal.grossWeightGrams)
         val cutQ = MandiMathEngine.gramsToQuintals(deal.cutWeightGrams)
         val netQ = MandiMathEngine.gramsToQuintals(deal.netWeightGrams)
 
-        val farmerPayableRs = MandiMathEngine.paisaToRupeesString(deal.netFarmerPayablePaisa)
+        val farmerPayableRs = MandiMathEngine.paisaToRupeesString(kotlin.math.abs(deal.netFarmerPayablePaisa))
         val labourRs = MandiMathEngine.paisaToRupeesString(deal.labourChargePaisa)
         val commRs = MandiMathEngine.paisaToRupeesString(deal.farmerCommissionPaisa)
 
@@ -46,7 +46,8 @@ object DigitalSlipRenderer {
             appendLine("➖ *पल्लेदारी / मजदूरी:* ₹ $labourRs")
             appendLine("➖ *मंडी आढ़त:* ₹ $commRs")
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
-            appendLine("🟢 *शुद्ध देय भुगतान (Net Payable): ₹ $farmerPayableRs*")
+            if (deal.netFarmerPayablePaisa < 0) appendLine("*किसान से लेना है: ₹ $farmerPayableRs*")
+            else appendLine("🟢 *शुद्ध देय भुगतान (Net Payable): ₹ $farmerPayableRs*")
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
             appendLine("धन्यवाद! 🙏")
             appendLine("— ${shopProfile.ownerName} (${shopProfile.shopName})")

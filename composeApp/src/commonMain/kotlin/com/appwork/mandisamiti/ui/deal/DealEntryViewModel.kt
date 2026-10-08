@@ -1,7 +1,9 @@
 package com.appwork.mandisamiti.ui.deal
 
+import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.DeductionsInput
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.math.SettlementCalculation
 import com.appwork.mandisamiti.domain.model.Commodity
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.DealStatus
@@ -88,6 +90,8 @@ class DealEntryViewModel(
     private val _events = MutableSharedFlow<DealEntryEvent>()
     val events: SharedFlow<DealEntryEvent> = _events.asSharedFlow()
 
+    private var originalDeal: Deal? = null
+
     init {
         loadShopProfileAndParties()
         if (existingDealId != null) {
@@ -124,9 +128,10 @@ class DealEntryViewModel(
                 val farmer = partyRepository.getPartyById(deal.farmerId)
                 val buyer = deal.buyerId?.let { partyRepository.getPartyById(it) }
 
-                val grossQ = MandiMathEngine.gramsToQuintals(deal.grossWeightGrams).toString()
-                val tareQ = MandiMathEngine.gramsToQuintals(deal.cutWeightGrams).toString()
-                val rate = deal.ratePaisaPerUnit?.let { (it / 100L).toString() } ?: ""
+                originalDeal = deal
+                val grossQ = MandiMathEngine.gramsToQuintalsInputString(deal.grossWeightGrams)
+                val tareQ = MandiMathEngine.gramsToQuintalsInputString(deal.cutWeightGrams)
+                val rate = deal.ratePaisaPerUnit?.let { MandiMathEngine.paisaToInputString(it) } ?: ""
 
                 _uiState.value = _uiState.value.copy(
                     dealId = deal.id,
@@ -137,6 +142,8 @@ class DealEntryViewModel(
                     grossWeightText = grossQ,
                     tareWeightText = tareQ,
                     ratePerQuintalText = rate,
+                    labourChargesText = MandiMathEngine.paisaToInputString(deal.labourChargePaisa),
+                    commissionPercentText = MandiMathEngine.paisaToInputString(deal.farmerCommissionBps),
                     receiptPhotoUri = deal.receiptPhotoUri,
                     isSettledStage = deal.dealStatus == DealStatus.SETTLED
                 )
@@ -205,8 +212,8 @@ class DealEntryViewModel(
             ActiveInputField.BAGS_COUNT -> applyKeypad(current.bagsCountText, key, allowDecimal = false)
             ActiveInputField.GROSS_WEIGHT -> applyKeypad(current.grossWeightText, key, allowDecimal = true)
             ActiveInputField.TARE_WEIGHT -> applyKeypad(current.tareWeightText, key, allowDecimal = true)
-            ActiveInputField.RATE_PER_QUINTAL -> applyKeypad(current.ratePerQuintalText, key, allowDecimal = false)
-            ActiveInputField.LABOUR_CHARGES -> applyKeypad(current.labourChargesText, key, allowDecimal = false)
+            ActiveInputField.RATE_PER_QUINTAL -> applyKeypad(current.ratePerQuintalText, key, allowDecimal = true)
+            ActiveInputField.LABOUR_CHARGES -> applyKeypad(current.labourChargesText, key, allowDecimal = true)
             ActiveInputField.COMMISSION_PERCENT -> applyKeypad(current.commissionPercentText, key, allowDecimal = true)
         }
 
@@ -280,38 +287,31 @@ class DealEntryViewModel(
             rounded
         }
 
-        val rateRs = state.ratePerQuintalText.toLongOrNull() ?: 0L
-        val ratePaisa = rateRs * 100L
-        val labourRs = state.labourChargesText.toLongOrNull() ?: 0L
-        val labourPaisa = labourRs * 100L
-        val commPercent = state.commissionPercentText.toDoubleOrNull() ?: 1.5
+        val calc = computeSettlement(state)
+        _uiState.value = _uiState.value.copy(
+            netWeightQuintals = netQuintalsStr,
+            grossAmountPaisa = calc?.grossAmountPaisa ?: 0L,
+            netFarmerPayablePaisa = calc?.netFarmerPayablePaisa ?: 0L,
+            netBuyerReceivablePaisa = calc?.netBuyerReceivablePaisa ?: 0L
+        )
+    }
 
-        if (ratePaisa > 0L && netGrams > 0L) {
-            val grossAmount = (netGrams * ratePaisa) / MandiMathEngine.GRAMS_PER_QUINTAL
-            val farmerComm = (grossAmount * (commPercent / 100.0)).toLong()
-            val calc = MandiMathEngine.calculateSettlement(
-                grossWeightGrams = grossGrams,
-                cutWeightGrams = tareGrams,
-                ratePaisaPerQuintal = ratePaisa,
-                deductions = DeductionsInput(
-                    farmerCommissionPaisa = farmerComm,
-                    labourChargePaisa = labourPaisa
-                )
+    private fun computeSettlement(state: DealEntryUiState): SettlementCalculation? {
+        val grossGrams = MandiMathEngine.parseQuintalsStringToGrams(state.grossWeightText)
+        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(state.tareWeightText)
+        val netGrams = (grossGrams - tareGrams).coerceAtLeast(0L)
+        val ratePaisa = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText)
+        if (ratePaisa <= 0L || netGrams <= 0L) return null
+        val commissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText)
+        return MandiMathEngine.calculateSettlement(
+            grossWeightGrams = grossGrams,
+            cutWeightGrams = tareGrams,
+            ratePaisaPerQuintal = ratePaisa,
+            deductions = DeductionsInput(
+                farmerCommissionPaisa = MandiMathEngine.percentageOf(MandiMathEngine.grossAmountPaisa(netGrams, ratePaisa), commissionBps),
+                labourChargePaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText)
             )
-            _uiState.value = _uiState.value.copy(
-                netWeightQuintals = netQuintalsStr,
-                grossAmountPaisa = calc.grossAmountPaisa,
-                netFarmerPayablePaisa = calc.netFarmerPayablePaisa,
-                netBuyerReceivablePaisa = calc.netBuyerReceivablePaisa
-            )
-        } else {
-            _uiState.value = _uiState.value.copy(
-                netWeightQuintals = netQuintalsStr,
-                grossAmountPaisa = 0L,
-                netFarmerPayablePaisa = 0L,
-                netBuyerReceivablePaisa = 0L
-            )
-        }
+        )
     }
 
     fun saveDeal() {
@@ -332,49 +332,48 @@ class DealEntryViewModel(
             return
         }
 
-        val isSettled = state.isSettledStage && state.ratePerQuintalText.isNotEmpty()
-        val rateRs = state.ratePerQuintalText.toLongOrNull()
-        val ratePaisa = rateRs?.let { it * 100L }
-        val labourRs = state.labourChargesText.toLongOrNull() ?: 0L
-        val labourPaisa = labourRs * 100L
-        val commPercent = state.commissionPercentText.toDoubleOrNull() ?: 1.5
-
+        val calc = computeSettlement(state)
+        val isSettled = state.isSettledStage && calc != null
         val now = Clock.System.now().toEpochMilliseconds()
-        val dealId = state.dealId ?: "deal_${now}_${(1000..9999).random()}"
+        val original = originalDeal
 
         val deal = Deal(
-            id = dealId,
+            id = original?.id ?: IdGenerator.newId(),
             shopId = state.shopId,
             farmerId = farmer.id,
             buyerId = state.selectedBuyer?.id,
-            commodityId = state.selectedCommodity?.id ?: "comm_wheat",
+            commodityId = state.selectedCommodity?.id ?: original?.commodityId ?: "comm_wheat",
             dealStatus = if (isSettled) DealStatus.SETTLED else DealStatus.PENDING_SETTLEMENT,
-            dealDate = now,
+            dealDate = original?.dealDate ?: now,
             bagsCount = bags,
             grossWeightGrams = grossGrams,
             cutWeightGrams = tareGrams,
             netWeightGrams = netGrams,
-            ratePaisaPerUnit = ratePaisa,
-            grossAmountPaisa = state.grossAmountPaisa,
-            farmerCommissionPaisa = (state.grossAmountPaisa * (commPercent / 100.0)).toLong(),
-            labourChargePaisa = labourPaisa,
-            netFarmerPayablePaisa = state.netFarmerPayablePaisa,
-            netBuyerReceivablePaisa = state.netBuyerReceivablePaisa,
+            ratePaisaPerUnit = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText).takeIf { it > 0L },
+            grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
+            farmerCommissionPaisa = if (isSettled) calc!!.farmerCommissionPaisa else 0L,
+            farmerCommissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText),
+            labourChargePaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText),
+            netFarmerPayablePaisa = if (isSettled) calc!!.netFarmerPayablePaisa else 0L,
+            netBuyerReceivablePaisa = if (isSettled) calc!!.netBuyerReceivablePaisa else 0L,
             receiptPhotoUri = state.receiptPhotoUri,
-            createdAt = now,
-            updatedAt = now
+            createdAt = original?.createdAt ?: now,
+            updatedAt = now,
+            revision = original?.revision ?: 1
         )
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            dealRepository.saveDeal(deal)
+            if (original == null) dealRepository.saveDeal(deal) else dealRepository.editDeal(deal)
 
             // Hindi Soundbox Voice Announcement Text
             val hindiVoiceText = if (isSettled) {
                 val farmerName = farmer.name
                 val bagsStr = if (bags > 0) "$bags बोरी " else ""
-                val amountRs = MandiMathEngine.paisaToRupeesString(state.netFarmerPayablePaisa)
-                "$farmerName, $bagsStr, ₹$amountRs पक्के हिसाब में दर्ज हुए।"
+                val payable = state.netFarmerPayablePaisa
+                val amountRs = MandiMathEngine.paisaToRupeesString(kotlin.math.abs(payable))
+                if (payable < 0) "$farmerName, ${bagsStr}किसान से ₹$amountRs लेना है।"
+                else "$farmerName, $bagsStr, ₹$amountRs पक्के हिसाब में दर्ज हुए।"
             } else {
                 val farmerName = farmer.name
                 val quintalsStr = state.netWeightQuintals

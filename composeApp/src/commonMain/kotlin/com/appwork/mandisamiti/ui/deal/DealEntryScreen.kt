@@ -55,6 +55,7 @@ import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiNavy
+import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
@@ -373,11 +374,12 @@ fun DealEntryScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 InvoiceRow(label = "सकल माल मूल्य (Gross)", amountPaisa = uiState.grossAmountPaisa, isBold = false)
+                                val farmerOwesShop = uiState.netFarmerPayablePaisa < 0
                                 InvoiceRow(
-                                    label = "किसान को शुद्ध देय",
-                                    amountPaisa = uiState.netFarmerPayablePaisa,
+                                    label = if (farmerOwesShop) "किसान से लेना है" else "किसान को शुद्ध देय",
+                                    amountPaisa = kotlin.math.abs(uiState.netFarmerPayablePaisa),
                                     isBold = true,
-                                    color = MandiGreenPayable
+                                    color = if (farmerOwesShop) MandiRedReceivable else MandiGreenPayable
                                 )
                                 InvoiceRow(
                                     label = "व्यापारी से देय वसूली",
