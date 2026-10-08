@@ -42,9 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
@@ -132,6 +134,13 @@ fun DailyCashRegisterScreen(
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiNavy
+                    )
+
+                    CashBreakdownItem(
+                        label = "पिछला शेष (Opening)",
+                        amountPaisa = uiState.openingCashPaisa,
+                        color = MandiNavy,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     // 2-Way Metrics Breakdown (In vs Out)
@@ -247,8 +256,9 @@ fun DailyCashRegisterScreen(
                 items(uiState.todayTransactions, key = { it.transaction.id }) { item ->
                     val isDeposit = item.transaction.transactionType == TransactionType.JAMA_RECEIVED
                     val remarks = item.transaction.remarks
+                    val isVoid = item.transaction.isVoid
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().alpha(if (isVoid) 0.55f else 1f),
                         shape = RoundedCornerShape(10.dp),
                         colors = CardDefaults.cardColors(containerColor = MandiSurface),
                         border = CardDefaults.outlinedCardBorder().copy(
@@ -281,7 +291,7 @@ fun DailyCashRegisterScreen(
                                     )
                                 }
 
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
                                         text = item.partyName,
                                         fontSize = 14.sp,
@@ -293,6 +303,13 @@ fun DailyCashRegisterScreen(
                                         fontSize = 12.sp,
                                         color = MandiTextSecondary
                                     )
+                                    if (isVoid) {
+                                        Text(
+                                            text = "रद्द" + (item.transaction.voidReason?.let { " · ${it.labelHi}" } ?: ""),
+                                            fontSize = 11.sp,
+                                            color = MandiTextMuted
+                                        )
+                                    }
                                 }
                             }
 
@@ -300,7 +317,8 @@ fun DailyCashRegisterScreen(
                                 text = "${if (isDeposit) "+" else "-"}₹${MandiMathEngine.paisaToRupeesString(item.transaction.amountPaisa)}",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDeposit) MandiGreenPayable else MandiRedReceivable
+                                color = if (isDeposit) MandiGreenPayable else MandiRedReceivable,
+                                textDecoration = if (isVoid) TextDecoration.LineThrough else null
                             )
                         }
                     }

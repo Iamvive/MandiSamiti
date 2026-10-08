@@ -1,5 +1,7 @@
 package com.appwork.mandisamiti.ui.register
 
+import com.appwork.mandisamiti.domain.cash.CashDrawer
+import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
 
 data class TransactionWithParty(
     val transaction: CashTransaction,
@@ -33,6 +36,7 @@ data class TransactionWithParty(
 data class DailyRegisterUiState(
     val shopProfile: ShopProfile? = null,
     val isSoundEnabled: Boolean = true,
+    val openingCashPaisa: Long = 0L,
     val todayCashInPaisa: Long = 0L,
     val todayCashOutPaisa: Long = 0L,
     val inHandCashDrawerPaisa: Long = 0L,
@@ -52,7 +56,9 @@ class DailyRegisterViewModel(
     private val partyRepository: PartyRepository,
     private val shopProfileRepository: ShopProfileRepository,
     private val ttsManager: SoundboxTtsManager,
-    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    private val clock: Clock = Clock.System,
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault()
 ) {
 
     private val _uiState = MutableStateFlow(DailyRegisterUiState())
@@ -86,31 +92,21 @@ class DailyRegisterViewModel(
         // Observe cash transactions and calculate daily cash register summary
         cashRepository.getTransactionsByShopStream(shopId)
             .onEach { allTx ->
+                val window = CashDrawer.dayWindow(clock.now(), timeZone)
+                val summary = CashDrawer.summarize(allTx, window)
                 val partyMap = _uiState.value.availableParties.associateBy { it.id }
-
-                var cashIn = 0L
-                var cashOut = 0L
-
-                val txWithParties = allTx.map { tx ->
-                    if (tx.transactionType == TransactionType.JAMA_RECEIVED) {
-                        cashIn += tx.amountPaisa
-                    } else if (tx.transactionType == TransactionType.UDHAR_GIVEN) {
-                        cashOut += tx.amountPaisa
+                val todays = allTx
+                    .filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
+                    .map { tx ->
+                        val party = partyMap[tx.partyId]
+                        TransactionWithParty(transaction = tx, partyName = party?.name ?: "खाता", village = party?.village)
                     }
-
-                    val party = partyMap[tx.partyId]
-                    TransactionWithParty(
-                        transaction = tx,
-                        partyName = party?.name ?: "खाता",
-                        village = party?.village
-                    )
-                }
-
                 _uiState.value = _uiState.value.copy(
-                    todayCashInPaisa = cashIn,
-                    todayCashOutPaisa = cashOut,
-                    inHandCashDrawerPaisa = cashIn - cashOut,
-                    todayTransactions = txWithParties.sortedByDescending { it.transaction.transactionDate }
+                    openingCashPaisa = summary.openingPaisa,
+                    todayCashInPaisa = summary.cashInPaisa,
+                    todayCashOutPaisa = summary.cashOutPaisa,
+                    inHandCashDrawerPaisa = summary.closingPaisa,
+                    todayTransactions = todays.sortedByDescending { it.transaction.transactionDate }
                 )
             }
             .launchIn(viewModelScope)
@@ -133,11 +129,11 @@ class DailyRegisterViewModel(
     ) {
         if (amountRs <= 0L) return
 
-        val now = Clock.System.now().toEpochMilliseconds()
+        val now = clock.now().toEpochMilliseconds()
         val amountPaisa = amountRs * 100L
 
         val tx = CashTransaction(
-            id = "tx_daily_${now}_${(1000..9999).random()}",
+            id = IdGenerator.newId(),
             shopId = shopId,
             partyId = partyId,
             transactionType = transactionType,
