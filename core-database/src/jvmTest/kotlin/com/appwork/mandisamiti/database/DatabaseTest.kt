@@ -116,7 +116,8 @@ class DatabaseTest {
             created_at = 1710928000000L,
             updated_at = 1710928000000L,
             is_deleted = 0L,
-            sync_status = 0L
+            sync_status = 0L,
+            farmer_commission_bps = 0L, revision = 1L, is_void = 0L, void_reason = null
         )
 
         // Check Farmer Balance: Shop owes farmer ₹95,090 -> Balance is -9,509,000 paisa
@@ -142,7 +143,8 @@ class DatabaseTest {
             created_at = 1710928000000L,
             updated_at = 1710928000000L,
             is_deleted = 0L,
-            sync_status = 0L
+            sync_status = 0L,
+            revision = 1L, is_void = 0L, void_reason = null
         )
 
         // Farmer balance should now be -9,509,000 + 5,000,000 = -4,509,000 paisa (Shop still owes ₹45,090)
@@ -155,5 +157,39 @@ class DatabaseTest {
         queries.markDealSynced("deal-1")
         val remainingPending = queries.getPendingSyncDeals().executeAsList()
         assertEquals(0, remainingPending.size)
+    }
+
+    @Test
+    fun schemaIsVersion2AndBalanceIgnoresVoids() {
+        val db = AppDatabase(DriverFactory().createDriver())
+        val q = db.appDatabaseQueries
+        assertEquals(2L, AppDatabase.Schema.version)
+
+        q.insertParty("farmer-1", "shop-1", "रामवीर", null, null, "FARMER", null, null, 1L, 1L, 0L, 0L)
+        q.insertCashTransaction(
+            id = "tx-1", shop_id = "shop-1", party_id = "farmer-1", deal_id = null,
+            transaction_type = "UDHAR_GIVEN", amount_paisa = 500_000L, payment_mode = "CASH",
+            transaction_date = 1L, voice_note_uri = null, remarks = null,
+            created_at = 1L, updated_at = 1L, is_deleted = 0L, sync_status = 0L,
+            revision = 1L, is_void = 0L, void_reason = null
+        )
+        q.insertCashTransaction(
+            id = "tx-2", shop_id = "shop-1", party_id = "farmer-1", deal_id = null,
+            transaction_type = "UDHAR_GIVEN", amount_paisa = 99_900L, payment_mode = "CASH",
+            transaction_date = 2L, voice_note_uri = null, remarks = null,
+            created_at = 2L, updated_at = 2L, is_deleted = 0L, sync_status = 0L,
+            revision = 2L, is_void = 1L, void_reason = "WRONG_ENTRY"
+        )
+        assertEquals(500_000L, q.getPartyBalance("farmer-1").executeAsOne().balance_paisa)
+
+        q.insertRevision(
+            id = "rev-1", shop_id = "shop-1", entry_id = "tx-2", entry_kind = "CASH",
+            revision = 1L, change_kind = "CREATE", snapshot_json = "{}", void_reason = null, changed_at = 2L
+        )
+        q.insertRevision(
+            id = "rev-2", shop_id = "shop-1", entry_id = "tx-2", entry_kind = "CASH",
+            revision = 2L, change_kind = "VOID", snapshot_json = "{}", void_reason = "WRONG_ENTRY", changed_at = 3L
+        )
+        assertEquals(listOf("CREATE", "VOID"), q.getRevisionsForEntry("tx-2").executeAsList().map { it.change_kind })
     }
 }

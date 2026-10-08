@@ -1,0 +1,23 @@
+ALTER TABLE dealEntity ADD COLUMN farmer_commission_bps INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE dealEntity ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE dealEntity ADD COLUMN is_void INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE dealEntity ADD COLUMN void_reason TEXT;
+
+ALTER TABLE cashTransactionEntity ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE cashTransactionEntity ADD COLUMN is_void INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE cashTransactionEntity ADD COLUMN void_reason TEXT;
+
+CREATE TABLE entryRevisionEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    entry_id TEXT NOT NULL,
+    entry_kind TEXT NOT NULL,
+    revision INTEGER NOT NULL,
+    change_kind TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    void_reason TEXT,
+    changed_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(entry_id, revision)
+);
+CREATE INDEX idx_revision_entry ON entryRevisionEntity(entry_id, revision);

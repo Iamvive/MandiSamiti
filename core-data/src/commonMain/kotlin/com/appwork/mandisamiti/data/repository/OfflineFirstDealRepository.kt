@@ -95,7 +95,8 @@ class OfflineFirstDealRepository(
             created_at = deal.createdAt,
             updated_at = deal.updatedAt,
             is_deleted = if (deal.isDeleted) 1L else 0L,
-            sync_status = deal.syncStatus.toLong()
+            sync_status = deal.syncStatus.toLong(),
+            farmer_commission_bps = 0L, revision = 1L, is_void = 0L, void_reason = null,
         )
     }
 

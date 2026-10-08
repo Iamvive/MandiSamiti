@@ -88,6 +88,10 @@ CREATE TABLE dealEntity (
     updated_at INTEGER NOT NULL,
     is_deleted INTEGER NOT NULL DEFAULT 0,
     sync_status INTEGER NOT NULL DEFAULT 0,
+    farmer_commission_bps INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
     FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
     FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
     FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
@@ -113,12 +117,31 @@ CREATE TABLE cashTransactionEntity (
     updated_at INTEGER NOT NULL,
     is_deleted INTEGER NOT NULL DEFAULT 0,
     sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
     FOREIGN KEY(party_id) REFERENCES partyEntity(id),
     FOREIGN KEY(deal_id) REFERENCES dealEntity(id)
 );
 
 CREATE INDEX idx_tx_party ON cashTransactionEntity(party_id, is_deleted);
 CREATE INDEX idx_tx_date ON cashTransactionEntity(transaction_date);
+
+-- Append-only audit trail: one row per create / edit / void of a deal or cash entry
+CREATE TABLE entryRevisionEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    entry_id TEXT NOT NULL,
+    entry_kind TEXT NOT NULL, -- 'DEAL' | 'CASH'
+    revision INTEGER NOT NULL,
+    change_kind TEXT NOT NULL, -- 'CREATE' | 'EDIT' | 'VOID'
+    snapshot_json TEXT NOT NULL,
+    void_reason TEXT,
+    changed_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(entry_id, revision)
+);
+CREATE INDEX idx_revision_entry ON entryRevisionEntity(entry_id, revision);
 
 -- ================= QUERIES =================
 
@@ -179,8 +202,9 @@ INSERT OR REPLACE INTO dealEntity(
     farmer_commission_paisa, buyer_commission_paisa, labour_charge_paisa, weighing_charge_paisa, other_deductions_paisa,
     net_farmer_payable_paisa, net_buyer_receivable_paisa,
     receipt_photo_uri, voice_note_uri, remarks,
-    created_at, updated_at, is_deleted, sync_status
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    created_at, updated_at, is_deleted, sync_status,
+    farmer_commission_bps, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 softDeleteDeal:
 UPDATE dealEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
@@ -193,8 +217,8 @@ getCashTransactionsByShop:
 SELECT * FROM cashTransactionEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC;
 
 insertCashTransaction:
-INSERT OR REPLACE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 softDeleteCashTransaction:
 UPDATE cashTransactionEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
@@ -209,22 +233,22 @@ SELECT
     p.party_type AS party_type,
     (
         -- 1. Cash Advances given to party (+)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0), 0)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
         +
         -- 2. Interest added to party (+)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0), 0)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)
         -
         -- 3. Cash Received from party (-)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0), 0)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0 AND is_void = 0), 0)
         -
         -- 4. Discounts given to party (-)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'DISCOUNT_GIVEN' AND is_deleted = 0), 0)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'DISCOUNT_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
         +
         -- 5. Deals where party is BUYER: Buyer owes shop (+)
-        COALESCE((SELECT SUM(net_buyer_receivable_paisa) FROM dealEntity WHERE buyer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0), 0)
+        COALESCE((SELECT SUM(net_buyer_receivable_paisa) FROM dealEntity WHERE buyer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
         -
         -- 6. Deals where party is FARMER: Shop owes farmer (-)
-        COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0), 0)
+        COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
     ) AS balance_paisa
 FROM partyEntity p
 WHERE p.id = ? AND p.is_deleted = 0;
@@ -247,3 +271,11 @@ UPDATE dealEntity SET sync_status = 1 WHERE id = ?;
 
 markTransactionSynced:
 UPDATE cashTransactionEntity SET sync_status = 1 WHERE id = ?;
+
+-- Revision Queries
+insertRevision:
+INSERT INTO entryRevisionEntity(id, shop_id, entry_id, entry_kind, revision, change_kind, snapshot_json, void_reason, changed_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getRevisionsForEntry:
+SELECT * FROM entryRevisionEntity WHERE entry_id = ? ORDER BY revision ASC;

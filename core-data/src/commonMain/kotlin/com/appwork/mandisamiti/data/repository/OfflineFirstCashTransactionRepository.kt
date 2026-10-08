@@ -50,7 +50,8 @@ class OfflineFirstCashTransactionRepository(
             created_at = transaction.createdAt,
             updated_at = transaction.updatedAt,
             is_deleted = if (transaction.isDeleted) 1L else 0L,
-            sync_status = transaction.syncStatus.toLong()
+            sync_status = transaction.syncStatus.toLong(),
+            revision = 1L, is_void = 0L, void_reason = null,
         )
     }
 
