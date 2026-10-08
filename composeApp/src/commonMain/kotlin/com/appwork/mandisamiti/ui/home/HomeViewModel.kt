@@ -36,6 +36,7 @@ data class HomeUiState(
     val allParties: List<PartyWithBalance> = emptyList(),
     val filteredParties: List<PartyWithBalance> = emptyList(),
     val currentTab: NavigationTab = NavigationTab.DASHBOARD,
+    val pendingSyncCount: Int = 0,
     val isEnglish: Boolean = false,
     val isLoading: Boolean = true
 ) {

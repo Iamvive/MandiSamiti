@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -163,6 +167,22 @@ fun PartyCard(
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary
                         )
+                        // Sync Status Tick
+                        if (party.syncStatus == 1) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Synced",
+                                tint = MandiGreenPayable,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Pending Local",
+                                tint = MandiTextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                         // Role Pill
                         Box(
                             modifier = Modifier

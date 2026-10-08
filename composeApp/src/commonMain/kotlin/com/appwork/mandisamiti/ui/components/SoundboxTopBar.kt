@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +44,7 @@ fun SoundboxTopBar(
     isSoundEnabled: Boolean,
     onToggleSound: () -> Unit,
     modifier: Modifier = Modifier,
+    pendingSyncCount: Int = 0,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
     val soundBtnShape = RoundedCornerShape(20.dp)
@@ -99,33 +101,67 @@ fun SoundboxTopBar(
             }
         }
 
-        // Clean Minimal Soundbox Status Pill
         Row(
-            modifier = Modifier
-                .clip(soundBtnShape)
-                .background(if (isSoundEnabled) MandiGreenLight else MandiSurfaceElevated)
-                .border(
-                    width = 1.dp,
-                    color = if (isSoundEnabled) MandiGreenBorder else MandiBorder,
-                    shape = soundBtnShape
-                )
-                .clickable { onToggleSound() }
-                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                contentDescription = "वॉइस साउंडबॉक्स स्थिति",
-                tint = if (isSoundEnabled) MandiGreenText else MandiTextMuted,
-                modifier = Modifier.size(15.dp)
-            )
-            Text(
-                text = if (isSoundEnabled) "वॉइस ऑन" else "म्यूट",
-                color = if (isSoundEnabled) MandiGreenText else MandiTextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (pendingSyncCount > 0) {
+                Row(
+                    modifier = Modifier
+                        .clip(soundBtnShape)
+                        .background(com.appwork.mandisamiti.ui.theme.MandiAmberLight)
+                        .border(
+                            width = 1.dp,
+                            color = com.appwork.mandisamiti.ui.theme.MandiAmberPrimary.copy(alpha = 0.5f),
+                            shape = soundBtnShape
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "Pending Sync",
+                        tint = com.appwork.mandisamiti.ui.theme.MandiAmberDark,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "$pendingSyncCount",
+                        color = com.appwork.mandisamiti.ui.theme.MandiAmberDark,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Clean Minimal Soundbox Status Pill
+            Row(
+                modifier = Modifier
+                    .clip(soundBtnShape)
+                    .background(if (isSoundEnabled) MandiGreenLight else MandiSurfaceElevated)
+                    .border(
+                        width = 1.dp,
+                        color = if (isSoundEnabled) MandiGreenBorder else MandiBorder,
+                        shape = soundBtnShape
+                    )
+                    .clickable { onToggleSound() }
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                    contentDescription = "वॉइस साउंडबॉक्स स्थिति",
+                    tint = if (isSoundEnabled) MandiGreenText else MandiTextMuted,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = if (isSoundEnabled) "वॉइस ऑन" else "म्यूट",
+                    color = if (isSoundEnabled) MandiGreenText else MandiTextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }

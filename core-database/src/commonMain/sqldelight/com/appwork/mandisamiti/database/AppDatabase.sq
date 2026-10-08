@@ -276,3 +276,18 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getRevisionsForEntry:
 SELECT * FROM entryRevisionEntity WHERE entry_id = ? ORDER BY revision ASC;
+
+getPendingSyncRevisions:
+SELECT * FROM entryRevisionEntity WHERE sync_status = 0;
+
+markRevisionSynced:
+UPDATE entryRevisionEntity SET sync_status = 1 WHERE id = ?;
+
+getPendingSyncCount:
+SELECT (
+    (SELECT COUNT(*) FROM partyEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM dealEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM cashTransactionEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0)
+) AS pending_count;
+

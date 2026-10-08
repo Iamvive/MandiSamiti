@@ -27,6 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -582,6 +584,21 @@ private fun FintechDealCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    if (deal.syncStatus == 1) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Synced",
+                            tint = MandiGreenPayable,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Pending Local",
+                            tint = MandiTextMuted,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
 
                 if (!isVoid) {
@@ -688,12 +705,32 @@ private fun FintechCashCard(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = if (isDeposit) "नकद जमा प्राप्त" else "नकद भुगतान दिया",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiTextPrimary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = if (isDeposit) "नकद जमा प्राप्त" else "नकद भुगतान दिया",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        if (transaction.syncStatus == 1) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Synced",
+                                tint = MandiGreenPayable,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Pending Local",
+                                tint = MandiTextMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                     if (!remarks.isNullOrBlank()) {
                         Text(
                             text = remarks,

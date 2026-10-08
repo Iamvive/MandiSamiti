@@ -42,7 +42,8 @@ fun HomeScreen(
                 shopName = uiState.shopProfile?.shopName ?: "",
                 mandiLocation = uiState.shopProfile?.mandiName ?: "",
                 isSoundEnabled = uiState.isSoundEnabled,
-                onToggleSound = { viewModel.toggleSoundSetting() }
+                onToggleSound = { viewModel.toggleSoundSetting() },
+                pendingSyncCount = uiState.pendingSyncCount
             )
         },
         bottomBar = {
