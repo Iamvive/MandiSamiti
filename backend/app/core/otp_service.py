@@ -17,9 +17,10 @@ class OtpService:
 
     async def issue(self, phone: str) -> str:
         rl = f"otp_rl:{phone}"
-        count = await self.redis.incr(rl)
-        if count == 1:
-            await self.redis.expire(rl, RATE_WINDOW_SECONDS)
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.incr(rl)
+            pipe.expire(rl, RATE_WINDOW_SECONDS, nx=True)
+            count, _ = await pipe.execute()
         if count > RATE_MAX_SENDS:
             raise OtpRateLimited()
         code = self.static_code or f"{secrets.randbelow(10**6):06d}"
@@ -29,13 +30,23 @@ class OtpService:
         return code
 
     async def verify(self, phone: str, otp: str) -> bool:
+        # Count the attempt first (atomic), then compare, so concurrent
+        # guesses cannot out-run the lockout.
         key = f"otp:{phone}"
-        saved = await self.redis.hget(key, "code")
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.hincrby(key, "fails", 1)
+            pipe.hget(key, "code")
+            fails, saved = await pipe.execute()
         if saved is None:
+            # key was missing: HINCRBY recreated a TTL-less stub; remove it
+            await self.redis.delete(key)
+            return False
+        if fails > MAX_FAILS:
+            await self.redis.delete(key)
             return False
         if secrets.compare_digest(saved.encode(), otp.strip().encode()):
-            await self.redis.delete(key)
-            return True
-        if await self.redis.hincrby(key, "fails", 1) >= MAX_FAILS:
+            # single use: only the caller whose DEL removed the key wins
+            return await self.redis.delete(key) == 1
+        if fails >= MAX_FAILS:
             await self.redis.delete(key)
         return False
