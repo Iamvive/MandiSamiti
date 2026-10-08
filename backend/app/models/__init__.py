@@ -3,6 +3,7 @@ from app.models.party import Party
 from app.models.deal import Deal
 from app.models.transaction import CashTransaction
 from app.models.revision import EntryRevision
+from app.models.refresh_token import RefreshToken
 
-__all__ = ["User", "ShopProfile", "Party", "Deal", "CashTransaction", "EntryRevision"]
+__all__ = ["User", "ShopProfile", "Party", "Deal", "CashTransaction", "EntryRevision", "RefreshToken"]
 

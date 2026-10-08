@@ -1,38 +1,65 @@
-from pydantic import BaseModel, Field
 from typing import Optional
+from pydantic import BaseModel, Field
 
-class SendOTPRequest(BaseModel):
-    phone_number: str = Field(..., description="10 digit Indian mobile number", example="9876543210")
+Phone = Field(..., description="10 digit Indian mobile number", examples=["9876543210"])
+Mpin = Field(..., pattern=r"^\d{4}$", examples=["1234"])
 
-class SendOTPResponse(BaseModel):
-    success: bool
-    message: str
-    phone_number: str
-    expires_in_seconds: int = 300
-    mock_otp: Optional[str] = None  # Returned only in dev / test mode
 
-class VerifyOTPRequest(BaseModel):
-    phone_number: str = Field(..., example="9876543210")
-    otp: str = Field(..., min_length=4, max_length=6, example="123456")
-    shop_name: Optional[str] = Field(None, example="श्री गणेश ट्रेडिंग")
-    user_name: Optional[str] = Field(None, example="Vivek Ji")
+class SendOtpRequest(BaseModel):
+    phone: str = Phone
 
-class TokenResponse(BaseModel):
+
+class SendOtpResponse(BaseModel):
+    sent: bool
+    cooldown_s: int
+
+
+class VerifyOtpRequest(BaseModel):
+    phone: str = Phone
+    otp: str = Field(..., min_length=4, max_length=6)
+
+
+class VerifyOtpResponse(BaseModel):
+    status: str  # NEW | EXISTING
+    signup_pass: Optional[str] = None
+    login_pass: Optional[str] = None
+
+
+class SignupRequest(BaseModel):
+    signup_pass: str
+    shop_name: str = Field(..., min_length=1, max_length=120)
+    owner_name: str = Field(..., min_length=1, max_length=120)
+    mandi_name: str = Field(..., min_length=1, max_length=120)
+    mpin: str = Mpin
+
+
+class LoginRequest(BaseModel):
+    login_pass: str
+    mpin: str = Mpin
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
+
+
+class ShopOut(BaseModel):
+    id: str
+    shop_name: str
+    owner_name: Optional[str] = None
+    mandi_name: Optional[str] = None
+    phone_number: Optional[str] = None
+
+
+class AuthSession(BaseModel):
     access_token: str
     refresh_token: str
-    token_type: str = "bearer"
-    user_id: str
-    shop_id: Optional[str] = None
-    role: str
-    user_name: str
-    shop_name: Optional[str] = None
+    shop: ShopOut
 
-class SetupMPINRequest(BaseModel):
-    mpin: str = Field(..., min_length=4, max_length=6, example="1234")
 
-class VerifyMPINRequest(BaseModel):
-    phone_number: str = Field(..., example="9876543210")
-    mpin: str = Field(..., min_length=4, max_length=6, example="1234")
-
-class RefreshTokenRequest(BaseModel):
+class RefreshResponse(BaseModel):
+    access_token: str
     refresh_token: str

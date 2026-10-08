@@ -1,19 +1,21 @@
+import re
 import time
-from fastapi import APIRouter, Depends, HTTPException, status
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User, ShopProfile
+from app.models.refresh_token import RefreshToken
 from app.schemas.auth import (
-    SendOTPRequest, SendOTPResponse,
-    VerifyOTPRequest, TokenResponse,
-    SetupMPINRequest, VerifyMPINRequest,
-    RefreshTokenRequest
+    SendOtpRequest, SendOtpResponse, VerifyOtpRequest, VerifyOtpResponse,
+    SignupRequest, LoginRequest, RefreshRequest, LogoutRequest,
+    AuthSession, ShopOut, RefreshResponse,
 )
 from app.core.security import (
-    create_access_token, create_refresh_token,
+    create_access_token, create_refresh_token, create_pass_token,
     decode_token, get_password_hash, verify_password,
-    get_current_user_payload
 )
 from app.core.otp_service import OtpService, OtpRateLimited
 from app.core.otp_sender import OtpSender, get_otp_sender
@@ -22,147 +24,184 @@ from app.config import settings
 
 router = APIRouter()
 
-@router.post("/otp/send", response_model=SendOTPResponse, summary="Send 6-digit OTP to mobile")
-async def send_otp(
-    req: SendOTPRequest,
-    redis=Depends(get_redis),
-    sender: OtpSender = Depends(get_otp_sender),
-):
-    phone = req.phone_number.strip().replace("+91", "").replace(" ", "")
-    if len(phone) != 10 or not phone.isdigit():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please provide a valid 10-digit Indian mobile number"
-        )
-    
+PHONE_RE = re.compile(r"^[6-9]\d{9}$")
+MAX_MPIN_FAILS = 5
+OTP_COOLDOWN_S = 30
+
+
+def _unauthorized(detail="INVALID_PASS"):
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+
+def _clean_phone(raw: str) -> str:
+    phone = raw.strip().replace(" ", "")
+    if phone.startswith("+91"):
+        phone = phone[3:]
+    if not PHONE_RE.match(phone):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="INVALID_PHONE")
+    return phone
+
+
+def _otp_service(redis) -> OtpService:
+    return OtpService(redis, settings.OTP_STATIC_CODE if settings.OTP_STATIC_ENABLED else None)
+
+
+def _decode_pass(token: str, expected_type: str) -> dict:
     try:
-        otp = await OtpService(redis, settings.OTP_STATIC_CODE if settings.OTP_STATIC_ENABLED else None).issue(phone)
-    except OtpRateLimited:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many OTP requests. Please try again after 5 minutes."
-        )
-    await sender.send(phone, otp)
-
-    return SendOTPResponse(
-        success=True,
-        message="OTP sent successfully",
-        phone_number=phone,
-        expires_in_seconds=settings.OTP_EXPIRE_SECONDS,
-        mock_otp=None
-    )
+        payload = decode_token(token)
+    except HTTPException:
+        raise _unauthorized()
+    if payload.get("type") != expected_type or not payload.get("jti") or not payload.get("phone"):
+        raise _unauthorized()
+    return payload
 
 
-@router.post("/otp/verify", response_model=TokenResponse, summary="Verify OTP and issue JWT access tokens")
-async def verify_otp(req: VerifyOTPRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
-    phone = req.phone_number.strip().replace("+91", "").replace(" ", "")
-    if not await OtpService(redis, settings.OTP_STATIC_CODE if settings.OTP_STATIC_ENABLED else None).verify(phone, req.otp):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OTP"
-        )
-    
-    # Check if user exists
-    result = await db.execute(select(User).where(User.phone_number == phone))
-    user = result.scalars().first()
+async def _consume_pass(redis, jti: str) -> bool:
+    """Atomic single-use: True only for the caller that sets the key."""
+    ttl = settings.AUTH_PASS_EXPIRE_MINUTES * 60
+    return bool(await redis.set(f"pass_used:{jti}", 1, nx=True, ex=ttl))
 
-    if not user:
-        # Create new Shop and User
-        shop = ShopProfile(
-            shop_name=req.shop_name or "मेरी मंडी दुकान",
-            mandi_name="मथुरा कृषि उपज मंडी"
-        )
-        db.add(shop)
-        await db.flush()
 
-        user = User(
-            phone_number=phone,
-            name=req.user_name or "व्यापारी / मुनीम",
-            role="OWNER",
-            shop_id=shop.id
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        await db.refresh(shop)
-        shop_name = shop.shop_name
-    else:
-        # Load existing shop
-        shop_result = await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))
-        shop = shop_result.scalars().first()
-        shop_name = shop.shop_name if shop else None
-
-    access_token = create_access_token(subject=user.id, shop_id=user.shop_id, role=user.role)
-    refresh_token = create_refresh_token(subject=user.id)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        user_id=user.id,
-        shop_id=user.shop_id,
-        role=user.role,
-        user_name=user.name,
-        shop_name=shop_name
-    )
-
-@router.post("/mpin/setup", summary="Set up local 4-digit MPIN")
-async def setup_mpin(
-    req: SetupMPINRequest,
-    current_user: dict = Depends(get_current_user_payload),
-    db: AsyncSession = Depends(get_db)
-):
-    user_id = current_user.get("sub")
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    user.mpin_hash = get_password_hash(req.mpin)
-    user.updated_at = time.time()
+async def _issue_session(db: AsyncSession, user: User, shop: ShopProfile) -> AuthSession:
+    refresh, jti, exp_ms = create_refresh_token(user.id)
+    db.add(RefreshToken(jti=jti, user_id=user.id, expires_at=exp_ms))
     await db.commit()
-
-    return {"success": True, "message": "MPIN configured successfully"}
-
-@router.post("/mpin/verify", response_model=TokenResponse, summary="Fast login with 4-digit MPIN")
-async def verify_mpin(req: VerifyMPINRequest, db: AsyncSession = Depends(get_db)):
-    phone = req.phone_number.strip().replace("+91", "").replace(" ", "")
-    result = await db.execute(select(User).where(User.phone_number == phone))
-    user = result.scalars().first()
-    if not user or not user.mpin_hash:
-        raise HTTPException(status_code=400, detail="Invalid phone number or MPIN not setup")
-    
-    if not verify_password(req.mpin, user.mpin_hash):
-        raise HTTPException(status_code=400, detail="Incorrect MPIN")
-    
-    shop_result = await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))
-    shop = shop_result.scalars().first()
-
-    access_token = create_access_token(subject=user.id, shop_id=user.shop_id, role=user.role)
-    refresh_token = create_refresh_token(subject=user.id)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        user_id=user.id,
-        shop_id=user.shop_id,
-        role=user.role,
-        user_name=user.name,
-        shop_name=shop.shop_name if shop else None
+    return AuthSession(
+        access_token=create_access_token(subject=user.id, shop_id=user.shop_id, role=user.role),
+        refresh_token=refresh,
+        shop=ShopOut(
+            id=shop.id, shop_name=shop.shop_name, owner_name=shop.owner_name,
+            mandi_name=shop.mandi_name, phone_number=shop.phone_number,
+        ),
     )
 
-@router.post("/refresh", summary="Refresh expired access token")
-async def refresh_token(req: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
-    payload = decode_token(req.refresh_token)
-    if payload.get("type") != "refresh":
-        raise HTTPException(status_code=400, detail="Invalid refresh token")
-    
-    user_id = payload.get("sub")
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    access_token = create_access_token(subject=user.id, shop_id=user.shop_id, role=user.role)
-    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/otp/send", response_model=SendOtpResponse)
+async def send_otp(req: SendOtpRequest, redis=Depends(get_redis), sender: OtpSender = Depends(get_otp_sender)):
+    phone = _clean_phone(req.phone)
+    try:
+        code = await _otp_service(redis).issue(phone)
+    except OtpRateLimited:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail="OTP_RATE_LIMITED")
+    await sender.send(phone, code)
+    return SendOtpResponse(sent=True, cooldown_s=OTP_COOLDOWN_S)
+
+
+@router.post("/otp/verify", response_model=VerifyOtpResponse)
+async def verify_otp(req: VerifyOtpRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
+    phone = _clean_phone(req.phone)
+    if not await _otp_service(redis).verify(phone, req.otp):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="OTP_INVALID")
+    exists = (await db.execute(select(User.id).where(User.phone_number == phone))).first()
+    if exists:
+        token, _ = create_pass_token("login_pass", phone)
+        return VerifyOtpResponse(status="EXISTING", login_pass=token)
+    token, _ = create_pass_token("signup_pass", phone)
+    return VerifyOtpResponse(status="NEW", signup_pass=token)
+
+
+@router.post("/signup", response_model=AuthSession)
+async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
+    payload = _decode_pass(req.signup_pass, "signup_pass")
+    phone = payload["phone"]
+    if not await _consume_pass(redis, payload["jti"]):
+        raise _unauthorized()
+    if (await db.execute(select(User.id).where(User.phone_number == phone))).first():
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="PHONE_EXISTS")
+    shop = ShopProfile(
+        id=str(uuid.uuid4()), shop_name=req.shop_name, owner_name=req.owner_name,
+        mandi_name=req.mandi_name, phone_number=phone,
+    )
+    user = User(
+        phone_number=phone, name=req.owner_name, role="OWNER", shop_id=shop.id,
+        mpin_hash=get_password_hash(req.mpin),
+    )
+    db.add(shop)
+    await db.flush()
+    db.add(user)
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="PHONE_EXISTS")
+    return await _issue_session(db, user, shop)
+
+
+@router.post("/login", response_model=AuthSession)
+async def login(req: LoginRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
+    payload = _decode_pass(req.login_pass, "login_pass")
+    jti = payload["jti"]
+    ttl = settings.AUTH_PASS_EXPIRE_MINUTES * 60
+    if await redis.exists(f"pass_used:{jti}"):
+        raise _unauthorized()
+
+    # Count the attempt first (atomic), then decide.
+    fail_key = f"mpin_fail:{jti}"
+    async with redis.pipeline(transaction=True) as pipe:
+        pipe.incr(fail_key)
+        pipe.expire(fail_key, ttl, nx=True)
+        attempts, _ = await pipe.execute()
+    if attempts > MAX_MPIN_FAILS:
+        raise _unauthorized({"code": "PASS_BURNED"})
+
+    user = (await db.execute(select(User).where(User.phone_number == payload["phone"]))).scalars().first()
+    ok = bool(user and user.is_active and user.mpin_hash and verify_password(req.mpin, user.mpin_hash))
+    if not ok:
+        if attempts >= MAX_MPIN_FAILS:
+            await _consume_pass(redis, jti)  # burn the pass
+            raise _unauthorized({"code": "PASS_BURNED"})
+        raise _unauthorized({"code": "MPIN_INVALID", "attempts_left": MAX_MPIN_FAILS - attempts})
+
+    if not await _consume_pass(redis, jti):
+        raise _unauthorized()
+    shop = (await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))).scalars().first()
+    if not shop:
+        raise _unauthorized()
+    return await _issue_session(db, user, shop)
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh(req: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        payload = decode_token(req.refresh_token)
+    except HTTPException:
+        raise _unauthorized("INVALID_REFRESH")
+    if payload.get("type") != "refresh" or not payload.get("jti"):
+        raise _unauthorized("INVALID_REFRESH")
+    now = int(time.time() * 1000)
+    # Atomic rotate: only one caller can flip revoked_at from NULL.
+    res = await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.jti == payload["jti"], RefreshToken.revoked_at.is_(None), RefreshToken.expires_at > now)
+        .values(revoked_at=now)
+    )
+    if res.rowcount != 1:
+        await db.rollback()
+        raise _unauthorized("INVALID_REFRESH")
+    user = (await db.execute(select(User).where(User.id == payload["sub"]))).scalars().first()
+    if not user or not user.is_active:
+        await db.rollback()
+        raise _unauthorized("INVALID_REFRESH")
+    new_refresh, jti, exp_ms = create_refresh_token(user.id)
+    db.add(RefreshToken(jti=jti, user_id=user.id, expires_at=exp_ms))
+    await db.commit()
+    return RefreshResponse(
+        access_token=create_access_token(subject=user.id, shop_id=user.shop_id, role=user.role),
+        refresh_token=new_refresh,
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(req: LogoutRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        payload = decode_token(req.refresh_token)
+    except HTTPException:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    if payload.get("type") == "refresh" and payload.get("jti"):
+        await db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.jti == payload["jti"], RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=int(time.time() * 1000))
+        )
+        await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

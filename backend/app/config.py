@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "mandisamiti-super-secure-production-jwt-key-32chars-min"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 90  # 90 days
+    AUTH_PASS_EXPIRE_MINUTES: int = 10
     
     # Database (Default: local async SQLite; In Docker/VPS: PostgreSQL)
     DATABASE_URL: str = "sqlite+aiosqlite:///./mandi_backend.db"

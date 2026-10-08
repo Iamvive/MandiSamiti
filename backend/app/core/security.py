@@ -1,4 +1,5 @@
 import time
+import uuid
 from typing import Optional, Any
 import jwt
 from fastapi import HTTPException, Security, status
@@ -30,14 +31,25 @@ def create_access_token(subject: str, shop_id: Optional[str] = None, role: str =
     }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def create_refresh_token(subject: str) -> str:
-    expire = time.time() + (settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60)
-    to_encode = {
-        "sub": subject,
-        "exp": int(expire),
-        "type": "refresh"
-    }
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+def create_refresh_token(subject: str, jti: Optional[str] = None) -> tuple[str, str, int]:
+    """Returns (token, jti, expires_at_ms)."""
+    jti = jti or str(uuid.uuid4())
+    exp = int(time.time() + settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60)
+    token = jwt.encode(
+        {"sub": subject, "jti": jti, "exp": exp, "type": "refresh"},
+        settings.SECRET_KEY, algorithm=settings.ALGORITHM,
+    )
+    return token, jti, exp * 1000
+
+def create_pass_token(pass_type: str, phone: str) -> tuple[str, str]:
+    """Short-lived single-use pass (signup_pass / login_pass). Returns (token, jti)."""
+    jti = str(uuid.uuid4())
+    exp = int(time.time() + settings.AUTH_PASS_EXPIRE_MINUTES * 60)
+    token = jwt.encode(
+        {"type": pass_type, "phone": phone, "jti": jti, "exp": exp},
+        settings.SECRET_KEY, algorithm=settings.ALGORITHM,
+    )
+    return token, jti
 
 def decode_token(token: str) -> dict[str, Any]:
     try:
