@@ -29,14 +29,14 @@ MandiSamiti is an enterprise-grade, high-trust accounting and trade execution sy
 | :--- | :--- | :--- | :--- | :--- |
 | **NGDL v1.2 Design System** | Pure Alabaster / Space Black monochromatic theme | High contrast, zero emoji clutter | ✅ **Live on Phone** | Phase 0 (Done) |
 | **Paisa-Precise Math Core** | Decimal-free integer arithmetic for all mandi calculations | 100% mathematical honesty | ✅ **Live on Phone** | Phase 0 (Done) |
-| **Exact Money Math** | Half-up rounding, signed farmer payables, paisa-safe rate edits | No silent zeroing or lost paise | ✅ **Live on Phone** | Phase 1A (Done) |
+| **Exact Money Math** | Half-up rounding, signed farmer payables, paisa-safe rate edits | No silent zeroing or lost paise | 🟡 **Done in code, phone test pending** | Phase 1A |
 | **Voice Soundbox (TTS)** | Vernacular audio playback for settlements | Audio reassurance for busy/senior users | ✅ **Live on Phone** | Phase 0 (Done) |
 | **WhatsApp Slip Export** | 1-tap instant WhatsApp bill & receipt delivery | Pre-formatted Hindi slips for farmers | ✅ **Live on Phone** | Phase 0 (Done) |
 | **4-Tab Navigation Bar** | Screen decomposition (Dashboard, Khata, Galla, Settings) | Prevents single-screen overcrowding | ✅ **Live on Phone** | Phase 1 (Done) |
 | **Language Switcher (हिन्दी/EN)** | Dynamic runtime toggle between Hindi & English | Easy switch for younger vs senior users | 🟡 **UI only** (not persisted) | Phase 1 |
 | **Authentication & Sign Out** | Phone + 4-digit MPIN, Session Store & Sign Out | Simple PIN memory, no complex passwords | 🟡 **UI only** (fake OTP) | Plan 1C |
 | **Multi-Shop Management** | Switch between multiple mandi licenses/firms | 1-tap dropdown in Settings | ⚪ **Planned** | Phase 2 |
-| **Entry Deletion & Void Audit** | Soft-delete / Void with Reason & instant balance reversal | Mistake protection with audit trail | ✅ **Live on Phone** | Phase 1A (Done) |
+| **Entry Deletion & Void Audit** | Soft-delete / Void with Reason & instant balance reversal | Mistake protection with audit trail | 🟡 **Done in code, phone test pending** | Phase 1A |
 | **Camera Slip OCR / Attachment**| Attach or scan physical weighbridge slips (कांटा पर्ची) | Photo capture with thumbnail preview | 🟡 **Drafted** | Phase 3 |
 | **FastAPI + PostgreSQL Sync** | VPS Backend synchronization (:8050) | Cloud backup for local SQLite DB | ⚪ **Not connected** | Plans 1B/1C |
 
