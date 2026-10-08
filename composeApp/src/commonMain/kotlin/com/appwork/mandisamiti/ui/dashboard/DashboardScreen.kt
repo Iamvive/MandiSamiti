@@ -156,7 +156,7 @@ fun DashboardScreen(
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
-                    text = if (isEnglish) "+ New Trade Entry / Inward" else "+ नया सौदा / आवक दर्ज करें",
+                    text = if (isEnglish) "New Trade Entry / Inward" else "नया सौदा / आवक दर्ज करें",
                     color = MandiPrimaryActionText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold

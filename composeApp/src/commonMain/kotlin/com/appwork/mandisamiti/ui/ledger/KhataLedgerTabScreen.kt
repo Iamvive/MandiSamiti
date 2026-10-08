@@ -81,7 +81,7 @@ fun KhataLedgerTabScreen(
                 },
                 text = {
                     Text(
-                        text = if (isEnglish) "+ Add Party" else "+ नया खाता",
+                        text = if (isEnglish) "Add Party" else "नया खाता",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiPrimaryActionText

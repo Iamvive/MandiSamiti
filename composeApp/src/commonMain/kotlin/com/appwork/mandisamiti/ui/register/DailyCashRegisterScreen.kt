@@ -376,15 +376,16 @@ fun DailyCashRegisterScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDeposit) MandiGreenPayable else MandiRedReceivable
+                        containerColor = if (isDeposit) MandiBtnSuccessBg else MandiBtnDangerBg,
+                        contentColor = Color.White
                     )
                 ) {
-                    Text("सुरक्षित करें")
+                    Text("सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDirectCashDialog = null }) {
-                    Text("रद्द करें")
+                    Text("रद्द करें", color = MandiTextSecondary)
                 }
             }
         )

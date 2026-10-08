@@ -68,10 +68,15 @@ import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessFg
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
+import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
@@ -412,6 +417,7 @@ private fun ShopDetailsSection(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            val buttonTextColor = if (uiState.isStep1Valid) MandiPrimaryActionText else MandiTextMuted
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -423,13 +429,25 @@ private fun ShopDetailsSection(
                     .height(50.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MandiAmberPrimary,
-                    disabledContainerColor = MandiBorder
+                    containerColor = MandiPrimaryAction,
+                    contentColor = MandiPrimaryActionText,
+                    disabledContainerColor = MandiSurfaceElevated,
+                    disabledContentColor = MandiTextMuted
                 )
             ) {
-                Text("आगे बढ़ें (OTP प्राप्त करें)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "आगे बढ़ें (OTP प्राप्त करें)",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = buttonTextColor
+                )
                 Spacer(modifier = Modifier.size(8.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = buttonTextColor,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -522,6 +540,7 @@ private fun OtpVerificationSection(
                 colors = textFieldColors()
             )
 
+            val otpButtonTextColor = if (otp.length == 6) MandiBtnSuccessFg else MandiTextMuted
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -533,13 +552,25 @@ private fun OtpVerificationSection(
                     .height(50.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MandiGreenPayable,
-                    disabledContainerColor = MandiBorder
+                    containerColor = MandiBtnSuccessBg,
+                    contentColor = MandiBtnSuccessFg,
+                    disabledContainerColor = MandiSurfaceElevated,
+                    disabledContentColor = MandiTextMuted
                 )
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = otpButtonTextColor,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text("OTP सत्यापित करें", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "OTP सत्यापित करें",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = otpButtonTextColor
+                )
             }
 
             // Resend Countdown Throttler
@@ -688,6 +719,7 @@ private fun MpinSetupSection(
                 colors = textFieldColors()
             )
 
+            val mpinButtonTextColor = if (isMpinValid && !isLoading) MandiPrimaryActionText else MandiTextMuted
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -699,16 +731,28 @@ private fun MpinSetupSection(
                     .height(50.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MandiAmberPrimary,
-                    disabledContainerColor = MandiBorder
+                    containerColor = MandiPrimaryAction,
+                    contentColor = MandiPrimaryActionText,
+                    disabledContainerColor = MandiSurfaceElevated,
+                    disabledContentColor = MandiTextMuted
                 )
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(color = MandiPrimaryActionText, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = mpinButtonTextColor,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text("पंजीयन पूर्ण करें व खाता खोलें", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "पंजीयन पूर्ण करें व खाता खोलें",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = mpinButtonTextColor
+                    )
                 }
             }
         }

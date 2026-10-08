@@ -60,9 +60,13 @@ import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiBtnDangerBg
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
@@ -350,15 +354,16 @@ fun PartyLedgerScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDeposit) MandiGreenPayable else MandiRedReceivable
+                        containerColor = if (isDeposit) MandiBtnSuccessBg else MandiBtnDangerBg,
+                        contentColor = Color.White
                     )
                 ) {
-                    Text("सुरक्षित करें")
+                    Text("सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCashEntryType = null }) {
-                    Text("रद्द करें")
+                    Text("रद्द करें", color = MandiTextSecondary)
                 }
             }
         )
@@ -441,14 +446,17 @@ fun PartyLedgerScreen(
                             viewModel.closeInterestDialog()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiAmberPrimary)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    )
                 ) {
-                    Text("ब्याज खाते में जोड़ें")
+                    Text("ब्याज खाते में जोड़ें", color = MandiPrimaryActionText, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeInterestDialog() }) {
-                    Text("बंद करें")
+                    Text("बंद करें", color = MandiTextSecondary)
                 }
             }
         )
