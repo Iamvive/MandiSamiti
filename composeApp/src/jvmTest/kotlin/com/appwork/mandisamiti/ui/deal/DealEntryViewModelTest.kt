@@ -284,4 +284,40 @@ class DealEntryViewModelTest {
         assertEquals(listOf("deal-old"), deals.map { it.id })
         assertEquals(1, deals.single().revision)
     }
+
+    @Test
+    fun editSaveKeepsFieldsTheScreenDoesNotHold() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        seedShopAndParties(shopRepo, partyRepo)
+        dealRepo.saveDeal(
+            existingDeal().copy(
+                remarks = "गीला माल", voiceNoteUri = "voice://1", buyerCommissionPaisa = 7_000L,
+                weighingChargePaisa = 5_000L, otherDeductionsPaisa = 3_000L
+            )
+        )
+
+        val viewModel = DealEntryViewModel(
+            shopId = "shop-1", existingDealId = "deal-old", dealRepository = dealRepo,
+            partyRepository = partyRepo, shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope
+        )
+        viewModel.uiState.first { it.isEditMode && it.selectedFarmer != null && it.ratePerQuintalText.isNotEmpty() }
+
+        viewModel.events.test {
+            viewModel.saveDeal()
+            awaitItem()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val saved = dealRepo.getDealById("deal-old")!!
+        assertEquals("गीला माल", saved.remarks)
+        assertEquals("voice://1", saved.voiceNoteUri)
+        assertEquals(7_000L, saved.buyerCommissionPaisa)
+        assertEquals(5_000L, saved.weighingChargePaisa)
+        assertEquals(3_000L, saved.otherDeductionsPaisa)
+    }
 }

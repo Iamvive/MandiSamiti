@@ -339,30 +339,57 @@ class DealEntryViewModel(
         val now = Clock.System.now().toEpochMilliseconds()
         val original = originalDeal
 
-        val deal = Deal(
-            id = original?.id ?: IdGenerator.newId(),
-            shopId = state.shopId,
-            farmerId = farmer.id,
-            buyerId = state.selectedBuyer?.id,
-            commodityId = state.selectedCommodity?.id ?: original?.commodityId ?: "comm_wheat",
-            dealStatus = if (isSettled) DealStatus.SETTLED else DealStatus.PENDING_SETTLEMENT,
-            dealDate = original?.dealDate ?: now,
-            bagsCount = bags,
-            grossWeightGrams = grossGrams,
-            cutWeightGrams = tareGrams,
-            netWeightGrams = netGrams,
-            ratePaisaPerUnit = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText).takeIf { it > 0L },
-            grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
-            farmerCommissionPaisa = if (isSettled) calc!!.farmerCommissionPaisa else 0L,
-            farmerCommissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText),
-            labourChargePaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText),
-            netFarmerPayablePaisa = if (isSettled) calc!!.netFarmerPayablePaisa else 0L,
-            netBuyerReceivablePaisa = if (isSettled) calc!!.netBuyerReceivablePaisa else 0L,
-            receiptPhotoUri = state.receiptPhotoUri,
-            createdAt = original?.createdAt ?: now,
-            updatedAt = now,
-            revision = original?.revision ?: 1
-        )
+        val commodityId = state.selectedCommodity?.id ?: original?.commodityId ?: "comm_wheat"
+        val dealStatus = if (isSettled) DealStatus.SETTLED else DealStatus.PENDING_SETTLEMENT
+        val ratePaisa = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText).takeIf { it > 0L }
+        val commissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText)
+        val labourPaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText)
+        val deal = if (original != null) {
+            // Edit: override only what this screen holds, so remarks, voice note and the other charges survive.
+            original.copy(
+                farmerId = farmer.id,
+                buyerId = state.selectedBuyer?.id,
+                commodityId = commodityId,
+                dealStatus = dealStatus,
+                bagsCount = bags,
+                grossWeightGrams = grossGrams,
+                cutWeightGrams = tareGrams,
+                netWeightGrams = netGrams,
+                ratePaisaPerUnit = ratePaisa,
+                grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
+                farmerCommissionPaisa = if (isSettled) calc!!.farmerCommissionPaisa else 0L,
+                farmerCommissionBps = commissionBps,
+                labourChargePaisa = labourPaisa,
+                netFarmerPayablePaisa = if (isSettled) calc!!.netFarmerPayablePaisa else 0L,
+                netBuyerReceivablePaisa = if (isSettled) calc!!.netBuyerReceivablePaisa else 0L,
+                receiptPhotoUri = state.receiptPhotoUri,
+                updatedAt = now
+            )
+        } else {
+            Deal(
+                id = IdGenerator.newId(),
+                shopId = state.shopId,
+                farmerId = farmer.id,
+                buyerId = state.selectedBuyer?.id,
+                commodityId = commodityId,
+                dealStatus = dealStatus,
+                dealDate = now,
+                bagsCount = bags,
+                grossWeightGrams = grossGrams,
+                cutWeightGrams = tareGrams,
+                netWeightGrams = netGrams,
+                ratePaisaPerUnit = ratePaisa,
+                grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
+                farmerCommissionPaisa = if (isSettled) calc!!.farmerCommissionPaisa else 0L,
+                farmerCommissionBps = commissionBps,
+                labourChargePaisa = labourPaisa,
+                netFarmerPayablePaisa = if (isSettled) calc!!.netFarmerPayablePaisa else 0L,
+                netBuyerReceivablePaisa = if (isSettled) calc!!.netBuyerReceivablePaisa else 0L,
+                receiptPhotoUri = state.receiptPhotoUri,
+                createdAt = now,
+                updatedAt = now
+            )
+        }
 
         _uiState.value = _uiState.value.copy(isSaving = true)
         viewModelScope.launch {
