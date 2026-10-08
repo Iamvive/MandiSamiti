@@ -221,7 +221,6 @@ fun RegisterScreen(
                             onShopChange = viewModel::onShopNameChanged,
                             onOwnerChange = viewModel::onOwnerNameChanged,
                             onMandiChange = viewModel::onMandiNameChanged,
-                            onFillSample = viewModel::fillSampleUser,
                             onSubmit = viewModel::proceedToOtp
                         )
                     }
@@ -266,7 +265,6 @@ private fun ShopDetailsSection(
     onShopChange: (String) -> Unit,
     onOwnerChange: (String) -> Unit,
     onMandiChange: (String) -> Unit,
-    onFillSample: () -> Unit,
     onSubmit: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
@@ -283,40 +281,12 @@ private fun ShopDetailsSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "दुकान व फर्म का विवरण",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MandiAmberLight.copy(alpha = 0.4f))
-                        .clickable { onFillSample() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = null,
-                        tint = MandiAmberDark,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "नमूना डेटा भरें",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiAmberDark
-                    )
-                }
-            }
+            Text(
+                text = "दुकान व फर्म का विवरण",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MandiTextPrimary
+            )
 
             // Mobile Number
             OutlinedTextField(

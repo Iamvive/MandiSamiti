@@ -39,8 +39,8 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             SoundboxTopBar(
-                shopName = uiState.shopProfile?.shopName ?: "श्री गणेश ट्रेडिंग",
-                mandiLocation = uiState.shopProfile?.mandiName ?: "नवीन अनाज मंडी, मथुरा",
+                shopName = uiState.shopProfile?.shopName ?: "",
+                mandiLocation = uiState.shopProfile?.mandiName ?: "",
                 isSoundEnabled = uiState.isSoundEnabled,
                 onToggleSound = { viewModel.toggleSoundSetting() }
             )

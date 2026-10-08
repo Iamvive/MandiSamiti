@@ -142,18 +142,18 @@ fun SettingsScreen(
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = uiState.shopProfile?.shopName ?: "श्री गणेश ट्रेडिंग",
+                            text = uiState.shopProfile?.shopName ?: "",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary
                         )
                         Text(
-                            text = uiState.shopProfile?.mandiName ?: "नवीन अनाज मंडी, मथुरा",
+                            text = uiState.shopProfile?.mandiName ?: "",
                             fontSize = 13.sp,
                             color = MandiTextSecondary
                         )
                         Text(
-                            text = "फ़ोन: ${uiState.shopProfile?.phoneNumber ?: "+91 9876543210"}",
+                            text = "फ़ोन: ${uiState.shopProfile?.phoneNumber ?: ""}",
                             fontSize = 12.sp,
                             color = MandiTextMuted
                         )

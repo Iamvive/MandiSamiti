@@ -79,21 +79,6 @@ class RegisterViewModel(
         return false
     }
 
-    fun fillSampleUser() {
-        _uiState.update {
-            it.copy(
-                phoneNumber = "9876543210",
-                shopName = "श्री गणेश ट्रेडिंग",
-                ownerName = "लाला मदन लाल जी",
-                mandiName = "मथुरा कृषि उपज मंडी",
-                phoneError = null,
-                shopNameError = null,
-                ownerNameError = null,
-                generalErrorMessage = null
-            )
-        }
-    }
-
     fun onPhoneNumberChanged(value: String) {
         val digitsOnly = value.filter { it.isDigit() }.take(10)
         val error = when {
