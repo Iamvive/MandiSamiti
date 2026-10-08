@@ -316,6 +316,8 @@ class DealEntryViewModel(
 
     fun saveDeal() {
         val state = _uiState.value
+        if (state.isSaving) return // a second tap while the first save is in flight must not save twice
+        if (state.isEditMode && originalDeal == null) return // edit target not loaded yet: never save it as a new deal
         val farmer = state.selectedFarmer
         if (farmer == null) {
             _uiState.value = state.copy(error = "कृपया किसान का चयन करें")
@@ -362,8 +364,8 @@ class DealEntryViewModel(
             revision = original?.revision ?: 1
         )
 
+        _uiState.value = _uiState.value.copy(isSaving = true)
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true)
             if (original == null) dealRepository.saveDeal(deal) else dealRepository.editDeal(deal)
 
             // Hindi Soundbox Voice Announcement Text

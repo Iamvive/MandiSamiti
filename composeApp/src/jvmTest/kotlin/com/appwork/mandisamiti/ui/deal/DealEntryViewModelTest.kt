@@ -231,4 +231,57 @@ class DealEntryViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun doubleTapSaveCreatesExactlyOneDeal() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        seedShopAndParties(shopRepo, partyRepo)
+
+        val viewModel = DealEntryViewModel(
+            shopId = "shop-1", existingDealId = null, dealRepository = dealRepo,
+            partyRepository = partyRepo, shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope
+        )
+        viewModel.uiState.first { it.selectedFarmer != null }
+        viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT)
+        listOf(KeypadAction.DIGIT_1, KeypadAction.DIGIT_8).forEach(viewModel::onKeypadAction)
+
+        viewModel.saveDeal()
+        viewModel.saveDeal()
+        testScheduler.runCurrent() // runs the queued backgroundScope work (advanceUntilIdle skips background tasks)
+
+        assertEquals(1, dealRepo.getDealsByShopStream("shop-1").first().size)
+    }
+
+    @Test
+    fun saveInEditModeBeforeDealLoadsDoesNotCreateANewDeal() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        seedShopAndParties(shopRepo, partyRepo)
+        dealRepo.saveDeal(existingDeal())
+        val farmer = partyRepo.getPartyById("farmer-1")!!
+
+        val viewModel = DealEntryViewModel(
+            shopId = "shop-1", existingDealId = "deal-old", dealRepository = dealRepo,
+            partyRepository = partyRepo, shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope
+        )
+        // The load coroutine is queued but has not run: originalDeal is still null.
+        viewModel.onSelectFarmer(farmer)
+        viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT)
+        listOf(KeypadAction.DIGIT_1, KeypadAction.DIGIT_8).forEach(viewModel::onKeypadAction)
+        viewModel.saveDeal()
+        testScheduler.runCurrent() // runs the queued backgroundScope work (advanceUntilIdle skips background tasks)
+
+        val deals = dealRepo.getDealsByShopStream("shop-1").first()
+        assertEquals(listOf("deal-old"), deals.map { it.id })
+        assertEquals(1, deals.single().revision)
+    }
 }

@@ -425,6 +425,7 @@ fun DealEntryScreen(
                 // 6. Action Save Button
                 Button(
                     onClick = { viewModel.saveDeal() },
+                    enabled = !uiState.isSaving,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
