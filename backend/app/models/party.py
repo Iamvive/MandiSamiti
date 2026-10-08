@@ -1,6 +1,6 @@
 import uuid
 import time
-from sqlalchemy import Column, String, Integer, Float, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, BigInteger, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -13,9 +13,12 @@ class Party(Base):
     phone = Column(String(15), nullable=True)
     role = Column(String(20), nullable=False)  # FARMER (किसान), BUYER (व्यापारी)
     village = Column(String, nullable=True)
-    current_balance = Column(Float, default=0.0)  # Positive = Receivable, Negative = Payable
+    monthly_interest_rate = Column(Float, nullable=True, default=1.5)
+    photo_uri = Column(String, nullable=True)
+    is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)
-    updated_at = Column(Float, default=lambda: time.time())
-    created_at = Column(Float, default=lambda: time.time())
+    created_at = Column(BigInteger, default=lambda: int(time.time() * 1000))
+    updated_at = Column(BigInteger, default=lambda: int(time.time() * 1000), onupdate=lambda: int(time.time() * 1000))
 
     shop = relationship("ShopProfile", back_populates="parties")
+

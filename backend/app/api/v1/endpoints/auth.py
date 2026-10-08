@@ -29,7 +29,13 @@ async def send_otp(req: SendOTPRequest):
             detail="Please provide a valid 10-digit Indian mobile number"
         )
     
-    otp = otp_service.generate_otp(phone)
+    try:
+        otp = otp_service.generate_otp(phone)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(e)
+        )
     mock_val = otp if settings.OTP_MOCK_MODE else None
 
     return SendOTPResponse(
@@ -39,6 +45,7 @@ async def send_otp(req: SendOTPRequest):
         expires_in_seconds=settings.OTP_EXPIRE_SECONDS,
         mock_otp=mock_val
     )
+
 
 @router.post("/otp/verify", response_model=TokenResponse, summary="Verify OTP and issue JWT access tokens")
 async def verify_otp(req: VerifyOTPRequest, db: AsyncSession = Depends(get_db)):

@@ -1,6 +1,6 @@
 import uuid
 import time
-from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, Boolean, BigInteger, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -9,12 +9,16 @@ class ShopProfile(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     shop_name = Column(String, nullable=False)
+    owner_name = Column(String, nullable=True)
     mandi_name = Column(String, nullable=True)
-    mandi_license_number = Column(String, nullable=True)
-    soundbox_enabled = Column(Boolean, default=True)
+    shop_number = Column(String, nullable=True)
+    phone_number = Column(String(15), nullable=True)
+    pin_hash = Column(String, nullable=True)
+    default_monthly_interest_rate = Column(Float, default=1.5)
+    is_sound_enabled = Column(Integer, default=1)
     soundbox_voice_lang = Column(String, default="hi-IN")
-    created_at = Column(Float, default=lambda: time.time())
-    updated_at = Column(Float, default=lambda: time.time())
+    created_at = Column(BigInteger, default=lambda: int(time.time() * 1000))
+    updated_at = Column(BigInteger, default=lambda: int(time.time() * 1000), onupdate=lambda: int(time.time() * 1000))
 
     users = relationship("User", back_populates="shop")
     parties = relationship("Party", back_populates="shop")
@@ -31,7 +35,8 @@ class User(Base):
     shop_id = Column(String, ForeignKey("shop_profiles.id"), nullable=True)
     mpin_hash = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(Float, default=lambda: time.time())
-    updated_at = Column(Float, default=lambda: time.time())
+    created_at = Column(BigInteger, default=lambda: int(time.time() * 1000))
+    updated_at = Column(BigInteger, default=lambda: int(time.time() * 1000), onupdate=lambda: int(time.time() * 1000))
 
     shop = relationship("ShopProfile", back_populates="users")
+

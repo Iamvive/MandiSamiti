@@ -2,5 +2,7 @@ from app.models.user import User, ShopProfile
 from app.models.party import Party
 from app.models.deal import Deal
 from app.models.transaction import CashTransaction
+from app.models.revision import EntryRevision
 
-__all__ = ["User", "ShopProfile", "Party", "Deal", "CashTransaction"]
+__all__ = ["User", "ShopProfile", "Party", "Deal", "CashTransaction", "EntryRevision"]
+

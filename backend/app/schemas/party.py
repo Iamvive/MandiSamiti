@@ -7,7 +7,9 @@ class PartyBase(BaseModel):
     phone: Optional[str] = None
     role: str  # FARMER, BUYER
     village: Optional[str] = None
-    current_balance: float = 0.0
+    monthly_interest_rate: Optional[float] = 1.5
+    photo_uri: Optional[str] = None
+    is_deleted: int = 0
 
 class PartyCreate(PartyBase):
     pass
@@ -16,7 +18,8 @@ class PartyResponse(PartyBase):
     id: str
     shop_id: str
     sync_version: int
-    updated_at: float
-    created_at: float
+    updated_at: int
+    created_at: int
 
     model_config = ConfigDict(from_attributes=True)
+
