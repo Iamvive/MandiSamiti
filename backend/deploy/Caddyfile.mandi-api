@@ -6,5 +6,6 @@ mandi-api.appworx.co.in {
     }
     reverse_proxy 127.0.0.1:8050 {
         header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
     }
 }
