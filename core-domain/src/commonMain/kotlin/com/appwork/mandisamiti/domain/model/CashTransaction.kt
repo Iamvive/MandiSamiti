@@ -31,5 +31,8 @@ data class CashTransaction(
     val createdAt: Long,
     val updatedAt: Long,
     val isDeleted: Boolean = false,
-    val syncStatus: Int = 0
+    val syncStatus: Int = 0,
+    val revision: Int = 1,
+    val isVoid: Boolean = false,
+    val voidReason: VoidReason? = null
 )

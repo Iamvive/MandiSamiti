@@ -206,9 +206,6 @@ INSERT OR REPLACE INTO dealEntity(
     farmer_commission_bps, revision, is_void, void_reason
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
-softDeleteDeal:
-UPDATE dealEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
-
 -- Cash Transaction Queries
 getCashTransactionsByParty:
 SELECT * FROM cashTransactionEntity WHERE party_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC;
@@ -220,8 +217,8 @@ insertCashTransaction:
 INSERT OR REPLACE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
-softDeleteCashTransaction:
-UPDATE cashTransactionEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
+getCashTransactionById:
+SELECT * FROM cashTransactionEntity WHERE id = ?;
 
 -- Party Running Balance Aggregation Query
 -- Positive = लेना है (Receivable), Negative = देना है (Payable)

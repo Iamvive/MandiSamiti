@@ -45,5 +45,9 @@ data class Deal(
     val createdAt: Long,
     val updatedAt: Long,
     val isDeleted: Boolean = false,
-    val syncStatus: Int = 0
+    val syncStatus: Int = 0,
+    val farmerCommissionBps: Long = 0L, // commission % in basis points (150 = 1.5%)
+    val revision: Int = 1,
+    val isVoid: Boolean = false,
+    val voidReason: VoidReason? = null
 )

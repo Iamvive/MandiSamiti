@@ -6,20 +6,26 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.DealEntity
 import com.appwork.mandisamiti.domain.model.Deal
+import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.DealStatus
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.DealRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlinx.serialization.json.Json
 
 class OfflineFirstDealRepository(
     private val database: AppDatabase,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val clock: Clock = Clock.System
 ) : DealRepository {
 
     private val queries = database.appDatabaseQueries
+    private val json = Json { encodeDefaults = true }
 
     override fun getDealsByShopStream(shopId: String): Flow<List<Deal>> {
         return queries.getDealsByShop(shopId)
@@ -54,17 +60,60 @@ class OfflineFirstDealRepository(
     }
 
     override suspend fun saveDeal(deal: Deal) = withContext(ioDispatcher) {
-        insertOrReplace(deal)
+        database.transaction {
+            val created = deal.copy(revision = 1, syncStatus = 0)
+            insertOrReplace(created)
+            recordRevision(created, "CREATE", created.updatedAt)
+        }
     }
 
     override suspend fun editDeal(deal: Deal) = withContext(ioDispatcher) {
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-        insertOrReplace(deal.copy(updatedAt = now, syncStatus = 0))
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val current = queries.getDealById(deal.id).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Deal ${deal.id} does not exist")
+            require(!current.isVoid) { "Deal ${deal.id} is void and cannot be edited" }
+            val edited = deal.copy(
+                dealDate = current.dealDate,
+                createdAt = current.createdAt,
+                updatedAt = now,
+                revision = current.revision + 1,
+                isVoid = false,
+                voidReason = null,
+                syncStatus = 0
+            )
+            insertOrReplace(edited)
+            recordRevision(edited, "EDIT", now)
+        }
     }
 
-    override suspend fun deleteDeal(dealId: String) = withContext(ioDispatcher) {
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-        queries.softDeleteDeal(updated_at = now, id = dealId)
+    override suspend fun voidDeal(dealId: String, reason: VoidReason) = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val current = queries.getDealById(dealId).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Deal $dealId does not exist")
+            if (current.isVoid) return@transaction
+            val voided = current.copy(
+                isVoid = true, voidReason = reason, revision = current.revision + 1,
+                updatedAt = now, syncStatus = 0
+            )
+            insertOrReplace(voided)
+            recordRevision(voided, "VOID", now)
+        }
+    }
+
+    private fun recordRevision(deal: Deal, changeKind: String, at: Long) {
+        queries.insertRevision(
+            id = IdGenerator.newId(),
+            shop_id = deal.shopId,
+            entry_id = deal.id,
+            entry_kind = "DEAL",
+            revision = deal.revision.toLong(),
+            change_kind = changeKind,
+            snapshot_json = json.encodeToString(Deal.serializer(), deal),
+            void_reason = deal.voidReason?.name,
+            changed_at = at
+        )
     }
 
     private fun insertOrReplace(deal: Deal) {
@@ -96,7 +145,10 @@ class OfflineFirstDealRepository(
             updated_at = deal.updatedAt,
             is_deleted = if (deal.isDeleted) 1L else 0L,
             sync_status = deal.syncStatus.toLong(),
-            farmer_commission_bps = 0L, revision = 1L, is_void = 0L, void_reason = null,
+            farmer_commission_bps = deal.farmerCommissionBps,
+            revision = deal.revision.toLong(),
+            is_void = if (deal.isVoid) 1L else 0L,
+            void_reason = deal.voidReason?.name,
         )
     }
 
@@ -128,7 +180,11 @@ class OfflineFirstDealRepository(
             createdAt = created_at,
             updatedAt = updated_at,
             isDeleted = is_deleted == 1L,
-            syncStatus = sync_status.toInt()
+            syncStatus = sync_status.toInt(),
+            farmerCommissionBps = farmer_commission_bps,
+            revision = revision.toInt(),
+            isVoid = is_void == 1L,
+            voidReason = void_reason?.let { VoidReason.valueOf(it) }
         )
     }
 }
