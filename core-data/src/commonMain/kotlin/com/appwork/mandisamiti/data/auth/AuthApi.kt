@@ -32,29 +32,29 @@ fun mandiHttpClient(engine: HttpClientEngine? = null): HttpClient {
 class AuthApi(private val http: HttpClient, private val baseUrl: String) {
 
     suspend fun sendOtp(phone: String): Result<Unit> =
-        call("otp/send", SendOtpRequest(phone)) { status, _ ->
+        call("otp/send", SendOtpRequest(phone), { status, _ ->
             when (status) {
                 HttpStatusCode.TooManyRequests -> AuthError.RateLimited
                 HttpStatusCode.ServiceUnavailable -> AuthError.Network("OTP service unavailable")
                 else -> null
             }
-        }.map { }
+        }) { }
 
     suspend fun verifyOtp(phone: String, otp: String): Result<OtpVerifyResult> =
-        call("otp/verify", VerifyOtpRequest(phone, otp)) { status, text ->
+        call("otp/verify", VerifyOtpRequest(phone, otp), { status, text ->
             when {
                 status == HttpStatusCode.BadRequest && detailString(text) == "OTP_INVALID" -> AuthError.OtpInvalid
                 status == HttpStatusCode.TooManyRequests -> AuthError.RateLimited
                 else -> null
             }
-        }.mapCatching { resp ->
+        }) { resp ->
             val r: VerifyOtpResponse = resp.body()
             when (r.status) {
                 "NEW" -> OtpVerifyResult.NewShop(r.signupPass ?: throw AuthError.Network("Malformed response"))
                 "EXISTING" -> OtpVerifyResult.ExistingShop(r.loginPass ?: throw AuthError.Network("Malformed response"))
                 else -> throw AuthError.Network("Unknown status ${r.status}")
             }
-        }.mapNetwork()
+        }
 
     suspend fun signup(
         signupPass: String,
@@ -63,65 +63,65 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
         mandiName: String,
         mpin: String,
     ): Result<AuthSessionDto> =
-        call("signup", SignupRequest(signupPass, shopName, ownerName, mandiName, mpin)) { status, _ ->
+        call("signup", SignupRequest(signupPass, shopName, ownerName, mandiName, mpin), { status, _ ->
             when (status) {
                 HttpStatusCode.Unauthorized -> AuthError.PassBurned
                 HttpStatusCode.Conflict -> AuthError.PhoneAlreadyRegistered
                 else -> null
             }
-        }.mapCatching { it.body<AuthSessionDto>() }.mapNetwork()
+        }) { it.body<AuthSessionDto>() }
 
     suspend fun login(loginPass: String, mpin: String): Result<AuthSessionDto> =
-        call("login", LoginRequest(loginPass, mpin)) { status, text ->
+        call("login", LoginRequest(loginPass, mpin), { status, text ->
             if (status == HttpStatusCode.Unauthorized) {
                 val detail = detailObject(text)
                 when (detail?.get("code")?.jsonPrimitive?.contentOrNull) {
                     "MPIN_INVALID" -> AuthError.MpinInvalid(detail["attempts_left"]?.jsonPrimitive?.intOrNull ?: 0)
-                    "PASS_BURNED" -> AuthError.PassBurned
-                    else -> null
+                    // PASS_BURNED, plain "INVALID_PASS", or any unrecognised 401: the pass is dead.
+                    else -> AuthError.PassBurned
                 }
             } else null
-        }.mapCatching { it.body<AuthSessionDto>() }.mapNetwork()
+        }) { it.body<AuthSessionDto>() }
 
     suspend fun refresh(refreshToken: String): Result<Pair<String, String>> =
-        call("refresh", RefreshRequest(refreshToken)) { status, _ ->
+        call("refresh", RefreshRequest(refreshToken), { status, _ ->
             if (status == HttpStatusCode.Unauthorized) AuthError.SessionExpired else null
-        }.mapCatching {
+        }) {
             val r: RefreshResponse = it.body()
             r.accessToken to r.refreshToken
-        }.mapNetwork()
+        }
 
     suspend fun logout(refreshToken: String): Result<Unit> =
-        call("logout", RefreshRequest(refreshToken)) { _, _ -> null }.map { }
+        call("logout", RefreshRequest(refreshToken), { _, _ -> null }) { }
 
-    /** POSTs [body]; maps non-2xx via [mapError] (null falls through to "HTTP <code>"), IO failures to Network. */
-    private suspend inline fun <reified T : Any> call(
+    /**
+     * POSTs [body]; non-2xx goes through [mapError] (null falls back to "HTTP <code>"), 2xx through [parse].
+     * IO and parse failures become [AuthError]; CancellationException always propagates.
+     */
+    private suspend inline fun <reified Req : Any, R> call(
         path: String,
-        body: T,
+        body: Req,
         mapError: (HttpStatusCode, String) -> AuthError?,
-    ): Result<HttpResponse> {
-        val response = try {
-            http.post("$baseUrl/api/v1/auth/$path") {
+        parse: (HttpResponse) -> R,
+    ): Result<R> {
+        return try {
+            val response = http.post("$baseUrl/api/v1/auth/$path") {
                 contentType(ContentType.Application.Json)
                 setBody(body)
             }
+            if (response.status.value in 200..299) {
+                Result.success(parse(response))
+            } else {
+                val text = try { response.bodyAsText() } catch (e: CancellationException) { throw e } catch (e: Exception) { "" }
+                Result.failure(mapError(response.status, text) ?: AuthError.Network("HTTP ${response.status.value}"))
+            }
         } catch (e: CancellationException) {
             throw e
+        } catch (e: AuthError) {
+            Result.failure(e)
         } catch (e: Exception) {
-            return Result.failure(AuthError.Network(e.message ?: e::class.simpleName ?: "IO error"))
+            Result.failure(AuthError.Network(e.message ?: e::class.simpleName ?: "IO error"))
         }
-        if (response.status.value in 200..299) return Result.success(response)
-        val text = try { response.bodyAsText() } catch (e: CancellationException) { throw e } catch (e: Exception) { "" }
-        return Result.failure(
-            mapError(response.status, text)
-                ?: AuthError.Network("HTTP ${response.status.value}"),
-        )
-    }
-
-    /** Parse/deserialization failures after a 2xx become Network errors; AuthErrors pass through. */
-    private fun <T> Result<T>.mapNetwork(): Result<T> = recoverCatching { e ->
-        if (e is CancellationException) throw e
-        throw e as? AuthError ?: AuthError.Network(e.message ?: "Malformed response")
     }
 
     private fun detailElement(text: String) =

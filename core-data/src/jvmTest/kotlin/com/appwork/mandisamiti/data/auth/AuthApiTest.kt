@@ -11,6 +11,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -18,6 +19,7 @@ import kotlinx.serialization.json.jsonObject
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -118,6 +120,35 @@ class AuthApiTest {
         assertEquals(setOf("login_pass", "mpin"), reqs.single().bodyJson().keys)
         val b = api { json(HttpStatusCode.Unauthorized, """{"detail":{"code":"PASS_BURNED"}}""") }.login("lp", "0")
         assertEquals(AuthError.PassBurned, b.error())
+    }
+
+    @Test
+    fun login_deadPass_variants_mapToPassBurned() = runTest {
+        for (body in listOf("""{"detail":"INVALID_PASS"}""", """{"detail":{"code":"WHATEVER"}}""", "not json")) {
+            val r = api { json(HttpStatusCode.Unauthorized, body) }.login("lp", "1")
+            assertEquals(AuthError.PassBurned, r.error(), body)
+        }
+    }
+
+    @Test
+    fun verifyOtp_429_isRateLimited() = runTest {
+        val r = api { json(HttpStatusCode.TooManyRequests, "{}") }.verifyOtp("9", "1")
+        assertEquals(AuthError.RateLimited, r.error())
+    }
+
+    @Test
+    fun malformed2xxBody_isNetwork() = runTest {
+        val r = api { json(HttpStatusCode.OK, """{"unexpected":1}""") }.login("lp", "1")
+        assertIs<AuthError.Network>(r.error())
+        val v = api { json(HttpStatusCode.OK, """{"status":"NEW"}""") }.verifyOtp("9", "1")
+        assertEquals(AuthError.Network("Malformed response"), v.error())
+    }
+
+    @Test
+    fun cancellationFromEngine_propagates() = runTest {
+        val client = mandiHttpClient(MockEngine { throw CancellationException("cancelled") })
+        assertFailsWith<CancellationException> { AuthApi(client, base).login("lp", "1") }
+        assertFailsWith<CancellationException> { AuthApi(client, base).refresh("r") }
     }
 
     @Test
