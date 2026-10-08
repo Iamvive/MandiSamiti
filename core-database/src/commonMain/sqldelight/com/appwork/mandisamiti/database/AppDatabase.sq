@@ -291,3 +291,22 @@ SELECT (
     (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0)
 ) AS pending_count;
 
+
+-- Local data wipe (sign-out / account switch), children first
+wipeRevisions:
+DELETE FROM entryRevisionEntity;
+
+wipeCashTransactions:
+DELETE FROM cashTransactionEntity;
+
+wipeDeals:
+DELETE FROM dealEntity;
+
+wipeCommodities:
+DELETE FROM commodityEntity;
+
+wipeParties:
+DELETE FROM partyEntity;
+
+wipeShopProfiles:
+DELETE FROM shopProfileEntity;
