@@ -258,17 +258,21 @@ fun DailyCashRegisterScreen(
                     val remarks = item.transaction.remarks
                     val isVoid = item.transaction.isVoid
                     Card(
-                        modifier = Modifier.fillMaxWidth().alpha(if (isVoid) 0.55f else 1f),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         colors = CardDefaults.cardColors(containerColor = MandiSurface),
                         border = CardDefaults.outlinedCardBorder().copy(
                             brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
                         )
                     ) {
+                      Column(
+                          modifier = Modifier.padding(12.dp),
+                          verticalArrangement = Arrangement.spacedBy(6.dp)
+                      ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .alpha(if (isVoid) 0.55f else 1f),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -303,13 +307,6 @@ fun DailyCashRegisterScreen(
                                         fontSize = 12.sp,
                                         color = MandiTextSecondary
                                     )
-                                    if (isVoid) {
-                                        Text(
-                                            text = "रद्द" + (item.transaction.voidReason?.let { " · ${it.labelHi}" } ?: ""),
-                                            fontSize = 11.sp,
-                                            color = MandiTextMuted
-                                        )
-                                    }
                                 }
                             }
 
@@ -321,6 +318,16 @@ fun DailyCashRegisterScreen(
                                 textDecoration = if (isVoid) TextDecoration.LineThrough else null
                             )
                         }
+
+                        if (isVoid) {
+                            Text(
+                                text = "रद्द" + (item.transaction.voidReason?.let { " · ${it.labelHi}" } ?: ""),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiTextSecondary
+                            )
+                        }
+                      }
                     }
                 }
 

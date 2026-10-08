@@ -623,7 +623,7 @@ private fun FintechDealCard(
                     text = "रद्द · ${deal.voidReason?.labelHi ?: ""}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = MandiTextMuted
+                    color = MandiTextSecondary
                 )
             }
       }
@@ -706,7 +706,7 @@ private fun FintechCashCard(
                     text = "रद्द · ${transaction.voidReason?.labelHi ?: ""}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = MandiTextMuted
+                    color = MandiTextSecondary
                 )
             }
       }
