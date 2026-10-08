@@ -63,7 +63,7 @@ object MandiMathEngine {
         return (wholeQuintals * GRAMS_PER_QUINTAL) + fractionalGrams
     }
 
-    /** "2275.50" -> 227_550. Blank or malformed input -> 0. Digits past 2 decimals are dropped (the keypad never produces them). */
+    /** "2275.50" -> 227_550. Blank or malformed input -> 0. Digits past 2 decimals are dropped; the keypad caps every field so it never produces them (rate, labour, commission: 2 decimals). */
     fun parseRupeesToPaisa(input: String): Long = parseFixedTwoDecimals(input)
 
     /** "1.5" (%) -> 150 basis points. */

@@ -74,6 +74,8 @@ sealed interface DealEntryEvent {
     data class Error(val message: String) : DealEntryEvent
 }
 
+private const val MAX_KEYPAD_LENGTH = 9
+
 class DealEntryViewModel(
     private val shopId: String,
     private val existingDealId: String? = null,
@@ -209,12 +211,12 @@ class DealEntryViewModel(
     private fun appendKey(key: String) {
         val current = _uiState.value
         val updatedText = when (current.activeField) {
-            ActiveInputField.BAGS_COUNT -> applyKeypad(current.bagsCountText, key, allowDecimal = false)
-            ActiveInputField.GROSS_WEIGHT -> applyKeypad(current.grossWeightText, key, allowDecimal = true)
-            ActiveInputField.TARE_WEIGHT -> applyKeypad(current.tareWeightText, key, allowDecimal = true)
-            ActiveInputField.RATE_PER_QUINTAL -> applyKeypad(current.ratePerQuintalText, key, allowDecimal = true)
-            ActiveInputField.LABOUR_CHARGES -> applyKeypad(current.labourChargesText, key, allowDecimal = true)
-            ActiveInputField.COMMISSION_PERCENT -> applyKeypad(current.commissionPercentText, key, allowDecimal = true)
+            ActiveInputField.BAGS_COUNT -> applyKeypad(current.bagsCountText, key, maxDecimals = 0)
+            ActiveInputField.GROSS_WEIGHT -> applyKeypad(current.grossWeightText, key, maxDecimals = 5)
+            ActiveInputField.TARE_WEIGHT -> applyKeypad(current.tareWeightText, key, maxDecimals = 5)
+            ActiveInputField.RATE_PER_QUINTAL -> applyKeypad(current.ratePerQuintalText, key, maxDecimals = 2)
+            ActiveInputField.LABOUR_CHARGES -> applyKeypad(current.labourChargesText, key, maxDecimals = 2)
+            ActiveInputField.COMMISSION_PERCENT -> applyKeypad(current.commissionPercentText, key, maxDecimals = 2)
         }
 
         _uiState.value = when (current.activeField) {
@@ -268,12 +270,16 @@ class DealEntryViewModel(
         recalculate()
     }
 
-    private fun applyKeypad(current: String, key: String, allowDecimal: Boolean): String {
-        return when (key) {
-            "." -> if (allowDecimal && !current.contains(".")) (if (current.isEmpty()) "0." else "$current.") else current
-            "00" -> if (current.isNotEmpty() && current != "0") "$current" + "00" else current
-            else -> if (current == "0" && key != ".") key else current + key
+    /** Appends [key]; digits after "." are capped at [maxDecimals] (0 = no decimal point) and the text at [MAX_KEYPAD_LENGTH]. Extra keys are ignored. */
+    private fun applyKeypad(current: String, key: String, maxDecimals: Int): String {
+        val next = when (key) {
+            "." -> if (maxDecimals > 0 && !current.contains(".")) (if (current.isEmpty()) "0." else "$current.") else current
+            "00" -> if (current.isNotEmpty() && current != "0") current + "00" else current
+            else -> if (current == "0") key else current + key
         }
+        if (next == current) return current
+        val decimals = next.substringAfter('.', "").length
+        return if (next.length > MAX_KEYPAD_LENGTH || decimals > maxDecimals) current else next
     }
 
     private fun recalculate() {

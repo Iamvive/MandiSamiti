@@ -320,4 +320,41 @@ class DealEntryViewModelTest {
         assertEquals(5_000L, saved.weighingChargePaisa)
         assertEquals(3_000L, saved.otherDeductionsPaisa)
     }
+
+    @Test
+    fun keypadCapsDecimalsPerFieldAndTotalLength() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        seedShopAndParties(shopRepo, partyRepo)
+        val viewModel = DealEntryViewModel(
+            shopId = "shop-1", existingDealId = null, dealRepository = dealRepo,
+            partyRepository = partyRepo, shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope
+        )
+        viewModel.uiState.first { it.selectedFarmer != null }
+
+        fun type(field: ActiveInputField, vararg keys: KeypadAction) {
+            viewModel.onFocusField(field)
+            viewModel.onKeypadClear()
+            keys.forEach(viewModel::onKeypadAction)
+        }
+        val d = KeypadAction.DECIMAL
+        val k1 = KeypadAction.DIGIT_1
+        val k5 = KeypadAction.DIGIT_5
+
+        type(ActiveInputField.COMMISSION_PERCENT, k1, d, k5, k5, k5)
+        assertEquals("1.55", viewModel.uiState.value.commissionPercentText)
+
+        type(ActiveInputField.GROSS_WEIGHT, k1, d, k5, k5, k5, k5, k5, k5, k5)
+        assertEquals("1.55555", viewModel.uiState.value.grossWeightText) // 5 decimals max for weight
+
+        type(ActiveInputField.BAGS_COUNT, k1, d, k5)
+        assertEquals("15", viewModel.uiState.value.bagsCountText) // bags take no decimal point
+
+        type(ActiveInputField.RATE_PER_QUINTAL, k1, k1, k1, k1, k1, k1, k1, k1, k1, k1, k1)
+        assertEquals("111111111", viewModel.uiState.value.ratePerQuintalText) // 9 characters max
+    }
 }
