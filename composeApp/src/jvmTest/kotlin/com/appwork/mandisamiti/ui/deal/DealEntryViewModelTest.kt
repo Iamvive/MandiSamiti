@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.ui.components.KeypadAction
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,9 +24,10 @@ class DealEntryViewModelTest {
     @Test
     fun testTwoStageDealCalculationAndKeypadEntry() = runTest {
         val database = createTestDatabase()
-        val shopRepo = OfflineFirstShopProfileRepository(database)
-        val partyRepo = OfflineFirstPartyRepository(database)
-        val dealRepo = OfflineFirstDealRepository(database)
+        val ioDispatcher = StandardTestDispatcher(testScheduler) // repos and VM share the test scheduler: no real threads
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
         val ttsManager = SoundboxTtsManager()
 
         val shopId = "shop-1"

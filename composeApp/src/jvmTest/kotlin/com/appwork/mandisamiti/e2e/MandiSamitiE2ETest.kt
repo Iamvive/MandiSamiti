@@ -27,6 +27,7 @@ import com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModel
 import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
 import com.appwork.mandisamiti.ui.slip.DigitalSlipRenderer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,11 +40,12 @@ class MandiSamitiE2ETest {
     @Test
     fun testFullMandiDailyWorkflowEndToEnd() = runTest {
         val database = createTestDatabase()
-        val shopRepo = OfflineFirstShopProfileRepository(database)
-        val partyRepo = OfflineFirstPartyRepository(database)
-        val dealRepo = OfflineFirstDealRepository(database)
-        val cashRepo = OfflineFirstCashTransactionRepository(database)
-        val syncEngine = SyncEngine(database)
+        val ioDispatcher = StandardTestDispatcher(testScheduler) // repos and VM share the test scheduler: no real threads
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val syncEngine = SyncEngine(database, ioDispatcher = ioDispatcher)
         val ttsManager = SoundboxTtsManager()
 
         val shopId = "shop_mathura_1"
@@ -247,7 +249,8 @@ class MandiSamitiE2ETest {
 
         registerViewModel.uiState.test {
             var regState = awaitItem()
-            while (regState.todayTransactions.isEmpty()) {
+            // the shop stream also holds the ledger entries from step 6; wait for this buyer's JAMA row
+            while (regState.todayTransactions.none { it.transaction.partyId == buyerId }) {
                 regState = awaitItem()
             }
             assertTrue(regState.todayCashInPaisa >= 5000000L)

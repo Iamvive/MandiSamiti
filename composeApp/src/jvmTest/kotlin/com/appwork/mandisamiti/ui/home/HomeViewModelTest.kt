@@ -8,6 +8,7 @@ import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,8 +20,9 @@ class HomeViewModelTest {
     @Test
     fun testHomeViewModelSearchAndFilter() = runTest {
         val database = createTestDatabase()
-        val shopRepo = OfflineFirstShopProfileRepository(database)
-        val partyRepo = OfflineFirstPartyRepository(database)
+        val ioDispatcher = StandardTestDispatcher(testScheduler) // repos and VM share the test scheduler: no real threads
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
 
         val shopId = "shop-1"
         shopRepo.saveShopProfile(
