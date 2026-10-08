@@ -12,7 +12,11 @@ import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
+import com.appwork.mandisamiti.domain.repository.PartyRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.flow.first
@@ -138,5 +142,42 @@ class DailyRegisterViewModelTest {
         assertEquals(500_000L, state.todayCashOutPaisa)
         assertEquals(2_500_000L, state.inHandCashDrawerPaisa)
         assertEquals(expectedIds, state.todayTransactions.map { it.transaction.id }.toSet()) // voided stays visible
+    }
+
+    @Test
+    fun transactionRecordedBeforePartiesEmitStillShowsThePartyName() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val realPartyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val now = Instant.parse("2026-10-08T05:30:00Z")
+        val clock = object : Clock { override fun now() = now }
+        realPartyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "t1", shopId = "shop-1", partyId = "farmer-1", transactionType = TransactionType.JAMA_RECEIVED,
+                amountPaisa = 100_000L, transactionDate = now.toEpochMilliseconds(), createdAt = 1L, updatedAt = 1L
+            )
+        )
+        // Parties are held back until the test releases them, so the cash stream emits first.
+        val partiesGate = CompletableDeferred<Unit>()
+        val gatedPartyRepo = object : PartyRepository by realPartyRepo {
+            override fun getPartiesStream(shopId: String) = flow {
+                partiesGate.await()
+                emitAll(realPartyRepo.getPartiesStream(shopId))
+            }
+        }
+
+        val viewModel = DailyRegisterViewModel(
+            shopId = "shop-1", cashRepository = cashRepo, partyRepository = gatedPartyRepo,
+            shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope, clock = clock, timeZone = TimeZone.of("Asia/Kolkata")
+        )
+        testScheduler.runCurrent() // the cash stream emits while parties are still gated
+        partiesGate.complete(Unit)
+
+        val state = viewModel.uiState.first { it.todayTransactions.isNotEmpty() && it.availableParties.isNotEmpty() }
+        assertEquals("रामवीर सिंह", state.todayTransactions.single().partyName)
     }
 }

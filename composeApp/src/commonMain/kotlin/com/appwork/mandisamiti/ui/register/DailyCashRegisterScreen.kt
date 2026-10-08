@@ -296,12 +296,28 @@ fun DailyCashRegisterScreen(
                                 }
 
                                 Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = item.partyName,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MandiTextPrimary
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = item.partyName,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MandiTextPrimary,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        // Non-cash rows do not move the drawer; the tag says why.
+                                        val modeTag = when (item.transaction.paymentMode) {
+                                            PaymentMode.CASH -> null
+                                            PaymentMode.UPI -> "UPI"
+                                            PaymentMode.BANK -> "बैंक"
+                                            PaymentMode.BOOK_ENTRY -> "बही"
+                                        }
+                                        if (modeTag != null) {
+                                            Text(text = modeTag, fontSize = 12.sp, color = MandiTextSecondary)
+                                        }
+                                    }
                                     Text(
                                         text = if (!remarks.isNullOrBlank()) remarks else if (isDeposit) "नकद जमा" else "नकद निकासी",
                                         fontSize = 12.sp,

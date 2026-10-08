@@ -83,18 +83,15 @@ class DailyRegisterViewModel(
             }
             .launchIn(viewModelScope)
 
-        partyRepository.getPartiesStream(shopId)
-            .onEach { parties ->
-                _uiState.value = _uiState.value.copy(availableParties = parties)
-            }
-            .launchIn(viewModelScope)
-
-        // Observe cash transactions and calculate daily cash register summary
-        cashRepository.getTransactionsByShopStream(shopId)
-            .onEach { allTx ->
+        // Combined so a party list that loads after the cash list still renames the rows.
+        combine(
+            partyRepository.getPartiesStream(shopId),
+            cashRepository.getTransactionsByShopStream(shopId)
+        ) { parties, allTx -> parties to allTx }
+            .onEach { (parties, allTx) ->
                 val window = CashDrawer.dayWindow(clock.now(), timeZone)
                 val summary = CashDrawer.summarize(allTx, window)
-                val partyMap = _uiState.value.availableParties.associateBy { it.id }
+                val partyMap = parties.associateBy { it.id }
                 val todays = allTx
                     .filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                     .map { tx ->
@@ -102,6 +99,7 @@ class DailyRegisterViewModel(
                         TransactionWithParty(transaction = tx, partyName = party?.name ?: "खाता", village = party?.village)
                     }
                 _uiState.value = _uiState.value.copy(
+                    availableParties = parties,
                     openingCashPaisa = summary.openingPaisa,
                     todayCashInPaisa = summary.cashInPaisa,
                     todayCashOutPaisa = summary.cashOutPaisa,
