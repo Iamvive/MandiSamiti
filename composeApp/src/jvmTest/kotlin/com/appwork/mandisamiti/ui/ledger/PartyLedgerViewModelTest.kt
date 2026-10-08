@@ -7,12 +7,15 @@ import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
 import com.appwork.mandisamiti.database.createTestDatabase
 import com.appwork.mandisamiti.domain.math.InterestCalculation
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -107,5 +110,37 @@ class PartyLedgerViewModelTest {
             assertEquals(507500L, balance.balancePaisa) // ₹5,000 + ₹75 interest = ₹5,075
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun voidingACashEntryClearsItFromBalanceButKeepsItListed() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "tx-1", shopId = "shop-1", partyId = "farmer-1", transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 500_000L, transactionDate = 1L, createdAt = 1L, updatedAt = 1L
+            )
+        )
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1", partyId = "farmer-1", partyRepository = partyRepo, cashRepository = cashRepo,
+            dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() && it.balancePaisa == 500_000L }.ledgerItems.single()
+
+        viewModel.voidEntry(item, VoidReason.WRONG_ENTRY)
+
+        val after = viewModel.uiState.first { state ->
+            // balance and list come from separate streams, so wait for both to reflect the void
+            state.balancePaisa == 0L && (state.ledgerItems.singleOrNull() as? LedgerItem.CashItem)?.transaction?.isVoid == true
+        }
+        val listed = after.ledgerItems.single() as LedgerItem.CashItem
+        assertTrue(listed.transaction.isVoid)
     }
 }

@@ -1,8 +1,10 @@
 package com.appwork.mandisamiti.ui.ledger
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,15 +48,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiAccent
 import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
@@ -93,6 +100,8 @@ fun PartyLedgerScreen(
     var showCashEntryType by remember { mutableStateOf<TransactionType?>(null) }
     var cashAmountInput by remember { mutableStateOf("") }
     var cashRemarksInput by remember { mutableStateOf("") }
+
+    var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
 
     var interestRateInput by remember { mutableStateOf("1.5") }
     var interestDaysInput by remember { mutableStateOf("30") }
@@ -276,11 +285,15 @@ fun PartyLedgerScreen(
                         is LedgerItem.DealItem -> {
                             FintechDealCard(
                                 deal = item.deal,
-                                onShareSlip = { onShareWhatsAppReceipt(item.deal.id) }
+                                onShareSlip = { onShareWhatsAppReceipt(item.deal.id) },
+                                onLongPress = { voidTarget = item }
                             )
                         }
                         is LedgerItem.CashItem -> {
-                            FintechCashCard(transaction = item.transaction)
+                            FintechCashCard(
+                                transaction = item.transaction,
+                                onLongPress = { voidTarget = item }
+                            )
                         }
                     }
                 }
@@ -303,6 +316,30 @@ fun PartyLedgerScreen(
                 }
             }
         }
+    }
+
+    voidTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { voidTarget = null },
+            title = { Text("प्रविष्टि रद्द करें?", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
+                    VoidReason.entries.forEach { reason ->
+                        OutlinedButton(
+                            onClick = { viewModel.voidEntry(target, reason); voidTarget = null },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) { Text(reason.labelHi, color = MandiTextPrimary, fontSize = 16.sp) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { voidTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text("वापस", color = MandiTextSecondary)
+                }
+            }
+        )
     }
 
     // Cash Entry Dialog (Clean Fintech Modal)
@@ -502,20 +539,28 @@ private fun FintechActionButton(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun FintechDealCard(
     deal: com.appwork.mandisamiti.domain.model.Deal,
-    onShareSlip: () -> Unit
+    onShareSlip: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
+    val isVoid = deal.isVoid
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
+            .combinedClickable(onClick = {}, onLongClick = { if (!isVoid) onLongPress() })
             .background(MandiSurface)
             .border(1.dp, MandiBorder, shape)
             .padding(12.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            modifier = Modifier.alpha(if (isVoid) 0.55f else 1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -539,16 +584,18 @@ private fun FintechDealCard(
                     )
                 }
 
-                IconButton(
-                    onClick = onShareSlip,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "पर्ची शेयर करें",
-                        tint = MandiAccent,
-                        modifier = Modifier.size(18.dp)
-                    )
+                if (!isVoid) {
+                    IconButton(
+                        onClick = onShareSlip,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "पर्ची शेयर करें",
+                            tint = MandiAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -565,17 +612,31 @@ private fun FintechDealCard(
                     text = "₹${MandiMathEngine.paisaToRupeesString(deal.netFarmerPayablePaisa)}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MandiAmberDark
+                    color = MandiAmberDark,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
                 )
             }
         }
+
+            if (isVoid) {
+                Text(
+                    text = "रद्द · ${deal.voidReason?.labelHi ?: ""}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MandiTextMuted
+                )
+            }
+      }
     }
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun FintechCashCard(
-    transaction: com.appwork.mandisamiti.domain.model.CashTransaction
+    transaction: com.appwork.mandisamiti.domain.model.CashTransaction,
+    onLongPress: () -> Unit
 ) {
+    val isVoid = transaction.isVoid
     val isDeposit = transaction.transactionType == TransactionType.JAMA_RECEIVED
     val shape = RoundedCornerShape(10.dp)
     val remarks = transaction.remarks
@@ -584,12 +645,14 @@ private fun FintechCashCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
+            .combinedClickable(onClick = {}, onLongClick = { if (!isVoid) onLongPress() })
             .background(MandiSurface)
             .border(1.dp, MandiBorder, shape)
             .padding(12.dp)
     ) {
+      Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().alpha(if (isVoid) 0.55f else 1f),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -633,8 +696,19 @@ private fun FintechCashCard(
                 text = "${if (isDeposit) "+" else "-"}₹${MandiMathEngine.paisaToRupeesString(transaction.amountPaisa)}",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isDeposit) MandiGreenPayable else MandiRedReceivable
+                color = if (isDeposit) MandiGreenPayable else MandiRedReceivable,
+                textDecoration = if (isVoid) TextDecoration.LineThrough else null
             )
         }
+
+            if (isVoid) {
+                Text(
+                    text = "रद्द · ${transaction.voidReason?.labelHi ?: ""}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MandiTextMuted
+                )
+            }
+      }
     }
 }

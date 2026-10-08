@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.ledger
 
+import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.InterestCalculation
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
@@ -8,6 +9,7 @@ import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.CashTransactionRepository
 import com.appwork.mandisamiti.domain.repository.DealRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
@@ -157,7 +159,7 @@ class PartyLedgerViewModel(
         val amountPaisa = amountRs * 100L
 
         val tx = CashTransaction(
-            id = "tx_${now}_${(1000..9999).random()}",
+            id = IdGenerator.newId(),
             shopId = shopId,
             partyId = partyId,
             transactionType = transactionType,
@@ -193,7 +195,7 @@ class PartyLedgerViewModel(
         val now = Clock.System.now().toEpochMilliseconds()
 
         val tx = CashTransaction(
-            id = "tx_int_${now}_${(1000..9999).random()}",
+            id = IdGenerator.newId(),
             shopId = shopId,
             partyId = partyId,
             transactionType = TransactionType.INTEREST_ADDED,
@@ -216,6 +218,18 @@ class PartyLedgerViewModel(
             ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
             _uiState.value = _uiState.value.copy(isSaving = false, isInterestDialogOpen = false)
             _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
+        }
+    }
+
+    fun voidEntry(item: LedgerItem, reason: VoidReason) {
+        viewModelScope.launch {
+            when (item) {
+                is LedgerItem.DealItem -> dealRepository.voidDeal(item.deal.id, reason)
+                is LedgerItem.CashItem -> cashRepository.voidTransaction(item.transaction.id, reason)
+            }
+            val speech = "प्रविष्टि रद्द की गई: ${reason.labelHi}"
+            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
+            _events.emit(PartyLedgerEvent.TransactionRecorded(speech))
         }
     }
 }
