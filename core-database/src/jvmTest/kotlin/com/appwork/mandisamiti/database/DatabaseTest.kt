@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.database
 
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -191,5 +192,59 @@ class DatabaseTest {
             revision = 2L, change_kind = "VOID", snapshot_json = "{}", void_reason = "WRONG_ENTRY", changed_at = 3L
         )
         assertEquals(listOf("CREATE", "VOID"), q.getRevisionsForEntry("tx-2").executeAsList().map { it.change_kind })
+    }
+
+    @Test
+    fun migrationFromV1BackfillsCommissionBpsAndKeepsBalance() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        V1_SCHEMA_DDL.forEach { driver.execute(null, it, 0) }
+
+        driver.execute(null, """
+            INSERT INTO shopProfileEntity (id, shop_name, owner_name, mandi_name, phone_number, pin_hash, created_at, updated_at)
+            VALUES ('shop-1', 'S', 'O', 'M', '9', 'h', 1, 1)
+        """.trimIndent(), 0)
+        driver.execute(null, """
+            INSERT INTO partyEntity (id, shop_id, name, party_type, created_at, updated_at)
+            VALUES ('farmer-1', 'shop-1', 'रामवीर', 'FARMER', 1, 1)
+        """.trimIndent(), 0)
+        driver.execute(null, """
+            INSERT INTO commodityEntity (id, shop_id, name_hi, name_en, created_at, updated_at)
+            VALUES ('comm-1', 'shop-1', 'गेहूँ', 'Wheat', 1, 1)
+        """.trimIndent(), 0)
+        // Settled v1 deal: gross 97,831.00, farmer commission 1,467.47 (1.5%), payable 96,363.53
+        driver.execute(null, """
+            INSERT INTO dealEntity (id, shop_id, farmer_id, commodity_id, deal_status, deal_date,
+                bags_count, gross_weight_grams, net_weight_grams, gross_amount_paisa,
+                farmer_commission_paisa, net_farmer_payable_paisa, created_at, updated_at)
+            VALUES ('deal-1', 'shop-1', 'farmer-1', 'comm-1', 'SETTLED', 1,
+                40, 4000000, 4000000, 9783100, 146747, 9636353, 1, 1)
+        """.trimIndent(), 0)
+        driver.execute(null, """
+            INSERT INTO cashTransactionEntity (id, shop_id, party_id, transaction_type, amount_paisa, transaction_date, created_at, updated_at)
+            VALUES ('tx-1', 'shop-1', 'farmer-1', 'UDHAR_GIVEN', 1000000, 1, 1, 1)
+        """.trimIndent(), 0)
+
+        // Pre-migration balance, computed with the v1 balance rule (no is_void column yet).
+        val preBalance = driver.executeQuery(null, """
+            SELECT
+              COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = 'farmer-1' AND transaction_type IN ('UDHAR_GIVEN','INTEREST_ADDED') AND is_deleted = 0), 0)
+            - COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = 'farmer-1' AND transaction_type IN ('JAMA_RECEIVED','DISCOUNT_GIVEN') AND is_deleted = 0), 0)
+            + COALESCE((SELECT SUM(net_buyer_receivable_paisa) FROM dealEntity WHERE buyer_id = 'farmer-1' AND deal_status = 'SETTLED' AND is_deleted = 0), 0)
+            - COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = 'farmer-1' AND deal_status = 'SETTLED' AND is_deleted = 0), 0)
+        """.trimIndent(), { cursor ->
+            cursor.next()
+            app.cash.sqldelight.db.QueryResult.Value(cursor.getLong(0)!!)
+        }, 0).value
+        assertEquals(1_000_000L - 9_636_353L, preBalance)
+
+        AppDatabase.Schema.migrate(driver, 1, 2)
+
+        val q = AppDatabase(driver).appDatabaseQueries
+        val deal = q.getDealById("deal-1").executeAsOne()
+        assertEquals(150L, deal.farmer_commission_bps)
+        assertEquals(1L, deal.revision)
+        assertEquals(0L, deal.is_void)
+        assertEquals(1L, q.getCashTransactionById("tx-1").executeAsOne().revision)
+        assertEquals(preBalance, q.getPartyBalance("farmer-1").executeAsOne().balance_paisa)
     }
 }

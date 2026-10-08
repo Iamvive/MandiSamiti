@@ -21,3 +21,7 @@ CREATE TABLE entryRevisionEntity (
     UNIQUE(entry_id, revision)
 );
 CREATE INDEX idx_revision_entry ON entryRevisionEntity(entry_id, revision);
+
+UPDATE dealEntity
+SET farmer_commission_bps = (farmer_commission_paisa * 10000 + gross_amount_paisa / 2) / gross_amount_paisa
+WHERE gross_amount_paisa > 0;
