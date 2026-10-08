@@ -8,6 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.appwork.mandisamiti.data.auth.AuthApi
+import com.appwork.mandisamiti.data.auth.AuthRepository
+import com.appwork.mandisamiti.data.auth.InMemorySessionStore
+import com.appwork.mandisamiti.data.auth.LocalDataWiper
+import com.appwork.mandisamiti.data.auth.mandiHttpClient
 import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstDealRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
@@ -54,6 +59,15 @@ fun App(
     val partyRepo = remember { OfflineFirstPartyRepository(database) }
     val dealRepo = remember { OfflineFirstDealRepository(database) }
     val cashRepo = remember { OfflineFirstCashTransactionRepository(database) }
+    // TODO(task 10): real base URL + persistent SessionStore come from platform config.
+    val authRepo = remember {
+        AuthRepository(
+            api = AuthApi(mandiHttpClient(), "https://api.mandisamiti.example"),
+            sessionStore = InMemorySessionStore(),
+            shopProfileRepository = shopRepo,
+            wiper = LocalDataWiper(database),
+        )
+    }
     val cameraPicker = rememberCameraSlipPicker()
 
     val shopId = "shop_default"
@@ -72,7 +86,7 @@ fun App(
             is Screen.Register -> {
                 val registerViewModel = remember {
                     RegisterViewModel(
-                        shopProfileRepository = shopRepo,
+                        authRepository = authRepo,
                         ttsManager = ttsManager,
                         viewModelScope = coroutineScope
                     )

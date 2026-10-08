@@ -36,6 +36,7 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.ktor.client.core)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -45,6 +46,9 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.koin.android)
             implementation(libs.kotlinx.coroutines.android)
+        }
+        jvmTest.dependencies {
+            implementation(libs.ktor.client.mock)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

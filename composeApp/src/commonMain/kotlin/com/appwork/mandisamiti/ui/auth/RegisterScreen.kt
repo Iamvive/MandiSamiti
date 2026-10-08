@@ -122,15 +122,14 @@ fun RegisterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    if (uiState.step != AuthStep.PHONE_AND_SHOP) {
+                    if (uiState.step != AuthStep.PHONE) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(
                                 onClick = {
-                                    if (uiState.step == AuthStep.MPIN_SETUP) viewModel.goBackToOtp()
-                                    else viewModel.goBackToDetails()
+                                    viewModel.goBackToPhone()
                                 }
                             ) {
                                 Icon(
@@ -178,11 +177,11 @@ fun RegisterScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        StepDot(number = "1", label = "विवरण", isActive = uiState.step == AuthStep.PHONE_AND_SHOP, isDone = uiState.step != AuthStep.PHONE_AND_SHOP)
+                        StepDot(number = "1", label = "विवरण", isActive = uiState.step == AuthStep.PHONE, isDone = uiState.step != AuthStep.PHONE)
                         StepDivider()
-                        StepDot(number = "2", label = "OTP", isActive = uiState.step == AuthStep.OTP_VERIFICATION, isDone = uiState.step == AuthStep.MPIN_SETUP)
+                        StepDot(number = "2", label = "OTP", isActive = uiState.step == AuthStep.OTP, isDone = uiState.step == AuthStep.NEW_SHOP || uiState.step == AuthStep.ENTER_MPIN)
                         StepDivider()
-                        StepDot(number = "3", label = "MPIN", isActive = uiState.step == AuthStep.MPIN_SETUP, isDone = false)
+                        StepDot(number = "3", label = "MPIN", isActive = uiState.step == AuthStep.NEW_SHOP || uiState.step == AuthStep.ENTER_MPIN, isDone = false)
                     }
                 }
             }
@@ -214,18 +213,18 @@ fun RegisterScreen(
                 }
 
                 when (uiState.step) {
-                    AuthStep.PHONE_AND_SHOP -> {
+                    AuthStep.PHONE -> {
                         ShopDetailsSection(
                             uiState = uiState,
                             onPhoneChange = viewModel::onPhoneNumberChanged,
                             onShopChange = viewModel::onShopNameChanged,
                             onOwnerChange = viewModel::onOwnerNameChanged,
                             onMandiChange = viewModel::onMandiNameChanged,
-                            onSubmit = viewModel::proceedToOtp
+                            onSubmit = viewModel::submitPhone
                         )
                     }
 
-                    AuthStep.OTP_VERIFICATION -> {
+                    AuthStep.OTP -> {
                         OtpVerificationSection(
                             phoneNumber = uiState.phoneNumber,
                             otp = uiState.otp,
@@ -233,21 +232,21 @@ fun RegisterScreen(
                             cooldownSeconds = uiState.resendCooldownSeconds,
                             isResendEnabled = uiState.isResendEnabled,
                             onOtpChange = viewModel::onOtpChanged,
-                            onSubmit = viewModel::verifyOtp,
+                            onSubmit = viewModel::submitOtp,
                             onResend = viewModel::resendOtp
                         )
                     }
 
-                    AuthStep.MPIN_SETUP -> {
+                    AuthStep.NEW_SHOP, AuthStep.ENTER_MPIN -> {
                         MpinSetupSection(
                             mpin = uiState.mpin,
                             confirmMpin = uiState.confirmMpin,
                             confirmError = uiState.confirmMpinError,
                             isLoading = uiState.isLoading,
-                            isMpinValid = uiState.isMpinValid,
+                            isMpinValid = if (uiState.step == AuthStep.NEW_SHOP) uiState.isMpinValid else uiState.isEnterMpinValid,
                             onMpinChange = viewModel::onMpinChanged,
                             onConfirmMpinChange = viewModel::onConfirmMpinChanged,
-                            onSubmit = viewModel::completeRegistration
+                            onSubmit = if (uiState.step == AuthStep.NEW_SHOP) viewModel::submitNewShop else viewModel::submitMpin
                         )
                     }
                 }
