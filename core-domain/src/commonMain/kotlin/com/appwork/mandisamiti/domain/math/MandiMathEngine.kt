@@ -30,6 +30,7 @@ object MandiMathEngine {
     const val GRAMS_PER_KG = 1_000L
     const val GRAMS_PER_QUINTAL = 100_000L // 100 kg * 1,000 g
     const val PAISA_PER_RUPEE = 100L
+    const val BASIS_POINTS_PER_UNIT = 10_000L
 
     /**
      * Converts weight in grams to quintals for display (e.g. 1,840,000g -> 18.40 qtl).
@@ -62,6 +63,42 @@ object MandiMathEngine {
         return (wholeQuintals * GRAMS_PER_QUINTAL) + fractionalGrams
     }
 
+    /** "2275.50" -> 227_550. Blank or malformed input -> 0. Digits past 2 decimals are dropped (the keypad never produces them). */
+    fun parseRupeesToPaisa(input: String): Long = parseFixedTwoDecimals(input)
+
+    /** "1.5" (%) -> 150 basis points. */
+    fun parsePercentToBasisPoints(input: String): Long = parseFixedTwoDecimals(input)
+
+    /** 227_550 -> "2275.50", 227_500 -> "2275". Inverse of [parseRupeesToPaisa]; also turns basis points into percent text. */
+    fun paisaToInputString(paisa: Long): String {
+        val whole = paisa / PAISA_PER_RUPEE
+        val fraction = paisa % PAISA_PER_RUPEE
+        return if (fraction == 0L) "$whole" else "$whole.${fraction.toString().padStart(2, '0')}"
+    }
+
+    /** 1_840_000 g -> "18.4". Inverse of [parseQuintalsStringToGrams], no Double involved. */
+    fun gramsToQuintalsInputString(grams: Long): String {
+        val whole = grams / GRAMS_PER_QUINTAL
+        val fraction = (grams % GRAMS_PER_QUINTAL).toString().padStart(5, '0').trimEnd('0')
+        return if (fraction.isEmpty()) "$whole" else "$whole.$fraction"
+    }
+
+    /** Net weight x rate, rounded half-up to the nearest paisa. */
+    fun grossAmountPaisa(netWeightGrams: Long, ratePaisaPerQuintal: Long): Long =
+        (netWeightGrams * ratePaisaPerQuintal + GRAMS_PER_QUINTAL / 2) / GRAMS_PER_QUINTAL
+
+    /** amount x basisPoints / 10_000, rounded half-up. */
+    fun percentageOf(amountPaisa: Long, basisPoints: Long): Long =
+        (amountPaisa * basisPoints + BASIS_POINTS_PER_UNIT / 2) / BASIS_POINTS_PER_UNIT
+
+    private fun parseFixedTwoDecimals(input: String): Long {
+        val parts = input.trim().split(".")
+        if (parts.size > 2) return 0L
+        val whole = parts[0].ifEmpty { "0" }.toLongOrNull() ?: return 0L
+        val fraction = if (parts.size == 2) parts[1].padEnd(2, '0').take(2).toLongOrNull() ?: return 0L else 0L
+        return whole * 100L + fraction
+    }
+
     /**
      * Calculates the complete mandi settlement using exact integer math without float rounding loss.
      */
@@ -73,15 +110,15 @@ object MandiMathEngine {
     ): SettlementCalculation {
         val netWeightGrams = (grossWeightGrams - cutWeightGrams).coerceAtLeast(0L)
 
-        // Gross Amount = (netWeightGrams * ratePaisaPerQuintal) / GRAMS_PER_QUINTAL
-        val grossAmountPaisa = (netWeightGrams * ratePaisaPerQuintal) / GRAMS_PER_QUINTAL
+        val grossAmountPaisa = grossAmountPaisa(netWeightGrams, ratePaisaPerQuintal)
 
         val totalFarmerDeductions = deductions.farmerCommissionPaisa +
                 deductions.labourChargePaisa +
                 deductions.weighingChargePaisa +
                 deductions.otherDeductionsPaisa
 
-        val netFarmerPayable = (grossAmountPaisa - totalFarmerDeductions).coerceAtLeast(0L)
+        // Signed: negative means the farmer owes the shop (deductions exceed crop value).
+        val netFarmerPayable = grossAmountPaisa - totalFarmerDeductions
         val netBuyerReceivable = grossAmountPaisa + deductions.buyerCommissionPaisa
 
         return SettlementCalculation(
