@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     
     # OTP Configuration
     OTP_EXPIRE_SECONDS: int = 300  # 5 minutes
-    OTP_MOCK_MODE: bool = True     # Returns OTP in response in dev/test mode
+    OTP_STATIC_ENABLED: bool = True   # Static-code OTP (no SMS provider yet)
+    OTP_STATIC_CODE: str = "123456"
 
     model_config = SettingsConfigDict(
         env_file=".env",

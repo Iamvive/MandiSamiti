@@ -15,13 +15,19 @@ from app.core.security import (
     decode_token, get_password_hash, verify_password,
     get_current_user_payload
 )
-from app.core.otp_service import otp_service
+from app.core.otp_service import OtpService, OtpRateLimited
+from app.core.otp_sender import OtpSender, get_otp_sender
+from app.core.redis_client import get_redis
 from app.config import settings
 
 router = APIRouter()
 
 @router.post("/otp/send", response_model=SendOTPResponse, summary="Send 6-digit OTP to mobile")
-async def send_otp(req: SendOTPRequest):
+async def send_otp(
+    req: SendOTPRequest,
+    redis=Depends(get_redis),
+    sender: OtpSender = Depends(get_otp_sender),
+):
     phone = req.phone_number.strip().replace("+91", "").replace(" ", "")
     if len(phone) != 10 or not phone.isdigit():
         raise HTTPException(
@@ -30,27 +36,27 @@ async def send_otp(req: SendOTPRequest):
         )
     
     try:
-        otp = otp_service.generate_otp(phone)
-    except ValueError as e:
+        otp = await OtpService(redis, settings.OTP_STATIC_CODE if settings.OTP_STATIC_ENABLED else None).issue(phone)
+    except OtpRateLimited:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=str(e)
+            detail="Too many OTP requests. Please try again after 5 minutes."
         )
-    mock_val = otp if settings.OTP_MOCK_MODE else None
+    await sender.send(phone, otp)
 
     return SendOTPResponse(
         success=True,
         message="OTP sent successfully",
         phone_number=phone,
         expires_in_seconds=settings.OTP_EXPIRE_SECONDS,
-        mock_otp=mock_val
+        mock_otp=None
     )
 
 
 @router.post("/otp/verify", response_model=TokenResponse, summary="Verify OTP and issue JWT access tokens")
-async def verify_otp(req: VerifyOTPRequest, db: AsyncSession = Depends(get_db)):
+async def verify_otp(req: VerifyOTPRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
     phone = req.phone_number.strip().replace("+91", "").replace(" ", "")
-    if not otp_service.verify_otp(phone, req.otp):
+    if not await OtpService(redis, settings.OTP_STATIC_CODE if settings.OTP_STATIC_ENABLED else None).verify(phone, req.otp):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP"

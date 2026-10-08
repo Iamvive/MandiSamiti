@@ -1,71 +1,41 @@
-import random
-import time
-from typing import Dict, Tuple
+import secrets
 from app.config import settings
 
-# In-memory OTP store: phone -> (otp, expires_at, failed_attempts)
-_memory_otp_store: Dict[str, Tuple[str, float, int]] = {}
-# Rate limit store: phone -> list of request timestamps in last 5 mins
-_rate_limit_store: Dict[str, list] = {}
+RATE_WINDOW_SECONDS = 300
+RATE_MAX_SENDS = 3
+MAX_FAILS = 5
 
-class OTPService:
-    @staticmethod
-    def is_rate_limited(phone_number: str) -> bool:
-        now = time.time()
-        window_start = now - 300  # 5 minutes window
-        timestamps = _rate_limit_store.get(phone_number, [])
-        # Keep only timestamps within window
-        valid_timestamps = [t for t in timestamps if t > window_start]
-        _rate_limit_store[phone_number] = valid_timestamps
-        return len(valid_timestamps) >= 3
 
-    @staticmethod
-    def record_request(phone_number: str):
-        now = time.time()
-        timestamps = _rate_limit_store.get(phone_number, [])
-        timestamps.append(now)
-        _rate_limit_store[phone_number] = timestamps
+class OtpRateLimited(Exception):
+    pass
 
-    @staticmethod
-    def generate_otp(phone_number: str) -> str:
-        if OTPService.is_rate_limited(phone_number):
-            raise ValueError("Too many OTP requests. Please try again after 5 minutes.")
 
-        OTPService.record_request(phone_number)
+class OtpService:
+    def __init__(self, redis, static_code: str | None = None):
+        self.redis = redis
+        self.static_code = static_code
 
-        # Generate 6 digit OTP
-        if settings.OTP_MOCK_MODE and (phone_number.endswith("9999") or phone_number == "9876543210"):
-            otp = "123456"
-        else:
-            otp = f"{random.randint(100000, 999999)}"
+    async def issue(self, phone: str) -> str:
+        rl = f"otp_rl:{phone}"
+        count = await self.redis.incr(rl)
+        if count == 1:
+            await self.redis.expire(rl, RATE_WINDOW_SECONDS)
+        if count > RATE_MAX_SENDS:
+            raise OtpRateLimited()
+        code = self.static_code or f"{secrets.randbelow(10**6):06d}"
+        key = f"otp:{phone}"
+        await self.redis.hset(key, mapping={"code": code, "fails": 0})
+        await self.redis.expire(key, settings.OTP_EXPIRE_SECONDS)
+        return code
 
-        expires_at = time.time() + settings.OTP_EXPIRE_SECONDS
-        _memory_otp_store[phone_number] = (otp, expires_at, 0)
-        return otp
-
-    @staticmethod
-    def verify_otp(phone_number: str, otp: str) -> bool:
-        record = _memory_otp_store.get(phone_number)
-        if not record:
+    async def verify(self, phone: str, otp: str) -> bool:
+        key = f"otp:{phone}"
+        saved = await self.redis.hget(key, "code")
+        if saved is None:
             return False
-        
-        saved_otp, expires_at, failed_attempts = record
-        if time.time() > expires_at:
-            _memory_otp_store.pop(phone_number, None)
-            return False
-
-        if failed_attempts >= 5:
-            # Lockout after 5 failed attempts
-            _memory_otp_store.pop(phone_number, None)
-            return False
-
-        if saved_otp == otp.strip():
-            _memory_otp_store.pop(phone_number, None)
+        if secrets.compare_digest(saved.encode(), otp.strip().encode()):
+            await self.redis.delete(key)
             return True
-
-        # Increment failed attempts
-        _memory_otp_store[phone_number] = (saved_otp, expires_at, failed_attempts + 1)
+        if await self.redis.hincrby(key, "fails", 1) >= MAX_FAILS:
+            await self.redis.delete(key)
         return False
-
-otp_service = OTPService()
-
