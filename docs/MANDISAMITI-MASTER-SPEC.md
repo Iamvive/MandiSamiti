@@ -25,20 +25,24 @@ MandiSamiti is an enterprise-grade, high-trust accounting and trade execution sy
 
 ## 2. Universal Feature Matrix & Implementation Status
 
-| Feature Module | Description | Age 25–65 UX Solution | Status | Target Phase |
+| Feature Module | Description | Age 25–65 UX Solution | Status | Phase |
 | :--- | :--- | :--- | :--- | :--- |
-| **NGDL v1.2 Design System** | Pure Alabaster / Space Black monochromatic theme | High contrast, zero emoji clutter | ✅ **Live on Phone** | Phase 0 (Done) |
-| **Paisa-Precise Math Core** | Decimal-free integer arithmetic for all mandi calculations | 100% mathematical honesty | ✅ **Live on Phone** | Phase 0 (Done) |
-| **Exact Money Math** | Half-up rounding, signed farmer payables, paisa-safe rate edits | No silent zeroing or lost paise | 🟡 **Done in code, phone test pending** | Phase 1A |
-| **Voice Soundbox (TTS)** | Vernacular audio playback for settlements | Audio reassurance for busy/senior users | ✅ **Live on Phone** | Phase 0 (Done) |
-| **WhatsApp Slip Export** | 1-tap instant WhatsApp bill & receipt delivery | Pre-formatted Hindi slips for farmers | ✅ **Live on Phone** | Phase 0 (Done) |
-| **4-Tab Navigation Bar** | Screen decomposition (Dashboard, Khata, Galla, Settings) | Prevents single-screen overcrowding | ✅ **Live on Phone** | Phase 1 (Done) |
-| **Language Switcher (हिन्दी/EN)** | Dynamic runtime toggle between Hindi & English | Easy switch for younger vs senior users | 🟡 **UI only** (not persisted) | Phase 1 |
-| **Authentication & Sign Out** | Phone + 4-digit MPIN, Session Store & Sign Out | Simple PIN memory, no complex passwords | 🟡 **UI only** (fake OTP) | Plan 1C |
-| **Multi-Shop Management** | Switch between multiple mandi licenses/firms | 1-tap dropdown in Settings | ⚪ **Planned** | Phase 2 |
-| **Entry Deletion & Void Audit** | Soft-delete / Void with Reason & instant balance reversal | Mistake protection with audit trail | 🟡 **Done in code, phone test pending** | Phase 1A |
-| **Camera Slip OCR / Attachment**| Attach or scan physical weighbridge slips (कांटा पर्ची) | Photo capture with thumbnail preview | 🟡 **Drafted** | Phase 3 |
-| **FastAPI + PostgreSQL Sync** | VPS Backend synchronization (:8050) | Cloud backup for local SQLite DB | ⚪ **Not connected** | Plans 1B/1C |
+| **NGDL v1.2 Design System** | Pure Alabaster / Space Black monochromatic theme | High contrast (≥ 4.5:1), pure vector icons, zero emoji clutter | ✅ **Live on Phone** | Phase 0 (Done) |
+| **Paisa-Precise Math Core** | Decimal-free 64-bit integer arithmetic for all mandi calculations | 100% mathematical honesty, half-up rounding, signed farmer payables | ✅ **Live on Phone** | Phase 1A (Done) |
+| **Audit Trail & Soft Void** | Schema v2 `entryRevisionEntity` append-only revisions with `VoidReason` | Mistake protection with transparent audit log & balance reversal | ✅ **Live on Phone** | Phase 1A (Done) |
+| **Daily Cash Drawer (Galla)** | Carried-forward opening balance, cash-only mode, excluded voids | Accurate daily cash reconciliation, no all-time leakage | ✅ **Live on Phone** | Phase 1A (Done) |
+| **Zero Demo Data Seeding** | Pure production cleanliness, removed fake demo party seeding | No unwanted demo parties polluting live farmer books | ✅ **Live on Phone** | Phase 1A (Done) |
+| **Backend Schema v2 Parity** | FastAPI models aligned with 64-bit Long paisa/grams & `EntryRevision` sync | Multi-tenant shop isolation, no float conversion issues | ✅ **Verified (Pytest)** | Phase 1B (Done) |
+| **Backend Auth Security** | OTP rate limiting (max 3 / 5m), 5-failure lockout, Pydantic BaseSettings | Protection against brute-force and credential abuse | ✅ **Verified (Pytest)** | Phase 1B (Done) |
+| **KMP Offline Sync Engine** | Two-way Outbox sync (`SyncEngine`, `MandiSyncApiClient`, DTOs) | Seamless offline entries with automatic background sync | ✅ **Live in KMP** | Phase 1C (Done) |
+| **Sync Status UI Indicators** | Single vector check (offline local), double check (synced cloud), pending badge | Instant visual trust without technical jargon | ✅ **Live in KMP** | Phase 1C (Done) |
+| **Day Closing Reconciliation** | Galla Day Closing summary dialog (दैनिक रोज़नामा) with physical count & discrepancy calc | Clear tally ("हिसाब बराबर", "फालतू", "कमी") before closing | ✅ **Live in KMP** | Phase 2 (Done) |
+| **WhatsApp Day Closing Share** | Pre-formatted Hindi daily register summary via `WhatsAppShareManager` | 1-tap sharing of daily business tally with owners/partners | ✅ **Live in KMP** | Phase 2 (Done) |
+| **Soundbox Voice Playback** | Vernacular TTS voice announcement for deals and day closing totals | Audio reassurance for senior Aadhatis during busy rush | ✅ **Live in KMP** | Phase 2 (Done) |
+| **Soundbox Dialects & Replay** | Multi-dialect voice templates (Hindi, Braj/Desi Mandi, English) + instant replay | Customized dialect preference & auditory verification | ⏳ **In Progress** | Phase 3 |
+| **Multi-Device Staff Roles** | Owner (Full) vs Munim (Entry Only) vs Partner (Read Only) role guards | Premium multi-staff collaboration on separate devices | ⚪ **Planned** | Phase 4 |
+| **Official Mandi Papers (J-Form)**| Generate and export official J-Form (नीलामी पर्ची) & mandi return PDFs | Legal compliance and formal proof for mandi samiti tax | ⚪ **Planned** | Phase 5 |
+| **Camera Slip Attachment** | Attach or scan physical weighbridge slips (कांटा पर्ची) | Photo capture with thumbnail preview | ⚪ **Planned** | Phase 6 |
 
 ---
 
@@ -56,6 +60,7 @@ MandiSamiti is an enterprise-grade, high-trust accounting and trade execution sy
 │ • Net Receivable  │ • Search & Filter  │ • Cash Out (निकासी)   │ • Voice Soundbox Vol  │
 │ • Net Payable     │ • WhatsApp Khata   │ • Day Closing Tally   │ • Switch Shop License │
 │ • Quick New Deal  │ • Add Party (+FAB) │ • Petty Cash History  │ • Cloud Backup Status │
+│ • Sync Status Ticks│ • Sync Status Ticks│ • Discrepancy Calc   │ • Multi-Staff Roles   │
 └───────────────────┴────────────────────┴───────────────────────┴───────────────────────┘
 ```
 
@@ -72,6 +77,8 @@ In traditional Mandi Aadhat, transactions cannot simply "disappear" without an a
    - The party's running balance (`balancePaisa`) and daily cash drawer (`inHandCashDrawerPaisa`) are automatically recalculated immediately via SQLDelight reactive queries.
 3. **Visual Distinction:**
    - Voided entries appear in ledger with strikethrough and a muted status tag (`रद्द प्रविष्टि`), or are hidden under an "Unvoid / View Cancelled" toggle.
+4. **Append-Only Sync Engine:**
+   - Revisions are tracked in `entryRevisionEntity` and synced as delta operations to backend `EntryRevision` table.
 
 ---
 
@@ -92,6 +99,6 @@ $$\text{Buyer Final Receivable} = \text{Gross Value} + \text{Aadhat Commission (
 ## 6. Multi-AI Collaboration Protocol
 
 When any AI assistant (Antigravity, Claude Code, Codex, OpenCode, Hermes) works on MandiSamiti:
-1. **Rule §1:** Run `./gradlew test` before making assertions.
+1. **Rule §1:** Run `./gradlew test` (or `./gradlew jvmTest`) before making assertions. All 55 test suites must pass.
 2. **Rule §2:** Strictly adhere to NGDL v1.2 tokens in `ui/theme/Color.kt` (No raw emojis in UI strings/icons; use Compose vector ImageVectors).
-3. **Rule §3:** Record newly completed features in this document under Section 2 and synchronize the Obsidian Second Brain (`python3 scripts/project_update.py --path projects/MandiSamiti`).
+3. **Rule §3:** Record newly completed features in this document under Section 2 and synchronize the Obsidian Second Brain (`vaults/Vivek-K/wiki/concepts/mandisamiti-product-review-2026-10-08.md` and `exports/context-pack.md`).
