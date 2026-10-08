@@ -2,6 +2,7 @@ package com.appwork.mandisamiti
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,8 +15,6 @@ import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
-import com.appwork.mandisamiti.domain.model.PartyType
-import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
@@ -58,78 +57,6 @@ fun App(
     val cameraPicker = rememberCameraSlipPicker()
 
     val shopId = "shop_default"
-
-    // Demo dataset seeding for parties
-    LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            val parties = partyRepo.getPartiesStream(shopId).firstOrNull()
-            if (parties.isNullOrEmpty()) {
-                partyRepo.saveParty(
-                    Party(
-                        id = "farmer_1",
-                        shopId = shopId,
-                        name = "रामवीर सिंह",
-                        village = "राया (मथुरा)",
-                        phone = "9837000001",
-                        partyType = PartyType.FARMER,
-                        monthlyInterestRate = 1.5,
-                        createdAt = 1000L,
-                        updatedAt = 1000L
-                    )
-                )
-                partyRepo.saveParty(
-                    Party(
-                        id = "farmer_2",
-                        shopId = shopId,
-                        name = "महेन्द्र प्रधान",
-                        village = "गोवर्धन",
-                        phone = "9837000002",
-                        partyType = PartyType.FARMER,
-                        monthlyInterestRate = 1.5,
-                        createdAt = 1000L,
-                        updatedAt = 1000L
-                    )
-                )
-                partyRepo.saveParty(
-                    Party(
-                        id = "farmer_3",
-                        shopId = shopId,
-                        name = "बृजकिशोर शर्मा",
-                        village = "बरसाना",
-                        phone = "9837000003",
-                        partyType = PartyType.FARMER,
-                        monthlyInterestRate = 1.5,
-                        createdAt = 1000L,
-                        updatedAt = 1000L
-                    )
-                )
-                partyRepo.saveParty(
-                    Party(
-                        id = "buyer_1",
-                        shopId = shopId,
-                        name = "अग्रवाल ट्रेडर्स",
-                        village = "मथुरा शहर",
-                        phone = "9837000004",
-                        partyType = PartyType.BUYER,
-                        createdAt = 1000L,
-                        updatedAt = 1000L
-                    )
-                )
-                partyRepo.saveParty(
-                    Party(
-                        id = "buyer_2",
-                        shopId = shopId,
-                        name = "राधे श्याम फ्लोर मिल",
-                        village = "कोसी कलां",
-                        phone = "9837000005",
-                        partyType = PartyType.BUYER,
-                        createdAt = 1000L,
-                        updatedAt = 1000L
-                    )
-                )
-            }
-        }
-    }
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Register) }
 
@@ -239,35 +166,18 @@ fun App(
 
             is Screen.ReceiptPreview -> {
                 MandiBackHandler { currentScreen = Screen.Home }
-                var shopProfile by remember {
-                    mutableStateOf(
-                        ShopProfile(
-                            id = shopId,
-                            shopName = "श्री गणेश ट्रेडिंग",
-                            ownerName = "लाला मदन लाल जी",
-                            mandiName = "मथुरा मंडी",
-                            shopNumber = "A-1",
-                            phoneNumber = "9837123456",
-                            pinHash = "1234",
-                            createdAt = 1000L,
-                            updatedAt = 1000L
-                        )
+                val shopProfile by shopRepo.getShopProfileStream().collectAsState(initial = null)
+                shopProfile?.let { profile ->
+                    ReceiptPreviewScreen(
+                        shopProfile = profile,
+                        farmer = screen.farmer,
+                        buyer = screen.buyer,
+                        deal = screen.deal,
+                        whatsAppShareManager = whatsAppShareManager,
+                        ttsManager = ttsManager,
+                        onNavigateBack = { currentScreen = Screen.Home }
                     )
                 }
-                LaunchedEffect(Unit) {
-                    shopRepo.getShopProfileStream().collect { profile ->
-                        if (profile != null) shopProfile = profile
-                    }
-                }
-                ReceiptPreviewScreen(
-                    shopProfile = shopProfile,
-                    farmer = screen.farmer,
-                    buyer = screen.buyer,
-                    deal = screen.deal,
-                    whatsAppShareManager = whatsAppShareManager,
-                    ttsManager = ttsManager,
-                    onNavigateBack = { currentScreen = Screen.Home }
-                )
             }
 
             is Screen.DailyRegister -> {
