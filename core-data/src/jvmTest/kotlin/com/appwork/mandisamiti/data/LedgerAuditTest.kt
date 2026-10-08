@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -111,5 +112,78 @@ class LedgerAuditTest {
             listOf("CREATE", "VOID"),
             db.appDatabaseQueries.getRevisionsForEntry("tx-1").executeAsList().map { it.change_kind }
         )
+    }
+
+    /** Writes a v1-era deal row straight to the table: no entryRevisionEntity row exists for it. */
+    private fun insertRawDeal(db: com.appwork.mandisamiti.database.AppDatabase, d: Deal) {
+        db.appDatabaseQueries.insertDeal(
+            id = d.id, shop_id = d.shopId, farmer_id = d.farmerId, buyer_id = d.buyerId,
+            commodity_id = d.commodityId, deal_status = d.dealStatus.name, deal_date = d.dealDate,
+            bags_count = d.bagsCount.toLong(), gross_weight_grams = d.grossWeightGrams,
+            cut_weight_grams = d.cutWeightGrams, net_weight_grams = d.netWeightGrams,
+            rate_paisa_per_unit = d.ratePaisaPerUnit, gross_amount_paisa = d.grossAmountPaisa,
+            farmer_commission_paisa = d.farmerCommissionPaisa, buyer_commission_paisa = d.buyerCommissionPaisa,
+            labour_charge_paisa = d.labourChargePaisa, weighing_charge_paisa = d.weighingChargePaisa,
+            other_deductions_paisa = d.otherDeductionsPaisa, net_farmer_payable_paisa = d.netFarmerPayablePaisa,
+            net_buyer_receivable_paisa = d.netBuyerReceivablePaisa, receipt_photo_uri = d.receiptPhotoUri,
+            voice_note_uri = d.voiceNoteUri, remarks = d.remarks, created_at = d.createdAt,
+            updated_at = d.updatedAt, is_deleted = 0L, sync_status = 0L,
+            farmer_commission_bps = d.farmerCommissionBps, revision = 1L, is_void = 0L, void_reason = null,
+        )
+    }
+
+    @Test
+    fun editOfPreV2DealWritesBaselineCreateRevisionFirst() = runTest {
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        val repo = OfflineFirstDealRepository(db, ioDispatcher, clock)
+        insertRawDeal(db, deal())
+        assertTrue(db.appDatabaseQueries.getRevisionsForEntry("deal-1").executeAsList().isEmpty())
+
+        repo.editDeal(deal(payable = 90_000L))
+
+        val revisions = db.appDatabaseQueries.getRevisionsForEntry("deal-1").executeAsList()
+        assertEquals(listOf("CREATE", "EDIT"), revisions.map { it.change_kind })
+        assertEquals(listOf(1L, 2L), revisions.map { it.revision })
+        val original = Json.decodeFromString(Deal.serializer(), revisions[0].snapshot_json)
+        assertEquals(100_000L, original.netFarmerPayablePaisa)
+        assertEquals(1_000L, revisions[0].changed_at)
+    }
+
+    @Test
+    fun voidOfPreV2DealWritesBaselineCreateRevisionFirst() = runTest {
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        val repo = OfflineFirstDealRepository(db, ioDispatcher, clock)
+        insertRawDeal(db, deal())
+
+        repo.voidDeal("deal-1", VoidReason.WEIGHING_ERROR)
+
+        val revisions = db.appDatabaseQueries.getRevisionsForEntry("deal-1").executeAsList()
+        assertEquals(listOf("CREATE", "VOID"), revisions.map { it.change_kind })
+        assertEquals(listOf(1L, 2L), revisions.map { it.revision })
+    }
+
+    @Test
+    fun voidOfPreV2CashRowWritesBaselineCreateRevisionFirst() = runTest {
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher, clock)
+        db.appDatabaseQueries.insertCashTransaction(
+            id = "tx-raw", shop_id = "shop-1", party_id = "farmer-1", deal_id = null,
+            transaction_type = TransactionType.UDHAR_GIVEN.name, amount_paisa = 500_000L,
+            payment_mode = "CASH", transaction_date = 1_000L, voice_note_uri = null, remarks = null,
+            created_at = 1_000L, updated_at = 1_000L, is_deleted = 0L, sync_status = 0L,
+            revision = 1L, is_void = 0L, void_reason = null,
+        )
+
+        cashRepo.voidTransaction("tx-raw", VoidReason.WRONG_ENTRY)
+
+        val revisions = db.appDatabaseQueries.getRevisionsForEntry("tx-raw").executeAsList()
+        assertEquals(listOf("CREATE", "VOID"), revisions.map { it.change_kind })
+        assertEquals(listOf(1L, 2L), revisions.map { it.revision })
+        val original = Json.decodeFromString(CashTransaction.serializer(), revisions[0].snapshot_json)
+        assertEquals(500_000L, original.amountPaisa)
+        assertEquals(false, original.isVoid)
     }
 }

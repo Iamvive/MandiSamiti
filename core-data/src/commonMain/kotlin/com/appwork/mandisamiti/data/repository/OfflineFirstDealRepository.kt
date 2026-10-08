@@ -73,6 +73,7 @@ class OfflineFirstDealRepository(
             val current = queries.getDealById(deal.id).executeAsOneOrNull()?.toDomain()
                 ?: throw IllegalArgumentException("Deal ${deal.id} does not exist")
             require(!current.isVoid) { "Deal ${deal.id} is void and cannot be edited" }
+            ensureBaselineRevision(current)
             val edited = deal.copy(
                 dealDate = current.dealDate,
                 createdAt = current.createdAt,
@@ -93,12 +94,20 @@ class OfflineFirstDealRepository(
             val current = queries.getDealById(dealId).executeAsOneOrNull()?.toDomain()
                 ?: throw IllegalArgumentException("Deal $dealId does not exist")
             if (current.isVoid) return@transaction
+            ensureBaselineRevision(current)
             val voided = current.copy(
                 isVoid = true, voidReason = reason, revision = current.revision + 1,
                 updatedAt = now, syncStatus = 0
             )
             insertOrReplace(voided)
             recordRevision(voided, "VOID", now)
+        }
+    }
+
+    /** Rows written before schema v2 have no audit trail; record them as-is as their CREATE revision. */
+    private fun ensureBaselineRevision(current: Deal) {
+        if (queries.getRevisionsForEntry(current.id).executeAsList().isEmpty()) {
+            recordRevision(current, "CREATE", current.createdAt)
         }
     }
 
