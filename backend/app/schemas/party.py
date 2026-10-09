@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict
+import re
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional
 
 class PartyBase(BaseModel):
@@ -11,6 +12,17 @@ class PartyBase(BaseModel):
     photo_uri: Optional[str] = None
     is_deleted: int = 0
     updated_at: Optional[int] = None
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def normalise_phone(cls, v):
+        # A bad phone must never fail a whole sync push (the column is String(15)): keep 10 digits or drop it.
+        if v is None:
+            return None
+        digits = re.sub(r"[\s-]", "", str(v)).removeprefix("+")
+        if len(digits) == 12 and digits.startswith("91"):
+            digits = digits[2:]
+        return digits if len(digits) == 10 and digits.isdigit() else None
 
 class PartyCreate(PartyBase):
     pass

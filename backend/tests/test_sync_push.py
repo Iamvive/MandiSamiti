@@ -83,3 +83,52 @@ async def test_party_last_write_wins_by_updated_at(db):
 def test_more_than_100_revisions_is_rejected():
     with pytest.raises(ValidationError):
         SyncPushRequest(revisions=[rev(revision=i, rid=f"r{i}") for i in range(101)])
+
+@pytest.mark.parametrize("raw,expected", [
+    ("9876543210", "9876543210"),
+    ("98765 43210", "9876543210"),
+    ("+919876543210", "9876543210"),
+    ("919876543210", "9876543210"),
+    ("+91 98765 43210", "9876543210"),
+    ("98765432101234567", None),   # longer than the String(15) column: must never fail a push
+    ("12345", None),
+    ("", None),
+    (None, None),
+])
+def test_party_phone_is_normalised_or_dropped(raw, expected):
+    assert PartyCreate(id="p1", name="n", role="FARMER", phone=raw).phone == expected
+
+@pytest.mark.asyncio
+async def test_party_with_overlong_phone_is_stored_without_phone(db):
+    res = await sync_push(SyncPushRequest(parties=[PartyCreate(id="p1", name="n", role="FARMER", phone="1" * 20)]), USER, db)
+    assert res.synced_parties == ["p1"]
+    row = (await db.execute(select(Party).where(Party.id == "p1"))).scalars().one()
+    assert row.phone is None
+
+@pytest.mark.asyncio
+async def test_older_deal_push_gives_held_row_a_new_seq(db):
+    await sync_push(SyncPushRequest(deals=[deal(revision=2, payable=2000)]), USER, db)
+    res = await sync_push(SyncPushRequest(deals=[deal(revision=1, payable=1000)]), USER, db)
+    assert res.synced_deals == ["d1"]
+    row = (await db.execute(select(Deal).where(Deal.id == "d1"))).scalars().one()
+    assert row.revision == 2 and row.net_farmer_payable_paisa == 2000
+    assert row.server_seq == 2 == res.server_seq   # re-delivered on the next pull
+
+@pytest.mark.asyncio
+async def test_older_party_push_gives_held_row_a_new_seq(db):
+    await sync_push(SyncPushRequest(parties=[PartyCreate(id="p1", name="नया", role="FARMER", updated_at=20)]), USER, db)
+    await sync_push(SyncPushRequest(parties=[PartyCreate(id="p1", name="पुराना", role="FARMER", updated_at=10)]), USER, db)
+    row = (await db.execute(select(Party).where(Party.id == "p1"))).scalars().one()
+    assert row.name == "नया" and row.server_seq == 2
+
+@pytest.mark.asyncio
+async def test_older_cash_push_gives_held_row_a_new_seq(db):
+    from app.schemas.transaction import CashTransactionCreate
+    from app.models.transaction import CashTransaction
+    def tx(revision, amount):
+        return CashTransactionCreate(id="t1", party_id="p1", transaction_type="PAYMENT", amount_paisa=amount,
+                                     revision=revision)
+    await sync_push(SyncPushRequest(transactions=[tx(2, 200)]), USER, db)
+    await sync_push(SyncPushRequest(transactions=[tx(1, 100)]), USER, db)
+    row = (await db.execute(select(CashTransaction).where(CashTransaction.id == "t1"))).scalars().one()
+    assert row.amount_paisa == 200 and row.server_seq == 2
