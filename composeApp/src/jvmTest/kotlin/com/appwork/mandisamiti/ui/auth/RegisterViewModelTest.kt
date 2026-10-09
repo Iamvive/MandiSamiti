@@ -96,6 +96,7 @@ class RegisterViewModelTest {
 
         f.vm.onShopNameChanged("राम आढ़त")
         f.vm.onOwnerNameChanged("राम")
+        f.vm.onMandiNameChanged("मथुरा मंडी")
         f.vm.onMpinChanged("1234")
         f.vm.onConfirmMpinChanged("1234")
         f.clock.tap(); f.vm.submitNewShop()
@@ -150,7 +151,7 @@ class RegisterViewModelTest {
         f.toOtpStep()
         f.clock.tap(); f.vm.onOtpChanged("123456")
         f.vm.uiState.first { it.step == AuthStep.NEW_SHOP }
-        f.vm.onShopNameChanged("राम आढ़त"); f.vm.onOwnerNameChanged("राम")
+        f.vm.onShopNameChanged("राम आढ़त"); f.vm.onOwnerNameChanged("राम"); f.vm.onMandiNameChanged("मथुरा")
         f.vm.onMpinChanged("1234"); f.vm.onConfirmMpinChanged("1234")
         f.clock.tap(); f.vm.submitNewShop()
 
@@ -167,7 +168,7 @@ class RegisterViewModelTest {
         f.toOtpStep()
         f.clock.tap(); f.vm.onOtpChanged("123456")
         f.vm.uiState.first { it.step == AuthStep.NEW_SHOP }
-        f.vm.onShopNameChanged("राम आढ़त"); f.vm.onOwnerNameChanged("राम")
+        f.vm.onShopNameChanged("राम आढ़त"); f.vm.onOwnerNameChanged("राम"); f.vm.onMandiNameChanged("मथुरा")
         f.vm.onMpinChanged("1234"); f.vm.onConfirmMpinChanged("1234")
         f.clock.tap(); f.vm.submitNewShop()
 
@@ -238,8 +239,8 @@ class RegisterViewModelTest {
         vm.uiState.first { it.step == AuthStep.ENTER_MPIN }
     }
 
-    private fun Fixture.fillShop(shop: String = "राम आढ़त", owner: String = "राम", mpin: String = "1234", confirm: String = "1234") {
-        vm.onShopNameChanged(shop); vm.onOwnerNameChanged(owner); vm.onMandiNameChanged("मथुरा")
+    private fun Fixture.fillShop(shop: String = "राम आढ़त", owner: String = "राम", mpin: String = "1234", confirm: String = "1234", mandi: String = "मथुरा") {
+        vm.onShopNameChanged(shop); vm.onOwnerNameChanged(owner); vm.onMandiNameChanged(mandi)
         vm.onMpinChanged(mpin); vm.onConfirmMpinChanged(confirm)
     }
 
@@ -383,5 +384,33 @@ class RegisterViewModelTest {
 
         val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
         assertEquals("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें", s.generalErrorMessage)
+    }
+
+    @Test
+    fun newShop_blankMandiName_rejectedWithFieldError_noNetwork() = runTest {
+        val f = fixture(signupOk)
+        f.toNewShop()
+        f.fillShop(mandi = "   ")
+        f.clock.tap(); f.vm.submitNewShop()
+
+        advanceUntilIdle()
+        assertEquals(0, f.count("signup"))
+        assertEquals(AuthStep.NEW_SHOP, f.vm.uiState.value.step)
+        assertEquals("मंडी का नाम लिखें", f.vm.uiState.value.mandiNameError)
+    }
+
+    @Test
+    fun signup_422_showsCheckDetailsMessage() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("signup")) json(HttpStatusCode.UnprocessableEntity, """{"detail":[]}""") else verifyBody(p, "NEW")
+        }
+        f.toNewShop()
+        f.fillShop()
+        f.clock.tap(); f.vm.submitNewShop()
+
+        val s = f.vm.uiState.first { it.generalErrorMessage != null }
+        assertEquals("जानकारी जाँचें और दोबारा कोशिश करें", s.generalErrorMessage)
+        assertEquals(AuthStep.NEW_SHOP, s.step)
     }
 }

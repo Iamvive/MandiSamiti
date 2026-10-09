@@ -35,6 +35,7 @@ data class RegisterUiState(
     val phoneError: String? = null,
     val shopNameError: String? = null,
     val ownerNameError: String? = null,
+    val mandiNameError: String? = null,
     val otpError: String? = null,
     val mpinError: String? = null,
     val confirmMpinError: String? = null,
@@ -53,7 +54,7 @@ data class RegisterUiState(
                 (phoneNumber.startsWith("6") || phoneNumber.startsWith("7") || phoneNumber.startsWith("8") || phoneNumber.startsWith("9"))
 
     val isNewShopValid: Boolean
-        get() = shopName.trim().length >= 3 && ownerName.trim().length >= 2 && isMpinValid
+        get() = shopName.trim().length >= 3 && ownerName.trim().length >= 2 && mandiName.isNotBlank() && isMpinValid
 
     val isEnterMpinValid: Boolean
         get() = mpin.length == 4
@@ -112,7 +113,7 @@ class RegisterViewModel(
     }
 
     fun onMandiNameChanged(value: String) {
-        _uiState.update { it.copy(mandiName = value, generalErrorMessage = null) }
+        _uiState.update { it.copy(mandiName = value, mandiNameError = null, generalErrorMessage = null) }
     }
 
     fun onOtpChanged(value: String) {
@@ -250,6 +251,7 @@ class RegisterViewModel(
                     generalErrorMessage = "कृपया सभी आवश्यक विवरण सही से भरें और 4 अंकों का MPIN दर्ज करके पुष्टि करें",
                     shopNameError = if (s.shopName.trim().length < 3) "फर्म का नाम दर्ज करें" else null,
                     ownerNameError = if (s.ownerName.trim().length < 2) "व्यापारी का नाम दर्ज करें" else null,
+                    mandiNameError = if (s.mandiName.isBlank()) "मंडी का नाम लिखें" else null,
                     confirmMpinError = if (s.mpin != s.confirmMpin) "MPIN मेल नहीं खा रहा है" else null
                 )
             }
@@ -309,6 +311,8 @@ class RegisterViewModel(
                 resetToPhone(if (step == AuthStep.NEW_SHOP) "समय समाप्त — दोबारा OTP लें" else "बहुत गलत MPIN — दोबारा OTP लें")
             is AuthError.AccountLocked ->
                 resetToPhone("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें")
+            is AuthError.Invalid ->
+                showError("जानकारी जाँचें और दोबारा कोशिश करें")
             is AuthError.PhoneAlreadyRegistered ->
                 resetToPhone("यह नंबर पहले से रजिस्टर है — दोबारा OTP लेकर लॉगिन करें")
             else ->

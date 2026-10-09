@@ -96,7 +96,7 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
         call("logout", RefreshRequest(refreshToken), { _, _ -> null }) { }
 
     /**
-     * POSTs [body]; non-2xx goes through [mapError] (null falls back to "HTTP <code>"), 2xx through [parse].
+     * POSTs [body]; non-2xx goes through [mapError] (null falls back to [fallbackError]), 2xx through [parse].
      * IO and parse failures become [AuthError]; CancellationException always propagates.
      */
     private suspend inline fun <reified Req : Any, R> call(
@@ -114,7 +114,7 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
                 Result.success(parse(response))
             } else {
                 val text = try { response.bodyAsText() } catch (e: CancellationException) { throw e } catch (e: Exception) { "" }
-                Result.failure(mapError(response.status, text) ?: AuthError.Network("HTTP ${response.status.value}"))
+                Result.failure(mapError(response.status, text) ?: fallbackError(response.status))
             }
         } catch (e: CancellationException) {
             throw e
@@ -123,6 +123,12 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
         } catch (e: Exception) {
             Result.failure(AuthError.Network(e.message ?: e::class.simpleName ?: "IO error"))
         }
+    }
+
+    /** 400/422 = server rejected our input; anything else unmapped stays a network-style failure. */
+    private fun fallbackError(status: HttpStatusCode): AuthError = when (status) {
+        HttpStatusCode.BadRequest, HttpStatusCode.UnprocessableEntity -> AuthError.Invalid
+        else -> AuthError.Network("HTTP ${status.value}")
     }
 
     private fun detailElement(text: String) =

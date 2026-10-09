@@ -594,8 +594,14 @@ private fun NewShopSection(
             OutlinedTextField(
                 value = uiState.mandiName,
                 onValueChange = onMandiChange,
-                label = { Text("मंडी प्रांगण का नाम") },
+                label = { Text("मंडी प्रांगण का नाम *") },
                 placeholder = { Text("उदा. मथुरा कृषि उपज मंडी", color = MandiTextSecondary) },
+                isError = uiState.mandiNameError != null,
+                supportingText = {
+                    if (uiState.mandiNameError != null) {
+                        Text(uiState.mandiNameError!!, color = MandiRedText, fontSize = 11.sp)
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 singleLine = true,

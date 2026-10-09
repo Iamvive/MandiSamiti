@@ -33,6 +33,8 @@ sealed class AuthError(message: String) : Exception(message) {
     object AccountLocked : AuthError("ACCOUNT_LOCKED")
     object PhoneAlreadyRegistered : AuthError("PHONE_ALREADY_REGISTERED")
     object SessionExpired : AuthError("SESSION_EXPIRED")
+    /** Server rejected the input (400 other than OTP_INVALID, or 422 validation). */
+    object Invalid : AuthError("INVALID")
     data class Network(val causeMessage: String) : AuthError("NETWORK")
 }
 

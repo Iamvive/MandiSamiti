@@ -61,11 +61,11 @@ class AuthApiTest {
     }
 
     @Test
-    fun sendOtp_503_isNetworkOtpUnavailable_and400_isHttp400() = runTest {
+    fun sendOtp_503_isNetworkOtpUnavailable_and400_isInvalid() = runTest {
         val r503 = api { json(HttpStatusCode.ServiceUnavailable, "{}") }.sendOtp("1")
         assertEquals(AuthError.Network("OTP service unavailable"), r503.error())
-        val r400 = api { json(HttpStatusCode.BadRequest, """{"detail":"bad phone"}""") }.sendOtp("1")
-        assertEquals(AuthError.Network("HTTP 400"), r400.error())
+        val r400 = api { json(HttpStatusCode.BadRequest, """{"detail":"INVALID_PHONE"}""") }.sendOtp("1")
+        assertEquals(AuthError.Invalid, r400.error())
     }
 
     @Test
@@ -188,5 +188,14 @@ class AuthApiTest {
     fun login_accountLocked_isAccountLocked() = runTest {
         val r = api { json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_LOCKED"}}""") }.login("lp", "1234")
         assertEquals(AuthError.AccountLocked, r.error())
+    }
+
+    @Test
+    fun signup_422_isInvalid_and_verify400NonOtp_isInvalid() = runTest {
+        val r = api { json(HttpStatusCode.UnprocessableEntity, """{"detail":[{"loc":["body","mandi_name"]}]}""") }
+            .signup("p", "s", "o", "", "1234")
+        assertEquals(AuthError.Invalid, r.error())
+        val v = api { json(HttpStatusCode.BadRequest, """{"detail":"INVALID_PHONE"}""") }.verifyOtp("1", "123456")
+        assertEquals(AuthError.Invalid, v.error())
     }
 }
