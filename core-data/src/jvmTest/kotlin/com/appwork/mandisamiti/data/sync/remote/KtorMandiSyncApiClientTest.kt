@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.data.sync.remote
 
+import com.appwork.mandisamiti.data.auth.AuthError
+import com.appwork.mandisamiti.data.auth.InMemorySessionStore
+import com.appwork.mandisamiti.data.auth.Session
 import com.appwork.mandisamiti.data.auth.mandiHttpClient
 import com.appwork.mandisamiti.data.sync.model.PartySyncDto
 import com.appwork.mandisamiti.data.sync.model.SyncPushRequestDto
@@ -15,6 +18,7 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class KtorMandiSyncApiClientTest {
@@ -29,7 +33,8 @@ class KtorMandiSyncApiClientTest {
         handler: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ): KtorMandiSyncApiClient {
         val engine = MockEngine { req -> captured += req; handler(req) }
-        return KtorMandiSyncApiClient(mandiHttpClient(engine), base) { token }
+        val store = InMemorySessionStore().apply { if (token != null) save(Session("shop-1", token, "r")) }
+        return KtorMandiSyncApiClient(mandiHttpClient(engine), base, store) { Result.failure(IllegalStateException("unexpected refresh")) }
     }
 
     @Test
@@ -83,6 +88,42 @@ class KtorMandiSyncApiClientTest {
         val api = client(token = null) { json(HttpStatusCode.OK, "{}") }
         val res = api.pullSync()
         assertTrue(res.isFailure)
-        assertEquals("User not authenticated", res.exceptionOrNull()?.message)
+        assertIs<SyncAuthExpired>(res.exceptionOrNull())
+    }
+
+    @Test
+    fun on401RefreshesOnceAndRetriesWithTheNewToken() = runTest {
+        val seen = mutableListOf<String?>()
+        val engine = MockEngine { req ->
+            seen += req.headers[HttpHeaders.Authorization]
+            if (req.headers[HttpHeaders.Authorization] == "Bearer old") respond("", HttpStatusCode.Unauthorized)
+            else respond("{\"next_seq\":0,\"server_sync_time\":1}", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        val store = InMemorySessionStore().apply { save(Session("shop-1", "old", "r-old")) }
+        var refreshCalls = 0
+        val client = KtorMandiSyncApiClient(mandiHttpClient(engine), "http://x", store) { refreshCalls++; Result.success("new" to "r-new") }
+
+        assertTrue(client.pullSync(0, 500).isSuccess)
+        assertEquals(listOf<String?>("Bearer old", "Bearer new"), seen)
+        assertEquals(1, refreshCalls)
+        assertEquals("r-new", store.current()!!.refreshToken)
+    }
+
+    @Test
+    fun rejectedRefreshFailsWithSyncAuthExpiredAndKeepsTheSession() = runTest {
+        val engine = MockEngine { respond("", HttpStatusCode.Unauthorized) }
+        val store = InMemorySessionStore().apply { save(Session("shop-1", "old", "r-old")) }
+        val client = KtorMandiSyncApiClient(mandiHttpClient(engine), "http://x", store) { Result.failure(AuthError.SessionExpired) }
+        assertIs<SyncAuthExpired>(client.pullSync(0, 500).exceptionOrNull())
+        assertEquals("shop-1", store.current()!!.shopId)
+    }
+
+    @Test
+    fun refreshNetworkErrorIsAPlainFailureNotNeedsLogin() = runTest {
+        val engine = MockEngine { respond("", HttpStatusCode.Unauthorized) }
+        val store = InMemorySessionStore().apply { save(Session("shop-1", "old", "r-old")) }
+        val client = KtorMandiSyncApiClient(mandiHttpClient(engine), "http://x", store) { Result.failure(RuntimeException("offline")) }
+        val err = client.pullSync(0, 500).exceptionOrNull()
+        assertTrue(err != null && err !is SyncAuthExpired)
     }
 }

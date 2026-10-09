@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.appwork.mandisamiti.data.auth.AndroidSessionStore
+import com.appwork.mandisamiti.data.auth.AuthApi
 import com.appwork.mandisamiti.data.auth.mandiHttpClient
 import com.appwork.mandisamiti.data.sync.SyncEngine
 import com.appwork.mandisamiti.data.sync.SyncResult
@@ -27,7 +28,8 @@ class MandiSyncWorker(
         val syncApiClient = KtorMandiSyncApiClient(
             http = mandiHttpClient(),
             baseUrl = apiBaseUrl,
-            tokenProvider = { sessionStore.current()?.accessToken }
+            sessionStore = sessionStore,
+            refresh = AuthApi(mandiHttpClient(), apiBaseUrl)::refresh
         )
         val syncEngine = SyncEngine(database = database, apiClient = syncApiClient)
 
