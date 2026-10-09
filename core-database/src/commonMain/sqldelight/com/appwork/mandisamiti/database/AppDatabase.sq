@@ -303,6 +303,15 @@ SELECT (
     (SELECT COUNT(*) FROM entryRevisionEntity WHERE shop_id != :shopId)
 ) AS foreign_count;
 
+-- Unsynced rows (sync_status = 0) belonging to another shop whose profile came from the server (sync_status = 1)
+countForeignPendingFromServerShop:
+SELECT (
+    (SELECT COUNT(*) FROM partyEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM dealEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM cashTransactionEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1))
+) AS pending_count;
+
 -- Local data wipe (sign-out / account switch), children first
 wipeRevisions:
 DELETE FROM entryRevisionEntity;

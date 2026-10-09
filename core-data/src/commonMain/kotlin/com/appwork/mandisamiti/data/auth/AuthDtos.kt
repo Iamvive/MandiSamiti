@@ -35,6 +35,8 @@ sealed class AuthError(message: String) : Exception(message) {
     object SessionExpired : AuthError("SESSION_EXPIRED")
     /** Server rejected the input (400 other than OTP_INVALID, or 422 validation). */
     object Invalid : AuthError("INVALID")
+    /** This phone holds another server shop's unsynced entries; login refused so they are not wiped. */
+    object UnsyncedOtherShop : AuthError("UNSYNCED_OTHER_SHOP")
     data class Network(val causeMessage: String) : AuthError("NETWORK")
 }
 

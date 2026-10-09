@@ -11,7 +11,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
 import java.security.UnrecoverableKeyException
-import javax.crypto.AEADBadTagException
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -43,7 +43,8 @@ class AndroidSessionStore(context: Context) : SessionStore {
         }
     }
 
-    private fun Exception.isPermanent() = this is AEADBadTagException ||
+    // BadPaddingException covers AEADBadTagException (and its non-AEAD variants on some OEM keystores).
+    private fun Exception.isPermanent() = this is BadPaddingException ||
         this is KeyPermanentlyInvalidatedException ||
         this is IllegalArgumentException ||
         this is SerializationException ||

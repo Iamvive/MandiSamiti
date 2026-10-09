@@ -41,7 +41,12 @@ class RegisterViewModelTest {
     private fun MockRequestHandleScope.json(status: HttpStatusCode, body: String): HttpResponseData =
         respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
 
-    private class Fixture(val vm: RegisterViewModel, val clock: TestClock, val calls: MutableList<Pair<String, String>>) {
+    private class Fixture(
+        val vm: RegisterViewModel,
+        val clock: TestClock,
+        val calls: MutableList<Pair<String, String>>,
+        val db: com.appwork.mandisamiti.database.AppDatabase,
+    ) {
         fun bodyOf(suffix: String) = calls.filter { it.first.endsWith(suffix) }.map { it.second }
         fun count(suffix: String) = calls.count { it.first.endsWith(suffix) }
     }
@@ -61,7 +66,7 @@ class RegisterViewModelTest {
             ioDispatcher = io,
         )
         val clock = TestClock()
-        return Fixture(RegisterViewModel(repo, SoundboxTtsManager(), backgroundScope, clock), clock, calls)
+        return Fixture(RegisterViewModel(repo, SoundboxTtsManager(), backgroundScope, clock), clock, calls, db)
     }
 
     private fun Fixture.enterPhone() {
@@ -412,5 +417,37 @@ class RegisterViewModelTest {
         val s = f.vm.uiState.first { it.generalErrorMessage != null }
         assertEquals("जानकारी जाँचें और दोबारा कोशिश करें", s.generalErrorMessage)
         assertEquals(AuthStep.NEW_SHOP, s.step)
+    }
+
+    @Test
+    fun login_otherShopUnsynced_returnsToPhone_withSyncFirstMessage_andKeepsData() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+        }
+        val io = StandardTestDispatcher(testScheduler)
+        com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository(f.db, io).saveShopProfile(
+            com.appwork.mandisamiti.domain.model.ShopProfile(
+                id = "other-shop", shopName = "Other", ownerName = "O", mandiName = "M", phoneNumber = "9",
+                pinHash = "", createdAt = 1L, updatedAt = 1L, syncStatus = 1,
+            )
+        )
+        com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository(f.db, io).saveParty(
+            com.appwork.mandisamiti.domain.model.Party(
+                id = "p1", shopId = "other-shop", name = "R", village = "V",
+                partyType = com.appwork.mandisamiti.domain.model.PartyType.FARMER, createdAt = 1L, updatedAt = 1L,
+            )
+        )
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4826")
+        f.clock.tap(); f.vm.submitMpin()
+
+        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals(
+            "इस फ़ोन पर दूसरी दुकान की प्रविष्टियाँ अभी सर्वर पर नहीं गईं — पहले उस दुकान से लॉगिन करके सिंक करें",
+            s.generalErrorMessage,
+        )
+        assertEquals(false, s.isRegistrationComplete)
+        assertEquals(1, f.db.appDatabaseQueries.getAllParties("other-shop").executeAsList().size)
     }
 }

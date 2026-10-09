@@ -171,4 +171,51 @@ class AuthRepositoryTest {
         assertNull(store.current())
         assertNull(db.appDatabaseQueries.getShopProfile().executeAsOneOrNull())
     }
+
+    private suspend fun Fixture.seedShopWithPendingCash(id: String, profileSyncStatus: Long, scope: TestScope) {
+        shops.saveShopProfile(
+            ShopProfile(id = id, shopName = "Other", ownerName = "O", mandiName = "M", phoneNumber = "9", pinHash = "",
+                createdAt = 1L, updatedAt = 1L, syncStatus = profileSyncStatus.toInt())
+        )
+        parties.saveParty(
+            Party(id = "p1", shopId = id, name = "R", village = "V", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        )
+        OfflineFirstCashTransactionRepository(db, StandardTestDispatcher(scope.testScheduler)).recordTransaction(
+            CashTransaction(
+                id = "t1", shopId = id, partyId = "p1", transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 500_00L, transactionDate = 1L, createdAt = 1L, updatedAt = 1L, syncStatus = 0,
+            )
+        )
+    }
+
+    @Test
+    fun login_otherServerShopWithPendingEntries_isBlocked_andDataIntact() = runTest {
+        val f = fixture("shop-2")
+        f.seedShopWithPendingCash("shop-1", profileSyncStatus = 1L, scope = this)
+        val q = f.db.appDatabaseQueries
+        val revisionsBefore = q.getPendingSyncRevisions().executeAsList().size
+
+        val r = f.repo.login("pass", "1234")
+
+        assertEquals(AuthError.UnsyncedOtherShop, r.exceptionOrNull())
+        assertNull(f.store.current())
+        assertEquals("shop-1", q.getShopProfile().executeAsOne().id)
+        assertEquals(1, q.getAllParties("shop-1").executeAsList().size)
+        assertEquals(1, q.getPendingSyncTransactions().executeAsList().size)
+        assertEquals(revisionsBefore, q.getPendingSyncRevisions().executeAsList().size)
+    }
+
+    @Test
+    fun login_legacyUnsyncedDemoProfileWithPendingEntries_isStillWiped() = runTest {
+        val f = fixture("shop-2")
+        f.seedShopWithPendingCash("shop_default", profileSyncStatus = 0L, scope = this)
+
+        assertTrue(f.repo.login("pass", "1234").isSuccess)
+
+        val q = f.db.appDatabaseQueries
+        assertEquals(0, q.getPendingSyncTransactions().executeAsList().size)
+        assertEquals(0, q.getAllParties("shop_default").executeAsList().size)
+        assertEquals("shop-2", q.getShopProfile().executeAsOne().id)
+        assertEquals("shop-2", f.store.current()?.shopId)
+    }
 }

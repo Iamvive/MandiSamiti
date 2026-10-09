@@ -25,11 +25,19 @@ class AuthRepository(
     suspend fun login(pass: String, mpin: String): Result<Session> =
         api.login(pass, mpin).mapCatchingSuspend { adopt(it, phone = "") }
 
-    /** Makes the server's shop the local one: wipes foreign/demo data, saves the profile, then the session. */
+    /**
+     * Makes the server's shop the local one: wipes foreign/demo data, saves the profile, then the session.
+     * Fails with [AuthError.UnsyncedOtherShop] (nothing changed) if another server shop has unsynced rows here.
+     */
     private suspend fun adopt(dto: AuthSessionDto, phone: String): Session = withContext(ioDispatcher) {
         val shop = dto.shop
-        // The local DB may hold several profile rows (e.g. shop_default + shop_mathura_default): any foreign row means wipe.
-        if (wiper.hasDataOutsideShop(shop.id)) wiper.wipeAll()
+        // The local DB may hold several profile rows (e.g. shop_default + shop_mathura_default): any foreign row means wipe,
+        // unless another server shop still has unsynced entries here: then refuse and change nothing.
+        // Legacy demo profiles (sync_status = 0) are wiped regardless.
+        if (wiper.hasDataOutsideShop(shop.id)) {
+            if (wiper.hasUnsyncedServerShopDataOutside(shop.id)) throw AuthError.UnsyncedOtherShop
+            wiper.wipeAll()
+        }
         val now = clock.now().toEpochMilliseconds()
         shopProfileRepository.saveShopProfile(
             ShopProfile(

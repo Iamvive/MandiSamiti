@@ -313,6 +313,8 @@ class RegisterViewModel(
                 resetToPhone("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें")
             is AuthError.Invalid ->
                 showError("जानकारी जाँचें और दोबारा कोशिश करें")
+            is AuthError.UnsyncedOtherShop ->
+                resetToPhone("इस फ़ोन पर दूसरी दुकान की प्रविष्टियाँ अभी सर्वर पर नहीं गईं — पहले उस दुकान से लॉगिन करके सिंक करें")
             is AuthError.PhoneAlreadyRegistered ->
                 resetToPhone("यह नंबर पहले से रजिस्टर है — दोबारा OTP लेकर लॉगिन करें")
             else ->

@@ -19,4 +19,11 @@ class LocalDataWiper(private val database: AppDatabase) {
     /** True if any profile or any party/deal/cash/etc. row belongs to a shop other than [shopId]. */
     fun hasDataOutsideShop(shopId: String): Boolean =
         database.appDatabaseQueries.countForeignRows(shopId).executeAsOne() > 0
+
+    /**
+     * True if another shop that was adopted from the server (profile sync_status = 1) still has
+     * unsynced rows here. Wiping those would lose entries that never reached the server.
+     */
+    fun hasUnsyncedServerShopDataOutside(shopId: String): Boolean =
+        database.appDatabaseQueries.countForeignPendingFromServerShop(shopId).executeAsOne() > 0
 }
