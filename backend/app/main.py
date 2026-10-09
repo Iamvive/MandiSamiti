@@ -45,5 +45,4 @@ async def health_check():
         "status": "healthy",
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "otp_mode": "static" if settings.OTP_STATIC_ENABLED else "provider",
     }

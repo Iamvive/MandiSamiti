@@ -109,3 +109,40 @@ async def test_access_token_cannot_be_refreshed_and_logout_is_idempotent(client)
     assert (await client.post("/api/v1/auth/refresh", json={"refresh_token": s["access_token"]})).status_code == 401
     for _ in range(2):
         assert (await client.post("/api/v1/auth/logout", json={"refresh_token": s["refresh_token"]})).status_code == 204
+
+@pytest.mark.asyncio
+async def test_account_locks_after_too_many_wrong_mpins_across_passes(client):
+    from app.core.security import create_pass_token
+    await signup(client)
+    for _ in range(2):  # 2 passes x 5 wrong = 10 per-phone failures
+        lp, _ = create_pass_token("login_pass", P)
+        for _ in range(5):
+            r = await client.post("/api/v1/auth/login", json={"login_pass": lp, "mpin": "0000"})
+            assert r.status_code == 401
+    lp, _ = create_pass_token("login_pass", P)  # third fresh pass, correct MPIN
+    r = await client.post("/api/v1/auth/login", json={"login_pass": lp, "mpin": "4826"})
+    assert r.status_code == 401 and r.json()["detail"] == {"code": "ACCOUNT_LOCKED"}
+
+@pytest.mark.asyncio
+async def test_successful_login_resets_per_phone_counter(client):
+    from app.core.security import create_pass_token
+    await signup(client)
+    for _ in range(2):
+        lp, _ = create_pass_token("login_pass", P)
+        for _ in range(4):
+            await client.post("/api/v1/auth/login", json={"login_pass": lp, "mpin": "0000"})
+        r = await client.post("/api/v1/auth/login", json={"login_pass": lp, "mpin": "4826"})
+        assert r.status_code == 200  # 8 fails + 2 successes would lock if not reset
+
+    lp, _ = create_pass_token("login_pass", P)
+    for _ in range(4):
+        await client.post("/api/v1/auth/login", json={"login_pass": lp, "mpin": "0000"})
+    assert (await client.post("/api/v1/auth/login", json={"login_pass": lp, "mpin": "4826"})).status_code == 200
+
+@pytest.mark.asyncio
+async def test_pass_and_refresh_tokens_are_not_bearer_tokens(client):
+    s = (await signup(client)).json()
+    v = await otp(client)
+    for tok in (v["login_pass"], s["refresh_token"]):
+        r = await client.get("/api/v1/sync/pull", headers={"Authorization": f"Bearer {tok}"})
+        assert r.status_code == 401

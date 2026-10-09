@@ -26,6 +26,8 @@ router = APIRouter()
 
 PHONE_RE = re.compile(r"^[6-9]\d{9}$")
 MAX_MPIN_FAILS = 5
+MAX_MPIN_FAILS_PER_PHONE = 10
+PHONE_LOCK_S = 86400
 OTP_COOLDOWN_S = 30
 
 
@@ -135,12 +137,18 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db), redis=Dep
     if await redis.exists(f"pass_used:{jti}"):
         raise _unauthorized()
 
-    # Count the attempt first (atomic), then decide.
+    # Count the attempt first (atomic), per pass AND per phone, then decide.
+    # Per-phone counting stops brute force via fresh passes (static OTP).
     fail_key = f"mpin_fail:{jti}"
+    user_fail_key = f"mpin_fail_user:{payload['phone']}"
     async with redis.pipeline(transaction=True) as pipe:
         pipe.incr(fail_key)
         pipe.expire(fail_key, ttl, nx=True)
-        attempts, _ = await pipe.execute()
+        pipe.incr(user_fail_key)
+        pipe.expire(user_fail_key, PHONE_LOCK_S, nx=True)
+        attempts, _, user_attempts, _ = await pipe.execute()
+    if user_attempts > MAX_MPIN_FAILS_PER_PHONE:
+        raise _unauthorized({"code": "ACCOUNT_LOCKED"})
     if attempts > MAX_MPIN_FAILS:
         raise _unauthorized({"code": "PASS_BURNED"})
 
@@ -154,6 +162,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db), redis=Dep
 
     if not await _consume_pass(redis, jti):
         raise _unauthorized()
+    await redis.delete(user_fail_key)
     shop = (await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))).scalars().first()
     if not shop:
         raise _unauthorized()

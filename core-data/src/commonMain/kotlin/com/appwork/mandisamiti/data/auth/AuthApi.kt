@@ -77,6 +77,7 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
                 val detail = detailObject(text)
                 when (detail?.get("code")?.jsonPrimitive?.contentOrNull) {
                     "MPIN_INVALID" -> AuthError.MpinInvalid(detail["attempts_left"]?.jsonPrimitive?.intOrNull ?: 0)
+                    "ACCOUNT_LOCKED" -> AuthError.AccountLocked
                     // PASS_BURNED, plain "INVALID_PASS", or any unrecognised 401: the pass is dead.
                     else -> AuthError.PassBurned
                 }

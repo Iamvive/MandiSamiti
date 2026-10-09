@@ -370,4 +370,18 @@ class RegisterViewModelTest {
         advanceUntilIdle()
         assertEquals(1, f.count("otp/verify"))
     }
+
+    @Test
+    fun accountLocked_returnsToPhone_with24hMessage() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_LOCKED"}}""") else verifyBody(p, "EXISTING")
+        }
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4826")
+        f.clock.tap(); f.vm.submitMpin()
+
+        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें", s.generalErrorMessage)
+    }
 }

@@ -183,4 +183,10 @@ class AuthApiTest {
         assertIs<AuthError.Network>(r.error())
         assertEquals("offline", (r.error() as AuthError.Network).causeMessage)
     }
+
+    @Test
+    fun login_accountLocked_isAccountLocked() = runTest {
+        val r = api { json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_LOCKED"}}""") }.login("lp", "1234")
+        assertEquals(AuthError.AccountLocked, r.error())
+    }
 }

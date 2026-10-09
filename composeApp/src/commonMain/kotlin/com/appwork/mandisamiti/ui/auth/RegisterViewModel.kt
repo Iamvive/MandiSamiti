@@ -307,6 +307,8 @@ class RegisterViewModel(
             }
             is AuthError.PassBurned ->
                 resetToPhone(if (step == AuthStep.NEW_SHOP) "समय समाप्त — दोबारा OTP लें" else "बहुत गलत MPIN — दोबारा OTP लें")
+            is AuthError.AccountLocked ->
+                resetToPhone("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें")
             is AuthError.PhoneAlreadyRegistered ->
                 resetToPhone("यह नंबर पहले से रजिस्टर है — दोबारा OTP लेकर लॉगिन करें")
             else ->
