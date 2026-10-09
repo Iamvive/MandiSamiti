@@ -33,7 +33,17 @@ class SyncEngine(
 
     companion object {
         const val KEY_LAST_SERVER_SEQ = "last_server_seq"
+        const val KEY_NEEDS_LOGIN = "needs_login"
         const val DEFAULT_PAGE_LIMIT = 500
+        const val PUSH_BATCH = 100
+    }
+
+    suspend fun needsLogin(): Boolean = withContext(ioDispatcher) {
+        queries.getSyncMetadataLong(KEY_NEEDS_LOGIN).executeAsOneOrNull() == 1L
+    }
+
+    suspend fun setNeedsLogin(value: Boolean) = withContext(ioDispatcher) {
+        queries.setSyncMetadataLong(KEY_NEEDS_LOGIN, if (value) 1L else 0L)
     }
 
     suspend fun getLastServerSeq(): Long = withContext(ioDispatcher) {
@@ -78,7 +88,9 @@ class SyncEngine(
                 village = it.village,
                 monthly_interest_rate = it.monthly_interest_rate,
                 photo_uri = it.photo_uri,
-                is_deleted = it.is_deleted.toInt()
+                is_deleted = it.is_deleted.toInt(),
+                created_at = it.created_at,
+                updated_at = it.updated_at
             )
         }
 
@@ -110,7 +122,9 @@ class SyncEngine(
                 is_void = it.is_void.toInt(),
                 void_reason = it.void_reason,
                 revision = it.revision.toInt(),
-                is_deleted = it.is_deleted.toInt()
+                is_deleted = it.is_deleted.toInt(),
+                created_at = it.created_at,
+                updated_at = it.updated_at
             )
         }
 
@@ -128,7 +142,9 @@ class SyncEngine(
                 is_void = it.is_void.toInt(),
                 void_reason = it.void_reason,
                 revision = it.revision.toInt(),
-                is_deleted = it.is_deleted.toInt()
+                is_deleted = it.is_deleted.toInt(),
+                created_at = it.created_at,
+                updated_at = it.updated_at
             )
         }
 
@@ -149,24 +165,43 @@ class SyncEngine(
             return@withContext Result.success(0)
         }
 
-        val req = SyncPushRequestDto(
-            parties = parties,
-            deals = deals,
-            transactions = txs,
-            revisions = revisions
+        var acked = 0
+        val batches = maxOf(
+            parties.chunked(PUSH_BATCH).size, deals.chunked(PUSH_BATCH).size,
+            txs.chunked(PUSH_BATCH).size, revisions.chunked(PUSH_BATCH).size
         )
-
-        client.pushSync(req).map { res ->
-            res.synced_parties.forEach { queries.markPartySynced(it) }
-            deals.filter { res.synced_deals.contains(it.id) }.forEach {
-                queries.markDealSynced(it.id, it.revision.toLong())
+        val pChunks = parties.chunked(PUSH_BATCH)
+        val dChunks = deals.chunked(PUSH_BATCH)
+        val tChunks = txs.chunked(PUSH_BATCH)
+        val rChunks = revisions.chunked(PUSH_BATCH)
+        for (i in 0 until batches) {
+            val sentParties = pChunks.getOrElse(i) { emptyList() }
+            val sentDeals = dChunks.getOrElse(i) { emptyList() }
+            val sentTxs = tChunks.getOrElse(i) { emptyList() }
+            val sentRevs = rChunks.getOrElse(i) { emptyList() }
+            val result = client.pushSync(SyncPushRequestDto(sentParties, sentDeals, sentTxs, sentRevs))
+            val res = result.getOrElse { return@withContext Result.failure(it) }
+            database.transaction {
+                sentParties.filter { res.synced_parties.contains(it.id) }.forEach {
+                    queries.markPartySyncedAt(it.id, it.updated_at)
+                    acked++
+                }
+                sentDeals.filter { res.synced_deals.contains(it.id) }.forEach {
+                    queries.markDealSynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                sentTxs.filter { res.synced_transactions.contains(it.id) }.forEach {
+                    queries.markTransactionSynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                // Conflicted revisions are stored aside by the server and also listed here.
+                res.synced_revisions.forEach {
+                    queries.markRevisionSynced(it)
+                    acked++
+                }
             }
-            txs.filter { res.synced_transactions.contains(it.id) }.forEach {
-                queries.markTransactionSynced(it.id, it.revision.toLong())
-            }
-            res.synced_revisions.forEach { queries.markRevisionSynced(it) }
-            res.synced_parties.size + res.synced_deals.size + res.synced_transactions.size + res.synced_revisions.size
         }
+        Result.success(acked)
     }
 
     /** Merges server rows into the local DB under [shopId], paginating through all available pages. */
@@ -190,10 +225,11 @@ class SyncEngine(
             val res = pageResult.getOrThrow()
             val pageItemsCount = res.parties.size + res.deals.size + res.transactions.size + res.revisions.size
 
-            if (pageItemsCount > 0) {
+            run {
                 database.transaction {
                     res.parties.forEach { p ->
-                        queries.insertParty(
+                        queries.deleteSyncedParty(p.id)
+                        queries.insertPartyIfAbsent(
                             id = p.id,
                             shop_id = shopId,
                             name = p.name,
@@ -202,15 +238,16 @@ class SyncEngine(
                             party_type = p.role,
                             monthly_interest_rate = p.monthly_interest_rate,
                             photo_uri = p.photo_uri,
-                            created_at = res.server_sync_time,
-                            updated_at = res.server_sync_time,
+                            created_at = p.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            updated_at = p.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
                             is_deleted = p.is_deleted.toLong(),
                             sync_status = 1L
                         )
                     }
 
                     res.deals.forEach { d ->
-                        queries.insertDeal(
+                        queries.deleteSyncedDeal(d.id)
+                        queries.insertDealIfAbsent(
                             id = d.id,
                             shop_id = shopId,
                             farmer_id = d.farmer_id,
@@ -234,8 +271,8 @@ class SyncEngine(
                             receipt_photo_uri = d.receipt_photo_uri,
                             voice_note_uri = d.voice_note_uri,
                             remarks = d.remarks,
-                            created_at = res.server_sync_time,
-                            updated_at = res.server_sync_time,
+                            created_at = d.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            updated_at = d.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
                             is_deleted = d.is_deleted.toLong(),
                             sync_status = 1L,
                             farmer_commission_bps = d.farmer_commission_bps.toLong(),
@@ -246,7 +283,8 @@ class SyncEngine(
                     }
 
                     res.transactions.forEach { t ->
-                        queries.insertCashTransaction(
+                        queries.deleteSyncedCashTransaction(t.id)
+                        queries.insertCashTransactionIfAbsent(
                             id = t.id,
                             shop_id = shopId,
                             party_id = t.party_id ?: "",
@@ -257,8 +295,8 @@ class SyncEngine(
                             transaction_date = t.transaction_date ?: res.server_sync_time,
                             voice_note_uri = t.voice_note_uri,
                             remarks = t.remarks,
-                            created_at = res.server_sync_time,
-                            updated_at = res.server_sync_time,
+                            created_at = t.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            updated_at = t.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
                             is_deleted = t.is_deleted.toLong(),
                             sync_status = 1L,
                             revision = t.revision.toLong(),
@@ -268,7 +306,7 @@ class SyncEngine(
                     }
 
                     res.revisions.forEach { r ->
-                        queries.insertRevision(
+                        queries.insertRevisionFromServer(
                             id = r.id,
                             shop_id = shopId,
                             entry_id = r.entry_id,
@@ -281,11 +319,14 @@ class SyncEngine(
                         )
                     }
 
+                    // Same transaction as the page: a crash can't skip or replay it.
                     if (res.next_seq > currentSeq) {
                         queries.setSyncMetadataLong(KEY_LAST_SERVER_SEQ, res.next_seq)
                     }
                 }
+            }
 
+            if (pageItemsCount > 0) {
                 totalPulled += pageItemsCount
                 onProgress?.invoke(totalPulled)
             }
@@ -300,6 +341,7 @@ class SyncEngine(
         try {
             val pushed = pushPendingChanges().getOrThrow()
             val pulled = pullRemoteChanges(shopId).getOrThrow()
+            setNeedsLogin(false)
             SyncResult.Success(pushedCount = pushed, pulledCount = pulled, syncTimeMs = kotlinx.datetime.Clock.System.now().toEpochMilliseconds())
         } catch (t: Throwable) {
             SyncResult.Failure(t)

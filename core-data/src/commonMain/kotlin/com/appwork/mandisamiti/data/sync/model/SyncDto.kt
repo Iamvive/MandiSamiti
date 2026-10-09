@@ -11,7 +11,9 @@ data class PartySyncDto(
     val village: String? = null,
     val monthly_interest_rate: Double? = 1.5,
     val photo_uri: String? = null,
-    val is_deleted: Int = 0
+    val is_deleted: Int = 0,
+    val created_at: Long = 0L,
+    val updated_at: Long = 0L
 )
 
 @Serializable
@@ -42,7 +44,9 @@ data class DealSyncDto(
     val is_void: Int = 0,
     val void_reason: String? = null,
     val revision: Int = 1,
-    val is_deleted: Int = 0
+    val is_deleted: Int = 0,
+    val created_at: Long = 0L,
+    val updated_at: Long = 0L
 )
 
 @Serializable
@@ -60,7 +64,9 @@ data class CashTransactionSyncDto(
     val is_void: Int = 0,
     val void_reason: String? = null,
     val revision: Int = 1,
-    val is_deleted: Int = 0
+    val is_deleted: Int = 0,
+    val created_at: Long = 0L,
+    val updated_at: Long = 0L
 )
 
 @Serializable
@@ -91,12 +97,12 @@ data class SyncPushResponseDto(
     val synced_transactions: List<String> = emptyList(),
     val synced_revisions: List<String> = emptyList(),
     val server_sync_time: Long = 0L,
-    val server_seq: Long = 0L
+    val server_seq: Long = 0L,
+    val conflicts: List<String> = emptyList()
 )
 
 @Serializable
 data class SyncPullResponseDto(
-    val last_sync_timestamp: Long = 0L,
     val after_seq: Long = 0L,
     val next_seq: Long = 0L,
     val has_more: Boolean = false,

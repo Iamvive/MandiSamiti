@@ -15,21 +15,36 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FakeSyncApiClient : MandiSyncApiClient {
-    var lastPushedRequest: SyncPushRequestDto? = null
-    var pushResponseToReturn: Result<SyncPushResponseDto> = Result.success(SyncPushResponseDto(success = true))
-    var pullResponseToReturn: Result<SyncPullResponseDto> = Result.success(SyncPullResponseDto())
-    var lastPullAfterSeq: Long? = null
+    val pushed = mutableListOf<SyncPushRequestDto>()
+    val pushResponses = ArrayDeque<Result<SyncPushResponseDto>>()
+    val pullResponses = ArrayDeque<Result<SyncPullResponseDto>>()
+    val pullCursors = mutableListOf<Long>()
 
+    // Default when a queue is empty: ack everything that was sent / empty page.
     override suspend fun pushSync(request: SyncPushRequestDto): Result<SyncPushResponseDto> {
-        lastPushedRequest = request
-        return pushResponseToReturn
+        pushed += request
+        return pushResponses.removeFirstOrNull() ?: Result.success(
+            SyncPushResponseDto(
+                synced_parties = request.parties.map { it.id }, synced_deals = request.deals.map { it.id },
+                synced_transactions = request.transactions.map { it.id }, synced_revisions = request.revisions.map { it.id }
+            )
+        )
     }
 
     override suspend fun pullSync(afterSeq: Long, limit: Int): Result<SyncPullResponseDto> {
-        lastPullAfterSeq = afterSeq
-        return pullResponseToReturn
+        pullCursors += afterSeq
+        return pullResponses.removeFirstOrNull() ?: Result.success(SyncPullResponseDto(after_seq = afterSeq, next_seq = afterSeq))
     }
 }
+
+private fun farmer() = Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L)
+
+private fun deal() = Deal(
+    id = "deal-1", shopId = "shop-1", farmerId = "farmer-1", buyerId = null, commodityId = "comm-1", dealDate = 1000L,
+    bagsCount = 10, grossWeightGrams = 500000L, netWeightGrams = 500000L, ratePaisaPerUnit = 227550L,
+    grossAmountPaisa = 1137750L, netFarmerPayablePaisa = 1100000L, netBuyerReceivablePaisa = 1150000L,
+    createdAt = 1000L, updatedAt = 1000L
+)
 
 class SyncEngineTest {
 
@@ -88,22 +103,14 @@ class SyncEngineTest {
         assertEquals(6, summary.totalPending)
 
         // 3. Configure Fake API response
-        fakeClient.pushResponseToReturn = Result.success(
-            SyncPushResponseDto(
-                success = true,
-                synced_parties = listOf("farmer-1", "buyer-1"),
-                synced_deals = listOf("deal-1"),
-                synced_transactions = listOf("tx-1"),
-                synced_revisions = fakeClient.lastPushedRequest?.revisions?.map { it.id } ?: emptyList()
-            )
-        )
+        // (default fake acks everything that was sent)
 
         // 4. Push pending changes
         val pushResult = syncEngine.pushPendingChanges()
         assertTrue(pushResult.isSuccess)
 
         // 5. Verify pushed DTO contents
-        val pushed = fakeClient.lastPushedRequest!!
+        val pushed = fakeClient.pushed.last()
         assertEquals(2, pushed.parties.size)
         assertEquals(1, pushed.deals.size)
         assertEquals(227550L, pushed.deals[0].rate_paisa_per_unit)
@@ -123,7 +130,7 @@ class SyncEngineTest {
         val fakeClient = FakeSyncApiClient()
         val syncEngine = SyncEngine(database = database, apiClient = fakeClient)
 
-        fakeClient.pullResponseToReturn = Result.success(
+        fakeClient.pullResponses += Result.success(
             SyncPullResponseDto(
                 after_seq = 0L,
                 next_seq = 2000L,
@@ -198,5 +205,66 @@ class SyncEngineTest {
 
         val parties = partyRepo.getPartiesStream("shop-page-test").first()
         assertEquals(2, parties.size)
+    }
+
+    @Test
+    fun pullingBackOurOwnRevisionDoesNotFailAndLeavesNothingPending() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        OfflineFirstPartyRepository(db).saveParty(farmer())
+        OfflineFirstDealRepository(db).saveDeal(deal())
+        assertTrue(engine.pushPendingChanges().isSuccess)
+        val ownRev = db.appDatabaseQueries.getRevisionsForEntry("deal-1").executeAsOne()
+        fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 3, revisions = listOf(
+            EntryRevisionSyncDto(ownRev.id, "deal-1", "DEAL", 1, "CREATE", ownRev.snapshot_json, null, ownRev.changed_at))))
+        assertTrue(engine.pullRemoteChanges("shop-1").isSuccess)
+        assertEquals(0L, engine.getPendingCount())
+        assertEquals(3L, engine.getLastServerSeq())
+    }
+
+    @Test
+    fun pullDoesNotOverwriteAPendingLocalEdit() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        OfflineFirstPartyRepository(db).saveParty(farmer().copy(name = "local edit"))
+        fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 1, parties = listOf(
+            PartySyncDto(id = "farmer-1", name = "server", role = "FARMER", updated_at = 1L))))
+        engine.pullRemoteChanges("shop-1").getOrThrow()
+        assertEquals("local edit", db.appDatabaseQueries.getPartyById("farmer-1").executeAsOne().name)
+        assertEquals(1L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pushGoesInBatchesOf100AndKeepsEarlierAcksWhenALaterBatchFails() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        val repo = OfflineFirstPartyRepository(db)
+        repeat(150) { repo.saveParty(farmer().copy(id = "p$it")) }
+        fake.pushResponses += Result.success(SyncPushResponseDto(synced_parties = (0 until 100).map { "p$it" }))
+        fake.pushResponses += Result.failure(RuntimeException("connection dropped"))
+        assertTrue(engine.pushPendingChanges().isFailure)
+        assertEquals(listOf(100, 50), fake.pushed.map { it.parties.size })
+        assertEquals(50L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pullResumesFromTheLastAppliedPage() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 500, has_more = true,
+            parties = listOf(PartySyncDto(id = "a", name = "a", role = "FARMER"))))
+        fake.pullResponses += Result.failure(RuntimeException("timeout"))
+        assertTrue(engine.pullRemoteChanges("shop-1").isFailure)
+        assertEquals(500L, engine.getLastServerSeq())
+        engine.pullRemoteChanges("shop-1")
+        assertEquals(listOf(0L, 500L, 500L), fake.pullCursors)
+    }
+
+    @Test
+    fun conflictedRevisionIsAckedSoItDoesNotBlockLogout() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        OfflineFirstPartyRepository(db).saveParty(farmer())
+        OfflineFirstDealRepository(db).saveDeal(deal())
+        val revId = db.appDatabaseQueries.getRevisionsForEntry("deal-1").executeAsOne().id
+        fake.pushResponses += Result.success(SyncPushResponseDto(synced_parties = listOf("farmer-1"),
+            synced_deals = listOf("deal-1"), synced_revisions = listOf(revId), conflicts = listOf(revId)))
+        engine.pushPendingChanges().getOrThrow()
+        assertEquals(0L, engine.getPendingCount())
     }
 }
