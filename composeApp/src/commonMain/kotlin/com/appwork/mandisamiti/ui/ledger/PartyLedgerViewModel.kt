@@ -1,5 +1,7 @@
 package com.appwork.mandisamiti.ui.ledger
 
+import com.appwork.mandisamiti.data.sync.NoOpSyncScheduler
+import com.appwork.mandisamiti.data.sync.SyncScheduler
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.InterestCalculation
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
@@ -68,6 +70,7 @@ class PartyLedgerViewModel(
     private val dealRepository: DealRepository,
     private val shopProfileRepository: ShopProfileRepository,
     private val ttsManager: SoundboxTtsManager,
+    private val syncScheduler: SyncScheduler = NoOpSyncScheduler(),
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
 
@@ -174,6 +177,7 @@ class PartyLedgerViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             cashRepository.recordTransaction(tx)
+            syncScheduler.scheduleOneTimeSync()
 
             val partyName = _uiState.value.party?.name ?: partyRepository.getPartyById(partyId)?.name ?: "खाता"
             val typeHindi = when (transactionType) {
@@ -210,6 +214,7 @@ class PartyLedgerViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             cashRepository.recordTransaction(tx)
+            syncScheduler.scheduleOneTimeSync()
 
             val partyName = _uiState.value.party?.name ?: partyRepository.getPartyById(partyId)?.name ?: "खाता"
             val formattedAmount = MandiMathEngine.paisaToRupeesString(interestResult.accruedInterestPaisa)
@@ -227,6 +232,7 @@ class PartyLedgerViewModel(
                 is LedgerItem.DealItem -> dealRepository.voidDeal(item.deal.id, reason)
                 is LedgerItem.CashItem -> cashRepository.voidTransaction(item.transaction.id, reason)
             }
+            syncScheduler.scheduleOneTimeSync()
             val speech = "प्रविष्टि रद्द की गई: ${reason.labelHi}"
             ttsManager.speak(speech, _uiState.value.isSoundEnabled)
             _events.emit(PartyLedgerEvent.TransactionRecorded(speech))

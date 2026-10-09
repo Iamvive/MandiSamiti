@@ -31,6 +31,19 @@ class SyncEngine(
 ) {
     private val queries = database.appDatabaseQueries
 
+    companion object {
+        const val KEY_LAST_SERVER_SEQ = "last_server_seq"
+        const val DEFAULT_PAGE_LIMIT = 500
+    }
+
+    suspend fun getLastServerSeq(): Long = withContext(ioDispatcher) {
+        queries.getSyncMetadataLong(KEY_LAST_SERVER_SEQ).executeAsOneOrNull() ?: 0L
+    }
+
+    suspend fun setLastServerSeq(seq: Long) = withContext(ioDispatcher) {
+        queries.setSyncMetadataLong(KEY_LAST_SERVER_SEQ, seq)
+    }
+
     suspend fun getPendingSyncSummary(): SyncPayload = withContext(ioDispatcher) {
         val parties = queries.getPendingSyncParties().executeAsList()
         val deals = queries.getPendingSyncDeals().executeAsList()
@@ -156,38 +169,138 @@ class SyncEngine(
         }
     }
 
-    /** Merges server rows into the local DB under [shopId], the signed-in session's server shop id. */
-    suspend fun pullRemoteChanges(sinceMs: Long, shopId: String): Result<Int> = withContext(ioDispatcher) {
+    /** Merges server rows into the local DB under [shopId], paginating through all available pages. */
+    suspend fun pullRemoteChanges(
+        shopId: String,
+        onProgress: ((downloadedCount: Int) -> Unit)? = null
+    ): Result<Int> = withContext(ioDispatcher) {
         val client = apiClient ?: return@withContext Result.failure(IllegalStateException("No remote API client configured"))
 
-        client.pullSync(sinceMs).map { res ->
-            database.transaction {
-                res.parties.forEach { p ->
-                    queries.insertParty(
-                        id = p.id,
-                        shop_id = shopId,
-                        name = p.name,
-                        phone = p.phone,
-                        village = p.village,
-                        party_type = p.role,
-                        monthly_interest_rate = p.monthly_interest_rate,
-                        photo_uri = p.photo_uri,
-                        created_at = sinceMs,
-                        updated_at = res.server_sync_time,
-                        is_deleted = p.is_deleted.toLong(),
-                        sync_status = 1L
-                    )
-                }
+        var totalPulled = 0
+        var hasMore = true
+
+        while (hasMore) {
+            val currentSeq = getLastServerSeq()
+            val pageResult = client.pullSync(afterSeq = currentSeq, limit = DEFAULT_PAGE_LIMIT)
+
+            if (pageResult.isFailure) {
+                return@withContext Result.failure(pageResult.exceptionOrNull()!!)
             }
-            res.parties.size + res.deals.size + res.transactions.size + res.revisions.size
+
+            val res = pageResult.getOrThrow()
+            val pageItemsCount = res.parties.size + res.deals.size + res.transactions.size + res.revisions.size
+
+            if (pageItemsCount > 0) {
+                database.transaction {
+                    res.parties.forEach { p ->
+                        queries.insertParty(
+                            id = p.id,
+                            shop_id = shopId,
+                            name = p.name,
+                            phone = p.phone,
+                            village = p.village,
+                            party_type = p.role,
+                            monthly_interest_rate = p.monthly_interest_rate,
+                            photo_uri = p.photo_uri,
+                            created_at = res.server_sync_time,
+                            updated_at = res.server_sync_time,
+                            is_deleted = p.is_deleted.toLong(),
+                            sync_status = 1L
+                        )
+                    }
+
+                    res.deals.forEach { d ->
+                        queries.insertDeal(
+                            id = d.id,
+                            shop_id = shopId,
+                            farmer_id = d.farmer_id,
+                            buyer_id = d.buyer_id,
+                            commodity_id = d.commodity,
+                            deal_status = d.deal_status,
+                            deal_date = d.deal_date ?: res.server_sync_time,
+                            bags_count = d.bags_count.toLong(),
+                            gross_weight_grams = d.gross_weight_grams,
+                            cut_weight_grams = d.cut_weight_grams,
+                            net_weight_grams = d.net_weight_grams,
+                            rate_paisa_per_unit = d.rate_paisa_per_unit,
+                            gross_amount_paisa = d.gross_amount_paisa,
+                            farmer_commission_paisa = d.farmer_commission_paisa,
+                            buyer_commission_paisa = d.buyer_commission_paisa,
+                            labour_charge_paisa = d.labour_charge_paisa,
+                            weighing_charge_paisa = d.weighing_charge_paisa,
+                            other_deductions_paisa = d.other_deductions_paisa,
+                            net_farmer_payable_paisa = d.net_farmer_payable_paisa,
+                            net_buyer_receivable_paisa = d.net_buyer_receivable_paisa,
+                            receipt_photo_uri = d.receipt_photo_uri,
+                            voice_note_uri = d.voice_note_uri,
+                            remarks = d.remarks,
+                            created_at = res.server_sync_time,
+                            updated_at = res.server_sync_time,
+                            is_deleted = d.is_deleted.toLong(),
+                            sync_status = 1L,
+                            farmer_commission_bps = d.farmer_commission_bps.toLong(),
+                            revision = d.revision.toLong(),
+                            is_void = d.is_void.toLong(),
+                            void_reason = d.void_reason
+                        )
+                    }
+
+                    res.transactions.forEach { t ->
+                        queries.insertCashTransaction(
+                            id = t.id,
+                            shop_id = shopId,
+                            party_id = t.party_id ?: "",
+                            deal_id = t.deal_id,
+                            transaction_type = t.transaction_type,
+                            amount_paisa = t.amount_paisa,
+                            payment_mode = t.payment_mode,
+                            transaction_date = t.transaction_date ?: res.server_sync_time,
+                            voice_note_uri = t.voice_note_uri,
+                            remarks = t.remarks,
+                            created_at = res.server_sync_time,
+                            updated_at = res.server_sync_time,
+                            is_deleted = t.is_deleted.toLong(),
+                            sync_status = 1L,
+                            revision = t.revision.toLong(),
+                            is_void = t.is_void.toLong(),
+                            void_reason = t.void_reason
+                        )
+                    }
+
+                    res.revisions.forEach { r ->
+                        queries.insertRevision(
+                            id = r.id,
+                            shop_id = shopId,
+                            entry_id = r.entry_id,
+                            entry_kind = r.entry_kind,
+                            revision = r.revision.toLong(),
+                            change_kind = r.change_kind,
+                            snapshot_json = r.snapshot_json,
+                            void_reason = r.void_reason,
+                            changed_at = r.changed_at ?: res.server_sync_time
+                        )
+                    }
+
+                    if (res.next_seq > currentSeq) {
+                        queries.setSyncMetadataLong(KEY_LAST_SERVER_SEQ, res.next_seq)
+                    }
+                }
+
+                totalPulled += pageItemsCount
+                onProgress?.invoke(totalPulled)
+            }
+
+            hasMore = res.has_more && res.next_seq > currentSeq
         }
+
+        Result.success(totalPulled)
     }
 
-    suspend fun syncFull(sinceMs: Long, shopId: String): SyncResult = withContext(ioDispatcher) {
+    suspend fun syncFull(shopId: String): SyncResult = withContext(ioDispatcher) {
         try {
             val pushed = pushPendingChanges().getOrThrow()
-            val pulled = pullRemoteChanges(sinceMs, shopId).getOrThrow()
-            SyncResult.Success(pushedCount = pushed, pulledCount = pulled, syncTimeMs = sinceMs)
+            val pulled = pullRemoteChanges(shopId).getOrThrow()
+            SyncResult.Success(pushedCount = pushed, pulledCount = pulled, syncTimeMs = kotlinx.datetime.Clock.System.now().toEpochMilliseconds())
         } catch (t: Throwable) {
             SyncResult.Failure(t)
         }
@@ -199,4 +312,3 @@ class SyncEngine(
         txs.forEach { (id, revision) -> queries.markTransactionSynced(id, revision.toLong()) }
     }
 }
-

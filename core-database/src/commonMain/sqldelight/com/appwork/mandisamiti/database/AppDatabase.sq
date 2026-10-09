@@ -342,3 +342,20 @@ DELETE FROM partyEntity;
 
 wipeShopProfiles:
 DELETE FROM shopProfileEntity;
+
+-- Sync Metadata (Cursor & State)
+CREATE TABLE syncMetadataEntity (
+    key TEXT PRIMARY KEY NOT NULL,
+    value_text TEXT,
+    value_long INTEGER NOT NULL DEFAULT 0
+);
+
+getSyncMetadataLong:
+SELECT value_long FROM syncMetadataEntity WHERE key = ?;
+
+setSyncMetadataLong:
+INSERT OR REPLACE INTO syncMetadataEntity(key, value_long) VALUES (?, ?);
+
+wipeSyncMetadata:
+DELETE FROM syncMetadataEntity;
+

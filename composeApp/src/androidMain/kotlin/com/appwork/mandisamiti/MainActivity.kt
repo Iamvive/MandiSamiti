@@ -26,6 +26,8 @@ class MainActivity : ComponentActivity() {
         val whatsAppShareManager = WhatsAppShareManager(applicationContext)
         val sessionStore = AndroidSessionStore(applicationContext)
         val authApi = AuthApi(mandiHttpClient(), apiBaseUrl)
+        val syncScheduler = com.appwork.mandisamiti.sync.AndroidSyncScheduler(applicationContext)
+        syncScheduler.schedulePeriodicSync()
 
         setContent {
             App(
@@ -33,7 +35,8 @@ class MainActivity : ComponentActivity() {
                 ttsManager = ttsManager,
                 whatsAppShareManager = whatsAppShareManager,
                 sessionStore = sessionStore,
-                authApi = authApi
+                authApi = authApi,
+                syncScheduler = syncScheduler
             )
         }
     }

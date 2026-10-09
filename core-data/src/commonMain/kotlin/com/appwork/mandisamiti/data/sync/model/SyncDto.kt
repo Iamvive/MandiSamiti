@@ -90,12 +90,16 @@ data class SyncPushResponseDto(
     val synced_deals: List<String> = emptyList(),
     val synced_transactions: List<String> = emptyList(),
     val synced_revisions: List<String> = emptyList(),
-    val server_sync_time: Long = 0L
+    val server_sync_time: Long = 0L,
+    val server_seq: Long = 0L
 )
 
 @Serializable
 data class SyncPullResponseDto(
     val last_sync_timestamp: Long = 0L,
+    val after_seq: Long = 0L,
+    val next_seq: Long = 0L,
+    val has_more: Boolean = false,
     val parties: List<PartySyncDto> = emptyList(),
     val deals: List<DealSyncDto> = emptyList(),
     val transactions: List<CashTransactionSyncDto> = emptyList(),

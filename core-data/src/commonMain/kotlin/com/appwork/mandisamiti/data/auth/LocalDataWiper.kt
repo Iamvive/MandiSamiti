@@ -7,6 +7,7 @@ class LocalDataWiper(private val database: AppDatabase) {
     suspend fun wipeAll() {
         val q = database.appDatabaseQueries
         database.transaction {
+            q.wipeSyncMetadata()
             q.wipeRevisions()
             q.wipeCashTransactions()
             q.wipeDeals()

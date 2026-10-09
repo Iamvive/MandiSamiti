@@ -18,13 +18,15 @@ class FakeSyncApiClient : MandiSyncApiClient {
     var lastPushedRequest: SyncPushRequestDto? = null
     var pushResponseToReturn: Result<SyncPushResponseDto> = Result.success(SyncPushResponseDto(success = true))
     var pullResponseToReturn: Result<SyncPullResponseDto> = Result.success(SyncPullResponseDto())
+    var lastPullAfterSeq: Long? = null
 
     override suspend fun pushSync(request: SyncPushRequestDto): Result<SyncPushResponseDto> {
         lastPushedRequest = request
         return pushResponseToReturn
     }
 
-    override suspend fun pullSync(sinceMs: Long): Result<SyncPullResponseDto> {
+    override suspend fun pullSync(afterSeq: Long, limit: Int): Result<SyncPullResponseDto> {
+        lastPullAfterSeq = afterSeq
         return pullResponseToReturn
     }
 }
@@ -123,7 +125,9 @@ class SyncEngineTest {
 
         fakeClient.pullResponseToReturn = Result.success(
             SyncPullResponseDto(
-                last_sync_timestamp = 1000L,
+                after_seq = 0L,
+                next_seq = 2000L,
+                has_more = false,
                 parties = listOf(
                     PartySyncDto(
                         id = "remote-farmer-1",
@@ -137,12 +141,62 @@ class SyncEngineTest {
             )
         )
 
-        val pullResult = syncEngine.pullRemoteChanges(sinceMs = 1000L, shopId = "srv-shop-7")
+        val pullResult = syncEngine.pullRemoteChanges(shopId = "srv-shop-7")
         assertTrue(pullResult.isSuccess)
+        assertEquals(1, pullResult.getOrNull())
 
         val localParties = partyRepo.getPartiesStream("srv-shop-7").first()
         assertEquals(1, localParties.size)
         assertEquals("सुरेश कुमार", localParties[0].name)
         assertEquals("बलदेव", localParties[0].village)
+        assertEquals(2000L, syncEngine.getLastServerSeq())
+    }
+
+    @Test
+    fun testPullMultiplePagesWithCursor() = runTest {
+        val database = createTestDatabase()
+        val partyRepo = OfflineFirstPartyRepository(database)
+        val pullCalls = mutableListOf<Long>()
+
+        val pagingClient = object : MandiSyncApiClient {
+            override suspend fun pushSync(request: SyncPushRequestDto): Result<SyncPushResponseDto> = Result.success(SyncPushResponseDto())
+            override suspend fun pullSync(afterSeq: Long, limit: Int): Result<SyncPullResponseDto> {
+                pullCalls.add(afterSeq)
+                return when (afterSeq) {
+                    0L -> Result.success(
+                        SyncPullResponseDto(
+                            after_seq = 0L,
+                            next_seq = 100L,
+                            has_more = true,
+                            parties = listOf(PartySyncDto(id = "p-page-1", name = "राम 1", role = "FARMER")),
+                            server_sync_time = 1000L
+                        )
+                    )
+                    100L -> Result.success(
+                        SyncPullResponseDto(
+                            after_seq = 100L,
+                            next_seq = 200L,
+                            has_more = false,
+                            parties = listOf(PartySyncDto(id = "p-page-2", name = "श्याम 2", role = "BUYER")),
+                            server_sync_time = 1000L
+                        )
+                    )
+                    else -> Result.success(SyncPullResponseDto(after_seq = afterSeq, next_seq = afterSeq, has_more = false))
+                }
+            }
+        }
+
+        val syncEngine = SyncEngine(database = database, apiClient = pagingClient)
+        val progressUpdates = mutableListOf<Int>()
+        val result = syncEngine.pullRemoteChanges("shop-page-test") { progressUpdates.add(it) }
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, result.getOrNull())
+        assertEquals(listOf(0L, 100L), pullCalls)
+        assertEquals(listOf(1, 2), progressUpdates)
+        assertEquals(200L, syncEngine.getLastServerSeq())
+
+        val parties = partyRepo.getPartiesStream("shop-page-test").first()
+        assertEquals(2, parties.size)
     }
 }

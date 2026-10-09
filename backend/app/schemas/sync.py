@@ -12,18 +12,22 @@ class SyncPushRequest(BaseModel):
     revisions: List[EntryRevisionCreate] = []
 
 class SyncPushResponse(BaseModel):
-    success: bool
-    synced_parties: List[str]
-    synced_deals: List[str]
-    synced_transactions: List[str]
-    synced_revisions: List[str]
+    success: bool = True
+    synced_parties: List[str] = []
+    synced_deals: List[str] = []
+    synced_transactions: List[str] = []
+    synced_revisions: List[str] = []
     server_sync_time: int
+    server_seq: int = 0
 
 class SyncPullResponse(BaseModel):
-    last_sync_timestamp: int
-    parties: List[PartyResponse]
-    deals: List[DealResponse]
-    transactions: List[CashTransactionResponse]
-    revisions: List[EntryRevisionResponse]
+    last_sync_timestamp: int = 0
+    after_seq: int = 0
+    next_seq: int = 0
+    has_more: bool = False
+    parties: List[PartyResponse] = []
+    deals: List[DealResponse] = []
+    transactions: List[CashTransactionResponse] = []
+    revisions: List[EntryRevisionResponse] = []
     server_sync_time: int
 

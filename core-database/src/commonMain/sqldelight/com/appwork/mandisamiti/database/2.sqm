@@ -1,0 +1,6 @@
+CREATE TABLE syncMetadataEntity (
+    key TEXT PRIMARY KEY NOT NULL,
+    value_text TEXT,
+    value_long INTEGER NOT NULL DEFAULT 0
+);
+

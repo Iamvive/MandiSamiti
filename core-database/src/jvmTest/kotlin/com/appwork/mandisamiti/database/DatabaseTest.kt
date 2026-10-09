@@ -161,10 +161,10 @@ class DatabaseTest {
     }
 
     @Test
-    fun schemaIsVersion2AndBalanceIgnoresVoids() {
+    fun schemaIsVersion3AndBalanceIgnoresVoids() {
         val db = AppDatabase(DriverFactory().createDriver())
         val q = db.appDatabaseQueries
-        assertEquals(2L, AppDatabase.Schema.version)
+        assertEquals(3L, AppDatabase.Schema.version)
 
         q.insertParty("farmer-1", "shop-1", "रामवीर", null, null, "FARMER", null, null, 1L, 1L, 0L, 0L)
         q.insertCashTransaction(

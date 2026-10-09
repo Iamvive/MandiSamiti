@@ -16,7 +16,9 @@ import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionReposi
 import com.appwork.mandisamiti.data.repository.OfflineFirstDealRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
+import com.appwork.mandisamiti.data.sync.NoOpSyncScheduler
 import com.appwork.mandisamiti.data.sync.SyncEngine
+import com.appwork.mandisamiti.data.sync.SyncScheduler
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
@@ -58,6 +60,7 @@ fun App(
     whatsAppShareManager: WhatsAppShareManager,
     sessionStore: SessionStore,
     authApi: AuthApi,
+    syncScheduler: SyncScheduler = remember { NoOpSyncScheduler() },
 ) {
     val coroutineScope = rememberCoroutineScope()
     val shopRepo = remember { OfflineFirstShopProfileRepository(database) }
@@ -104,6 +107,8 @@ fun App(
                     onRegistrationSuccess = { newSession ->
                         // Use the session AuthRepository returned (already saved): no read-back that could fail silently.
                         session = newSession
+                        syncScheduler.schedulePeriodicSync()
+                        syncScheduler.scheduleOneTimeSync()
                         currentScreen = Screen.Home
                     }
                 )
@@ -141,6 +146,7 @@ fun App(
                                         is LogoutResult.Blocked ->
                                             snackbarHostState.showSnackbar(logoutBlockedMessage(result.pendingCount))
                                         LogoutResult.LoggedOut -> {
+                                            syncScheduler.cancelAll()
                                             session = null
                                             currentScreen = Screen.Register
                                         }
@@ -175,6 +181,7 @@ fun App(
                     viewModel = dealViewModel,
                     onNavigateBack = { currentScreen = Screen.Home },
                     onDealSavedSuccess = { dealId ->
+                        syncScheduler.scheduleOneTimeSync()
                         coroutineScope.launch {
                             val deal = dealRepo.getDealById(dealId)
                             if (deal != null) {
@@ -202,6 +209,7 @@ fun App(
                         dealRepository = dealRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
+                        syncScheduler = syncScheduler,
                         viewModelScope = coroutineScope
                     )
                 }

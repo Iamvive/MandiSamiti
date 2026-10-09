@@ -25,6 +25,11 @@ class LogoutUseCase(
     private val wiper: LocalDataWiper,
 ) {
     suspend operator fun invoke(): LogoutResult {
+        // Attempt an immediate push if there is a network connection
+        if (syncEngine.getPendingCount() > 0) {
+            syncEngine.pushPendingChanges()
+        }
+
         // Safety check is broad (rows + revisions); the reported number is user entries.
         if (syncEngine.getPendingCount() > 0) {
             return LogoutResult.Blocked(syncEngine.getPendingEntryCount().coerceAtLeast(1))

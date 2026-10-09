@@ -237,35 +237,78 @@ async def sync_push(
         server_sync_time=now_ms
     )
 
-@router.get("/pull", response_model=SyncPullResponse, summary="Download latest changes from cloud")
+@router.get("/pull", response_model=SyncPullResponse, summary="Download latest changes from cloud with cursor pagination")
 async def sync_pull(
-    since: int = Query(0, description="Timestamp (ms) of last sync"),
+    since: int = Query(0, description="Timestamp (ms) of last sync (legacy fallback)"),
+    after_seq: int = Query(0, description="Sequence cursor (ms or counter)"),
+    limit: int = Query(500, description="Maximum items per category page", le=1000),
     current_user: dict = Depends(get_current_user_payload),
     db: AsyncSession = Depends(get_db)
 ):
     shop_id = current_user.get("shop_id")
     now_ms = int(time.time() * 1000)
+    
+    val_since = since if isinstance(since, int) else (getattr(since, "default", 0) or 0)
+    val_after_seq = after_seq if isinstance(after_seq, int) else (getattr(after_seq, "default", 0) or 0)
+    val_limit = limit if isinstance(limit, int) else (getattr(limit, "default", 500) or 500)
+    cursor = max(val_since, val_after_seq)
+    limit_val = val_limit
 
     parties_res = await db.execute(
-        select(Party).where(Party.shop_id == shop_id, Party.updated_at > since)
+        select(Party)
+        .where(Party.shop_id == shop_id, Party.updated_at > cursor)
+        .order_by(Party.updated_at.asc())
+        .limit(limit_val + 1)
     )
     deals_res = await db.execute(
-        select(Deal).where(Deal.shop_id == shop_id, Deal.updated_at > since)
+        select(Deal)
+        .where(Deal.shop_id == shop_id, Deal.updated_at > cursor)
+        .order_by(Deal.updated_at.asc())
+        .limit(limit_val + 1)
     )
     txs_res = await db.execute(
-        select(CashTransaction).where(CashTransaction.shop_id == shop_id, CashTransaction.updated_at > since)
+        select(CashTransaction)
+        .where(CashTransaction.shop_id == shop_id, CashTransaction.updated_at > cursor)
+        .order_by(CashTransaction.updated_at.asc())
+        .limit(limit_val + 1)
     )
     revs_res = await db.execute(
-        select(EntryRevision).where(EntryRevision.shop_id == shop_id, EntryRevision.changed_at > since)
+        select(EntryRevision)
+        .where(EntryRevision.shop_id == shop_id, EntryRevision.changed_at > cursor)
+        .order_by(EntryRevision.changed_at.asc())
+        .limit(limit_val + 1)
     )
 
-    parties = [PartyResponse.model_validate(p) for p in parties_res.scalars().all()]
-    deals = [DealResponse.model_validate(d) for d in deals_res.scalars().all()]
-    txs = [CashTransactionResponse.model_validate(t) for t in txs_res.scalars().all()]
-    revisions = [EntryRevisionResponse.model_validate(r) for r in revs_res.scalars().all()]
+    parties_raw = parties_res.scalars().all()
+    deals_raw = deals_res.scalars().all()
+    txs_raw = txs_res.scalars().all()
+    revs_raw = revs_res.scalars().all()
+
+    has_more = (
+        len(parties_raw) > limit_val or
+        len(deals_raw) > limit_val or
+        len(txs_raw) > limit_val or
+        len(revs_raw) > limit_val
+    )
+
+    parties = [PartyResponse.model_validate(p) for p in parties_raw[:limit_val]]
+    deals = [DealResponse.model_validate(d) for d in deals_raw[:limit_val]]
+    txs = [CashTransactionResponse.model_validate(t) for t in txs_raw[:limit_val]]
+    revisions = [EntryRevisionResponse.model_validate(r) for r in revs_raw[:limit_val]]
+
+    all_timestamps = (
+        [p.updated_at for p in parties if p.updated_at] +
+        [d.updated_at for d in deals if d.updated_at] +
+        [t.updated_at for t in txs if t.updated_at] +
+        [r.changed_at for r in revisions if r.changed_at]
+    )
+    next_seq = max(all_timestamps) if all_timestamps else cursor
 
     return SyncPullResponse(
-        last_sync_timestamp=since,
+        last_sync_timestamp=cursor,
+        after_seq=cursor,
+        next_seq=next_seq,
+        has_more=has_more,
         parties=parties,
         deals=deals,
         transactions=txs,

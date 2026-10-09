@@ -6,5 +6,5 @@ import com.appwork.mandisamiti.data.sync.model.SyncPullResponseDto
 
 interface MandiSyncApiClient {
     suspend fun pushSync(request: SyncPushRequestDto): Result<SyncPushResponseDto>
-    suspend fun pullSync(sinceMs: Long): Result<SyncPullResponseDto>
+    suspend fun pullSync(afterSeq: Long = 0L, limit: Int = 500): Result<SyncPullResponseDto>
 }
