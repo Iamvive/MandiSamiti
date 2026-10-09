@@ -28,6 +28,7 @@ class CashTransactionResponse(CashTransactionBase):
     sync_version: int
     created_at: int
     updated_at: int
+    server_seq: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

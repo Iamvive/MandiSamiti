@@ -18,5 +18,6 @@ class EntryRevisionResponse(EntryRevisionBase):
     id: str
     shop_id: str
     changed_at: int
+    server_seq: int = 0
 
     model_config = ConfigDict(from_attributes=True)

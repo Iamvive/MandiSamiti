@@ -71,14 +71,14 @@ async def test_tenant_isolation_on_sync_push_and_pull(test_db):
     assert "tx-shared-id" in res_a.synced_transactions
 
     # 2. Shop B pulls data -> must receive EMPTY lists (cannot see Shop A's records)
-    pull_b = await sync_pull(since=0, current_user=user_b, db=test_db)
+    pull_b = await sync_pull(after_seq=0, limit=500, current_user=user_b, db=test_db)
     assert len(pull_b.parties) == 0
     assert len(pull_b.deals) == 0
     assert len(pull_b.transactions) == 0
     assert len(pull_b.revisions) == 0
 
     # 3. Shop A pulls data -> must receive all its records
-    pull_a = await sync_pull(since=0, current_user=user_a, db=test_db)
+    pull_a = await sync_pull(after_seq=0, limit=500, current_user=user_a, db=test_db)
     assert len(pull_a.parties) == 1
     assert pull_a.parties[0].name == "रामवीर सिंह"
     assert len(pull_a.deals) == 1
@@ -116,7 +116,7 @@ async def test_cross_tenant_overwrite_prevention(test_db):
     await sync_push(SyncPushRequest(deals=[deal_b_malicious]), current_user=user_b, db=test_db)
 
     # Verify Shop A's deal is unchanged
-    pull_a = await sync_pull(since=0, current_user=user_a, db=test_db)
+    pull_a = await sync_pull(after_seq=0, limit=500, current_user=user_a, db=test_db)
     assert len(pull_a.deals) == 1
     assert pull_a.deals[0].commodity == "गेहूँ"
     assert pull_a.deals[0].rate_paisa_per_unit == 250000
@@ -159,7 +159,7 @@ async def test_voided_entry_and_revision_sync(test_db):
     assert res.success is True
     assert len(res.synced_revisions) == 2
 
-    pull = await sync_pull(since=0, current_user=user_a, db=test_db)
+    pull = await sync_pull(after_seq=0, limit=500, current_user=user_a, db=test_db)
     assert len(pull.deals) == 1
     assert pull.deals[0].is_void == 1
     assert pull.deals[0].void_reason == "तौल त्रुटि"

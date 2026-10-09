@@ -24,7 +24,6 @@ class SyncPushResponse(BaseModel):
     server_seq: int = 0
 
 class SyncPullResponse(BaseModel):
-    last_sync_timestamp: int = 0
     after_seq: int = 0
     next_seq: int = 0
     has_more: bool = False

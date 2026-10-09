@@ -21,6 +21,7 @@ class PartyResponse(PartyBase):
     sync_version: int
     updated_at: int
     created_at: int
+    server_seq: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
