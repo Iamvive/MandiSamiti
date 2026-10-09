@@ -32,7 +32,8 @@ class SyncEngine(
     private val queries = database.appDatabaseQueries
 
     companion object {
-        const val KEY_LAST_SERVER_SEQ = "last_server_seq"
+        /** Pull cursor is per shop, so another shop's (or a stale) cursor can never start a download late. */
+        fun lastServerSeqKey(shopId: String) = "last_server_seq:$shopId"
         const val KEY_NEEDS_LOGIN = "needs_login"
         const val DEFAULT_PAGE_LIMIT = 500
         const val PUSH_BATCH = 100
@@ -46,12 +47,12 @@ class SyncEngine(
         queries.setSyncMetadataLong(KEY_NEEDS_LOGIN, if (value) 1L else 0L)
     }
 
-    suspend fun getLastServerSeq(): Long = withContext(ioDispatcher) {
-        queries.getSyncMetadataLong(KEY_LAST_SERVER_SEQ).executeAsOneOrNull() ?: 0L
+    suspend fun getLastServerSeq(shopId: String): Long = withContext(ioDispatcher) {
+        queries.getSyncMetadataLong(lastServerSeqKey(shopId)).executeAsOneOrNull() ?: 0L
     }
 
-    suspend fun setLastServerSeq(seq: Long) = withContext(ioDispatcher) {
-        queries.setSyncMetadataLong(KEY_LAST_SERVER_SEQ, seq)
+    suspend fun setLastServerSeq(shopId: String, seq: Long) = withContext(ioDispatcher) {
+        queries.setSyncMetadataLong(lastServerSeqKey(shopId), seq)
     }
 
     suspend fun getPendingSyncSummary(): SyncPayload = withContext(ioDispatcher) {
@@ -208,7 +209,7 @@ class SyncEngine(
         var hasMore = true
 
         while (hasMore) {
-            val currentSeq = getLastServerSeq()
+            val currentSeq = getLastServerSeq(shopId)
             val pageResult = client.pullSync(afterSeq = currentSeq, limit = DEFAULT_PAGE_LIMIT)
 
             if (pageResult.isFailure) {
@@ -218,7 +219,9 @@ class SyncEngine(
             val res = pageResult.getOrThrow()
             val pageItemsCount = res.parties.size + res.deals.size + res.transactions.size + res.revisions.size
 
-            database.transaction {
+            val applied = database.transactionWithResult {
+                // Logged out / switched shop while this page was in flight: write nothing, not even the cursor.
+                if (!queries.shopProfileExists(shopId).executeAsOne()) rollback(false)
                 res.parties.forEach { p ->
                     queries.deleteSyncedParty(p.id)
                     queries.insertPartyIfAbsent(
@@ -313,8 +316,12 @@ class SyncEngine(
 
                 // Same transaction as the page: a crash can't skip or replay it.
                 if (res.next_seq > currentSeq) {
-                    queries.setSyncMetadataLong(KEY_LAST_SERVER_SEQ, res.next_seq)
+                    queries.setSyncMetadataLong(lastServerSeqKey(shopId), res.next_seq)
                 }
+                true
+            }
+            if (!applied) {
+                return@withContext Result.failure(IllegalStateException("Shop $shopId is no longer on this phone"))
             }
 
             if (pageItemsCount > 0) {
@@ -327,6 +334,10 @@ class SyncEngine(
 
         Result.success(totalPulled)
     }
+
+    /** Pending local edits go up first, so a pull can't leave a stale local copy that a later push wrongly acks. */
+    suspend fun pushThenPull(shopId: String, onProgress: ((Int) -> Unit)? = null): Result<Int> =
+        pushPendingChanges().fold(onSuccess = { pullRemoteChanges(shopId, onProgress) }, onFailure = { Result.failure(it) })
 
     suspend fun syncFull(shopId: String): SyncResult = withContext(ioDispatcher) {
         try {

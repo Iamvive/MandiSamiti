@@ -19,10 +19,13 @@ class FakeSyncApiClient : MandiSyncApiClient {
     val pushResponses = ArrayDeque<Result<SyncPushResponseDto>>()
     val pullResponses = ArrayDeque<Result<SyncPullResponseDto>>()
     val pullCursors = mutableListOf<Long>()
+    val calls = mutableListOf<String>()
+    var beforePull: (suspend (Long) -> Unit)? = null
 
     // Default when a queue is empty: ack everything that was sent / empty page.
     override suspend fun pushSync(request: SyncPushRequestDto): Result<SyncPushResponseDto> {
         pushed += request
+        calls += "push"
         return pushResponses.removeFirstOrNull() ?: Result.success(
             SyncPushResponseDto(
                 synced_parties = request.parties.map { it.id }, synced_deals = request.deals.map { it.id },
@@ -33,9 +36,15 @@ class FakeSyncApiClient : MandiSyncApiClient {
 
     override suspend fun pullSync(afterSeq: Long, limit: Int): Result<SyncPullResponseDto> {
         pullCursors += afterSeq
+        calls += "pull"
+        beforePull?.invoke(afterSeq)
         return pullResponses.removeFirstOrNull() ?: Result.success(SyncPullResponseDto(after_seq = afterSeq, next_seq = afterSeq))
     }
 }
+
+/** Pulled rows only land while the shop profile they belong to exists locally. */
+private fun seedShop(db: com.appwork.mandisamiti.database.AppDatabase, id: String) =
+    db.appDatabaseQueries.insertShopProfile(id, "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L)
 
 private fun farmer() = Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L)
 
@@ -151,6 +160,7 @@ class SyncEngineTest {
             )
         )
 
+        seedShop(database, "srv-shop-7")
         val pullResult = syncEngine.pullRemoteChanges(shopId = "srv-shop-7")
         assertTrue(pullResult.isSuccess)
         assertEquals(1, pullResult.getOrNull())
@@ -159,7 +169,7 @@ class SyncEngineTest {
         assertEquals(1, localParties.size)
         assertEquals("सुरेश कुमार", localParties[0].name)
         assertEquals("बलदेव", localParties[0].village)
-        assertEquals(2000L, syncEngine.getLastServerSeq())
+        assertEquals(2000L, syncEngine.getLastServerSeq("srv-shop-7"))
     }
 
     @Test
@@ -198,13 +208,14 @@ class SyncEngineTest {
 
         val syncEngine = SyncEngine(database = database, apiClient = pagingClient)
         val progressUpdates = mutableListOf<Int>()
+        seedShop(database, "shop-page-test")
         val result = syncEngine.pullRemoteChanges("shop-page-test") { progressUpdates.add(it) }
 
         assertTrue(result.isSuccess)
         assertEquals(2, result.getOrNull())
         assertEquals(listOf(0L, 100L), pullCalls)
         assertEquals(listOf(1, 2), progressUpdates)
-        assertEquals(200L, syncEngine.getLastServerSeq())
+        assertEquals(200L, syncEngine.getLastServerSeq("shop-page-test"))
 
         val parties = partyRepo.getPartiesStream("shop-page-test").first()
         assertEquals(2, parties.size)
@@ -213,6 +224,7 @@ class SyncEngineTest {
     @Test
     fun pullingBackOurOwnRevisionDoesNotFailAndLeavesNothingPending() = runTest {
         val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
         OfflineFirstPartyRepository(db).saveParty(farmer())
         OfflineFirstDealRepository(db).saveDeal(deal())
         assertTrue(engine.pushPendingChanges().isSuccess)
@@ -221,12 +233,13 @@ class SyncEngineTest {
             EntryRevisionSyncDto(ownRev.id, "deal-1", "DEAL", 1, "CREATE", ownRev.snapshot_json, null, ownRev.changed_at))))
         assertTrue(engine.pullRemoteChanges("shop-1").isSuccess)
         assertEquals(0L, engine.getPendingCount())
-        assertEquals(3L, engine.getLastServerSeq())
+        assertEquals(3L, engine.getLastServerSeq("shop-1"))
     }
 
     @Test
     fun pullDoesNotOverwriteAPendingLocalEdit() = runTest {
         val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
         OfflineFirstPartyRepository(db).saveParty(farmer().copy(name = "local edit"))
         fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 1, parties = listOf(
             PartySyncDto(id = "farmer-1", name = "server", role = "FARMER", updated_at = 1L))))
@@ -250,11 +263,12 @@ class SyncEngineTest {
     @Test
     fun pullResumesFromTheLastAppliedPage() = runTest {
         val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
         fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 500, has_more = true,
             parties = listOf(PartySyncDto(id = "a", name = "a", role = "FARMER"))))
         fake.pullResponses += Result.failure(RuntimeException("timeout"))
         assertTrue(engine.pullRemoteChanges("shop-1").isFailure)
-        assertEquals(500L, engine.getLastServerSeq())
+        assertEquals(500L, engine.getLastServerSeq("shop-1"))
         engine.pullRemoteChanges("shop-1")
         assertEquals(listOf(0L, 500L, 500L), fake.pullCursors)
     }
@@ -286,5 +300,53 @@ class SyncEngineTest {
         val dealReq = fake.pushed.indexOfFirst { it.deals.isNotEmpty() }
         assertTrue(p149 in 0 until dealReq)
         assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pullCursorIsKeptPerShop() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1"); seedShop(db, "shop-2")
+        fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 40))
+        engine.pullRemoteChanges("shop-1").getOrThrow()
+        engine.pullRemoteChanges("shop-2").getOrThrow()
+        assertEquals(listOf(0L, 0L), fake.pullCursors)   // shop-2 starts from its own cursor, not shop-1's
+        assertEquals(40L, engine.getLastServerSeq("shop-1"))
+        assertEquals(0L, engine.getLastServerSeq("shop-2"))
+    }
+
+    @Test
+    fun pageArrivingAfterAWipeWritesNoRowsAndNoCursor() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
+        fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 500, has_more = true,
+            parties = listOf(PartySyncDto(id = "a", name = "a", role = "FARMER"))))
+        fake.pullResponses += Result.success(SyncPullResponseDto(next_seq = 900,
+            parties = listOf(PartySyncDto(id = "b", name = "b", role = "FARMER"))))
+        // Logout lands while the second page is in flight.
+        fake.beforePull = { after -> if (after == 500L) com.appwork.mandisamiti.data.auth.LocalDataWiper(db).wipeAll() }
+        assertTrue(engine.pullRemoteChanges("shop-1").isFailure)
+        assertEquals(null, db.appDatabaseQueries.getPartyById("b").executeAsOneOrNull())
+        assertEquals(null, db.appDatabaseQueries.getPartyById("a").executeAsOneOrNull())
+        assertEquals(0L, engine.getLastServerSeq("shop-1"))
+    }
+
+    @Test
+    fun firstSyncPushesPendingEditsBeforePulling() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
+        OfflineFirstPartyRepository(db).saveParty(farmer())
+        assertTrue(engine.pushThenPull("shop-1").isSuccess)
+        assertEquals(listOf("push", "pull"), fake.calls)
+        assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun firstSyncFailsWithoutPullingWhenPushFails() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
+        OfflineFirstPartyRepository(db).saveParty(farmer())
+        fake.pushResponses += Result.failure(RuntimeException("offline"))
+        assertTrue(engine.pushThenPull("shop-1").isFailure)
+        assertEquals(listOf("push"), fake.calls)
     }
 }

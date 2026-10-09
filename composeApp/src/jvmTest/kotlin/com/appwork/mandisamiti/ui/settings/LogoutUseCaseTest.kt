@@ -191,4 +191,39 @@ class LogoutUseCaseTest {
         assertEquals(session, f.store.current())
         assertEquals(1, f.db.partyCount())
     }
+
+    @Test
+    fun backgroundSyncIsCancelledBeforeTheWipe() = runTest {
+        val f = fixture()
+        f.db.appDatabaseQueries.markPartySynced("farmer-1")
+        var partiesAtCancel = -1
+        val logout = LogoutUseCase(
+            syncEngine = SyncEngine(f.db, ioDispatcher = StandardTestDispatcher(testScheduler)),
+            authApi = AuthApi(mandiHttpClient(MockEngine { respond("", HttpStatusCode.NoContent) }), "https://api.test"),
+            sessionStore = f.store,
+            wiper = LocalDataWiper(f.db),
+            onBeforeWipe = { partiesAtCancel = f.db.partyCount() },
+        )
+
+        assertEquals(LogoutResult.LoggedOut, logout())
+
+        // A sync still running after the wipe could write rows/cursor back into the emptied DB.
+        assertEquals(1, partiesAtCancel, "sync must be cancelled while local data still exists")
+        assertEquals(0, f.db.partyCount())
+    }
+
+    @Test
+    fun blockedLogoutDoesNotCancelSync() = runTest {
+        val f = fixture()
+        var cancelled = false
+        val logout = LogoutUseCase(
+            syncEngine = SyncEngine(f.db, ioDispatcher = StandardTestDispatcher(testScheduler)),
+            authApi = AuthApi(mandiHttpClient(MockEngine { respond("", HttpStatusCode.NoContent) }), "https://api.test"),
+            sessionStore = f.store,
+            wiper = LocalDataWiper(f.db),
+            onBeforeWipe = { cancelled = true },
+        )
+        assertTrue(logout() is LogoutResult.Blocked)
+        assertEquals(false, cancelled)
+    }
 }

@@ -59,7 +59,8 @@ class DailyRegisterViewModel(
     private val ttsManager: SoundboxTtsManager,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val clock: Clock = Clock.System,
-    private val timeZone: TimeZone = TimeZone.currentSystemDefault()
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    private val onLocalWrite: () -> Unit = {}
 ) {
 
     private val _uiState = MutableStateFlow(DailyRegisterUiState())
@@ -189,6 +190,7 @@ class DailyRegisterViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             cashRepository.recordTransaction(tx)
+            onLocalWrite()
 
             val party = partyRepository.getPartyById(partyId)
             val partyName = party?.name ?: "खाता"

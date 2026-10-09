@@ -23,6 +23,7 @@ class LogoutUseCase(
     private val authApi: AuthApi,
     private val sessionStore: SessionStore,
     private val wiper: LocalDataWiper,
+    private val onBeforeWipe: () -> Unit = {},
 ) {
     suspend operator fun invoke(): LogoutResult {
         // Attempt an immediate push if there is a network connection
@@ -40,6 +41,8 @@ class LogoutUseCase(
         // Session first: no session means no new writes, so a crash before the wipe leaves
         // "no session, stale data" (cleaned on next login) rather than "session, empty DB".
         sessionStore.clear()
+        // Stop background sync first: a page landing after the wipe would write rows/cursor back.
+        onBeforeWipe()
         wiper.wipeAll()
         return LogoutResult.LoggedOut
     }

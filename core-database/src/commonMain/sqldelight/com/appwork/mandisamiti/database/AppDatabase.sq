@@ -399,3 +399,6 @@ INSERT OR REPLACE INTO syncMetadataEntity(key, value_long) VALUES (?, ?);
 wipeSyncMetadata:
 DELETE FROM syncMetadataEntity;
 
+
+shopProfileExists:
+SELECT COUNT(*) > 0 FROM shopProfileEntity WHERE id = ?;

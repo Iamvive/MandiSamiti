@@ -233,4 +233,28 @@ class DailyRegisterViewModelTest {
         viewModel.closeDayClosingSummary()
         assertEquals(false, viewModel.uiState.value.isDayClosingSummaryOpen)
     }
+
+    @Test
+    fun recordingAnEntryAsksForASync() = runTest {
+        val database = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = io)
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर", village = null,
+            partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        var writes = 0
+        val viewModel = DailyRegisterViewModel(
+            shopId = "shop-1",
+            cashRepository = OfflineFirstCashTransactionRepository(database, ioDispatcher = io),
+            partyRepository = partyRepo,
+            shopProfileRepository = OfflineFirstShopProfileRepository(database, ioDispatcher = io),
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope,
+            onLocalWrite = { writes++ }
+        )
+
+        viewModel.recordDailyEntry(partyId = "farmer-1", transactionType = TransactionType.JAMA_RECEIVED, amountRs = 500L)
+        viewModel.events.first()   // EntryRecorded: the save has finished
+
+        assertEquals(1, writes)
+    }
 }

@@ -90,7 +90,7 @@ fun App(
         )
     }
     val logoutUseCase = remember {
-        LogoutUseCase(syncEngine, authApi, sessionStore, wiper)
+        LogoutUseCase(syncEngine, authApi, sessionStore, wiper, onBeforeWipe = { syncScheduler.cancelAll() })
     }
     val cameraPicker = rememberCameraSlipPicker()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -132,7 +132,8 @@ fun App(
                 val firstSyncViewModel = remember(shopId) {
                     FirstSyncViewModel(
                         shopId = shopId!!,
-                        pull = { id, p -> syncEngine.pullRemoteChanges(id, p) },
+                        // Push first: pending edits from before a re-login must not be overtaken by the pull.
+                        pull = { id, p -> syncEngine.pushThenPull(id, p) },
                         viewModelScope = coroutineScope,
                     )
                 }
@@ -185,7 +186,6 @@ fun App(
                                         is LogoutResult.Blocked ->
                                             snackbarHostState.showSnackbar(logoutBlockedMessage(result.pendingCount))
                                         LogoutResult.LoggedOut -> {
-                                            syncScheduler.cancelAll()
                                             session = null
                                             currentScreen = Screen.Register
                                         }
@@ -284,7 +284,8 @@ fun App(
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
-                        viewModelScope = coroutineScope
+                        viewModelScope = coroutineScope,
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
                 }
                 DailyCashRegisterScreen(
