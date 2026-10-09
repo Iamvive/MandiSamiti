@@ -357,4 +357,17 @@ class RegisterViewModelTest {
         assertEquals(AuthStep.ENTER_MPIN, f.vm.uiState.value.step)
         assertTrue(f.vm.uiState.value.generalErrorMessage != null)
     }
+
+    @Test
+    fun submitOtp_twiceBackToBack_sendsOneVerifyRequest() = runTest {
+        val f = fixture { req -> verifyBody(req.url.encodedPath, "NEW") }
+        f.toOtpStep()
+        f.vm.onOtpChanged("123456")
+        f.clock.tap(); f.vm.submitOtp()
+        f.clock.tap(); f.vm.submitOtp()
+        advanceUntilIdle()
+        f.vm.uiState.first { it.step == AuthStep.NEW_SHOP && !it.isLoading }
+        advanceUntilIdle()
+        assertEquals(1, f.count("otp/verify"))
+    }
 }

@@ -167,8 +167,8 @@ class RegisterViewModel(
     }
 
     private fun requestOtp(phone: String, moveToOtpStep: Boolean) {
+        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
             authRepository.sendOtp(phone).fold(
                 onSuccess = {
                     _uiState.update {
@@ -211,8 +211,8 @@ class RegisterViewModel(
             _uiState.update { it.copy(otpError = "कृपया 6 अंकों का OTP दर्ज करें") }
             return
         }
+        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null, otpError = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, generalErrorMessage = null, otpError = null) }
             authRepository.verifyOtp(s.phoneNumber, s.otp).fold(
                 onSuccess = { result ->
                     cooldownJob?.cancel()
@@ -255,8 +255,8 @@ class RegisterViewModel(
             }
             return
         }
+        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
             authRepository.signup(pass, s.shopName.trim(), s.ownerName.trim(), s.mandiName.trim(), s.mpin).fold(
                 onSuccess = {
                     signupPass = null
@@ -282,8 +282,8 @@ class RegisterViewModel(
             _uiState.update { it.copy(generalErrorMessage = "कृपया 4 अंकों का MPIN दर्ज करें") }
             return
         }
+        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
             authRepository.login(pass, s.mpin).fold(
                 onSuccess = {
                     loginPass = null

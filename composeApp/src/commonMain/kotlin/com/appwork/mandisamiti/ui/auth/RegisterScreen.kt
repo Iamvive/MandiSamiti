@@ -81,7 +81,6 @@ import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
-import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
@@ -139,7 +138,7 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "पीछे जाएं",
-                                    tint = Color.White
+                                    tint = MandiPrimaryActionText
                                 )
                             }
                         }
@@ -149,14 +148,14 @@ fun RegisterScreen(
                         modifier = Modifier
                             .size(52.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
+                            .background(MandiPrimaryActionText.copy(alpha = 0.2f))
                             .border(2.dp, MandiAmberLight, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Store,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MandiPrimaryActionText,
                             modifier = Modifier.size(26.dp)
                         )
                     }
@@ -165,7 +164,7 @@ fun RegisterScreen(
                         text = "मंडी समिति",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MandiPrimaryActionText
                     )
 
                     Text(
@@ -235,6 +234,7 @@ fun RegisterScreen(
                             otpError = uiState.otpError,
                             cooldownSeconds = uiState.resendCooldownSeconds,
                             isResendEnabled = uiState.isResendEnabled,
+                            isLoading = uiState.isLoading,
                             onOtpChange = viewModel::onOtpChanged,
                             onSubmit = viewModel::submitOtp,
                             onResend = viewModel::resendOtp
@@ -258,6 +258,7 @@ fun RegisterScreen(
                             mpin = uiState.mpin,
                             isLoading = uiState.isLoading,
                             isValid = uiState.isEnterMpinValid,
+                            errorMessage = uiState.generalErrorMessage,
                             onMpinChange = viewModel::onMpinChanged,
                             onSubmit = viewModel::submitMpin
                         )
@@ -292,11 +293,13 @@ private fun AuthActionButton(
     isLoading: Boolean,
     onClick: () -> Unit,
     leadingIcon: ImageVector? = null,
-    trailingIcon: ImageVector? = null
+    trailingIcon: ImageVector? = null,
+    containerColor: Color = MandiPrimaryAction,
+    contentColor: Color = MandiPrimaryActionText
 ) {
     val focusManager = LocalFocusManager.current
     val active = enabled && !isLoading
-    val textColor = if (active) MandiPrimaryActionText else MandiTextMuted
+    val textColor = if (active) contentColor else MandiTextSecondary
     Button(
         onClick = {
             focusManager.clearFocus()
@@ -308,14 +311,14 @@ private fun AuthActionButton(
             .height(50.dp),
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MandiPrimaryAction,
-            contentColor = MandiPrimaryActionText,
+            containerColor = containerColor,
+            contentColor = contentColor,
             disabledContainerColor = MandiSurfaceElevated,
-            disabledContentColor = MandiTextMuted
+            disabledContentColor = MandiTextSecondary
         )
     ) {
         if (isLoading) {
-            CircularProgressIndicator(color = MandiTextMuted, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(color = MandiTextSecondary, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         } else {
             if (leadingIcon != null) {
                 Icon(leadingIcon, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
@@ -365,7 +368,7 @@ private fun PhoneSection(
                 value = phoneNumber,
                 onValueChange = onPhoneChange,
                 label = { Text("मोबाइल नंबर *") },
-                placeholder = { Text("उदा. 9837123456", color = MandiTextMuted) },
+                placeholder = { Text("उदा. 9837123456", color = MandiTextSecondary) },
                 prefix = { Text("+91 ", fontWeight = FontWeight.Bold, color = MandiAmberDark) },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MandiAmberPrimary) },
                 isError = phoneError != null,
@@ -407,6 +410,7 @@ private fun OtpVerificationSection(
     otpError: String?,
     cooldownSeconds: Int,
     isResendEnabled: Boolean,
+    isLoading: Boolean,
     onOtpChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onResend: () -> Unit
@@ -459,7 +463,7 @@ private fun OtpVerificationSection(
                 value = otp,
                 onValueChange = { if (it.length <= 6) onOtpChange(it) },
                 label = { Text("6-अंकीय OTP कोड") },
-                placeholder = { Text("1 2 3 4 5 6", color = MandiTextMuted, textAlign = TextAlign.Center) },
+                placeholder = { Text("1 2 3 4 5 6", color = MandiTextSecondary, textAlign = TextAlign.Center) },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.NumberPassword,
                     imeAction = ImeAction.Done
@@ -467,7 +471,7 @@ private fun OtpVerificationSection(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
-                        if (otp.length == 6) onSubmit()
+                        if (otp.length == 6 && !isLoading) onSubmit()
                     }
                 ),
                 singleLine = true,
@@ -487,41 +491,18 @@ private fun OtpVerificationSection(
                 colors = textFieldColors()
             )
 
-            val otpButtonTextColor = if (otp.length == 6) MandiBtnSuccessFg else MandiTextMuted
-            Button(
-                onClick = {
-                    focusManager.clearFocus()
-                    onSubmit()
-                },
+            AuthActionButton(
+                text = "OTP सत्यापित करें",
                 enabled = otp.length == 6,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MandiBtnSuccessBg,
-                    contentColor = MandiBtnSuccessFg,
-                    disabledContainerColor = MandiSurfaceElevated,
-                    disabledContentColor = MandiTextMuted
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = otpButtonTextColor,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text(
-                    text = "OTP सत्यापित करें",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = otpButtonTextColor
-                )
-            }
+                isLoading = isLoading,
+                onClick = onSubmit,
+                leadingIcon = Icons.Default.Check,
+                containerColor = MandiBtnSuccessBg,
+                contentColor = MandiBtnSuccessFg
+            )
 
             // Resend Countdown Throttler
-            if (isResendEnabled) {
+            if (isResendEnabled && !isLoading) {
                 Text(
                     text = "OTP पुनः भेजें",
                     fontSize = 13.sp,
@@ -534,10 +515,10 @@ private fun OtpVerificationSection(
                 )
             } else {
                 Text(
-                    text = "OTP पुनः भेजें (${cooldownSeconds}s)",
+                    text = if (isResendEnabled) "OTP पुनः भेजें" else "OTP पुनः भेजें (${cooldownSeconds}s)",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MandiTextMuted
+                    color = MandiTextSecondary
                 )
             }
         }
@@ -576,7 +557,7 @@ private fun NewShopSection(
                 value = uiState.shopName,
                 onValueChange = onShopChange,
                 label = { Text("दुकान / फर्म का नाम *") },
-                placeholder = { Text("उदा. श्री गणेश ट्रेडिंग", color = MandiTextMuted) },
+                placeholder = { Text("उदा. श्री गणेश ट्रेडिंग", color = MandiTextSecondary) },
                 leadingIcon = { Icon(Icons.Default.Store, contentDescription = null, tint = MandiAmberPrimary) },
                 isError = uiState.shopNameError != null,
                 supportingText = {
@@ -595,7 +576,7 @@ private fun NewShopSection(
                 value = uiState.ownerName,
                 onValueChange = onOwnerChange,
                 label = { Text("व्यापारी / मुनीम का नाम *") },
-                placeholder = { Text("उदा. लाला मदन लाल जी", color = MandiTextMuted) },
+                placeholder = { Text("उदा. लाला मदन लाल जी", color = MandiTextSecondary) },
                 leadingIcon = { Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = MandiAmberPrimary) },
                 isError = uiState.ownerNameError != null,
                 supportingText = {
@@ -614,7 +595,7 @@ private fun NewShopSection(
                 value = uiState.mandiName,
                 onValueChange = onMandiChange,
                 label = { Text("मंडी प्रांगण का नाम") },
-                placeholder = { Text("उदा. मथुरा कृषि उपज मंडी", color = MandiTextMuted) },
+                placeholder = { Text("उदा. मथुरा कृषि उपज मंडी", color = MandiTextSecondary) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 singleLine = true,
@@ -633,7 +614,7 @@ private fun NewShopSection(
                 value = mpin,
                 onValueChange = { if (it.length <= 4) onMpinChange(it) },
                 label = { Text("नया 4-अंकीय MPIN *") },
-                placeholder = { Text("• • • •", color = MandiTextMuted, textAlign = TextAlign.Center) },
+                placeholder = { Text("• • • •", color = MandiTextSecondary, textAlign = TextAlign.Center) },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MandiAmberPrimary) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
@@ -648,7 +629,7 @@ private fun NewShopSection(
                 value = confirmMpin,
                 onValueChange = { if (it.length <= 4) onConfirmMpinChange(it) },
                 label = { Text("MPIN पुनः दर्ज करें *") },
-                placeholder = { Text("• • • •", color = MandiTextMuted, textAlign = TextAlign.Center) },
+                placeholder = { Text("• • • •", color = MandiTextSecondary, textAlign = TextAlign.Center) },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MandiAmberPrimary) },
                 visualTransformation = PasswordVisualTransformation(),
                 isError = confirmError != null,
@@ -699,6 +680,7 @@ private fun EnterMpinSection(
     mpin: String,
     isLoading: Boolean,
     isValid: Boolean,
+    errorMessage: String?,
     onMpinChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
@@ -743,8 +725,14 @@ private fun EnterMpinSection(
                 value = mpin,
                 onValueChange = { if (it.length <= 4) onMpinChange(it) },
                 label = { Text("4-अंकीय MPIN *") },
-                placeholder = { Text("• • • •", color = MandiTextMuted, textAlign = TextAlign.Center) },
+                placeholder = { Text("• • • •", color = MandiTextSecondary, textAlign = TextAlign.Center) },
                 visualTransformation = PasswordVisualTransformation(),
+                isError = errorMessage != null,
+                supportingText = {
+                    if (errorMessage != null) {
+                        Text(errorMessage, color = MandiRedText, fontSize = 11.sp)
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {
@@ -776,21 +764,21 @@ private fun StepDot(number: String, label: String, isActive: Boolean, isDone: Bo
             modifier = Modifier
                 .size(22.dp)
                 .clip(CircleShape)
-                .background(if (isActive || isDone) Color.White else Color.White.copy(alpha = 0.3f)),
+                .background(if (isActive || isDone) MandiPrimaryActionText else MandiPrimaryActionText.copy(alpha = 0.3f)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = number,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isActive || isDone) MandiAmberDark else Color.White
+                color = if (isActive || isDone) MandiAmberDark else MandiPrimaryActionText
             )
         }
         Text(
             text = label,
             fontSize = 12.sp,
             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            color = if (isActive) Color.White else Color.White.copy(alpha = 0.7f)
+            color = if (isActive) MandiPrimaryActionText else MandiPrimaryActionText.copy(alpha = 0.7f)
         )
     }
 }
@@ -801,7 +789,7 @@ private fun StepDivider() {
         modifier = Modifier
             .width(16.dp)
             .height(1.dp)
-            .background(Color.White.copy(alpha = 0.4f))
+            .background(MandiPrimaryActionText.copy(alpha = 0.4f))
     )
 }
 
@@ -811,5 +799,24 @@ private fun textFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedBorderColor = MandiBorder,
     focusedLabelColor = MandiAmberDark,
     unfocusedLabelColor = MandiTextSecondary,
-    cursorColor = MandiAmberPrimary
+    cursorColor = MandiAmberPrimary,
+    focusedTextColor = MandiTextPrimary,
+    unfocusedTextColor = MandiTextPrimary,
+    errorTextColor = MandiTextPrimary,
+    disabledTextColor = MandiTextSecondary,
+    focusedPlaceholderColor = MandiTextSecondary,
+    unfocusedPlaceholderColor = MandiTextSecondary,
+    errorPlaceholderColor = MandiTextSecondary,
+    errorLabelColor = MandiRedText,
+    errorBorderColor = MandiRedText,
+    errorCursorColor = MandiRedText,
+    focusedSupportingTextColor = MandiTextSecondary,
+    unfocusedSupportingTextColor = MandiTextSecondary,
+    errorSupportingTextColor = MandiRedText,
+    focusedLeadingIconColor = MandiTextSecondary,
+    unfocusedLeadingIconColor = MandiTextSecondary,
+    errorLeadingIconColor = MandiRedText,
+    focusedPrefixColor = MandiTextPrimary,
+    unfocusedPrefixColor = MandiTextPrimary,
+    errorPrefixColor = MandiTextPrimary
 )
