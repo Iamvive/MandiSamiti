@@ -45,6 +45,7 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
             when {
                 status == HttpStatusCode.BadRequest && detailString(text) == "OTP_INVALID" -> AuthError.OtpInvalid
                 status == HttpStatusCode.TooManyRequests -> AuthError.RateLimited
+                status == HttpStatusCode.Unauthorized && detailCode(text) == "ACCOUNT_DISABLED" -> AuthError.AccountDisabled
                 else -> null
             }
         }) { resp ->
@@ -63,9 +64,10 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
         mandiName: String,
         mpin: String,
     ): Result<AuthSessionDto> =
-        call("signup", SignupRequest(signupPass, shopName, ownerName, mandiName, mpin), { status, _ ->
+        call("signup", SignupRequest(signupPass, shopName, ownerName, mandiName, mpin), { status, text ->
             when (status) {
-                HttpStatusCode.Unauthorized -> AuthError.PassExpired
+                HttpStatusCode.Unauthorized ->
+                    if (detailCode(text) == "ACCOUNT_DISABLED") AuthError.AccountDisabled else AuthError.PassExpired
                 HttpStatusCode.Conflict -> AuthError.PhoneAlreadyRegistered
                 else -> null
             }
@@ -78,6 +80,7 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
                 when (detail?.get("code")?.jsonPrimitive?.contentOrNull) {
                     "MPIN_INVALID" -> AuthError.MpinInvalid(detail["attempts_left"]?.jsonPrimitive?.intOrNull ?: 0)
                     "ACCOUNT_LOCKED" -> AuthError.AccountLocked
+                    "ACCOUNT_DISABLED" -> AuthError.AccountDisabled
                     "PASS_BURNED" -> AuthError.PassBurned
                     // plain "INVALID_PASS" (expired/used pass) or any unrecognised 401: the pass is dead.
                     else -> AuthError.PassExpired
@@ -137,6 +140,9 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
 
     private fun detailString(text: String): String? =
         runCatching { detailElement(text)?.jsonPrimitive?.contentOrNull }.getOrNull()
+
+    private fun detailCode(text: String): String? =
+        runCatching { detailObject(text)?.get("code")?.jsonPrimitive?.contentOrNull }.getOrNull()
 
     private fun detailObject(text: String): JsonObject? =
         runCatching { detailElement(text)?.jsonObject }.getOrNull()

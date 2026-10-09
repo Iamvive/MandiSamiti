@@ -33,6 +33,8 @@ sealed class AuthError(message: String) : Exception(message) {
     object PassExpired : AuthError("PASS_EXPIRED")
     /** Too many wrong MPINs for this phone across passes; server locks it for 24h. */
     object AccountLocked : AuthError("ACCOUNT_LOCKED")
+    /** Server refused: account deactivated, or legacy staff account that cannot self re-onboard. */
+    object AccountDisabled : AuthError("ACCOUNT_DISABLED")
     object PhoneAlreadyRegistered : AuthError("PHONE_ALREADY_REGISTERED")
     object SessionExpired : AuthError("SESSION_EXPIRED")
     /** Server rejected the input (400 other than OTP_INVALID, or 422 validation). */

@@ -147,14 +147,14 @@ async def test_pass_and_refresh_tokens_are_not_bearer_tokens(client):
         r = await client.get("/api/v1/sync/pull", headers={"Authorization": f"Bearer {tok}"})
         assert r.status_code == 401
 
-async def _seed_legacy_user(db_sessionmaker, phone, mpin_hash):
+async def _seed_legacy_user(db_sessionmaker, phone, mpin_hash, role="OWNER", is_active=True):
     import hashlib
     from app.models.user import User, ShopProfile
     async with db_sessionmaker() as s:
         shop = ShopProfile(id="legacy-shop-1", shop_name="पुरानी दुकान", owner_name="पुराना", mandi_name="पुरानी मंडी", phone_number=phone)
         s.add(shop)
         await s.flush()
-        s.add(User(phone_number=phone, name="पुराना", role="OWNER", shop_id=shop.id,
+        s.add(User(phone_number=phone, name="पुराना", role=role, shop_id=shop.id, is_active=is_active,
                    mpin_hash=mpin_hash if mpin_hash != "sha" else hashlib.sha256(b"4826").hexdigest()))
         await s.commit()
 
@@ -184,3 +184,26 @@ async def test_bcrypt_user_signup_still_409(client):
     r = await client.post("/api/v1/auth/signup", json={
         "signup_pass": sp, "shop_name": "अ", "owner_name": "ब", "mandi_name": "स", "mpin": "1111"})
     assert r.status_code == 409
+
+
+async def _legacy_shop_name(db_sessionmaker):
+    from app.models.user import ShopProfile
+    async with db_sessionmaker() as s:
+        return (await s.get(ShopProfile, "legacy-shop-1")).shop_name
+
+async def _signup_with_stale_pass(client, phone=P):
+    from app.core.security import create_pass_token
+    sp, _ = create_pass_token("signup_pass", phone)
+    return await client.post("/api/v1/auth/signup", json={
+        "signup_pass": sp, "shop_name": "कब्ज़ा", "owner_name": "चोर", "mandi_name": "कहीं", "mpin": "1111"})
+
+@pytest.mark.parametrize("role,is_active", [("OWNER", False), ("MUNIM", True), ("VIEWER", True)])
+@pytest.mark.asyncio
+async def test_legacy_disabled_or_non_owner_is_refused_and_shop_unchanged(client, db_sessionmaker, role, is_active):
+    await _seed_legacy_user(db_sessionmaker, P, "sha", role=role, is_active=is_active)
+    await client.post("/api/v1/auth/otp/send", json={"phone": P})
+    v = await client.post("/api/v1/auth/otp/verify", json={"phone": P, "otp": "123456"})
+    assert v.status_code == 401 and v.json()["detail"] == {"code": "ACCOUNT_DISABLED"}
+    r = await _signup_with_stale_pass(client)  # a signup pass obtained some other way
+    assert r.status_code == 401 and r.json()["detail"] == {"code": "ACCOUNT_DISABLED"}
+    assert await _legacy_shop_name(db_sessionmaker) == "पुरानी दुकान"

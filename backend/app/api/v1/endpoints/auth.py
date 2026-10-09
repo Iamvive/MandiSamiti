@@ -83,8 +83,19 @@ def _is_bcrypt(mpin_hash: str | None) -> bool:
     return bool(mpin_hash) and mpin_hash.startswith("$2")
 
 
+def _legacy_reset_allowed(user: User) -> bool:
+    """Only an active OWNER may re-set a legacy MPIN; staff re-onboarding comes with the roles feature."""
+    return bool(user.is_active) and user.role == "OWNER"
+
+
+def _account_disabled() -> HTTPException:
+    return _unauthorized({"code": "ACCOUNT_DISABLED"})
+
+
 async def _reset_legacy_user(db: AsyncSession, user: User, req: SignupRequest) -> AuthSession:
     """Legacy (SHA-256 / missing) hash: set a bcrypt MPIN in place and KEEP the shop_id so server data stays attached."""
+    if not _legacy_reset_allowed(user):
+        raise _account_disabled()
     user.mpin_hash = await run_in_threadpool(get_password_hash, req.mpin)
     user.name = req.owner_name
     shop = None
@@ -117,9 +128,12 @@ async def verify_otp(req: VerifyOtpRequest, db: AsyncSession = Depends(get_db), 
     phone = _clean_phone(req.phone)
     if not await _otp_service(redis).verify(phone, req.otp):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="OTP_INVALID")
-    mpin_hash = (await db.execute(select(User.mpin_hash).where(User.phone_number == phone))).first()
-    # A pre-bcrypt (or missing) hash can never verify: treat as NEW so signup can re-set the MPIN.
-    if mpin_hash and _is_bcrypt(mpin_hash[0]):
+    user = (await db.execute(select(User).where(User.phone_number == phone))).scalars().first()
+    # A pre-bcrypt (or missing) hash can never verify: treat as NEW so signup can re-set the MPIN,
+    # but only for an active OWNER (disabled users and legacy staff are refused).
+    if user and not _is_bcrypt(user.mpin_hash) and not _legacy_reset_allowed(user):
+        raise _account_disabled()
+    if user and _is_bcrypt(user.mpin_hash):
         token, _ = create_pass_token("login_pass", phone)
         return VerifyOtpResponse(status="EXISTING", login_pass=token)
     token, _ = create_pass_token("signup_pass", phone)

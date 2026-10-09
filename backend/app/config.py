@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_prod_secrets(self):
-        if self.APP_ENV != "prod":
+        if self.APP_ENV.strip().lower() not in ("prod", "production"):
             return self
         key = self.SECRET_KEY
         if key == DEFAULT_SECRET_KEY or key.startswith("change-me") or len(key) < MIN_PROD_SECRET_LEN:

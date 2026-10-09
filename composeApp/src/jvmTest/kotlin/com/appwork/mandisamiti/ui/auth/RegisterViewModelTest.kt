@@ -478,4 +478,18 @@ class RegisterViewModelTest {
         val s = f.vm.uiState.first { it.isRegistrationComplete }
         assertEquals(com.appwork.mandisamiti.data.auth.Session("s1", "a", "r"), s.completedSession)
     }
+
+    @Test
+    fun verify_accountDisabled_returnsToPhone_withContactOwnerMessage() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("otp/verify")) json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_DISABLED"}}""") else verifyBody(p, "NEW")
+        }
+        f.toOtpStep()
+        f.clock.tap(); f.vm.onOtpChanged("123456")
+
+        val s = f.vm.uiState.first { it.generalErrorMessage != null }
+        assertEquals("यह खाता बंद है — दुकान मालिक से संपर्क करें", s.generalErrorMessage)
+        assertEquals(AuthStep.PHONE, s.step)
+    }
 }

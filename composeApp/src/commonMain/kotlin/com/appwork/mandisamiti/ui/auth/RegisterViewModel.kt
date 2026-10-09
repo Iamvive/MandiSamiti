@@ -314,6 +314,8 @@ class RegisterViewModel(
                 resetToPhone(if (step == AuthStep.NEW_SHOP) "समय समाप्त — दोबारा OTP लें" else "बहुत गलत MPIN — दोबारा OTP लें")
             is AuthError.PassExpired ->
                 resetToPhone("समय समाप्त — दोबारा OTP लें")
+            is AuthError.AccountDisabled ->
+                resetToPhone("यह खाता बंद है — दुकान मालिक से संपर्क करें")
             is AuthError.AccountLocked ->
                 resetToPhone("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें")
             is AuthError.Invalid ->

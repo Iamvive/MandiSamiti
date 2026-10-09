@@ -198,4 +198,12 @@ class AuthApiTest {
         val v = api { json(HttpStatusCode.BadRequest, """{"detail":"INVALID_PHONE"}""") }.verifyOtp("1", "123456")
         assertEquals(AuthError.Invalid, v.error())
     }
+
+    @Test
+    fun accountDisabled_onVerifySignupAndLogin_isAccountDisabled() = runTest {
+        val body = """{"detail":{"code":"ACCOUNT_DISABLED"}}"""
+        assertEquals(AuthError.AccountDisabled, api { json(HttpStatusCode.Unauthorized, body) }.verifyOtp("9", "123456").error())
+        assertEquals(AuthError.AccountDisabled, api { json(HttpStatusCode.Unauthorized, body) }.signup("p", "s", "o", "m", "1234").error())
+        assertEquals(AuthError.AccountDisabled, api { json(HttpStatusCode.Unauthorized, body) }.login("lp", "1234").error())
+    }
 }

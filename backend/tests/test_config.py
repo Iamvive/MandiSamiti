@@ -23,3 +23,9 @@ def test_prod_static_otp_logs_loud_warning(caplog):
     with caplog.at_level(logging.WARNING):
         Settings(APP_ENV="prod", SECRET_KEY=secrets.token_hex(32), OTP_STATIC_ENABLED=True, _env_file=None)
     assert any("OTP_STATIC_ENABLED" in r.message and r.levelno == logging.WARNING for r in caplog.records)
+
+
+@pytest.mark.parametrize("env", [" PROD ", "production", "Prod", "prod "])
+def test_prod_env_is_normalised(env):
+    with pytest.raises(ValueError, match="SECRET_KEY"):
+        Settings(APP_ENV=env, SECRET_KEY=DEFAULT_SECRET_KEY, _env_file=None)
