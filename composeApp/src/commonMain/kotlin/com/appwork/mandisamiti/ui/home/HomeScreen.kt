@@ -1,6 +1,20 @@
 package com.appwork.mandisamiti.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -36,6 +50,8 @@ fun HomeScreen(
     onNavigateToPartyKhata: (Party) -> Unit,
     onNavigateToDayClosing: () -> Unit,
     onSignOut: () -> Unit,
+    needsLogin: Boolean = false,
+    onReLogin: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -82,12 +98,14 @@ fun HomeScreen(
         },
         containerColor = MandiBackground
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MandiBackground)
         ) {
+            if (needsLogin) ReLoginBanner(onReLogin)
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (uiState.currentTab) {
                 NavigationTab.DASHBOARD -> {
                     DashboardScreen(
@@ -129,8 +147,40 @@ fun HomeScreen(
                     )
                 }
             }
+            }
         }
     }
 }
 
+@Composable
+private fun ReLoginBanner(onReLogin: () -> Unit) {
+    // Theme-aware colours (not the static light Mandi* aliases) so the banner is readable in dark mode too.
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .shadow(2.dp, shape)
+            .clip(shape)
+            .background(colors.surfaceVariant)
+            .border(1.dp, colors.outline, shape)
+            .clickable(onClick = onReLogin)
+            .heightIn(min = 48.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "दोबारा लॉगिन करें",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = colors.onSurface
+        )
+        Text(
+            text = "आपकी एंट्री फ़ोन में सुरक्षित हैं",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant
+        )
+    }
+}
 

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,12 +44,15 @@ import com.appwork.mandisamiti.ui.settings.LogoutResult
 import com.appwork.mandisamiti.ui.settings.LogoutUseCase
 import com.appwork.mandisamiti.ui.settings.logoutBlockedMessage
 import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
+import com.appwork.mandisamiti.ui.sync.FirstSyncScreen
+import com.appwork.mandisamiti.ui.sync.FirstSyncViewModel
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
     data object Register : Screen
+    data object FirstSync : Screen
     data object Home : Screen
     data class DealEntry(val existingDealId: String? = null) : Screen
     data class PartyLedger(val partyId: String) : Screen
@@ -118,8 +122,26 @@ fun App(
                         session = newSession
                         syncScheduler.schedulePeriodicSync()
                         syncScheduler.scheduleOneTimeSync()
-                        currentScreen = Screen.Home
+                        coroutineScope.launch { syncEngine.setNeedsLogin(false) }
+                        currentScreen = Screen.FirstSync
                     }
+                )
+            }
+
+            is Screen.FirstSync -> {
+                val firstSyncViewModel = remember(shopId) {
+                    FirstSyncViewModel(
+                        shopId = shopId!!,
+                        pull = { id, p -> syncEngine.pullRemoteChanges(id, p) },
+                        viewModelScope = coroutineScope,
+                    )
+                }
+                val firstSyncState by firstSyncViewModel.state.collectAsState()
+                FirstSyncScreen(
+                    state = firstSyncState,
+                    onRetry = firstSyncViewModel::retry,
+                    onSkip = { currentScreen = Screen.Home },
+                    onDone = { currentScreen = Screen.Home },
                 )
             }
 
@@ -133,9 +155,16 @@ fun App(
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
                 }
+                val needsLogin by produceState(false, shopId) { value = syncEngine.needsLogin() }
                 HomeScreen(
                     viewModel = homeViewModel,
                     shopId = shopId!!,
+                    needsLogin = needsLogin,
+                    onReLogin = {
+                        // Data stays on the phone; AuthRepository.adopt keeps it when the same shop logs in again.
+                        sessionStore.clear()
+                        session = null
+                    },
                     snackbarHostState = snackbarHostState,
                     onNavigateToNewEntry = {
                         currentScreen = Screen.DealEntry()
