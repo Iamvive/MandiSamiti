@@ -23,6 +23,8 @@ import com.appwork.mandisamiti.ui.navigation.NavigationTab
 import com.appwork.mandisamiti.ui.settings.SettingsScreen
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.theme.MandiBackground
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 
 @Composable
 fun HomeScreen(
