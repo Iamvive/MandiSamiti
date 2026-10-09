@@ -269,6 +269,46 @@ UPDATE dealEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
 markTransactionSynced:
 UPDATE cashTransactionEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
 
+-- Applying a server row: replace only a row that has nothing unsynced; a pending local edit wins until pushed.
+-- (Default SQLDelight dialect is SQLite 3.18: no UPSERT, so delete-if-synced then insert-if-absent.)
+deleteSyncedParty:
+DELETE FROM partyEntity WHERE id = ? AND sync_status = 1;
+
+insertPartyIfAbsent:
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncedDeal:
+DELETE FROM dealEntity WHERE id = ? AND sync_status = 1;
+
+insertDealIfAbsent:
+INSERT OR IGNORE INTO dealEntity(
+    id, shop_id, farmer_id, buyer_id, commodity_id, deal_status, deal_date,
+    bags_count, gross_weight_grams, cut_weight_grams, net_weight_grams,
+    rate_paisa_per_unit, gross_amount_paisa,
+    farmer_commission_paisa, buyer_commission_paisa, labour_charge_paisa, weighing_charge_paisa, other_deductions_paisa,
+    net_farmer_payable_paisa, net_buyer_receivable_paisa,
+    receipt_photo_uri, voice_note_uri, remarks,
+    created_at, updated_at, is_deleted, sync_status,
+    farmer_commission_bps, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncedCashTransaction:
+DELETE FROM cashTransactionEntity WHERE id = ? AND sync_status = 1;
+
+insertCashTransactionIfAbsent:
+INSERT OR IGNORE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- A revision pulled from the server: already synced; ignored if we hold (id) or (entry_id, revision).
+insertRevisionFromServer:
+INSERT OR IGNORE INTO entryRevisionEntity(id, shop_id, entry_id, entry_kind, revision, change_kind, snapshot_json, void_reason, changed_at, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1);
+
+-- Ack a pushed party only if it was not edited after the push read it.
+markPartySyncedAt:
+UPDATE partyEntity SET sync_status = 1 WHERE id = ? AND updated_at = ?;
+
 -- Revision Queries
 insertRevision:
 INSERT INTO entryRevisionEntity(id, shop_id, entry_id, entry_kind, revision, change_kind, snapshot_json, void_reason, changed_at)
