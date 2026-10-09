@@ -4,7 +4,6 @@ import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 
@@ -29,8 +28,8 @@ class AuthRepository(
     /** Makes the server's shop the local one: wipes foreign/demo data, saves the profile, then the session. */
     private suspend fun adopt(dto: AuthSessionDto, phone: String): Session = withContext(ioDispatcher) {
         val shop = dto.shop
-        val localId = shopProfileRepository.getShopProfileStream().first()?.id
-        if (localId != shop.id) wiper.wipeAll()
+        // The local DB may hold several profile rows (e.g. shop_default + shop_mathura_default): any foreign row means wipe.
+        if (wiper.hasDataOutsideShop(shop.id)) wiper.wipeAll()
         val now = clock.now().toEpochMilliseconds()
         shopProfileRepository.saveShopProfile(
             ShopProfile(

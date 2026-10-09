@@ -99,6 +99,35 @@ class AuthRepositoryTest {
     }
 
     @Test
+    fun login_withTwoLocalProfiles_wipesEvenWhenOneMatchesServerShop() = runTest {
+        val f = fixture("shop-1")
+        f.seedLocalShop("shop-1")
+        f.shops.saveShopProfile(
+            ShopProfile(id = "shop_mathura_default", shopName = "Demo2", ownerName = "O", mandiName = "M", phoneNumber = "9", pinHash = "", createdAt = 1L, updatedAt = 1L)
+        )
+
+        assertTrue(f.repo.login("pass", "1234").isSuccess)
+
+        assertEquals(0, f.db.appDatabaseQueries.getAllParties("shop-1").executeAsList().size)
+        assertEquals(listOf("shop-1"), f.db.appDatabaseQueries.run { listOf(getShopProfile().executeAsOne().id) })
+    }
+
+    @Test
+    fun login_withOrphanRowsUnderOtherShop_wipes() = runTest {
+        val f = fixture("shop-1")
+        f.seedLocalShop("shop-1")
+        f.db.appDatabaseQueries.wipeShopProfiles() // parties now orphaned; shop-1 rows remain, none foreign
+        f.parties.saveParty(
+            Party(id = "p2", shopId = "other", name = "X", village = "V", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        )
+
+        assertTrue(f.repo.login("pass", "1234").isSuccess)
+
+        assertEquals(0, f.db.appDatabaseQueries.getAllParties("other").executeAsList().size)
+        assertEquals(0, f.db.appDatabaseQueries.getAllParties("shop-1").executeAsList().size)
+    }
+
+    @Test
     fun failedLogin_changesNothing() = runTest {
         val io = StandardTestDispatcher(testScheduler)
         val db = createTestDatabase()

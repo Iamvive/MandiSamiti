@@ -15,4 +15,8 @@ class LocalDataWiper(private val database: AppDatabase) {
             q.wipeShopProfiles()
         }
     }
+
+    /** True if any profile or any party/deal/cash/etc. row belongs to a shop other than [shopId]. */
+    fun hasDataOutsideShop(shopId: String): Boolean =
+        database.appDatabaseQueries.countForeignRows(shopId).executeAsOne() > 0
 }

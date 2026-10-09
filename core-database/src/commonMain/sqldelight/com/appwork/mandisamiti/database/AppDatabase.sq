@@ -292,6 +292,17 @@ SELECT (
 ) AS pending_count;
 
 
+-- Rows (deleted or not) that belong to any shop other than ?
+countForeignRows:
+SELECT (
+    (SELECT COUNT(*) FROM shopProfileEntity WHERE id != :shopId) +
+    (SELECT COUNT(*) FROM partyEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM commodityEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM dealEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM cashTransactionEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM entryRevisionEntity WHERE shop_id != :shopId)
+) AS foreign_count;
+
 -- Local data wipe (sign-out / account switch), children first
 wipeRevisions:
 DELETE FROM entryRevisionEntity;
