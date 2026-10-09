@@ -95,6 +95,7 @@ class MandiSamitiE2ETest {
 
         // Step 3: Verify Master Home Screen displays parties
         val homeViewModel = HomeViewModel(
+            shopId = shopId,
             shopProfileRepository = shopRepo,
             partyRepository = partyRepo,
             viewModelScope = backgroundScope

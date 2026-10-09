@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug only: lets the debug build reach a local backend over http (10.0.2.2 emulator host or a LAN IP).
+     Release has no network_security_config, so it keeps the platform default: cleartext blocked. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

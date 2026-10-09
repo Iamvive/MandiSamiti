@@ -1,7 +1,7 @@
 package com.appwork.mandisamiti
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,13 +10,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.appwork.mandisamiti.data.auth.AuthApi
 import com.appwork.mandisamiti.data.auth.AuthRepository
-import com.appwork.mandisamiti.data.auth.InMemorySessionStore
 import com.appwork.mandisamiti.data.auth.LocalDataWiper
-import com.appwork.mandisamiti.data.auth.mandiHttpClient
+import com.appwork.mandisamiti.data.auth.SessionStore
 import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstDealRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
+import com.appwork.mandisamiti.data.sync.SyncEngine
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
@@ -34,9 +34,11 @@ import com.appwork.mandisamiti.ui.ledger.PartyLedgerScreen
 import com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModel
 import com.appwork.mandisamiti.ui.register.DailyCashRegisterScreen
 import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
+import com.appwork.mandisamiti.ui.settings.LogoutResult
+import com.appwork.mandisamiti.ui.settings.LogoutUseCase
+import com.appwork.mandisamiti.ui.settings.logoutBlockedMessage
 import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
@@ -52,38 +54,42 @@ sealed interface Screen {
 fun App(
     database: AppDatabase,
     ttsManager: SoundboxTtsManager,
-    whatsAppShareManager: WhatsAppShareManager
+    whatsAppShareManager: WhatsAppShareManager,
+    sessionStore: SessionStore,
+    authApi: AuthApi,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val shopRepo = remember { OfflineFirstShopProfileRepository(database) }
     val partyRepo = remember { OfflineFirstPartyRepository(database) }
     val dealRepo = remember { OfflineFirstDealRepository(database) }
     val cashRepo = remember { OfflineFirstCashTransactionRepository(database) }
-    // TODO(task 10): real base URL + persistent SessionStore come from platform config.
+    val wiper = remember { LocalDataWiper(database) }
     val authRepo = remember {
         AuthRepository(
-            api = AuthApi(mandiHttpClient(), "https://api.mandisamiti.example"),
-            sessionStore = InMemorySessionStore(),
+            api = authApi,
+            sessionStore = sessionStore,
             shopProfileRepository = shopRepo,
-            wiper = LocalDataWiper(database),
+            wiper = wiper,
         )
     }
-    val cameraPicker = rememberCameraSlipPicker()
-
-    val shopId = "shop_default"
-
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Register) }
-
-    LaunchedEffect(Unit) {
-        val existingProfile = shopRepo.getShopProfileStream().firstOrNull()
-        if (existingProfile != null) {
-            currentScreen = Screen.Home
-        }
+    val logoutUseCase = remember {
+        LogoutUseCase(SyncEngine(database), authApi, sessionStore, wiper)
     }
+    val cameraPicker = rememberCameraSlipPicker()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // The stored session alone decides the start screen, synchronously: no async lookup, no Register flash.
+    var session by remember { mutableStateOf(sessionStore.current()) }
+    var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register) }
 
     MandiSamitiTheme {
-        when (val screen = currentScreen) {
+        val activeSession = session
+        // Every shop-scoped screen needs a session; without one the only place to go is Register.
+        val screen = if (activeSession == null) Screen.Register else currentScreen
+        val shopId = activeSession?.shopId
+        when (screen) {
             is Screen.Register -> {
+                // Leaving this branch drops the remembered VM, so after logout Register starts fresh at PHONE.
                 val registerViewModel = remember {
                     RegisterViewModel(
                         authRepository = authRepo,
@@ -94,14 +100,17 @@ fun App(
                 RegisterScreen(
                     viewModel = registerViewModel,
                     onRegistrationSuccess = {
+                        // AuthRepository saved the server session before reporting success.
+                        session = sessionStore.current()
                         currentScreen = Screen.Home
                     }
                 )
             }
 
             is Screen.Home -> {
-                val homeViewModel = remember {
+                val homeViewModel = remember(shopId) {
                     HomeViewModel(
+                        shopId = shopId!!,
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
                         viewModelScope = coroutineScope
@@ -109,6 +118,8 @@ fun App(
                 }
                 HomeScreen(
                     viewModel = homeViewModel,
+                    shopId = shopId!!,
+                    snackbarHostState = snackbarHostState,
                     onNavigateToNewEntry = {
                         currentScreen = Screen.DealEntry()
                     },
@@ -119,16 +130,25 @@ fun App(
                         currentScreen = Screen.DailyRegister
                     },
                     onSignOut = {
-                        currentScreen = Screen.Register
+                        coroutineScope.launch {
+                            when (val result = logoutUseCase()) {
+                                is LogoutResult.Blocked ->
+                                    snackbarHostState.showSnackbar(logoutBlockedMessage(result.pendingCount))
+                                LogoutResult.LoggedOut -> {
+                                    session = null
+                                    currentScreen = Screen.Register
+                                }
+                            }
+                        }
                     }
                 )
             }
 
             is Screen.DealEntry -> {
                 MandiBackHandler { currentScreen = Screen.Home }
-                val dealViewModel = remember(screen.existingDealId) {
+                val dealViewModel = remember(shopId, screen.existingDealId) {
                     DealEntryViewModel(
-                        shopId = shopId,
+                        shopId = shopId!!,
                         existingDealId = screen.existingDealId,
                         dealRepository = dealRepo,
                         partyRepository = partyRepo,
@@ -159,9 +179,9 @@ fun App(
 
             is Screen.PartyLedger -> {
                 MandiBackHandler { currentScreen = Screen.Home }
-                val ledgerViewModel = remember(screen.partyId) {
+                val ledgerViewModel = remember(shopId, screen.partyId) {
                     PartyLedgerViewModel(
-                        shopId = shopId,
+                        shopId = shopId!!,
                         partyId = screen.partyId,
                         partyRepository = partyRepo,
                         cashRepository = cashRepo,
@@ -196,9 +216,9 @@ fun App(
 
             is Screen.DailyRegister -> {
                 MandiBackHandler { currentScreen = Screen.Home }
-                val registerViewModel = remember {
+                val registerViewModel = remember(shopId) {
                     DailyRegisterViewModel(
-                        shopId = shopId,
+                        shopId = shopId!!,
                         cashRepository = cashRepo,
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,

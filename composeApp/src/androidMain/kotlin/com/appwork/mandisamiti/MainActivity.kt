@@ -4,10 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
+import com.appwork.mandisamiti.data.auth.AndroidSessionStore
+import com.appwork.mandisamiti.data.auth.AuthApi
+import com.appwork.mandisamiti.data.auth.mandiHttpClient
 import com.appwork.mandisamiti.database.DriverFactory
 import com.appwork.mandisamiti.database.createDatabase
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
+import com.appwork.mandisamiti.platform.apiBaseUrl
 
 class MainActivity : ComponentActivity() {
 
@@ -20,12 +24,16 @@ class MainActivity : ComponentActivity() {
         val database = createDatabase(DriverFactory(applicationContext))
         ttsManager = SoundboxTtsManager(applicationContext)
         val whatsAppShareManager = WhatsAppShareManager(applicationContext)
+        val sessionStore = AndroidSessionStore(applicationContext)
+        val authApi = AuthApi(mandiHttpClient(), apiBaseUrl)
 
         setContent {
             App(
                 database = database,
                 ttsManager = ttsManager,
-                whatsAppShareManager = whatsAppShareManager
+                whatsAppShareManager = whatsAppShareManager,
+                sessionStore = sessionStore,
+                authApi = authApi
             )
         }
     }

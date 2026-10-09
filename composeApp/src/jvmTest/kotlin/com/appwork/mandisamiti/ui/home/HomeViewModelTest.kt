@@ -8,6 +8,7 @@ import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -64,6 +65,7 @@ class HomeViewModelTest {
         )
 
         val viewModel = HomeViewModel(
+            shopId = shopId,
             shopProfileRepository = shopRepo,
             partyRepository = partyRepo,
             viewModelScope = backgroundScope
@@ -90,5 +92,38 @@ class HomeViewModelTest {
             assertEquals(2, resetState.filteredParties.size)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    /** BUG-1/BUG-2: the khata list follows the session shop id, not whichever profile row comes first. */
+    @Test
+    fun partiesComeFromSessionShopNotFromFirstProfileRow() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+
+        // A leftover demo profile is the only profile row; the session belongs to the server shop.
+        shopRepo.saveShopProfile(
+            ShopProfile(
+                id = "legacy-demo", shopName = "Demo", ownerName = "O", mandiName = "M",
+                phoneNumber = "9", pinHash = "", createdAt = 1L, updatedAt = 1L
+            )
+        )
+        partyRepo.saveParty(
+            Party(id = "p-legacy", shopId = "legacy-demo", name = "पुराना", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        )
+        partyRepo.saveParty(
+            Party(id = "p-server", shopId = "srv-shop", name = "रामवीर", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        )
+
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val state = viewModel.uiState.first { !it.isLoading && it.allParties.isNotEmpty() }
+        assertEquals(listOf("p-server"), state.allParties.map { it.party.id })
     }
 }

@@ -151,7 +151,8 @@ class SyncEngine(
         }
     }
 
-    suspend fun pullRemoteChanges(sinceMs: Long): Result<Int> = withContext(ioDispatcher) {
+    /** Merges server rows into the local DB under [shopId], the signed-in session's server shop id. */
+    suspend fun pullRemoteChanges(sinceMs: Long, shopId: String): Result<Int> = withContext(ioDispatcher) {
         val client = apiClient ?: return@withContext Result.failure(IllegalStateException("No remote API client configured"))
 
         client.pullSync(sinceMs).map { res ->
@@ -159,7 +160,7 @@ class SyncEngine(
                 res.parties.forEach { p ->
                     queries.insertParty(
                         id = p.id,
-                        shop_id = "shop_default",
+                        shop_id = shopId,
                         name = p.name,
                         phone = p.phone,
                         village = p.village,
@@ -177,10 +178,10 @@ class SyncEngine(
         }
     }
 
-    suspend fun syncFull(sinceMs: Long): SyncResult = withContext(ioDispatcher) {
+    suspend fun syncFull(sinceMs: Long, shopId: String): SyncResult = withContext(ioDispatcher) {
         try {
             val pushed = pushPendingChanges().getOrThrow()
-            val pulled = pullRemoteChanges(sinceMs).getOrThrow()
+            val pulled = pullRemoteChanges(sinceMs, shopId).getOrThrow()
             SyncResult.Success(pushedCount = pushed, pulledCount = pulled, syncTimeMs = sinceMs)
         } catch (t: Throwable) {
             SyncResult.Failure(t)

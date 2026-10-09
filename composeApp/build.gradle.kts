@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
@@ -71,6 +73,13 @@ android {
         versionName = "2.0.0"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // KMP maps androidDebug -> android "debug" too late for the manifest merger; set the overlay explicitly.
+    sourceSets.getByName("debug").manifest.srcFile("src/androidDebug/AndroidManifest.xml")
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -80,6 +89,14 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
+        }
+        getByName("debug") {
+            val localProps = Properties().apply {
+                rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+            }
+            val debugUrl = localProps.getProperty("mandi.apiBaseUrl") ?: "http://10.0.2.2:8000"
+            buildConfigField("String", "API_BASE_URL", "\"$debugUrl\"")
         }
     }
     compileOptions {

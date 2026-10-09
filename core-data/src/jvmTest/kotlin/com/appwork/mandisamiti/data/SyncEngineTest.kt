@@ -137,10 +137,10 @@ class SyncEngineTest {
             )
         )
 
-        val pullResult = syncEngine.pullRemoteChanges(1000L)
+        val pullResult = syncEngine.pullRemoteChanges(sinceMs = 1000L, shopId = "srv-shop-7")
         assertTrue(pullResult.isSuccess)
 
-        val localParties = partyRepo.getPartiesStream("shop_default").first()
+        val localParties = partyRepo.getPartiesStream("srv-shop-7").first()
         assertEquals(1, localParties.size)
         assertEquals("सुरेश कुमार", localParties[0].name)
         assertEquals("बलदेव", localParties[0].village)

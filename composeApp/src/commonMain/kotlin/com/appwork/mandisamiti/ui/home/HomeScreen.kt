@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
@@ -23,11 +26,13 @@ import com.appwork.mandisamiti.ui.theme.MandiBackground
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    shopId: String,
     onNavigateToNewEntry: () -> Unit,
     onNavigateToPartyKhata: (Party) -> Unit,
     onNavigateToDayClosing: () -> Unit,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -59,6 +64,7 @@ fun HomeScreen(
                 isEnglish = uiState.isEnglish
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MandiBackground
     ) { paddingValues ->
         Box(
@@ -88,7 +94,7 @@ fun HomeScreen(
                             onNavigateToPartyKhata(
                                 Party(
                                     id = "new_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}",
-                                    shopId = uiState.shopProfile?.id ?: "shop_default",
+                                    shopId = shopId,
                                     name = "",
                                     partyType = PartyType.FARMER,
                                     createdAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),

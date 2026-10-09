@@ -38,7 +38,7 @@ enum class ActiveInputField {
 
 data class DealEntryUiState(
     val dealId: String? = null,
-    val shopId: String = "shop-1",
+    val shopId: String = "",
     val isEditMode: Boolean = false,
     val isSoundEnabled: Boolean = true,
     val selectedFarmer: Party? = null,

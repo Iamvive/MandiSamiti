@@ -45,6 +45,7 @@ data class HomeUiState(
 }
 
 class HomeViewModel(
+    private val shopId: String,
     private val shopProfileRepository: ShopProfileRepository,
     private val partyRepository: PartyRepository,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
@@ -57,15 +58,12 @@ class HomeViewModel(
         loadShopProfileAndParties()
     }
 
+    /** Parties always follow the session's [shopId]; the profile row is only used for display. */
     private fun loadShopProfileAndParties() {
         shopProfileRepository.getShopProfileStream()
-            .onEach { profile ->
-                _uiState.value = _uiState.value.copy(shopProfile = profile)
-                if (profile != null) {
-                    observeParties(profile.id)
-                }
-            }
+            .onEach { profile -> _uiState.value = _uiState.value.copy(shopProfile = profile) }
             .launchIn(viewModelScope)
+        observeParties(shopId)
     }
 
     private var partyBalanceJobs = mutableListOf<kotlinx.coroutines.Job>()
