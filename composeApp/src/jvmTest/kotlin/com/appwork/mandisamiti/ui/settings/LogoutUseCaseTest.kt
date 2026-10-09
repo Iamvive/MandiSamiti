@@ -116,4 +116,30 @@ class LogoutUseCaseTest {
         assertNull(f.store.current())
         assertEquals(0, f.db.partyCount())
     }
+
+    @Test
+    fun sessionIsClearedBeforeLocalDataIsWiped() = runTest {
+        val f = fixture()
+        f.db.appDatabaseQueries.markPartySynced("farmer-1")
+        var partiesAtClear = -1
+        val recordingStore = object : com.appwork.mandisamiti.data.auth.SessionStore by f.store {
+            override fun clear() {
+                partiesAtClear = f.db.partyCount()
+                f.store.clear()
+            }
+        }
+        val logout = LogoutUseCase(
+            syncEngine = SyncEngine(f.db, ioDispatcher = StandardTestDispatcher(testScheduler)),
+            authApi = AuthApi(mandiHttpClient(MockEngine { respond("", HttpStatusCode.NoContent) }), "https://api.test"),
+            sessionStore = recordingStore,
+            wiper = LocalDataWiper(f.db),
+        )
+
+        assertEquals(LogoutResult.LoggedOut, logout())
+
+        // A crash between the two steps must leave "no session" (safe), never "session but empty DB".
+        assertEquals(1, partiesAtClear, "session must be cleared while local data still exists")
+        assertNull(f.store.current())
+        assertEquals(0, f.db.partyCount())
+    }
 }

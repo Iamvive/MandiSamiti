@@ -39,6 +39,7 @@ import com.appwork.mandisamiti.ui.settings.LogoutUseCase
 import com.appwork.mandisamiti.ui.settings.logoutBlockedMessage
 import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
@@ -81,6 +82,7 @@ fun App(
     // The stored session alone decides the start screen, synchronously: no async lookup, no Register flash.
     var session by remember { mutableStateOf(sessionStore.current()) }
     var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register) }
+    var signOutInFlight by remember { mutableStateOf(false) }
 
     MandiSamitiTheme {
         val activeSession = session
@@ -130,13 +132,25 @@ fun App(
                         currentScreen = Screen.DailyRegister
                     },
                     onSignOut = {
-                        coroutineScope.launch {
-                            when (val result = logoutUseCase()) {
-                                is LogoutResult.Blocked ->
-                                    snackbarHostState.showSnackbar(logoutBlockedMessage(result.pendingCount))
-                                LogoutResult.LoggedOut -> {
-                                    session = null
-                                    currentScreen = Screen.Register
+                        // Ignore a second tap while a sign-out is already running.
+                        if (!signOutInFlight) {
+                            signOutInFlight = true
+                            coroutineScope.launch {
+                                try {
+                                    when (val result = logoutUseCase()) {
+                                        is LogoutResult.Blocked ->
+                                            snackbarHostState.showSnackbar(logoutBlockedMessage(result.pendingCount))
+                                        LogoutResult.LoggedOut -> {
+                                            session = null
+                                            currentScreen = Screen.Register
+                                        }
+                                    }
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("लॉगआउट नहीं हो सका — दोबारा कोशिश करें")
+                                } finally {
+                                    signOutInFlight = false
                                 }
                             }
                         }

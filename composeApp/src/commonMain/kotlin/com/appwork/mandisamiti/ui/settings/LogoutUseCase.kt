@@ -16,7 +16,7 @@ fun logoutBlockedMessage(pendingCount: Long): String =
 
 /**
  * Signs out without losing data: refuses while any local entry is unsynced, otherwise
- * revokes the refresh token (best effort), wipes local rows, then clears the session.
+ * revokes the refresh token (best effort), clears the session, then wipes local rows.
  */
 class LogoutUseCase(
     private val syncEngine: SyncEngine,
@@ -30,8 +30,10 @@ class LogoutUseCase(
 
         // Best effort: a network failure must not block, the local token is cleared below anyway.
         sessionStore.current()?.refreshToken?.let { authApi.logout(it) }
-        wiper.wipeAll()
+        // Session first: no session means no new writes, so a crash before the wipe leaves
+        // "no session, stale data" (cleaned on next login) rather than "session, empty DB".
         sessionStore.clear()
+        wiper.wipeAll()
         return LogoutResult.LoggedOut
     }
 }
