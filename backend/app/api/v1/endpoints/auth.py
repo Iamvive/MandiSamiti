@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 from app.database import get_db
 from app.models.user import User, ShopProfile
 from app.models.refresh_token import RefreshToken
@@ -84,7 +85,7 @@ def _is_bcrypt(mpin_hash: str | None) -> bool:
 
 async def _reset_legacy_user(db: AsyncSession, user: User, req: SignupRequest) -> AuthSession:
     """Legacy (SHA-256 / missing) hash: set a bcrypt MPIN in place and KEEP the shop_id so server data stays attached."""
-    user.mpin_hash = get_password_hash(req.mpin)
+    user.mpin_hash = await run_in_threadpool(get_password_hash, req.mpin)
     user.name = req.owner_name
     shop = None
     if user.shop_id:
@@ -142,7 +143,7 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db), redis=D
     )
     user = User(
         phone_number=phone, name=req.owner_name, role="OWNER", shop_id=shop.id,
-        mpin_hash=get_password_hash(req.mpin),
+        mpin_hash=await run_in_threadpool(get_password_hash, req.mpin),
     )
     db.add(shop)
     await db.flush()
@@ -179,7 +180,10 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db), redis=Dep
         raise _unauthorized({"code": "PASS_BURNED"})
 
     user = (await db.execute(select(User).where(User.phone_number == payload["phone"]))).scalars().first()
-    ok = bool(user and user.is_active and user.mpin_hash and verify_password(req.mpin, user.mpin_hash))
+    ok = bool(
+        user and user.is_active and user.mpin_hash
+        and await run_in_threadpool(verify_password, req.mpin, user.mpin_hash)
+    )
     if not ok:
         if attempts >= MAX_MPIN_FAILS:
             await _consume_pass(redis, jti)  # burn the pass

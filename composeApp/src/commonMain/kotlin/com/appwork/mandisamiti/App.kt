@@ -101,9 +101,9 @@ fun App(
                 }
                 RegisterScreen(
                     viewModel = registerViewModel,
-                    onRegistrationSuccess = {
-                        // AuthRepository saved the server session before reporting success.
-                        session = sessionStore.current()
+                    onRegistrationSuccess = { newSession ->
+                        // Use the session AuthRepository returned (already saved): no read-back that could fail silently.
+                        session = newSession
                         currentScreen = Screen.Home
                     }
                 )

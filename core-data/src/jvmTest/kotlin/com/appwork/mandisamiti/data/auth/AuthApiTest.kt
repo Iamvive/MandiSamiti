@@ -104,8 +104,8 @@ class AuthApiTest {
             api { json(HttpStatusCode.Conflict, "{}") }.signup("p", "s", "o", "m", "1").error(),
         )
         assertEquals(
-            AuthError.PassBurned,
-            api { json(HttpStatusCode.Unauthorized, """{"detail":"invalid"}""") }.signup("p", "s", "o", "m", "1").error(),
+            AuthError.PassExpired,
+            api { json(HttpStatusCode.Unauthorized, """{"detail":"INVALID_PASS"}""") }.signup("p", "s", "o", "m", "1").error(),
         )
     }
 
@@ -123,10 +123,10 @@ class AuthApiTest {
     }
 
     @Test
-    fun login_deadPass_variants_mapToPassBurned() = runTest {
+    fun login_deadPass_variants_mapToPassExpired() = runTest {
         for (body in listOf("""{"detail":"INVALID_PASS"}""", """{"detail":{"code":"WHATEVER"}}""", "not json")) {
             val r = api { json(HttpStatusCode.Unauthorized, body) }.login("lp", "1")
-            assertEquals(AuthError.PassBurned, r.error(), body)
+            assertEquals(AuthError.PassExpired, r.error(), body)
         }
     }
 

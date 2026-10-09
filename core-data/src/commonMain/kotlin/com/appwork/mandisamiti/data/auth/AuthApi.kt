@@ -65,7 +65,7 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
     ): Result<AuthSessionDto> =
         call("signup", SignupRequest(signupPass, shopName, ownerName, mandiName, mpin), { status, _ ->
             when (status) {
-                HttpStatusCode.Unauthorized -> AuthError.PassBurned
+                HttpStatusCode.Unauthorized -> AuthError.PassExpired
                 HttpStatusCode.Conflict -> AuthError.PhoneAlreadyRegistered
                 else -> null
             }
@@ -78,8 +78,9 @@ class AuthApi(private val http: HttpClient, private val baseUrl: String) {
                 when (detail?.get("code")?.jsonPrimitive?.contentOrNull) {
                     "MPIN_INVALID" -> AuthError.MpinInvalid(detail["attempts_left"]?.jsonPrimitive?.intOrNull ?: 0)
                     "ACCOUNT_LOCKED" -> AuthError.AccountLocked
-                    // PASS_BURNED, plain "INVALID_PASS", or any unrecognised 401: the pass is dead.
-                    else -> AuthError.PassBurned
+                    "PASS_BURNED" -> AuthError.PassBurned
+                    // plain "INVALID_PASS" (expired/used pass) or any unrecognised 401: the pass is dead.
+                    else -> AuthError.PassExpired
                 }
             } else null
         }) { it.body<AuthSessionDto>() }

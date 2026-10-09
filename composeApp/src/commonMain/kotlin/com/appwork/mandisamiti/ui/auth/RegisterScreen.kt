@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.auth
 
 import androidx.compose.foundation.background
+import com.appwork.mandisamiti.data.auth.Session
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -87,14 +88,14 @@ import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel,
-    onRegistrationSuccess: () -> Unit
+    onRegistrationSuccess: (Session) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(uiState.isRegistrationComplete) {
-        if (uiState.isRegistrationComplete) {
-            onRegistrationSuccess()
+    LaunchedEffect(uiState.completedSession) {
+        uiState.completedSession?.let {
+            onRegistrationSuccess(it)
         }
     }
 

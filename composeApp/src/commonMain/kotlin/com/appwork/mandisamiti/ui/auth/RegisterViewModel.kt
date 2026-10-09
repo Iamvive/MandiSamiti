@@ -3,6 +3,7 @@ package com.appwork.mandisamiti.ui.auth
 import com.appwork.mandisamiti.data.auth.AuthError
 import com.appwork.mandisamiti.data.auth.AuthRepository
 import com.appwork.mandisamiti.data.auth.OtpVerifyResult
+import com.appwork.mandisamiti.data.auth.Session
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -47,7 +48,9 @@ data class RegisterUiState(
     
     // Progress Status
     val isLoading: Boolean = false,
-    val isRegistrationComplete: Boolean = false
+    val isRegistrationComplete: Boolean = false,
+    /** The session AuthRepository saved; handed to App so it never re-reads the store. */
+    val completedSession: Session? = null
 ) {
     val isStep1Valid: Boolean
         get() = phoneNumber.length == 10 &&
@@ -260,10 +263,10 @@ class RegisterViewModel(
         _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
             authRepository.signup(pass, s.shopName.trim(), s.ownerName.trim(), s.mandiName.trim(), s.mpin).fold(
-                onSuccess = {
+                onSuccess = { session ->
                     signupPass = null
                     ttsManager.speak("नमस्ते ${s.ownerName} जी, आपकी फर्म ${s.shopName} का पंजीयन सफल रहा।", isSoundEnabled = true)
-                    _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true) }
+                    _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true, completedSession = session) }
                 },
                 onFailure = { fail(it) }
             )
@@ -287,9 +290,9 @@ class RegisterViewModel(
         _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
             authRepository.login(pass, s.mpin).fold(
-                onSuccess = {
+                onSuccess = { session ->
                     loginPass = null
-                    _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true) }
+                    _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true, completedSession = session) }
                 },
                 onFailure = { fail(it) }
             )
@@ -309,6 +312,8 @@ class RegisterViewModel(
             }
             is AuthError.PassBurned ->
                 resetToPhone(if (step == AuthStep.NEW_SHOP) "समय समाप्त — दोबारा OTP लें" else "बहुत गलत MPIN — दोबारा OTP लें")
+            is AuthError.PassExpired ->
+                resetToPhone("समय समाप्त — दोबारा OTP लें")
             is AuthError.AccountLocked ->
                 resetToPhone("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें")
             is AuthError.Invalid ->

@@ -29,6 +29,8 @@ sealed class AuthError(message: String) : Exception(message) {
     object RateLimited : AuthError("RATE_LIMITED")
     data class MpinInvalid(val attemptsLeft: Int) : AuthError("MPIN_INVALID")
     object PassBurned : AuthError("PASS_BURNED")
+    /** Pass expired or unknown (INVALID_PASS / unrecognised 401): get a fresh OTP. */
+    object PassExpired : AuthError("PASS_EXPIRED")
     /** Too many wrong MPINs for this phone across passes; server locks it for 24h. */
     object AccountLocked : AuthError("ACCOUNT_LOCKED")
     object PhoneAlreadyRegistered : AuthError("PHONE_ALREADY_REGISTERED")

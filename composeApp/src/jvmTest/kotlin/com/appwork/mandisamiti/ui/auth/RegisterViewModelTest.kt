@@ -450,4 +450,32 @@ class RegisterViewModelTest {
         assertEquals(false, s.isRegistrationComplete)
         assertEquals(1, f.db.appDatabaseQueries.getAllParties("other-shop").executeAsList().size)
     }
+
+    @Test
+    fun login_expiredPass_showsTimeUpMessage_notWrongMpin() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.Unauthorized, """{"detail":"INVALID_PASS"}""") else verifyBody(p, "EXISTING")
+        }
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4826")
+        f.clock.tap(); f.vm.submitMpin()
+
+        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals("समय समाप्त — दोबारा OTP लें", s.generalErrorMessage)
+    }
+
+    @Test
+    fun login_success_exposesSessionFromRepository() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+        }
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4826")
+        f.clock.tap(); f.vm.submitMpin()
+
+        val s = f.vm.uiState.first { it.isRegistrationComplete }
+        assertEquals(com.appwork.mandisamiti.data.auth.Session("s1", "a", "r"), s.completedSession)
+    }
 }
