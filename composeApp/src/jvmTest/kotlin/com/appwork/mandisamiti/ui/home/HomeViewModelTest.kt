@@ -180,4 +180,22 @@ class HomeViewModelTest {
 
         assertEquals(1, writes)
     }
+
+    @Test
+    fun createPartyRefusesAnInvalidPhoneAndSavesNothing() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher),
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            viewModel.createParty("रामवीर", null, "98765432101234567", PartyType.FARMER)
+        }
+        assertEquals(0, database.appDatabaseQueries.getAllParties("srv-shop").executeAsList().size)
+    }
 }

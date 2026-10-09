@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.home
 
+import com.appwork.mandisamiti.ui.ledger.isValidPartyPhone
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
@@ -165,13 +166,15 @@ class HomeViewModel(
     ): Party {
         val cleanName = name.trim()
         require(cleanName.isNotBlank()) { "Party name cannot be blank" }
+        val cleanPhone = phoneNumber?.trim()?.ifBlank { null }
+        require(cleanPhone == null || isValidPartyPhone(cleanPhone)) { "Party phone must be a 10-digit mobile number" }
         val now = Clock.System.now().toEpochMilliseconds()
         val newParty = Party(
             id = IdGenerator.newId(),
             shopId = shopId,
             name = cleanName,
             village = village?.trim()?.ifBlank { null },
-            phone = phoneNumber?.trim()?.ifBlank { null },
+            phone = cleanPhone,
             partyType = partyType,
             createdAt = now,
             updatedAt = now

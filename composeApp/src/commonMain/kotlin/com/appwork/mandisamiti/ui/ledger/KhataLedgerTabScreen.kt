@@ -24,6 +24,9 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -227,7 +230,7 @@ fun KhataLedgerTabScreen(
                 Text(
                     text = if (isEnglish) "Create New Account" else "नया खाता बनाएं",
                     fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
@@ -267,10 +270,16 @@ fun KhataLedgerTabScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    val phoneInvalid = !isValidPartyPhone(partyPhoneInput)
                     OutlinedTextField(
                         value = partyPhoneInput,
-                        onValueChange = { partyPhoneInput = it },
+                        onValueChange = { partyPhoneInput = sanitizePartyPhone(it) },
                         label = { Text(if (isEnglish) "Mobile Number" else "मोबाइल नंबर (वैकल्पिक)") },
+                        isError = phoneInvalid,
+                        supportingText = if (phoneInvalid) {
+                            { Text(if (isEnglish) "Enter a 10-digit mobile number" else "10 अंकों का मोबाइल नंबर डालें (6–9 से शुरू)") }
+                        } else null,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -280,7 +289,7 @@ fun KhataLedgerTabScreen(
                 Button(
                     onClick = {
                         val trimmedName = partyNameInput.trim()
-                        if (trimmedName.isNotBlank()) {
+                        if (trimmedName.isNotBlank() && isValidPartyPhone(partyPhoneInput)) {
                             onCreateParty(
                                 trimmedName,
                                 partyVillageInput.trim().ifBlank { null },
@@ -293,7 +302,7 @@ fun KhataLedgerTabScreen(
                             partyPhoneInput = ""
                         }
                     },
-                    enabled = partyNameInput.trim().isNotBlank(),
+                    enabled = partyNameInput.trim().isNotBlank() && isValidPartyPhone(partyPhoneInput),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MandiPrimaryAction,
                         contentColor = MandiPrimaryActionText
@@ -317,7 +326,7 @@ fun KhataLedgerTabScreen(
                 ) {
                     Text(
                         text = if (isEnglish) "Cancel" else "रद्द करें",
-                        color = MandiTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
