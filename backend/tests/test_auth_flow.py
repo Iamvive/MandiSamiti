@@ -146,3 +146,41 @@ async def test_pass_and_refresh_tokens_are_not_bearer_tokens(client):
     for tok in (v["login_pass"], s["refresh_token"]):
         r = await client.get("/api/v1/sync/pull", headers={"Authorization": f"Bearer {tok}"})
         assert r.status_code == 401
+
+async def _seed_legacy_user(db_sessionmaker, phone, mpin_hash):
+    import hashlib
+    from app.models.user import User, ShopProfile
+    async with db_sessionmaker() as s:
+        shop = ShopProfile(id="legacy-shop-1", shop_name="पुरानी दुकान", owner_name="पुराना", mandi_name="पुरानी मंडी", phone_number=phone)
+        s.add(shop)
+        await s.flush()
+        s.add(User(phone_number=phone, name="पुराना", role="OWNER", shop_id=shop.id,
+                   mpin_hash=mpin_hash if mpin_hash != "sha" else hashlib.sha256(b"4826").hexdigest()))
+        await s.commit()
+
+@pytest.mark.parametrize("legacy_hash", ["sha", None])
+@pytest.mark.asyncio
+async def test_legacy_hash_user_resignups_keeping_shop_id_then_logs_in(client, db_sessionmaker, legacy_hash):
+    await _seed_legacy_user(db_sessionmaker, P, legacy_hash)
+    v = await otp(client)
+    assert v["status"] == "NEW" and v["signup_pass"]
+    r = await client.post("/api/v1/auth/signup", json={
+        "signup_pass": v["signup_pass"], "shop_name": "नई दुकान", "owner_name": "रमेश",
+        "mandi_name": "मथुरा मंडी", "mpin": "1357"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["shop"]["id"] == "legacy-shop-1"
+    assert body["shop"]["shop_name"] == "नई दुकान" and body["shop"]["mandi_name"] == "मथुरा मंडी"
+    v2 = await otp(client)
+    assert v2["status"] == "EXISTING"
+    r = await client.post("/api/v1/auth/login", json={"login_pass": v2["login_pass"], "mpin": "1357"})
+    assert r.status_code == 200 and r.json()["shop"]["id"] == "legacy-shop-1"
+
+@pytest.mark.asyncio
+async def test_bcrypt_user_signup_still_409(client):
+    await signup(client)
+    from app.core.security import create_pass_token
+    sp, _ = create_pass_token("signup_pass", P)
+    r = await client.post("/api/v1/auth/signup", json={
+        "signup_pass": sp, "shop_name": "अ", "owner_name": "ब", "mandi_name": "स", "mpin": "1111"})
+    assert r.status_code == 409

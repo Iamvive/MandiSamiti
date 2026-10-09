@@ -78,6 +78,28 @@ async def _issue_session(db: AsyncSession, user: User, shop: ShopProfile) -> Aut
     )
 
 
+def _is_bcrypt(mpin_hash: str | None) -> bool:
+    return bool(mpin_hash) and mpin_hash.startswith("$2")
+
+
+async def _reset_legacy_user(db: AsyncSession, user: User, req: SignupRequest) -> AuthSession:
+    """Legacy (SHA-256 / missing) hash: set a bcrypt MPIN in place and KEEP the shop_id so server data stays attached."""
+    user.mpin_hash = get_password_hash(req.mpin)
+    user.name = req.owner_name
+    shop = None
+    if user.shop_id:
+        shop = (await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))).scalars().first()
+    if shop is None:
+        shop = ShopProfile(id=user.shop_id or str(uuid.uuid4()), phone_number=user.phone_number, shop_name=req.shop_name)
+        db.add(shop)
+        user.shop_id = shop.id
+    shop.shop_name = req.shop_name
+    shop.owner_name = req.owner_name
+    shop.mandi_name = req.mandi_name
+    await db.flush()
+    return await _issue_session(db, user, shop)
+
+
 @router.post("/otp/send", response_model=SendOtpResponse)
 async def send_otp(req: SendOtpRequest, redis=Depends(get_redis), sender: OtpSender = Depends(get_otp_sender)):
     phone = _clean_phone(req.phone)
@@ -94,8 +116,9 @@ async def verify_otp(req: VerifyOtpRequest, db: AsyncSession = Depends(get_db), 
     phone = _clean_phone(req.phone)
     if not await _otp_service(redis).verify(phone, req.otp):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="OTP_INVALID")
-    exists = (await db.execute(select(User.id).where(User.phone_number == phone))).first()
-    if exists:
+    mpin_hash = (await db.execute(select(User.mpin_hash).where(User.phone_number == phone))).first()
+    # A pre-bcrypt (or missing) hash can never verify: treat as NEW so signup can re-set the MPIN.
+    if mpin_hash and _is_bcrypt(mpin_hash[0]):
         token, _ = create_pass_token("login_pass", phone)
         return VerifyOtpResponse(status="EXISTING", login_pass=token)
     token, _ = create_pass_token("signup_pass", phone)
@@ -108,8 +131,11 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db), redis=D
     phone = payload["phone"]
     if not await _consume_pass(redis, payload["jti"]):
         raise _unauthorized()
-    if (await db.execute(select(User.id).where(User.phone_number == phone))).first():
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="PHONE_EXISTS")
+    existing = (await db.execute(select(User).where(User.phone_number == phone))).scalars().first()
+    if existing:
+        if _is_bcrypt(existing.mpin_hash):
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="PHONE_EXISTS")
+        return await _reset_legacy_user(db, existing, req)
     shop = ShopProfile(
         id=str(uuid.uuid4()), shop_name=req.shop_name, owner_name=req.owner_name,
         mandi_name=req.mandi_name, phone_number=phone,
