@@ -20,6 +20,7 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -282,6 +283,7 @@ class RegisterViewModelTest {
         f.vm.goBackToPhone()
         f.clock.tap(); f.vm.submitNewShop()
 
+        advanceUntilIdle()
         assertEquals(0, f.count("signup"))
         assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
         assertEquals("समय समाप्त — दोबारा OTP लें", f.vm.uiState.value.generalErrorMessage)
@@ -302,8 +304,10 @@ class RegisterViewModelTest {
         f.vm.onMpinChanged("0000")
         f.clock.tap(); f.vm.submitMpin()
 
+        advanceUntilIdle()
         assertEquals(1, f.count("login"))
         assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
+        assertEquals("बहुत गलत MPIN — दोबारा OTP लें", f.vm.uiState.value.generalErrorMessage)
     }
 
     private fun newShopCase(shop: String, owner: String, mpin: String, confirm: String) = runTest {
@@ -312,6 +316,7 @@ class RegisterViewModelTest {
         f.fillShop(shop, owner, mpin, confirm)
         f.clock.tap(); f.vm.submitNewShop()
 
+        advanceUntilIdle()
         assertEquals(0, f.count("signup"))
         assertEquals(AuthStep.NEW_SHOP, f.vm.uiState.value.step)
         assertEquals(false, f.vm.uiState.value.isRegistrationComplete)
@@ -328,6 +333,7 @@ class RegisterViewModelTest {
         f.vm.onPhoneNumberChanged(number)
         f.clock.tap(); f.vm.submitPhone()
 
+        advanceUntilIdle()
         assertEquals(0, f.count("otp/send"))
         assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
         assertTrue(f.vm.uiState.value.generalErrorMessage != null)
@@ -346,6 +352,7 @@ class RegisterViewModelTest {
         f.vm.onMpinChanged("123")
         f.clock.tap(); f.vm.submitMpin()
 
+        advanceUntilIdle()
         assertEquals(0, f.count("login"))
         assertEquals(AuthStep.ENTER_MPIN, f.vm.uiState.value.step)
         assertTrue(f.vm.uiState.value.generalErrorMessage != null)
