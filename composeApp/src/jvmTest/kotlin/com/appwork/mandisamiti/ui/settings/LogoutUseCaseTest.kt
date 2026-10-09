@@ -5,14 +5,17 @@ import com.appwork.mandisamiti.data.auth.InMemorySessionStore
 import com.appwork.mandisamiti.data.auth.LocalDataWiper
 import com.appwork.mandisamiti.data.auth.Session
 import com.appwork.mandisamiti.data.auth.mandiHttpClient
+import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
 import com.appwork.mandisamiti.data.sync.SyncEngine
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.createTestDatabase
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.TransactionType
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -141,5 +144,51 @@ class LogoutUseCaseTest {
         assertEquals(1, partiesAtClear, "session must be cleared while local data still exists")
         assertNull(f.store.current())
         assertEquals(0, f.db.partyCount())
+    }
+
+    @Test
+    fun oneCashEntryReportsOneEntryNotRows() = runTest {
+        val f = fixture()
+        f.db.appDatabaseQueries.markPartySynced("farmer-1")
+        OfflineFirstCashTransactionRepository(f.db, StandardTestDispatcher(testScheduler)).recordTransaction(
+            CashTransaction(
+                id = "tx-1", shopId = shopId, partyId = "farmer-1",
+                transactionType = TransactionType.UDHAR_GIVEN, amountPaisa = 100_00L,
+                transactionDate = 1L, createdAt = 1L, updatedAt = 1L
+            )
+        )
+        // Row + its revision are both unsynced (the old count was 2)
+        assertEquals(1, f.db.appDatabaseQueries.getPendingSyncTransactions().executeAsList().size)
+        assertEquals(1, f.db.appDatabaseQueries.getPendingSyncRevisions().executeAsList().size)
+
+        val result = f.logout()
+
+        assertEquals(LogoutResult.Blocked(1), result)
+        assertEquals(session, f.store.current())
+        assertEquals(1, f.db.partyCount())
+        assertEquals(1, f.db.appDatabaseQueries.getPendingSyncTransactions().executeAsList().size)
+    }
+
+    @Test
+    fun pendingRevisionAloneStillBlocksLogout() = runTest {
+        val f = fixture()
+        val q = f.db.appDatabaseQueries
+        q.markPartySynced("farmer-1")
+        OfflineFirstCashTransactionRepository(f.db, StandardTestDispatcher(testScheduler)).recordTransaction(
+            CashTransaction(
+                id = "tx-1", shopId = shopId, partyId = "farmer-1",
+                transactionType = TransactionType.UDHAR_GIVEN, amountPaisa = 100_00L,
+                transactionDate = 1L, createdAt = 1L, updatedAt = 1L
+            )
+        )
+        q.markTransactionSynced("tx-1", 1L)
+        assertEquals(0, q.getPendingSyncTransactions().executeAsList().size)
+        assertEquals(1, q.getPendingSyncRevisions().executeAsList().size)
+
+        val result = f.logout()
+
+        assertTrue(result is LogoutResult.Blocked, "unsynced revision must block logout, was $result")
+        assertEquals(session, f.store.current())
+        assertEquals(1, f.db.partyCount())
     }
 }

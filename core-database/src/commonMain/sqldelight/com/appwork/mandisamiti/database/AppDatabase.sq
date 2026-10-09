@@ -292,6 +292,18 @@ SELECT (
 ) AS pending_count;
 
 
+-- User-facing count: distinct unsynced entries (a row and its revision count once); excludes the shop profile
+getPendingEntryCount:
+SELECT COUNT(*) FROM (
+    SELECT id FROM partyEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM dealEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM cashTransactionEntity WHERE sync_status = 0
+    UNION
+    SELECT entry_id FROM entryRevisionEntity WHERE sync_status = 0
+);
+
 -- Rows (deleted or not) that belong to any shop other than ?
 countForeignRows:
 SELECT (

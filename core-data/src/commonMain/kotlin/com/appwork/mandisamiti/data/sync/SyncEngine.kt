@@ -48,6 +48,11 @@ class SyncEngine(
         queries.getPendingSyncCount().executeAsOne()
     }
 
+    /** Distinct unsynced user entries (what the user sees); [getPendingCount] stays the broad safety check. */
+    suspend fun getPendingEntryCount(): Long = withContext(ioDispatcher) {
+        queries.getPendingEntryCount().executeAsOne()
+    }
+
     suspend fun pushPendingChanges(): Result<Int> = withContext(ioDispatcher) {
         val client = apiClient ?: return@withContext Result.failure(IllegalStateException("No remote API client configured"))
 

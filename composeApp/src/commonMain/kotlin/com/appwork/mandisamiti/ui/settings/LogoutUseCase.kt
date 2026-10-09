@@ -25,8 +25,10 @@ class LogoutUseCase(
     private val wiper: LocalDataWiper,
 ) {
     suspend operator fun invoke(): LogoutResult {
-        val pending = syncEngine.getPendingCount()
-        if (pending > 0) return LogoutResult.Blocked(pending)
+        // Safety check is broad (rows + revisions); the reported number is user entries.
+        if (syncEngine.getPendingCount() > 0) {
+            return LogoutResult.Blocked(syncEngine.getPendingEntryCount().coerceAtLeast(1))
+        }
 
         // Best effort: a network failure must not block, the local token is cleared below anyway.
         sessionStore.current()?.refreshToken?.let { authApi.logout(it) }
