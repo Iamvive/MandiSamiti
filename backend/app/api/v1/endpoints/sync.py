@@ -9,6 +9,7 @@ from app.models.transaction import CashTransaction
 from app.models.revision import EntryRevision
 from app.models.sync_conflict import SyncConflict
 from app.core.sync_seq import lock_shop, next_seq
+from app.models.user import ShopProfile
 from app.schemas.sync import SyncPushRequest, SyncPushResponse, SyncPullResponse
 from app.schemas.party import PartyResponse
 from app.schemas.deal import DealResponse
@@ -61,6 +62,8 @@ async def sync_push(
                     existing.sync_version += 1
                     existing.updated_at = incoming_at
                     existing.server_seq = next_seq(shop)
+                elif incoming_at < (existing.updated_at or 0):
+                    existing.server_seq = next_seq(shop)  # phone holds an older copy: re-deliver ours on its next pull
                 synced_parties.append(p_id)
             else:
                 # Collision with another shop's ID: do not overwrite and skip
@@ -124,6 +127,8 @@ async def sync_push(
                     existing_deal.sync_version += 1
                     existing_deal.updated_at = now_ms
                     existing_deal.server_seq = next_seq(shop)
+                elif d_in.revision < (existing_deal.revision or 0):
+                    existing_deal.server_seq = next_seq(shop)  # re-deliver the newer held row
                 synced_deals.append(d_id)
             else:
                 # Cross-tenant collision: skip overwrite
@@ -193,6 +198,8 @@ async def sync_push(
                     existing_tx.sync_version += 1
                     existing_tx.updated_at = now_ms
                     existing_tx.server_seq = next_seq(shop)
+                elif t_in.revision < (existing_tx.revision or 0):
+                    existing_tx.server_seq = next_seq(shop)  # re-deliver the newer held row
                 synced_txs.append(t_id)
             else:
                 continue
@@ -281,13 +288,17 @@ async def sync_pull(
     db: AsyncSession = Depends(get_db),
 ):
     shop_id = current_user.get("shop_id")
+    # Only seqs <= the committed last_seq: pushes commit last_seq with their rows under the shop lock,
+    # so a push committing between the SELECTs below can't let a page jump over an unseen seq.
+    max_seq = (await db.execute(select(ShopProfile.last_seq).where(ShopProfile.id == shop_id))).scalar() or 0
     # Each table's first `limit` rows after the cursor contain every row of the global first `limit`.
     kinds = ((Party, PartyResponse), (Deal, DealResponse),
              (CashTransaction, CashTransactionResponse), (EntryRevision, EntryRevisionResponse))
     merged = []
     for model, schema in kinds:
         res = await db.execute(
-            select(model).where(model.shop_id == shop_id, model.server_seq > after_seq)
+            select(model).where(model.shop_id == shop_id, model.server_seq > after_seq,
+                                model.server_seq <= max_seq)
             .order_by(model.server_seq.asc()).limit(limit + 1)
         )
         merged += [(row.server_seq, schema, row) for row in res.scalars().all()]

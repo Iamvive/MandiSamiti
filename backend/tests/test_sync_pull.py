@@ -48,3 +48,13 @@ async def test_paging_by_seq_has_no_gaps_across_kinds(db):
 async def test_empty_pull_keeps_cursor(db):
     page = await sync_pull(after_seq=7, limit=500, current_user=USER, db=db)
     assert page.next_seq == 7 and page.has_more is False
+
+@pytest.mark.asyncio
+async def test_pull_never_returns_rows_above_committed_last_seq(db):
+    from app.models.party import Party
+    await sync_push(SyncPushRequest(parties=[PartyCreate(id="p0", name="n0", role="FARMER")]), USER, db)  # seq 1, last_seq 1
+    # A push still in flight elsewhere: its row is visible with seq 3 but last_seq was not committed past 1.
+    db.add(Party(id="p-late", shop_id="shop-a", name="late", role="FARMER", server_seq=3))
+    await db.commit()
+    page = await sync_pull(after_seq=0, limit=500, current_user=USER, db=db)
+    assert [p.id for p in page.parties] == ["p0"] and page.next_seq == 1 and page.has_more is False
