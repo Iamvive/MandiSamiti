@@ -7,8 +7,6 @@ import androidx.core.view.WindowCompat
 import com.appwork.mandisamiti.data.auth.AndroidSessionStore
 import com.appwork.mandisamiti.data.auth.AuthApi
 import com.appwork.mandisamiti.data.auth.mandiHttpClient
-import com.appwork.mandisamiti.database.DriverFactory
-import com.appwork.mandisamiti.database.createDatabase
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.platform.apiBaseUrl
@@ -21,7 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val database = createDatabase(DriverFactory(applicationContext))
+        val database = AppDatabaseHolder.get(applicationContext)
         ttsManager = SoundboxTtsManager(applicationContext)
         val whatsAppShareManager = WhatsAppShareManager(applicationContext)
         val sessionStore = AndroidSessionStore(applicationContext)

@@ -10,8 +10,7 @@ import com.appwork.mandisamiti.data.sync.SyncEngine
 import com.appwork.mandisamiti.data.sync.SyncResult
 import com.appwork.mandisamiti.data.sync.remote.KtorMandiSyncApiClient
 import com.appwork.mandisamiti.data.sync.remote.SyncAuthExpired
-import com.appwork.mandisamiti.database.DriverFactory
-import com.appwork.mandisamiti.database.createDatabase
+import com.appwork.mandisamiti.AppDatabaseHolder
 import com.appwork.mandisamiti.platform.apiBaseUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,7 +24,7 @@ class MandiSyncWorker(
         val sessionStore = AndroidSessionStore(applicationContext)
         val currentSession = sessionStore.current() ?: return@withContext Result.success()
 
-        val database = createDatabase(DriverFactory(applicationContext))
+        val database = AppDatabaseHolder.get(applicationContext)
         val http = mandiHttpClient()
         try {
             val syncApiClient = KtorMandiSyncApiClient(
