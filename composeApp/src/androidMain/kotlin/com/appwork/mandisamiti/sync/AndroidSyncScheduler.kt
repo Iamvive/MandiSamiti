@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.sync
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
@@ -27,10 +28,11 @@ class AndroidSyncScheduler(private val context: Context) : SyncScheduler {
     override fun scheduleOneTimeSync() {
         val request = OneTimeWorkRequestBuilder<MandiSyncWorker>()
             .setConstraints(connectedConstraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         workManager.enqueueUniqueWork(
             UNIQUE_ONE_TIME_SYNC,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             request
         )
     }

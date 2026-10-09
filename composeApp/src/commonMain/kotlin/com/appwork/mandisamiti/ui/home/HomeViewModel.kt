@@ -51,7 +51,8 @@ class HomeViewModel(
     private val shopId: String,
     private val shopProfileRepository: ShopProfileRepository,
     private val partyRepository: PartyRepository,
-    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    private val onLocalWrite: () -> Unit = {}
 ) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -176,6 +177,7 @@ class HomeViewModel(
             updatedAt = now
         )
         partyRepository.saveParty(newParty)
+        onLocalWrite()
         return newParty
     }
 

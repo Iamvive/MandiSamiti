@@ -9,6 +9,7 @@ import com.appwork.mandisamiti.data.auth.mandiHttpClient
 import com.appwork.mandisamiti.data.sync.SyncEngine
 import com.appwork.mandisamiti.data.sync.SyncResult
 import com.appwork.mandisamiti.data.sync.remote.KtorMandiSyncApiClient
+import com.appwork.mandisamiti.data.sync.remote.SyncAuthExpired
 import com.appwork.mandisamiti.database.DriverFactory
 import com.appwork.mandisamiti.database.createDatabase
 import com.appwork.mandisamiti.platform.apiBaseUrl
@@ -25,19 +26,28 @@ class MandiSyncWorker(
         val currentSession = sessionStore.current() ?: return@withContext Result.success()
 
         val database = createDatabase(DriverFactory(applicationContext))
-        val syncApiClient = KtorMandiSyncApiClient(
-            http = mandiHttpClient(),
-            baseUrl = apiBaseUrl,
-            sessionStore = sessionStore,
-            refresh = AuthApi(mandiHttpClient(), apiBaseUrl)::refresh
-        )
-        val syncEngine = SyncEngine(database = database, apiClient = syncApiClient)
+        val http = mandiHttpClient()
+        try {
+            val syncApiClient = KtorMandiSyncApiClient(
+                http = http,
+                baseUrl = apiBaseUrl,
+                sessionStore = sessionStore,
+                refresh = AuthApi(http, apiBaseUrl)::refresh
+            )
+            val syncEngine = SyncEngine(database = database, apiClient = syncApiClient)
 
-        when (syncEngine.syncFull(currentSession.shopId)) {
-            is SyncResult.Success -> Result.success()
-            is SyncResult.Failure -> {
-                if (runAttemptCount < 3) Result.retry() else Result.failure()
+            when (val r = syncEngine.syncFull(currentSession.shopId)) {
+                is SyncResult.Success -> Result.success()
+                is SyncResult.Failure ->
+                    if (r.error is SyncAuthExpired) {
+                        syncEngine.setNeedsLogin(true)
+                        Result.failure()
+                    } else {
+                        Result.retry() // WorkManager's exponential backoff; no attempt cap
+                    }
             }
+        } finally {
+            http.close()
         }
     }
 }

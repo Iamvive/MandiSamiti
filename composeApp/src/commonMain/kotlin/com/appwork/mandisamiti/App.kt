@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import com.appwork.mandisamiti.data.auth.AuthApi
 import com.appwork.mandisamiti.data.auth.AuthRepository
 import com.appwork.mandisamiti.data.auth.LocalDataWiper
+import com.appwork.mandisamiti.data.auth.mandiHttpClient
 import com.appwork.mandisamiti.data.auth.SessionStore
 import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstDealRepository
@@ -19,10 +20,12 @@ import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
 import com.appwork.mandisamiti.data.sync.NoOpSyncScheduler
 import com.appwork.mandisamiti.data.sync.SyncEngine
 import com.appwork.mandisamiti.data.sync.SyncScheduler
+import com.appwork.mandisamiti.data.sync.remote.KtorMandiSyncApiClient
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.platform.apiBaseUrl
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.platform.rememberCameraSlipPicker
@@ -76,8 +79,14 @@ fun App(
             wiper = wiper,
         )
     }
+    val syncEngine = remember {
+        SyncEngine(
+            database,
+            KtorMandiSyncApiClient(mandiHttpClient(), apiBaseUrl, sessionStore, authApi::refresh)
+        )
+    }
     val logoutUseCase = remember {
-        LogoutUseCase(SyncEngine(database), authApi, sessionStore, wiper)
+        LogoutUseCase(syncEngine, authApi, sessionStore, wiper)
     }
     val cameraPicker = rememberCameraSlipPicker()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -120,7 +129,8 @@ fun App(
                         shopId = shopId!!,
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
-                        viewModelScope = coroutineScope
+                        viewModelScope = coroutineScope,
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
                 }
                 HomeScreen(

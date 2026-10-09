@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
         val sessionStore = AndroidSessionStore(applicationContext)
         val authApi = AuthApi(mandiHttpClient(), apiBaseUrl)
         val syncScheduler = com.appwork.mandisamiti.sync.AndroidSyncScheduler(applicationContext)
-        syncScheduler.schedulePeriodicSync()
+        if (sessionStore.current() != null) syncScheduler.schedulePeriodicSync()
 
         setContent {
             App(

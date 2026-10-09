@@ -159,5 +159,25 @@ class HomeViewModelTest {
         assertNotNull(inDb)
         assertEquals("सुरेश कुमार", inDb.name)
     }
-}
 
+    @Test
+    fun createPartyAsksForASync() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        var writes = 0
+
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope,
+            onLocalWrite = { writes++ }
+        )
+
+        viewModel.createParty("रामवीर", null, null, PartyType.FARMER)
+
+        assertEquals(1, writes)
+    }
+}
