@@ -23,14 +23,22 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.PartyFilter
@@ -52,22 +61,26 @@ import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
-import androidx.compose.material3.ExtendedFloatingActionButton
-
 @Composable
 fun KhataLedgerTabScreen(
     uiState: HomeUiState,
     onSearchQueryChanged: (String) -> Unit,
     onFilterSelected: (PartyFilter) -> Unit,
     onPartyClick: (Party) -> Unit,
-    onAddNewPartyClick: () -> Unit,
+    onCreateParty: (name: String, village: String?, phone: String?, type: PartyType) -> Unit,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var showAddPartyDialog by remember { mutableStateOf(false) }
+    var partyNameInput by remember { mutableStateOf("") }
+    var partyVillageInput by remember { mutableStateOf("") }
+    var partyPhoneInput by remember { mutableStateOf("") }
+    var selectedPartyType by remember { mutableStateOf(PartyType.FARMER) }
+
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { onAddNewPartyClick() },
+                onClick = { showAddPartyDialog = true },
                 containerColor = MandiPrimaryAction,
                 contentColor = MandiPrimaryActionText,
                 shape = RoundedCornerShape(14.dp),
@@ -200,6 +213,115 @@ fun KhataLedgerTabScreen(
                 Spacer(modifier = Modifier.height(72.dp)) // Extra padding for FAB
             }
         }
+    }
+
+    if (showAddPartyDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAddPartyDialog = false
+                partyNameInput = ""
+                partyVillageInput = ""
+                partyPhoneInput = ""
+            },
+            title = {
+                Text(
+                    text = if (isEnglish) "Create New Account" else "नया खाता बनाएं",
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Party Type selector
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        KhataFilterChip(
+                            label = if (isEnglish) "Farmer" else "किसान",
+                            isSelected = selectedPartyType == PartyType.FARMER,
+                            onClick = { selectedPartyType = PartyType.FARMER },
+                            modifier = Modifier.weight(1f)
+                        )
+                        KhataFilterChip(
+                            label = if (isEnglish) "Buyer" else "व्यापारी",
+                            isSelected = selectedPartyType == PartyType.BUYER,
+                            onClick = { selectedPartyType = PartyType.BUYER },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = partyNameInput,
+                        onValueChange = { partyNameInput = it },
+                        label = { Text(if (isEnglish) "Party Name *" else "नांव / नाम *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = partyVillageInput,
+                        onValueChange = { partyVillageInput = it },
+                        label = { Text(if (isEnglish) "Village / Location" else "गांव / पता (वैकल्पिक)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = partyPhoneInput,
+                        onValueChange = { partyPhoneInput = it },
+                        label = { Text(if (isEnglish) "Mobile Number" else "मोबाइल नंबर (वैकल्पिक)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmedName = partyNameInput.trim()
+                        if (trimmedName.isNotBlank()) {
+                            onCreateParty(
+                                trimmedName,
+                                partyVillageInput.trim().ifBlank { null },
+                                partyPhoneInput.trim().ifBlank { null },
+                                selectedPartyType
+                            )
+                            showAddPartyDialog = false
+                            partyNameInput = ""
+                            partyVillageInput = ""
+                            partyPhoneInput = ""
+                        }
+                    },
+                    enabled = partyNameInput.trim().isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    )
+                ) {
+                    Text(
+                        text = if (isEnglish) "Save Account" else "खाता बनाएं",
+                        fontWeight = FontWeight.Bold,
+                        color = MandiPrimaryActionText
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAddPartyDialog = false
+                        partyNameInput = ""
+                        partyVillageInput = ""
+                        partyPhoneInput = ""
+                    }
+                ) {
+                    Text(
+                        text = if (isEnglish) "Cancel" else "रद्द करें",
+                        color = MandiTextSecondary
+                    )
+                }
+            }
+        )
     }
 }
 

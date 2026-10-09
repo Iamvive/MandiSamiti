@@ -1,6 +1,8 @@
 package com.appwork.mandisamiti.ui.home
 
+import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.repository.PartyRepository
 import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 
 import com.appwork.mandisamiti.ui.navigation.NavigationTab
 
@@ -151,6 +154,29 @@ class HomeViewModel(
         viewModelScope.launch {
             shopProfileRepository.updateSoundSetting(currentProfile.id, newSoundState)
         }
+    }
+
+    suspend fun createParty(
+        name: String,
+        village: String?,
+        phoneNumber: String?,
+        partyType: PartyType
+    ): Party {
+        val cleanName = name.trim()
+        require(cleanName.isNotBlank()) { "Party name cannot be blank" }
+        val now = Clock.System.now().toEpochMilliseconds()
+        val newParty = Party(
+            id = IdGenerator.newId(),
+            shopId = shopId,
+            name = cleanName,
+            village = village?.trim()?.ifBlank { null },
+            phone = phoneNumber?.trim()?.ifBlank { null },
+            partyType = partyType,
+            createdAt = now,
+            updatedAt = now
+        )
+        partyRepository.saveParty(newParty)
+        return newParty
     }
 
     private fun filterList(

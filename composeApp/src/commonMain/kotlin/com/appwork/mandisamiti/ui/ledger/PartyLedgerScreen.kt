@@ -327,7 +327,12 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
-                    VoidReason.entries.forEach { reason ->
+                    val filteredReasons = if (target is LedgerItem.DealItem) {
+                        VoidReason.entries.filter { it.appliesToDeal }
+                    } else {
+                        VoidReason.entries.filter { it.appliesToCash }
+                    }
+                    filteredReasons.forEach { reason ->
                         OutlinedButton(
                             onClick = { viewModel.voidEntry(target, reason); voidTarget = null },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)

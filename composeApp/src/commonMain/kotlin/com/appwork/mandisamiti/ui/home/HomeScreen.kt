@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
@@ -38,6 +40,7 @@ fun HomeScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     // When not on Dashboard, hardware/system back returns to Dashboard
     MandiBackHandler(enabled = uiState.currentTab != NavigationTab.DASHBOARD) {
@@ -102,17 +105,11 @@ fun HomeScreen(
                         onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
                         onFilterSelected = { viewModel.onFilterSelected(it) },
                         onPartyClick = onNavigateToPartyKhata,
-                        onAddNewPartyClick = {
-                            onNavigateToPartyKhata(
-                                Party(
-                                    id = "new_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}",
-                                    shopId = shopId,
-                                    name = "",
-                                    partyType = PartyType.FARMER,
-                                    createdAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
-                                    updatedAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                                )
-                            )
+                        onCreateParty = { name, village, phone, type ->
+                            coroutineScope.launch {
+                                val newParty = viewModel.createParty(name, village, phone, type)
+                                onNavigateToPartyKhata(newParty)
+                            }
                         },
                         isEnglish = uiState.isEnglish
                     )

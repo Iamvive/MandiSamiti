@@ -126,4 +126,38 @@ class HomeViewModelTest {
         val state = viewModel.uiState.first { !it.isLoading && it.allParties.isNotEmpty() }
         assertEquals(listOf("p-server"), state.allParties.map { it.party.id })
     }
+
+    @Test
+    fun createPartySavesAndReturnsNewParty() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val createdParty = viewModel.createParty(
+            name = "सुरेश कुमार",
+            village = "भरतपुर",
+            phoneNumber = "9898989898",
+            partyType = PartyType.FARMER
+        )
+
+        assertNotNull(createdParty)
+        assertEquals("सुरेश कुमार", createdParty.name)
+        assertEquals("भरतपुर", createdParty.village)
+        assertEquals("9898989898", createdParty.phone)
+        assertEquals(PartyType.FARMER, createdParty.partyType)
+        assertEquals("srv-shop", createdParty.shopId)
+
+        val inDb = partyRepo.getPartyById(createdParty.id)
+        assertNotNull(inDb)
+        assertEquals("सुरेश कुमार", inDb.name)
+    }
 }
+
