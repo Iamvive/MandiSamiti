@@ -16,6 +16,7 @@ class EntryRevision(Base):
     snapshot_json = Column(String, nullable=False)
     void_reason = Column(String, nullable=True)
     changed_at = Column(BigInteger, default=lambda: int(time.time() * 1000), nullable=False)
+    server_seq = Column(BigInteger, nullable=False, default=0, server_default="0", index=True)
 
     __table_args__ = (
         UniqueConstraint("entry_id", "revision", name="uq_entry_revision"),

@@ -17,6 +17,7 @@ class Party(Base):
     photo_uri = Column(String, nullable=True)
     is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)
+    server_seq = Column(BigInteger, nullable=False, default=0, server_default="0", index=True)
     created_at = Column(BigInteger, default=lambda: int(time.time() * 1000))
     updated_at = Column(BigInteger, default=lambda: int(time.time() * 1000), onupdate=lambda: int(time.time() * 1000))
 

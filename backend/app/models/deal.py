@@ -44,6 +44,7 @@ class Deal(Base):
     revision = Column(Integer, default=1)
     is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)
+    server_seq = Column(BigInteger, nullable=False, default=0, server_default="0", index=True)
     created_at = Column(BigInteger, default=lambda: int(time.time() * 1000), index=True)
     updated_at = Column(BigInteger, default=lambda: int(time.time() * 1000), onupdate=lambda: int(time.time() * 1000))
 

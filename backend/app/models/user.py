@@ -19,6 +19,8 @@ class ShopProfile(Base):
     soundbox_voice_lang = Column(String, default="hi-IN")
     created_at = Column(BigInteger, default=lambda: int(time.time() * 1000))
     updated_at = Column(BigInteger, default=lambda: int(time.time() * 1000), onupdate=lambda: int(time.time() * 1000))
+    # Per-shop change counter. Every row a push accepts takes the next value as its server_seq.
+    last_seq = Column(BigInteger, nullable=False, default=0, server_default="0")
 
     users = relationship("User", back_populates="shop")
     parties = relationship("Party", back_populates="shop")
