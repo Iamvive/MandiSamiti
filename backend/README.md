@@ -20,7 +20,7 @@ Scalable, asynchronous cloud backend for MandiSamiti (Indian Mandi Agri-Trade Le
 
 ### Offline-to-Cloud Sync (`/api/v1/sync`)
 - `POST /api/v1/sync/push` — Ingests batches of offline Parties, Deals, and Cash Transactions from mobile app
-- `GET /api/v1/sync/pull` — Retrieves remote updates since `last_sync_timestamp` for multi-terminal sync
+- `GET /api/v1/sync/pull?after_seq=N&limit=500` — Returns the shop's rows with `server_seq > after_seq` (all kinds merged in seq order, capped at the shop's committed `last_seq`); the phone stores the response's `next_seq` as its cursor and keeps pulling while `has_more` is true
 
 ### Soundbox Voice Broadcast (`/api/v1/soundbox`)
 - `POST /api/v1/soundbox/broadcast` — Triggers instant Hindi audio voice script for payment received

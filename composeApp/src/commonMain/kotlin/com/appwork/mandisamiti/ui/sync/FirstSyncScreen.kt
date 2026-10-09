@@ -69,7 +69,7 @@ fun FirstSyncScreen(
                 Button(
                     onClick = onRetry,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp).heightIn(min = 48.dp),
                 ) { Text("फिर कोशिश करें") }
                 TextButton(
                     onClick = onSkip,
