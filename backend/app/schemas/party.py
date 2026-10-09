@@ -10,6 +10,7 @@ class PartyBase(BaseModel):
     monthly_interest_rate: Optional[float] = 1.5
     photo_uri: Optional[str] = None
     is_deleted: int = 0
+    updated_at: Optional[int] = None
 
 class PartyCreate(PartyBase):
     pass
