@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.sync
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +33,7 @@ fun FirstSyncScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(colors.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

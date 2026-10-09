@@ -4,18 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -106,47 +106,47 @@ fun HomeScreen(
         ) {
             if (needsLogin) ReLoginBanner(onReLogin)
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (uiState.currentTab) {
-                NavigationTab.DASHBOARD -> {
-                    DashboardScreen(
-                        uiState = uiState,
-                        onNavigateToNewEntry = onNavigateToNewEntry,
-                        onNavigateToPartyKhata = onNavigateToPartyKhata,
-                        onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
-                        isEnglish = uiState.isEnglish
-                    )
-                }
+                when (uiState.currentTab) {
+                    NavigationTab.DASHBOARD -> {
+                        DashboardScreen(
+                            uiState = uiState,
+                            onNavigateToNewEntry = onNavigateToNewEntry,
+                            onNavigateToPartyKhata = onNavigateToPartyKhata,
+                            onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
+                            isEnglish = uiState.isEnglish
+                        )
+                    }
 
-                NavigationTab.KHATA -> {
-                    KhataLedgerTabScreen(
-                        uiState = uiState,
-                        onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
-                        onFilterSelected = { viewModel.onFilterSelected(it) },
-                        onPartyClick = onNavigateToPartyKhata,
-                        onCreateParty = { name, village, phone, type ->
-                            coroutineScope.launch {
-                                val newParty = viewModel.createParty(name, village, phone, type)
-                                onNavigateToPartyKhata(newParty)
-                            }
-                        },
-                        isEnglish = uiState.isEnglish
-                    )
-                }
+                    NavigationTab.KHATA -> {
+                        KhataLedgerTabScreen(
+                            uiState = uiState,
+                            onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
+                            onFilterSelected = { viewModel.onFilterSelected(it) },
+                            onPartyClick = onNavigateToPartyKhata,
+                            onCreateParty = { name, village, phone, type ->
+                                coroutineScope.launch {
+                                    val newParty = viewModel.createParty(name, village, phone, type)
+                                    onNavigateToPartyKhata(newParty)
+                                }
+                            },
+                            isEnglish = uiState.isEnglish
+                        )
+                    }
 
-                NavigationTab.GALLA -> {
-                    // Handled via onNavigateToDayClosing
-                }
+                    NavigationTab.GALLA -> {
+                        // Handled via onNavigateToDayClosing
+                    }
 
-                NavigationTab.SETTINGS -> {
-                    SettingsScreen(
-                        uiState = uiState,
-                        isEnglish = uiState.isEnglish,
-                        onLanguageToggle = { viewModel.setLanguage(it) },
-                        onToggleSound = { viewModel.toggleSoundSetting() },
-                        onSignOutClick = onSignOut
-                    )
+                    NavigationTab.SETTINGS -> {
+                        SettingsScreen(
+                            uiState = uiState,
+                            isEnglish = uiState.isEnglish,
+                            onLanguageToggle = { viewModel.setLanguage(it) },
+                            onToggleSound = { viewModel.toggleSoundSetting() },
+                            onSignOutClick = onSignOut
+                        )
+                    }
                 }
-            }
             }
         }
     }
@@ -165,7 +165,7 @@ private fun ReLoginBanner(onReLogin: () -> Unit) {
             .clip(shape)
             .background(colors.surfaceVariant)
             .border(1.dp, colors.outline, shape)
-            .clickable(onClick = onReLogin)
+            .clickable(role = Role.Button, onClick = onReLogin)
             .heightIn(min = 48.dp)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
