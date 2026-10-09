@@ -1,12 +1,15 @@
 package com.appwork.mandisamiti.data.auth
 
+import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.createTestDatabase
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.TransactionType
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
@@ -109,7 +112,31 @@ class AuthRepositoryTest {
         assertTrue(f.repo.login("pass", "1234").isSuccess)
 
         assertEquals(0, f.db.appDatabaseQueries.getAllParties("shop-1").executeAsList().size)
-        assertEquals(listOf("shop-1"), f.db.appDatabaseQueries.run { listOf(getShopProfile().executeAsOne().id) })
+        val q = f.db.appDatabaseQueries
+        assertEquals(1, q.countForeignRows("nobody").executeAsOne().toInt()) // exactly one profile row left
+        assertEquals("shop-1", q.getShopProfile().executeAsOne().id)
+        assertEquals(0, q.countForeignRows("shop-1").executeAsOne().toInt())
+    }
+
+    @Test
+    fun login_sameShop_keepsPendingCashEntryAndItsRevision() = runTest {
+        val f = fixture("shop-1")
+        f.seedLocalShop("shop-1")
+        val cash = OfflineFirstCashTransactionRepository(f.db, StandardTestDispatcher(testScheduler))
+        cash.recordTransaction(
+            CashTransaction(
+                id = "t1", shopId = "shop-1", partyId = "p1", transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 500_00L, transactionDate = 1L, createdAt = 1L, updatedAt = 1L, syncStatus = 0,
+            )
+        )
+        val q = f.db.appDatabaseQueries
+        val revisionsBefore = q.getPendingSyncRevisions().executeAsList().size
+        assertTrue(revisionsBefore > 0)
+
+        assertTrue(f.repo.login("pass", "1234").isSuccess)
+
+        assertEquals(1, q.getPendingSyncTransactions().executeAsList().size)
+        assertEquals(revisionsBefore, q.getPendingSyncRevisions().executeAsList().size)
     }
 
     @Test

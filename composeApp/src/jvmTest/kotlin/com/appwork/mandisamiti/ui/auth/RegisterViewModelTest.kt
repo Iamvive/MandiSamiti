@@ -15,6 +15,7 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,6 +26,7 @@ import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class RegisterViewModelTest {
     private class TestClock(var ms: Long = 1_000_000L) : Clock {
@@ -38,20 +40,27 @@ class RegisterViewModelTest {
     private fun MockRequestHandleScope.json(status: HttpStatusCode, body: String): HttpResponseData =
         respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
 
-    private class Fixture(val vm: RegisterViewModel, val clock: TestClock)
+    private class Fixture(val vm: RegisterViewModel, val clock: TestClock, val calls: MutableList<Pair<String, String>>) {
+        fun bodyOf(suffix: String) = calls.filter { it.first.endsWith(suffix) }.map { it.second }
+        fun count(suffix: String) = calls.count { it.first.endsWith(suffix) }
+    }
 
     private fun TestScope.fixture(handler: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData): Fixture {
         val io = StandardTestDispatcher(testScheduler)
         val db = createTestDatabase()
+        val calls = mutableListOf<Pair<String, String>>()
         val repo = AuthRepository(
-            api = AuthApi(mandiHttpClient(MockEngine { handler(it) }), "https://api.test"),
+            api = AuthApi(mandiHttpClient(MockEngine {
+                calls += it.url.encodedPath to ((it.body as? TextContent)?.text ?: "")
+                handler(it)
+            }), "https://api.test"),
             sessionStore = InMemorySessionStore(),
             shopProfileRepository = OfflineFirstShopProfileRepository(db, io),
             wiper = LocalDataWiper(db),
             ioDispatcher = io,
         )
         val clock = TestClock()
-        return Fixture(RegisterViewModel(repo, SoundboxTtsManager(), backgroundScope, clock), clock)
+        return Fixture(RegisterViewModel(repo, SoundboxTtsManager(), backgroundScope, clock), clock, calls)
     }
 
     private fun Fixture.enterPhone() {
@@ -208,5 +217,137 @@ class RegisterViewModelTest {
         f.vm.uiState.first { it.step == AuthStep.OTP && !it.isLoading }
         assertEquals(1, sends)
         assertNull(f.vm.uiState.value.generalErrorMessage)
+    }
+
+    // ---- helpers for the added coverage ----
+    private val signupOk: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData = { req ->
+        val p = req.url.encodedPath
+        if (p.endsWith("signup")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "NEW")
+    }
+
+    private suspend fun Fixture.toNewShop() {
+        toOtpStep()
+        clock.tap(); vm.onOtpChanged("123456")
+        vm.uiState.first { it.step == AuthStep.NEW_SHOP }
+    }
+
+    private suspend fun Fixture.toEnterMpin() {
+        toOtpStep()
+        clock.tap(); vm.onOtpChanged("123456")
+        vm.uiState.first { it.step == AuthStep.ENTER_MPIN }
+    }
+
+    private fun Fixture.fillShop(shop: String = "राम आढ़त", owner: String = "राम", mpin: String = "1234", confirm: String = "1234") {
+        vm.onShopNameChanged(shop); vm.onOwnerNameChanged(owner); vm.onMandiNameChanged("मथुरा")
+        vm.onMpinChanged(mpin); vm.onConfirmMpinChanged(confirm)
+    }
+
+    @Test
+    fun signup_sendsSignupPassAndShopFields() = runTest {
+        val f = fixture(signupOk)
+        f.toNewShop()
+        f.fillShop()
+        f.clock.tap(); f.vm.submitNewShop()
+        f.vm.uiState.first { it.isRegistrationComplete }
+
+        val body = f.bodyOf("signup").single()
+        assertTrue("\"signup_pass\":\"sp\"" in body, body)
+        assertTrue("\"shop_name\":\"राम आढ़त\"" in body || "\"shop_name\":\"\\u" in body, body)
+        assertTrue("owner_name" in body && "mandi_name" in body, body)
+        assertTrue("\"mpin\":\"1234\"" in body, body)
+    }
+
+    @Test
+    fun login_sendsLoginPassNotSignupPass() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+        }
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4321")
+        f.clock.tap(); f.vm.submitMpin()
+        f.vm.uiState.first { it.isRegistrationComplete }
+
+        val body = f.bodyOf("login").single()
+        assertTrue("\"login_pass\":\"lp\"" in body, body)
+        assertTrue("sp" !in body.replace("login_pass", ""), body)
+        assertTrue("\"mpin\":\"4321\"" in body, body)
+    }
+
+    @Test
+    fun newShop_backToPhone_thenSubmit_doesNotCallSignup() = runTest {
+        val f = fixture(signupOk)
+        f.toNewShop()
+        f.fillShop()
+        f.vm.goBackToPhone()
+        f.clock.tap(); f.vm.submitNewShop()
+
+        assertEquals(0, f.count("signup"))
+        assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
+        assertEquals("समय समाप्त — दोबारा OTP लें", f.vm.uiState.value.generalErrorMessage)
+    }
+
+    @Test
+    fun afterPassBurned_submitMpin_doesNotReuseBurnedPass() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.Unauthorized, """{"detail":{"code":"PASS_BURNED"}}""") else verifyBody(p, "EXISTING")
+        }
+        f.toEnterMpin()
+        f.vm.onMpinChanged("0000")
+        f.clock.tap(); f.vm.submitMpin()
+        f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals(1, f.count("login"))
+
+        f.vm.onMpinChanged("0000")
+        f.clock.tap(); f.vm.submitMpin()
+
+        assertEquals(1, f.count("login"))
+        assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
+    }
+
+    private fun newShopCase(shop: String, owner: String, mpin: String, confirm: String) = runTest {
+        val f = fixture(signupOk)
+        f.toNewShop()
+        f.fillShop(shop, owner, mpin, confirm)
+        f.clock.tap(); f.vm.submitNewShop()
+
+        assertEquals(0, f.count("signup"))
+        assertEquals(AuthStep.NEW_SHOP, f.vm.uiState.value.step)
+        assertEquals(false, f.vm.uiState.value.isRegistrationComplete)
+        assertTrue(f.vm.uiState.value.generalErrorMessage != null)
+    }
+
+    @Test fun newShop_shortShopName_rejected() = newShopCase("ab", "राम", "1234", "1234")
+    @Test fun newShop_shortOwnerName_rejected() = newShopCase("राम आढ़त", "र", "1234", "1234")
+    @Test fun newShop_mpinMismatch_rejected() = newShopCase("राम आढ़त", "राम", "1234", "1235")
+    @Test fun newShop_mpinNotFourDigits_rejected() = newShopCase("राम आढ़त", "राम", "123", "123")
+
+    private fun phoneCase(number: String) = runTest {
+        val f = fixture { json(HttpStatusCode.OK, """{"sent":true,"cooldown_s":30}""") }
+        f.vm.onPhoneNumberChanged(number)
+        f.clock.tap(); f.vm.submitPhone()
+
+        assertEquals(0, f.count("otp/send"))
+        assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
+        assertTrue(f.vm.uiState.value.generalErrorMessage != null)
+    }
+
+    @Test fun phone_startingWithFive_rejected() = phoneCase("5837123456")
+    @Test fun phone_nineDigits_rejected() = phoneCase("983712345")
+
+    @Test
+    fun enterMpin_threeDigits_rejected() = runTest {
+        val f = fixture { req ->
+            val p = req.url.encodedPath
+            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+        }
+        f.toEnterMpin()
+        f.vm.onMpinChanged("123")
+        f.clock.tap(); f.vm.submitMpin()
+
+        assertEquals(0, f.count("login"))
+        assertEquals(AuthStep.ENTER_MPIN, f.vm.uiState.value.step)
+        assertTrue(f.vm.uiState.value.generalErrorMessage != null)
     }
 }
