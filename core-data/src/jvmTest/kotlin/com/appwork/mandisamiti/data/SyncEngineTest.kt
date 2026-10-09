@@ -110,7 +110,10 @@ class SyncEngineTest {
         assertTrue(pushResult.isSuccess)
 
         // 5. Verify pushed DTO contents
-        val pushed = fakeClient.pushed.last()
+        val pushed = SyncPushRequestDto(
+            parties = fakeClient.pushed.flatMap { it.parties }, deals = fakeClient.pushed.flatMap { it.deals },
+            transactions = fakeClient.pushed.flatMap { it.transactions }, revisions = fakeClient.pushed.flatMap { it.revisions }
+        )
         assertEquals(2, pushed.parties.size)
         assertEquals(1, pushed.deals.size)
         assertEquals(227550L, pushed.deals[0].rate_paisa_per_unit)
@@ -265,6 +268,23 @@ class SyncEngineTest {
         fake.pushResponses += Result.success(SyncPushResponseDto(synced_parties = listOf("farmer-1"),
             synced_deals = listOf("deal-1"), synced_revisions = listOf(revId), conflicts = listOf(revId)))
         engine.pushPendingChanges().getOrThrow()
+        assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pushSendsParentsBeforeChildrenAndNeverMixesKinds() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        val repo = OfflineFirstPartyRepository(db)
+        repeat(150) { repo.saveParty(farmer().copy(id = "p$it")) }
+        OfflineFirstDealRepository(db).saveDeal(deal().copy(farmerId = "p149"))
+        assertTrue(engine.pushPendingChanges().isSuccess)
+        val kinds = fake.pushed.map { r ->
+            listOf(r.parties, r.deals, r.transactions, r.revisions).count { it.isNotEmpty() }
+        }
+        assertTrue(kinds.all { it == 1 })
+        val p149 = fake.pushed.indexOfFirst { r -> r.parties.any { it.id == "p149" } }
+        val dealReq = fake.pushed.indexOfFirst { it.deals.isNotEmpty() }
+        assertTrue(p149 in 0 until dealReq)
         assertEquals(0L, engine.getPendingCount())
     }
 }
