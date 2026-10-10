@@ -1,6 +1,7 @@
 # MandiSamiti — Monetization Design: बही सुरक्षा (Basic) + उधारी वसूली (Pro)
 
 **Date:** 2026-10-10 · **Status:** approved in brainstorming, awaiting spec review · **Owner:** Vivek
+**Google Doc:** https://docs.google.com/document/d/1NAmjRiq2SEDrCkRGwseVYfIt4YCgmijpdJ3Ae9KGSJQ/edit (snapshot of this file on 2026-10-10; this markdown file is the source of truth)
 **Related:** [pilot plan](../../product/pilot-plan.md) · [pilot cost](../../product/pilot-cost.md) · [Phase 4 staff roles](2026-10-10-mandisamiti-phase4-staff-roles-design.md) · [feature status](../../product/feature-status.md)
 
 ## 1. Goal and constraints
