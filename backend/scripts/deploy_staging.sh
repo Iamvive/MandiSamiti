@@ -1,15 +1,29 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 echo "🚀 [STAGING DEPLOYMENT] Starting Staging Pipeline..."
 
 # 1. Run local test suite first
 echo "🧪 Running unit tests..."
-PYTHONPATH=/Users/appworx/Desktop/MandiSamiti/backend /Users/appworx/Desktop/automation/venv/bin/pytest /Users/appworx/Desktop/MandiSamiti/backend/tests
+if [ -f "$BACKEND_DIR/.venv/bin/pytest" ]; then
+  PYTHONPATH="$BACKEND_DIR" "$BACKEND_DIR/.venv/bin/pytest" "$BACKEND_DIR/tests"
+elif [ -f "/Users/appworx/Desktop/automation/venv/bin/pytest" ]; then
+  PYTHONPATH="$BACKEND_DIR" /Users/appworx/Desktop/automation/venv/bin/pytest "$BACKEND_DIR/tests"
+else
+  PYTHONPATH="$BACKEND_DIR" pytest "$BACKEND_DIR/tests"
+fi
 
 # 2. Sync to VPS Staging directory
 echo "📦 Syncing code to /opt/mandisamiti-staging on VPS..."
-rsync -avz --delete --exclude '__pycache__' --exclude '.pytest_cache' --exclude '*.db' /Users/appworx/Desktop/MandiSamiti/backend/ appworx-core-vps:/opt/mandisamiti-staging/
+rsync -avz --delete \
+  --exclude '__pycache__' \
+  --exclude '.pytest_cache' \
+  --exclude '*.db' \
+  --exclude '.venv' \
+  "$BACKEND_DIR/" appworx-core-vps:/opt/mandisamiti-staging/
 
 # 3. Build & Recreate Staging Containers
 echo "🐳 Rebuilding Staging containers on VPS..."
