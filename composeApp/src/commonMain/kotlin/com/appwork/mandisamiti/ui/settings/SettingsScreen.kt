@@ -50,6 +50,7 @@ import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -350,7 +351,7 @@ private fun LanguageOptionPill(
             text = label,
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color.White else MandiTextPrimary
+            color = if (isSelected) MandiPrimaryActionText else MandiTextPrimary
         )
     }
 }

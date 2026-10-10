@@ -94,7 +94,8 @@ import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 fun PartyLedgerScreen(
     viewModel: PartyLedgerViewModel,
     onNavigateBack: () -> Unit,
-    onShareWhatsAppReceipt: (String) -> Unit
+    onShareWhatsAppReceipt: (String) -> Unit,
+    onEditDeal: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val party = uiState.party
@@ -288,6 +289,7 @@ fun PartyLedgerScreen(
                             FintechDealCard(
                                 deal = item.deal,
                                 onShareSlip = { onShareWhatsAppReceipt(item.deal.id) },
+                                onEditDeal = { onEditDeal(item.deal.id) },
                                 onLongPress = { voidTarget = item }
                             )
                         }
@@ -550,6 +552,7 @@ private fun FintechActionButton(
 private fun FintechDealCard(
     deal: com.appwork.mandisamiti.domain.model.Deal,
     onShareSlip: () -> Unit,
+    onEditDeal: () -> Unit = {},
     onLongPress: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
@@ -558,7 +561,7 @@ private fun FintechDealCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .combinedClickable(onClick = {}, onLongClick = { if (!isVoid) onLongPress() })
+            .combinedClickable(onClick = { if (!isVoid) onEditDeal() }, onLongClick = { if (!isVoid) onLongPress() })
             .background(MandiSurface)
             .border(1.dp, MandiBorder, shape)
             .padding(12.dp)

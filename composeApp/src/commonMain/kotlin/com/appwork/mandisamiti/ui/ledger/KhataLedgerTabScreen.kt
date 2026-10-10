@@ -355,7 +355,7 @@ private fun KhataFilterChip(
             text = label,
             fontSize = 13.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color.White else MandiTextSecondary
+            color = if (isSelected) MandiPrimaryActionText else MandiTextSecondary
         )
     }
 }

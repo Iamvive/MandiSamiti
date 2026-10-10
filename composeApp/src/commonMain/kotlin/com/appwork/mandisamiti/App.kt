@@ -255,7 +255,19 @@ fun App(
                 PartyLedgerScreen(
                     viewModel = ledgerViewModel,
                     onNavigateBack = { currentScreen = Screen.Home },
-                    onShareWhatsAppReceipt = { _ -> }
+                    onShareWhatsAppReceipt = { dealId ->
+                        coroutineScope.launch {
+                            val deal = dealRepo.getDealById(dealId)
+                            if (deal != null) {
+                                val farmer = partyRepo.getPartyById(deal.farmerId)
+                                val buyer = deal.buyerId?.let { partyRepo.getPartyById(it) }
+                                if (farmer != null) {
+                                    currentScreen = Screen.ReceiptPreview(deal, farmer, buyer)
+                                }
+                            }
+                        }
+                    },
+                    onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) }
                 )
             }
 

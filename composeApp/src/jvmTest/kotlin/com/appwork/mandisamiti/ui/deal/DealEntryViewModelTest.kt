@@ -319,6 +319,7 @@ class DealEntryViewModelTest {
         assertEquals(7_000L, saved.buyerCommissionPaisa)
         assertEquals(5_000L, saved.weighingChargePaisa)
         assertEquals(3_000L, saved.otherDeductionsPaisa)
+        assertEquals(4_107_278L - (61_609L + 15_050L + 5_000L + 3_000L), saved.netFarmerPayablePaisa)
     }
 
     @Test

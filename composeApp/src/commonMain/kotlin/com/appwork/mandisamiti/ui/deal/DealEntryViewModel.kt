@@ -309,13 +309,16 @@ class DealEntryViewModel(
         val ratePaisa = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText)
         if (ratePaisa <= 0L || netGrams <= 0L) return null
         val commissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText)
+        val original = originalDeal
         return MandiMathEngine.calculateSettlement(
             grossWeightGrams = grossGrams,
             cutWeightGrams = tareGrams,
             ratePaisaPerQuintal = ratePaisa,
             deductions = DeductionsInput(
                 farmerCommissionPaisa = MandiMathEngine.percentageOf(MandiMathEngine.grossAmountPaisa(netGrams, ratePaisa), commissionBps),
-                labourChargePaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText)
+                labourChargePaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText),
+                weighingChargePaisa = original?.weighingChargePaisa ?: 0L,
+                otherDeductionsPaisa = original?.otherDeductionsPaisa ?: 0L
             )
         )
     }
@@ -399,25 +402,30 @@ class DealEntryViewModel(
 
         _uiState.value = _uiState.value.copy(isSaving = true)
         viewModelScope.launch {
-            if (original == null) dealRepository.saveDeal(deal) else dealRepository.editDeal(deal)
+            try {
+                if (original == null) dealRepository.saveDeal(deal) else dealRepository.editDeal(deal)
 
-            // Hindi Soundbox Voice Announcement Text
-            val hindiVoiceText = if (isSettled) {
-                val farmerName = farmer.name
-                val bagsStr = if (bags > 0) "$bags बोरी " else ""
-                val payable = state.netFarmerPayablePaisa
-                val amountRs = MandiMathEngine.paisaToRupeesString(kotlin.math.abs(payable))
-                if (payable < 0) "$farmerName, ${bagsStr}किसान से ₹$amountRs लेना है।"
-                else "$farmerName, $bagsStr, ₹$amountRs पक्के हिसाब में दर्ज हुए।"
-            } else {
-                val farmerName = farmer.name
-                val quintalsStr = state.netWeightQuintals
-                "$farmerName, $quintalsStr कुंतल आवक दर्ज हुई।"
+                // Hindi Soundbox Voice Announcement Text
+                val hindiVoiceText = if (isSettled) {
+                    val farmerName = farmer.name
+                    val bagsStr = if (bags > 0) "$bags बोरी " else ""
+                    val payable = state.netFarmerPayablePaisa
+                    val amountRs = MandiMathEngine.paisaToRupeesString(kotlin.math.abs(payable))
+                    if (payable < 0) "$farmerName, ${bagsStr}किसान से ₹$amountRs लेना है।"
+                    else "$farmerName, $bagsStr, ₹$amountRs पक्के हिसाब में दर्ज हुए।"
+                } else {
+                    val farmerName = farmer.name
+                    val quintalsStr = state.netWeightQuintals
+                    "$farmerName, $quintalsStr कुंतल आवक दर्ज हुई।"
+                }
+
+                ttsManager.speak(hindiVoiceText, state.isSoundEnabled)
+                _events.emit(DealEntryEvent.DealSavedSuccess(deal, hindiVoiceText))
+            } catch (e: Throwable) {
+                _uiState.value = _uiState.value.copy(error = e.message ?: "सौदा सहेजने में विफल")
+            } finally {
+                _uiState.value = _uiState.value.copy(isSaving = false)
             }
-
-            ttsManager.speak(hindiVoiceText, state.isSoundEnabled)
-            _uiState.value = _uiState.value.copy(isSaving = false)
-            _events.emit(DealEntryEvent.DealSavedSuccess(deal, hindiVoiceText))
         }
     }
 }

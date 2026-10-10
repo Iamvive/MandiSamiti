@@ -47,6 +47,7 @@ import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
 import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiSurface
+import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
@@ -164,7 +165,7 @@ fun ReceiptPreviewScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF8FAFC))
+                            .background(MandiSurfaceElevated)
                             .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
                             .padding(12.dp)
                     ) {

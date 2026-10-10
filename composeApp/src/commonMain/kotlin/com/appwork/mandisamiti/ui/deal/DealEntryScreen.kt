@@ -117,7 +117,7 @@ fun DealEntryScreen(
                 TabRow(
                     selectedTabIndex = if (uiState.isSettledStage) 1 else 0,
                     containerColor = MandiSurface,
-                    contentColor = MandiNavy,
+                    contentColor = MandiTextPrimary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .border(1.dp, MandiBorder, RoundedCornerShape(10.dp))
@@ -125,6 +125,8 @@ fun DealEntryScreen(
                     Tab(
                         selected = !uiState.isSettledStage,
                         onClick = { viewModel.toggleSettlementStage(false) },
+                        selectedContentColor = MandiTextPrimary,
+                        unselectedContentColor = MandiTextMuted,
                         text = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -146,6 +148,8 @@ fun DealEntryScreen(
                     Tab(
                         selected = uiState.isSettledStage,
                         onClick = { viewModel.toggleSettlementStage(true) },
+                        selectedContentColor = MandiTextPrimary,
+                        unselectedContentColor = MandiTextMuted,
                         text = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -208,7 +212,7 @@ fun DealEntryScreen(
                                 text = uiState.selectedFarmer?.name ?: "किसान चुनें ▾",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiNavy
+                                color = MandiTextPrimary
                             )
                         }
 
@@ -227,7 +231,7 @@ fun DealEntryScreen(
                                 text = uiState.selectedCommodity?.nameHi ?: "गेहूं (Wheat)",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiNavy
+                                color = MandiTextPrimary
                             )
                         }
 
@@ -235,13 +239,13 @@ fun DealEntryScreen(
                             // Buyer Selector
                             Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (uiState.availableBuyers.isNotEmpty()) {
-                                            val nextIdx = ((uiState.availableBuyers.indexOf(uiState.selectedBuyer) + 1) % uiState.availableBuyers.size)
-                                            viewModel.onSelectBuyer(uiState.availableBuyers[nextIdx])
-                                        }
-                                    },
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (uiState.availableBuyers.isNotEmpty()) {
+                                        val nextIdx = ((uiState.availableBuyers.indexOf(uiState.selectedBuyer) + 1) % uiState.availableBuyers.size)
+                                        viewModel.onSelectBuyer(uiState.availableBuyers[nextIdx])
+                                    }
+                                },
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -254,7 +258,7 @@ fun DealEntryScreen(
                                     text = uiState.selectedBuyer?.name ?: "व्यापारी चुनें ▾",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MandiAccent
+                                    color = MandiTextPrimary
                                 )
                             }
                         }
@@ -328,7 +332,7 @@ fun DealEntryScreen(
                                 text = "${uiState.netWeightQuintals} क्विंटल",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiNavy
+                                color = MandiTextPrimary
                             )
                         }
                     }
@@ -385,7 +389,7 @@ fun DealEntryScreen(
                                     label = "व्यापारी से देय वसूली",
                                     amountPaisa = uiState.netBuyerReceivablePaisa,
                                     isBold = false,
-                                    color = MandiNavy
+                                    color = MandiTextPrimary
                                 )
                             }
                         }
