@@ -17,6 +17,7 @@ This page is an index. Each topic lives on its own page; open the one you need.
 | [Vision & accessibility](product/vision-and-accessibility.md) | Who the app is for and the 25–65 ergonomics rules |
 | [Information architecture](product/information-architecture.md) | The 4-hub layout: Dashboard, Khata, Galla, Settings |
 | [QuickBooks adaptation](product/quickbooks-adaptation.md) | Phase 7 backlog: aging chips, close & lock, expense chips |
+| [Video production](video-production/2026-10-10-deal-entry-short-storyboard.md) | Gemini-optimized 35s Shorts storyboards & Cloud TTS prompts |
 | [Pilot plan](product/pilot-plan.md) | Running the 21-shop pilot, ending access, and what happens to shop data |
 | [Pilot cost](product/pilot-cost.md) | Cost breakdown per month, day, shop and bill |
 
