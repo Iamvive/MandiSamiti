@@ -230,7 +230,8 @@ fun DailyCashRegisterScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MandiBtnSuccessBg,
                         contentColor = MandiBtnSuccessFg
-                    )
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -240,10 +241,11 @@ fun DailyCashRegisterScreen(
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
-                        text = if (isEnglish) "Cash In (Deposit)" else "नकद आवक (जमा)",
+                        text = if (isEnglish) "Cash In" else "नकद जमा",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MandiBtnSuccessFg
+                        color = MandiBtnSuccessFg,
+                        maxLines = 1
                     )
                 }
 
@@ -256,7 +258,8 @@ fun DailyCashRegisterScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MandiBtnDangerBg,
                         contentColor = MandiBtnDangerFg
-                    )
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
@@ -266,10 +269,11 @@ fun DailyCashRegisterScreen(
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
-                        text = if (isEnglish) "Cash Out (Expense)" else "नकद निकासी (खर्च)",
+                        text = if (isEnglish) "Cash Out" else "नकद निकासी",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MandiBtnDangerFg
+                        color = MandiBtnDangerFg,
+                        maxLines = 1
                     )
                 }
             }
