@@ -36,7 +36,7 @@ This page is an index. Each topic lives on its own page; open the one you need.
 | 2026-09-20 | [Aadhat ledger — product & technical design](superpowers/specs/2026-09-20-mandisamiti-aadhat-ledger-design.md) |
 | 2026-10-08 | [Accounts & cloud sync](superpowers/specs/2026-10-08-mandisamiti-accounts-and-sync-design.md) |
 | 2026-10-10 | [Phase 4 — staff roles](superpowers/specs/2026-10-10-mandisamiti-phase4-staff-roles-design.md) |
-| 2026-10-10 | [Monetization — Basic बही सुरक्षा + Pro उधारी वसूली](superpowers/specs/2026-10-10-mandisamiti-monetization-design.md) |
+| 2026-10-10 | [Monetization — Basic बही सुरक्षा + Pro उधारी वसूली](superpowers/specs/2026-10-10-mandisamiti-monetization-design.md) · [Google Doc](https://docs.google.com/document/d/1NAmjRiq2SEDrCkRGwseVYfIt4YCgmijpdJ3Ae9KGSJQ/edit) |
 
 ## Implementation plans (`superpowers/plans/`)
 | Date | Plan |
@@ -47,6 +47,13 @@ This page is an index. Each topic lives on its own page; open the one you need.
 | 2026-10-08 | [Phase 1B — backend hardening](superpowers/plans/2026-10-08-mandisamiti-1b-backend-hardening.md) |
 | 2026-10-08 | [Accounts](superpowers/plans/2026-10-08-mandisamiti-accounts.md) |
 | 2026-10-09 | [Sync](superpowers/plans/2026-10-09-mandisamiti-sync.md) |
+
+## Shared copies (Google Docs)
+| Doc | Repo source of truth |
+| :--- | :--- |
+| [Monetization design](https://docs.google.com/document/d/1NAmjRiq2SEDrCkRGwseVYfIt4YCgmijpdJ3Ae9KGSJQ/edit) | [2026-10-10-mandisamiti-monetization-design.md](superpowers/specs/2026-10-10-mandisamiti-monetization-design.md) |
+
+Google Docs are snapshots. Edit the repo file, then refresh the doc (or copy doc edits back into the repo).
 
 ## Other
 - [Android launch modes masterclass](android-launch-modes-masterclass.html) — learning material.
