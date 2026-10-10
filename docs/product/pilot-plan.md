@@ -2,9 +2,9 @@
 
 ← [Docs index](../MANDISAMITI-MASTER-SPEC.md) · Cost: [pilot cost](pilot-cost.md) · Status: [feature status](feature-status.md)
 
-Drafted 2026-10-10. **Status: proposal.** Decisions marked *Open* need Vivek's call.
+Drafted 2026-10-10. Pricing and plans: [monetization design](../superpowers/specs/2026-10-10-mandisamiti-monetization-design.md).
 
-Scope: 21 shops, 1 month, at most 50 bills/shop/day. Free for pilot shops. Vivek and his father onboard every shop in person.
+Scope: 21 shops, at most 50 bills/shop/day. **Each shop gets 30 days from its own start day.** The pilot is the **first paid month** at the real price (Basic ₹299 / Pro ₹699) with the 30-day Pro guarantee. Vivek and his father onboard every shop in person.
 
 ## 1. Principles
 1. **The books belong to the shop, not to us.** Never wipe a shop's phone remotely, and never delete its data before it has had a way to export it. Indian traders must keep books of account for years (income-tax and GST rules; general knowledge, not legal advice).
@@ -75,7 +75,7 @@ All must be true before the first pilot shop enters real data.
 | Shop's choice at pilot end | What happens to its data |
 | :--- | :--- |
 | **Continue** (paid or extended) | Kept as is. Same account, same books, no migration |
-| **Leave** | Read-only for **30 days**. Then server data is deleted at **90 days** after pilot end (*Open:* 90 days, or shorter) |
+| **Leave** | Read-only for **30 days**. Then server data is deleted **90 days** after the shop's access ends (decided 2026-10-10; storage cost is negligible) |
 | **Leave and asks for deletion now** | Delete from the server within 7 days after an export is offered. Confirm on WhatsApp |
 | **No answer** | Treated as *Leave*. Two WhatsApp reminders before deletion |
 
@@ -88,8 +88,8 @@ All must be true before the first pilot shop enters real data.
 **Farmers' and buyers' data:** party names and phone numbers are personal data of people who are not our users. Collect only what the ledger needs, use it only for that shop's books, and delete it with the shop's data. India's DPDP Act 2023 applies; check the current rules before charging money (not legal advice).
 
 ## 6. Pilot agreement (one page, Hindi, accepted on WhatsApp or signed)
-- **Dates:** pilot start and end; free during the pilot.
-- **After the pilot:** continue at a price to be agreed, or leave. If they leave, the app turns read-only for 30 days and they can export everything.
+- **Dates and price:** the shop's start date, its 30 days, and the first-month price with the 30-day Pro guarantee.
+- **After the pilot:** renew (monthly, season or yearly), or leave. If they leave, the app turns read-only for 30 days and they can export everything.
 - **Their data:** the data is theirs. We use it only to run their books and to improve the app. We never sell it or share it.
 - **Deletion:** deleted from our server 90 days after they leave, or sooner on request.
 - **Backups:** we back up daily, but they should also export at day-close each week.
@@ -100,8 +100,8 @@ Tracked as rows in [feature status](feature-status.md):
 - **Khata & galla export:** PDF/CSV on the phone, shared through WhatsApp.
 - **Shop deletion script:** deletes one shop's rows across all tables, writes an audit log line, and is run only after an export is offered.
 
-## Open decisions (Vivek)
-- [ ] Pilot dates, and whether a shop's month starts when that shop joins or for all shops together.
-- [ ] Grace period (30 days proposed) and deletion delay (90 days proposed).
-- [ ] Price after the pilot, if any. Infra alone is ~₹89/shop/month ([pilot cost](pilot-cost.md)).
-- [ ] Whether pilot shops that continue get a discount.
+## Decisions (2026-10-10)
+- [x] Each shop's 30 days start on its own start day.
+- [x] Leaving shops: 30 days read-only, server data deleted 90 days after access ends.
+- [x] Pilot is paid: Basic ₹299 / Pro ₹699 for the first month, Pro with the 30-day guarantee. See the [monetization design](../superpowers/specs/2026-10-10-mandisamiti-monetization-design.md).
+- [ ] Discount for pilot shops that continue (later).

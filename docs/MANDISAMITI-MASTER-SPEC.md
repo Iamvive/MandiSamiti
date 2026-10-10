@@ -35,6 +35,7 @@ This page is an index. Each topic lives on its own page; open the one you need.
 | 2026-09-20 | [Aadhat ledger — product & technical design](superpowers/specs/2026-09-20-mandisamiti-aadhat-ledger-design.md) |
 | 2026-10-08 | [Accounts & cloud sync](superpowers/specs/2026-10-08-mandisamiti-accounts-and-sync-design.md) |
 | 2026-10-10 | [Phase 4 — staff roles](superpowers/specs/2026-10-10-mandisamiti-phase4-staff-roles-design.md) |
+| 2026-10-10 | [Monetization — Basic बही सुरक्षा + Pro उधारी वसूली](superpowers/specs/2026-10-10-mandisamiti-monetization-design.md) |
 
 ## Implementation plans (`superpowers/plans/`)
 | Date | Plan |
