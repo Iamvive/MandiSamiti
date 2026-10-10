@@ -197,7 +197,7 @@ fun RegisterScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (uiState.generalErrorMessage != null) {
+                if (uiState.generalErrorMessage != null && uiState.step != AuthStep.ENTER_MPIN) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),

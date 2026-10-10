@@ -198,4 +198,48 @@ class HomeViewModelTest {
         }
         assertEquals(0, database.appDatabaseQueries.getAllParties("srv-shop").executeAsList().size)
     }
+
+    @Test
+    fun testLanguageSettingPersistence() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val tradeRepo = com.appwork.mandisamiti.data.repository.OfflineFirstTradeSettingsRepository(database, ioDispatcher = ioDispatcher)
+        var syncTriggered = 0
+
+        val viewModel = HomeViewModel(
+            shopId = "shop-1",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            tradeSettingsRepository = tradeRepo,
+            viewModelScope = backgroundScope,
+            onLocalWrite = { syncTriggered++ }
+        )
+
+        // Initial language is Hindi (false)
+        assertEquals(false, viewModel.uiState.value.isEnglish)
+
+        // Change language to English
+        viewModel.setLanguage(true)
+        testScheduler.runCurrent()
+        assertEquals(true, viewModel.uiState.value.isEnglish)
+        assertEquals(1, syncTriggered)
+
+        // Verify persisted to DB and reloadable
+        val persistedSettings = tradeRepo.getTradeSettings()
+        assertEquals(true, persistedSettings.isEnglish)
+
+        // Fresh ViewModel reloads English from repository
+        val viewModel2 = HomeViewModel(
+            shopId = "shop-1",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            tradeSettingsRepository = tradeRepo,
+            viewModelScope = backgroundScope
+        )
+
+        viewModel2.uiState.first { it.isEnglish }
+        assertEquals(true, viewModel2.uiState.value.isEnglish)
+    }
 }

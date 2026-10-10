@@ -24,13 +24,15 @@ class TradeSettingsRepositoryTest {
         assertEquals(150L, initial.buyerCommissionBps)
         assertEquals(15000L, initial.defaultLabourPaisa)
         assertEquals(35000L, initial.defaultTareGrams)
+        assertEquals(false, initial.isEnglish)
 
         // Save customized settings
         val custom = TradeSettings(
             farmerCommissionBps = 200L,   // 2.0%
             buyerCommissionBps = 100L,    // 1.0%
             defaultLabourPaisa = 18000L,  // ₹180
-            defaultTareGrams = 40000L     // 0.40 qtl
+            defaultTareGrams = 40000L,    // 0.40 qtl
+            isEnglish = true
         )
         repo.saveTradeSettings(custom)
 
@@ -39,6 +41,7 @@ class TradeSettingsRepositoryTest {
         assertEquals(100L, retrieved.buyerCommissionBps)
         assertEquals(18000L, retrieved.defaultLabourPaisa)
         assertEquals(40000L, retrieved.defaultTareGrams)
+        assertEquals(true, retrieved.isEnglish)
 
         // Verify fresh repository instance sees persisted values from SQLite
         val repo2 = OfflineFirstTradeSettingsRepository(database, dispatcher)
@@ -47,6 +50,7 @@ class TradeSettingsRepositoryTest {
         assertEquals(100L, fromDb.buyerCommissionBps)
         assertEquals(18000L, fromDb.defaultLabourPaisa)
         assertEquals(40000L, fromDb.defaultTareGrams)
+        assertEquals(true, fromDb.isEnglish)
     }
 
     @Test

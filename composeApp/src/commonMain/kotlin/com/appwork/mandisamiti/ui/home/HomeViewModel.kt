@@ -72,7 +72,12 @@ class HomeViewModel(
             .launchIn(viewModelScope)
 
         tradeSettingsRepository?.getTradeSettingsStream()
-            ?.onEach { settings -> _uiState.value = _uiState.value.copy(tradeSettings = settings) }
+            ?.onEach { settings ->
+                _uiState.value = _uiState.value.copy(
+                    tradeSettings = settings,
+                    isEnglish = settings.isEnglish
+                )
+            }
             ?.launchIn(viewModelScope)
 
         observeParties(shopId)
@@ -155,6 +160,11 @@ class HomeViewModel(
 
     fun setLanguage(isEnglish: Boolean) {
         _uiState.value = _uiState.value.copy(isEnglish = isEnglish)
+        val currentSettings = _uiState.value.tradeSettings
+        viewModelScope.launch {
+            tradeSettingsRepository?.saveTradeSettings(currentSettings.copy(isEnglish = isEnglish))
+            onLocalWrite()
+        }
     }
 
     fun toggleSoundSetting() {

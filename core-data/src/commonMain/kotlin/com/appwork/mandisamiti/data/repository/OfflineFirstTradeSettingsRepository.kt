@@ -31,6 +31,7 @@ class OfflineFirstTradeSettingsRepository(
             queries.setSyncMetadataLong(KEY_BUYER_COMM_BPS, settings.buyerCommissionBps)
             queries.setSyncMetadataLong(KEY_LABOUR_PAISA, settings.defaultLabourPaisa)
             queries.setSyncMetadataLong(KEY_TARE_GRAMS, settings.defaultTareGrams)
+            queries.setSyncMetadataLong(KEY_IS_ENGLISH, if (settings.isEnglish) 1L else 0L)
         }
         _settingsFlow.value = settings
     }
@@ -40,11 +41,13 @@ class OfflineFirstTradeSettingsRepository(
         val buyerBps = queries.getSyncMetadataLong(KEY_BUYER_COMM_BPS).executeAsOneOrNull() ?: DEFAULT_BUYER_COMM_BPS
         val labourPaisa = queries.getSyncMetadataLong(KEY_LABOUR_PAISA).executeAsOneOrNull() ?: DEFAULT_LABOUR_PAISA
         val tareGrams = queries.getSyncMetadataLong(KEY_TARE_GRAMS).executeAsOneOrNull() ?: DEFAULT_TARE_GRAMS
+        val isEnglish = (queries.getSyncMetadataLong(KEY_IS_ENGLISH).executeAsOneOrNull() ?: 0L) == 1L
         return TradeSettings(
             farmerCommissionBps = farmerBps,
             buyerCommissionBps = buyerBps,
             defaultLabourPaisa = labourPaisa,
-            defaultTareGrams = tareGrams
+            defaultTareGrams = tareGrams,
+            isEnglish = isEnglish
         )
     }
 
@@ -53,6 +56,7 @@ class OfflineFirstTradeSettingsRepository(
         const val KEY_BUYER_COMM_BPS = "trade_settings_buyer_comm_bps"
         const val KEY_LABOUR_PAISA = "trade_settings_labour_paisa"
         const val KEY_TARE_GRAMS = "trade_settings_tare_grams"
+        const val KEY_IS_ENGLISH = "trade_settings_is_english"
 
         const val DEFAULT_FARMER_COMM_BPS = 150L
         const val DEFAULT_BUYER_COMM_BPS = 150L
