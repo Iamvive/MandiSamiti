@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +46,8 @@ fun SoundboxTopBar(
     onToggleSound: () -> Unit,
     modifier: Modifier = Modifier,
     pendingSyncCount: Int = 0,
+    isEnglish: Boolean = false,
+    onOpenHelp: (() -> Unit)? = null,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
     val soundBtnShape = RoundedCornerShape(20.dp)
@@ -161,6 +164,37 @@ fun SoundboxTopBar(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
                 )
+            }
+
+            // Persistent Thumb-Accessible Video Help Pill
+            if (onOpenHelp != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(soundBtnShape)
+                        .background(MandiSurfaceElevated)
+                        .border(
+                            width = 1.dp,
+                            color = MandiBorder,
+                            shape = soundBtnShape
+                        )
+                        .clickable { onOpenHelp() }
+                        .padding(horizontal = 9.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircle,
+                        contentDescription = if (isEnglish) "Help Guides" else "वीडियो सहायता",
+                        tint = MandiGreenText,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = if (isEnglish) "Help" else "सीखें",
+                        color = MandiTextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }

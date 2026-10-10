@@ -36,6 +36,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.appwork.mandisamiti.ui.tutorial.MandiTutorial
+import com.appwork.mandisamiti.ui.tutorial.MandiTutorialSheet
+import com.appwork.mandisamiti.ui.tutorial.TutorialPill
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +77,7 @@ fun DealEntryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val cameraPicker = rememberCameraSlipPicker()
+    var showTutorialSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -87,6 +94,7 @@ fun DealEntryScreen(
                 mandiLocation = "मथुरा मंडी • पक्का हिसाब",
                 isSoundEnabled = uiState.isSoundEnabled,
                 onToggleSound = {},
+                onOpenHelp = { showTutorialSheet = true },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -113,6 +121,14 @@ fun DealEntryScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Video Tutorial Quick Pill (Thumb Zone)
+                TutorialPill(
+                    tutorial = MandiTutorial.DEAL_ENTRY,
+                    isEnglish = false,
+                    onClick = { showTutorialSheet = true },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 // 1. Sleek 2-Stage Breadcrumb Tabs (No Emojis)
                 TabRow(
                     selectedTabIndex = if (uiState.isSettledStage) 1 else 0,
@@ -510,6 +526,14 @@ fun DealEntryScreen(
                 showSubmitInsteadOfNext = uiState.isSettledStage && uiState.activeField == ActiveInputField.RATE_PER_QUINTAL
             )
         }
+    }
+
+    if (showTutorialSheet) {
+        MandiTutorialSheet(
+            initialTutorial = MandiTutorial.DEAL_ENTRY,
+            isEnglish = false,
+            onDismissRequest = { showTutorialSheet = false }
+        )
     }
 }
 

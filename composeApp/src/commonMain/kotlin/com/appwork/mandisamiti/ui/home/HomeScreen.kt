@@ -25,8 +25,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.model.Party
@@ -39,6 +41,8 @@ import com.appwork.mandisamiti.ui.navigation.NavigationTab
 import com.appwork.mandisamiti.ui.register.DailyCashRegisterScreen
 import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
 import com.appwork.mandisamiti.ui.settings.SettingsScreen
+import com.appwork.mandisamiti.ui.tutorial.MandiTutorial
+import com.appwork.mandisamiti.ui.tutorial.MandiTutorialSheet
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
@@ -61,6 +65,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    var activeTutorial by remember { mutableStateOf<MandiTutorial?>(null) }
 
     // When not on Dashboard, hardware/system back returns to Dashboard
     MandiBackHandler(enabled = uiState.currentTab != NavigationTab.DASHBOARD) {
@@ -74,7 +79,16 @@ fun HomeScreen(
                 mandiLocation = uiState.shopProfile?.mandiName ?: "",
                 isSoundEnabled = uiState.isSoundEnabled,
                 onToggleSound = { viewModel.toggleSoundSetting() },
-                pendingSyncCount = uiState.pendingSyncCount
+                pendingSyncCount = uiState.pendingSyncCount,
+                isEnglish = uiState.isEnglish,
+                onOpenHelp = {
+                    activeTutorial = when (uiState.currentTab) {
+                        NavigationTab.DASHBOARD -> MandiTutorial.DEAL_ENTRY
+                        NavigationTab.KHATA -> MandiTutorial.KHATA_STATEMENT
+                        NavigationTab.GALLA -> MandiTutorial.GALLA_REGISTER
+                        NavigationTab.SETTINGS -> MandiTutorial.SOUNDBOX_SETTINGS
+                    }
+                }
             )
         },
         bottomBar = {
@@ -158,6 +172,14 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    activeTutorial?.let { tutorial ->
+        MandiTutorialSheet(
+            initialTutorial = tutorial,
+            isEnglish = uiState.isEnglish,
+            onDismissRequest = { activeTutorial = null }
+        )
     }
 }
 
