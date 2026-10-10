@@ -74,6 +74,7 @@ fun App(
     val partyRepo = remember { OfflineFirstPartyRepository(database) }
     val dealRepo = remember { OfflineFirstDealRepository(database) }
     val cashRepo = remember { OfflineFirstCashTransactionRepository(database) }
+    val tradeSettingsRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstTradeSettingsRepository(database) }
     val wiper = remember { LocalDataWiper(database) }
     val authRepo = remember {
         AuthRepository(
@@ -152,6 +153,7 @@ fun App(
                         shopId = shopId!!,
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
+                        tradeSettingsRepository = tradeSettingsRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
@@ -212,6 +214,7 @@ fun App(
                         dealRepository = dealRepo,
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
+                        tradeSettingsRepository = tradeSettingsRepo,
                         ttsManager = ttsManager,
                         viewModelScope = coroutineScope
                     )

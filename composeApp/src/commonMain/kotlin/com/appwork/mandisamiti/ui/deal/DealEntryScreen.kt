@@ -359,13 +359,45 @@ fun DealEntryScreen(
                                 color = MandiTextPrimary
                             )
 
-                            FintechInputField(
-                                label = "नीलामी भाव (₹ / क्विंटल)",
-                                value = uiState.ratePerQuintalText,
-                                isFocused = uiState.activeField == ActiveInputField.RATE_PER_QUINTAL,
-                                onClick = { viewModel.onFocusField(ActiveInputField.RATE_PER_QUINTAL) },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                FintechInputField(
+                                    label = "नीलामी भाव (₹ / Qtl)",
+                                    value = uiState.ratePerQuintalText,
+                                    isFocused = uiState.activeField == ActiveInputField.RATE_PER_QUINTAL,
+                                    onClick = { viewModel.onFocusField(ActiveInputField.RATE_PER_QUINTAL) },
+                                    modifier = Modifier.weight(1.2f)
+                                )
+                                FintechInputField(
+                                    label = "किसान आढ़त (%)",
+                                    value = uiState.commissionPercentText,
+                                    isFocused = uiState.activeField == ActiveInputField.COMMISSION_PERCENT,
+                                    onClick = { viewModel.onFocusField(ActiveInputField.COMMISSION_PERCENT) },
+                                    modifier = Modifier.weight(0.8f)
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                FintechInputField(
+                                    label = "हम्माली / लेबर (₹)",
+                                    value = uiState.labourChargesText,
+                                    isFocused = uiState.activeField == ActiveInputField.LABOUR_CHARGES,
+                                    onClick = { viewModel.onFocusField(ActiveInputField.LABOUR_CHARGES) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FintechInputField(
+                                    label = "व्यापारी आढ़त (%)",
+                                    value = uiState.buyerCommissionPercentText,
+                                    isFocused = uiState.activeField == ActiveInputField.BUYER_COMMISSION_PERCENT,
+                                    onClick = { viewModel.onFocusField(ActiveInputField.BUYER_COMMISSION_PERCENT) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
 
                             // Itemized Breakdown Table
                             Column(
@@ -378,6 +410,17 @@ fun DealEntryScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 InvoiceRow(label = "सकल माल मूल्य (Gross)", amountPaisa = uiState.grossAmountPaisa, isBold = false)
+                                if (uiState.grossAmountPaisa > 0L) {
+                                    val farmerBps = MandiMathEngine.parsePercentToBasisPoints(uiState.commissionPercentText)
+                                    val farmerCommPaisa = MandiMathEngine.percentageOf(uiState.grossAmountPaisa, farmerBps)
+                                    val labourPaisa = MandiMathEngine.parseRupeesToPaisa(uiState.labourChargesText)
+                                    if (farmerCommPaisa > 0L) {
+                                        InvoiceRow(label = "− किसान आढ़त (${uiState.commissionPercentText}%)", amountPaisa = farmerCommPaisa, isBold = false, color = MandiTextSecondary)
+                                    }
+                                    if (labourPaisa > 0L) {
+                                        InvoiceRow(label = "− हम्माली / लेबर", amountPaisa = labourPaisa, isBold = false, color = MandiTextSecondary)
+                                    }
+                                }
                                 val farmerOwesShop = uiState.netFarmerPayablePaisa < 0
                                 InvoiceRow(
                                     label = if (farmerOwesShop) "किसान से लेना है" else "किसान को शुद्ध देय",
@@ -385,12 +428,17 @@ fun DealEntryScreen(
                                     isBold = true,
                                     color = if (farmerOwesShop) MandiRedReceivable else MandiGreenPayable
                                 )
-                                InvoiceRow(
-                                    label = "व्यापारी से देय वसूली",
-                                    amountPaisa = uiState.netBuyerReceivablePaisa,
-                                    isBold = false,
-                                    color = MandiTextPrimary
-                                )
+                                if (uiState.buyerCommissionPaisa > 0L) {
+                                    InvoiceRow(label = "+ व्यापारी आढ़त (${uiState.buyerCommissionPercentText}%)", amountPaisa = uiState.buyerCommissionPaisa, isBold = false, color = MandiTextSecondary)
+                                }
+                                if (uiState.selectedBuyer != null || uiState.netBuyerReceivablePaisa > 0L) {
+                                    InvoiceRow(
+                                        label = "व्यापारी से देय वसूली",
+                                        amountPaisa = uiState.netBuyerReceivablePaisa,
+                                        isBold = true,
+                                        color = MandiTextPrimary
+                                    )
+                                }
                             }
                         }
                     }

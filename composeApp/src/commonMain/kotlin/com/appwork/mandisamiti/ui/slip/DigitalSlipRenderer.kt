@@ -45,9 +45,17 @@ object DigitalSlipRenderer {
             appendLine("💵 *कुल रकम:* ₹ ${MandiMathEngine.paisaToRupeesString(deal.grossAmountPaisa)}")
             appendLine("➖ *पल्लेदारी / मजदूरी:* ₹ $labourRs")
             appendLine("➖ *मंडी आढ़त:* ₹ $commRs")
+            if (deal.buyerCommissionPaisa > 0L) {
+                val buyerCommRs = MandiMathEngine.paisaToRupeesString(deal.buyerCommissionPaisa)
+                appendLine("➕ *व्यापारी आढ़त:* ₹ $buyerCommRs")
+            }
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
             if (deal.netFarmerPayablePaisa < 0) appendLine("*किसान से लेना है: ₹ $farmerPayableRs*")
             else appendLine("🟢 *शुद्ध देय भुगतान (Net Payable): ₹ $farmerPayableRs*")
+            if (buyer != null) {
+                val buyerRecRs = MandiMathEngine.paisaToRupeesString(deal.netBuyerReceivablePaisa)
+                appendLine("🔵 *व्यापारी से वसूली: ₹ $buyerRecRs*")
+            }
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
             appendLine("धन्यवाद! 🙏")
             appendLine("— ${shopProfile.ownerName} (${shopProfile.shopName})")

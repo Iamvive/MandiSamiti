@@ -33,6 +33,7 @@ data class PartyWithBalance(
 
 data class HomeUiState(
     val shopProfile: ShopProfile? = null,
+    val tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings = com.appwork.mandisamiti.domain.model.TradeSettings(),
     val totalMarketReceivablePaisa: Long = 0L,
     val totalFarmerPayablePaisa: Long = 0L,
     val searchQuery: String = "",
@@ -52,6 +53,7 @@ class HomeViewModel(
     private val shopId: String,
     private val shopProfileRepository: ShopProfileRepository,
     private val partyRepository: PartyRepository,
+    private val tradeSettingsRepository: com.appwork.mandisamiti.domain.repository.TradeSettingsRepository? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val onLocalWrite: () -> Unit = {}
 ) {
@@ -68,6 +70,11 @@ class HomeViewModel(
         shopProfileRepository.getShopProfileStream()
             .onEach { profile -> _uiState.value = _uiState.value.copy(shopProfile = profile) }
             .launchIn(viewModelScope)
+
+        tradeSettingsRepository?.getTradeSettingsStream()
+            ?.onEach { settings -> _uiState.value = _uiState.value.copy(tradeSettings = settings) }
+            ?.launchIn(viewModelScope)
+
         observeParties(shopId)
     }
 
@@ -155,6 +162,13 @@ class HomeViewModel(
         val newSoundState = !currentProfile.isSoundEnabled
         viewModelScope.launch {
             shopProfileRepository.updateSoundSetting(currentProfile.id, newSoundState)
+        }
+    }
+
+    fun updateTradeSettings(settings: com.appwork.mandisamiti.domain.model.TradeSettings) {
+        viewModelScope.launch {
+            tradeSettingsRepository?.saveTradeSettings(settings)
+            onLocalWrite()
         }
     }
 

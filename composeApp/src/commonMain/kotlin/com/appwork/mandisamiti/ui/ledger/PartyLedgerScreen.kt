@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
+import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
@@ -288,6 +289,7 @@ fun PartyLedgerScreen(
                         is LedgerItem.DealItem -> {
                             FintechDealCard(
                                 deal = item.deal,
+                                isBuyerLedger = party?.partyType == PartyType.BUYER,
                                 onShareSlip = { onShareWhatsAppReceipt(item.deal.id) },
                                 onEditDeal = { onEditDeal(item.deal.id) },
                                 onLongPress = { voidTarget = item }
@@ -551,6 +553,7 @@ private fun FintechActionButton(
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechDealCard(
     deal: com.appwork.mandisamiti.domain.model.Deal,
+    isBuyerLedger: Boolean = false,
     onShareSlip: () -> Unit,
     onEditDeal: () -> Unit = {},
     onLongPress: () -> Unit
@@ -633,24 +636,42 @@ private fun FintechDealCard(
                     fontSize = 13.sp,
                     color = MandiTextSecondary
                 )
-                // A negative payable means the farmer owes the shop: say so instead of printing "₹-…".
-                val farmerOwesShop = deal.netFarmerPayablePaisa < 0
-                Column(horizontalAlignment = Alignment.End) {
-                    if (farmerOwesShop) {
+                if (isBuyerLedger) {
+                    Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "किसान से लेना है",
+                            text = "व्यापारी से वसूली",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MandiRedReceivable
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "₹${MandiMathEngine.paisaToRupeesString(deal.netBuyerReceivablePaisa)}",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary,
+                            textDecoration = if (isVoid) TextDecoration.LineThrough else null
                         )
                     }
-                    Text(
-                        text = "₹${MandiMathEngine.paisaToRupeesString(kotlin.math.abs(deal.netFarmerPayablePaisa))}",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (farmerOwesShop) MandiRedReceivable else MandiAmberDark,
-                        textDecoration = if (isVoid) TextDecoration.LineThrough else null
-                    )
+                } else {
+                    // A negative payable means the farmer owes the shop: say so instead of printing "₹-…".
+                    val farmerOwesShop = deal.netFarmerPayablePaisa < 0
+                    Column(horizontalAlignment = Alignment.End) {
+                        if (farmerOwesShop) {
+                            Text(
+                                text = "किसान से लेना है",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiRedReceivable
+                            )
+                        }
+                        Text(
+                            text = "₹${MandiMathEngine.paisaToRupeesString(kotlin.math.abs(deal.netFarmerPayablePaisa))}",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (farmerOwesShop) MandiRedReceivable else MandiAmberDark,
+                            textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                        )
+                    }
                 }
             }
         }

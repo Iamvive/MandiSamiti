@@ -32,8 +32,9 @@ enum class ActiveInputField {
     GROSS_WEIGHT,
     TARE_WEIGHT,
     RATE_PER_QUINTAL,
-    LABOUR_CHARGES,
-    COMMISSION_PERCENT
+    COMMISSION_PERCENT,
+    BUYER_COMMISSION_PERCENT,
+    LABOUR_CHARGES
 }
 
 data class DealEntryUiState(
@@ -55,6 +56,8 @@ data class DealEntryUiState(
     val ratePerQuintalText: String = "", // in Rs/Quintal, e.g. "2450"
     val labourChargesText: String = "150", // in Rs
     val commissionPercentText: String = "1.5", // %
+    val buyerCommissionPercentText: String = "1.5", // %
+    val buyerCommissionPaisa: Long = 0L,
 
     val activeField: ActiveInputField = ActiveInputField.GROSS_WEIGHT,
     val receiptPhotoUri: String? = null,
@@ -82,6 +85,7 @@ class DealEntryViewModel(
     private val dealRepository: DealRepository,
     private val partyRepository: PartyRepository,
     private val shopProfileRepository: ShopProfileRepository,
+    private val tradeSettingsRepository: com.appwork.mandisamiti.domain.repository.TradeSettingsRepository? = null,
     private val ttsManager: SoundboxTtsManager,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
@@ -96,8 +100,27 @@ class DealEntryViewModel(
 
     init {
         loadShopProfileAndParties()
+        loadTradeSettingsDefaults()
         if (existingDealId != null) {
             loadExistingDeal(existingDealId)
+        }
+    }
+
+    private fun loadTradeSettingsDefaults() {
+        if (existingDealId == null && tradeSettingsRepository != null) {
+            tradeSettingsRepository.getTradeSettingsStream()
+                .onEach { settings ->
+                    if (originalDeal == null) {
+                        _uiState.value = _uiState.value.copy(
+                            commissionPercentText = MandiMathEngine.paisaToInputString(settings.farmerCommissionBps),
+                            buyerCommissionPercentText = MandiMathEngine.paisaToInputString(settings.buyerCommissionBps),
+                            labourChargesText = MandiMathEngine.paisaToInputString(settings.defaultLabourPaisa),
+                            tareWeightText = MandiMathEngine.gramsToQuintalsInputString(settings.defaultTareGrams)
+                        )
+                        recalculate()
+                    }
+                }
+                .launchIn(viewModelScope)
         }
     }
 
@@ -135,6 +158,11 @@ class DealEntryViewModel(
                 val tareQ = MandiMathEngine.gramsToQuintalsInputString(deal.cutWeightGrams)
                 val rate = deal.ratePaisaPerUnit?.let { MandiMathEngine.paisaToInputString(it) } ?: ""
 
+                val buyerCommPercent = if (deal.grossAmountPaisa > 0L && deal.buyerCommissionPaisa > 0L) {
+                    val bps = (deal.buyerCommissionPaisa * 10000L + deal.grossAmountPaisa / 2) / deal.grossAmountPaisa
+                    MandiMathEngine.paisaToInputString(bps)
+                } else "1.5"
+
                 _uiState.value = _uiState.value.copy(
                     dealId = deal.id,
                     isEditMode = true,
@@ -146,6 +174,8 @@ class DealEntryViewModel(
                     ratePerQuintalText = rate,
                     labourChargesText = MandiMathEngine.paisaToInputString(deal.labourChargePaisa),
                     commissionPercentText = MandiMathEngine.paisaToInputString(deal.farmerCommissionBps),
+                    buyerCommissionPercentText = buyerCommPercent,
+                    buyerCommissionPaisa = deal.buyerCommissionPaisa,
                     receiptPhotoUri = deal.receiptPhotoUri,
                     isSettledStage = deal.dealStatus == DealStatus.SETTLED
                 )
@@ -201,9 +231,10 @@ class DealEntryViewModel(
             ActiveInputField.BAGS_COUNT -> ActiveInputField.GROSS_WEIGHT
             ActiveInputField.GROSS_WEIGHT -> ActiveInputField.TARE_WEIGHT
             ActiveInputField.TARE_WEIGHT -> if (_uiState.value.isSettledStage) ActiveInputField.RATE_PER_QUINTAL else ActiveInputField.BAGS_COUNT
-            ActiveInputField.RATE_PER_QUINTAL -> ActiveInputField.LABOUR_CHARGES
-            ActiveInputField.LABOUR_CHARGES -> ActiveInputField.COMMISSION_PERCENT
-            ActiveInputField.COMMISSION_PERCENT -> ActiveInputField.RATE_PER_QUINTAL
+            ActiveInputField.RATE_PER_QUINTAL -> ActiveInputField.COMMISSION_PERCENT
+            ActiveInputField.COMMISSION_PERCENT -> ActiveInputField.BUYER_COMMISSION_PERCENT
+            ActiveInputField.BUYER_COMMISSION_PERCENT -> ActiveInputField.LABOUR_CHARGES
+            ActiveInputField.LABOUR_CHARGES -> ActiveInputField.RATE_PER_QUINTAL
         }
         _uiState.value = _uiState.value.copy(activeField = next)
     }
@@ -217,6 +248,7 @@ class DealEntryViewModel(
             ActiveInputField.RATE_PER_QUINTAL -> applyKeypad(current.ratePerQuintalText, key, maxDecimals = 2)
             ActiveInputField.LABOUR_CHARGES -> applyKeypad(current.labourChargesText, key, maxDecimals = 2)
             ActiveInputField.COMMISSION_PERCENT -> applyKeypad(current.commissionPercentText, key, maxDecimals = 2)
+            ActiveInputField.BUYER_COMMISSION_PERCENT -> applyKeypad(current.buyerCommissionPercentText, key, maxDecimals = 2)
         }
 
         _uiState.value = when (current.activeField) {
@@ -226,6 +258,7 @@ class DealEntryViewModel(
             ActiveInputField.RATE_PER_QUINTAL -> current.copy(ratePerQuintalText = updatedText)
             ActiveInputField.LABOUR_CHARGES -> current.copy(labourChargesText = updatedText)
             ActiveInputField.COMMISSION_PERCENT -> current.copy(commissionPercentText = updatedText)
+            ActiveInputField.BUYER_COMMISSION_PERCENT -> current.copy(buyerCommissionPercentText = updatedText)
         }
         recalculate()
     }
@@ -239,6 +272,7 @@ class DealEntryViewModel(
             ActiveInputField.RATE_PER_QUINTAL -> current.ratePerQuintalText.dropLast(1)
             ActiveInputField.LABOUR_CHARGES -> current.labourChargesText.dropLast(1)
             ActiveInputField.COMMISSION_PERCENT -> current.commissionPercentText.dropLast(1)
+            ActiveInputField.BUYER_COMMISSION_PERCENT -> current.buyerCommissionPercentText.dropLast(1)
         }
 
         _uiState.value = when (current.activeField) {
@@ -248,6 +282,7 @@ class DealEntryViewModel(
             ActiveInputField.RATE_PER_QUINTAL -> current.copy(ratePerQuintalText = updatedText)
             ActiveInputField.LABOUR_CHARGES -> current.copy(labourChargesText = updatedText)
             ActiveInputField.COMMISSION_PERCENT -> current.copy(commissionPercentText = updatedText)
+            ActiveInputField.BUYER_COMMISSION_PERCENT -> current.copy(buyerCommissionPercentText = updatedText)
         }
         recalculate()
     }
@@ -261,6 +296,7 @@ class DealEntryViewModel(
             ActiveInputField.RATE_PER_QUINTAL -> current.copy(ratePerQuintalText = "")
             ActiveInputField.LABOUR_CHARGES -> current.copy(labourChargesText = "")
             ActiveInputField.COMMISSION_PERCENT -> current.copy(commissionPercentText = "")
+            ActiveInputField.BUYER_COMMISSION_PERCENT -> current.copy(buyerCommissionPercentText = "")
         }
         recalculate()
     }
@@ -297,6 +333,7 @@ class DealEntryViewModel(
         _uiState.value = _uiState.value.copy(
             netWeightQuintals = netQuintalsStr,
             grossAmountPaisa = calc?.grossAmountPaisa ?: 0L,
+            buyerCommissionPaisa = calc?.buyerCommissionPaisa ?: 0L,
             netFarmerPayablePaisa = calc?.netFarmerPayablePaisa ?: 0L,
             netBuyerReceivablePaisa = calc?.netBuyerReceivablePaisa ?: 0L
         )
@@ -309,13 +346,23 @@ class DealEntryViewModel(
         val ratePaisa = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText)
         if (ratePaisa <= 0L || netGrams <= 0L) return null
         val commissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText)
+        val buyerCommissionBps = MandiMathEngine.parsePercentToBasisPoints(state.buyerCommissionPercentText)
+        val grossAmt = MandiMathEngine.grossAmountPaisa(netGrams, ratePaisa)
         val original = originalDeal
+        val buyerCommPaisa = if (original != null && original.buyerCommissionPaisa > 0L && state.buyerCommissionPercentText == "1.5") {
+            original.buyerCommissionPaisa
+        } else if (state.selectedBuyer != null || buyerCommissionBps > 0L) {
+            MandiMathEngine.percentageOf(grossAmt, buyerCommissionBps)
+        } else {
+            original?.buyerCommissionPaisa ?: 0L
+        }
         return MandiMathEngine.calculateSettlement(
             grossWeightGrams = grossGrams,
             cutWeightGrams = tareGrams,
             ratePaisaPerQuintal = ratePaisa,
             deductions = DeductionsInput(
-                farmerCommissionPaisa = MandiMathEngine.percentageOf(MandiMathEngine.grossAmountPaisa(netGrams, ratePaisa), commissionBps),
+                farmerCommissionPaisa = MandiMathEngine.percentageOf(grossAmt, commissionBps),
+                buyerCommissionPaisa = buyerCommPaisa,
                 labourChargePaisa = MandiMathEngine.parseRupeesToPaisa(state.labourChargesText),
                 weighingChargePaisa = original?.weighingChargePaisa ?: 0L,
                 otherDeductionsPaisa = original?.otherDeductionsPaisa ?: 0L
@@ -367,6 +414,7 @@ class DealEntryViewModel(
                 ratePaisaPerUnit = ratePaisa,
                 grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
                 farmerCommissionPaisa = if (isSettled) calc!!.farmerCommissionPaisa else 0L,
+                buyerCommissionPaisa = if (isSettled) calc!!.buyerCommissionPaisa else 0L,
                 farmerCommissionBps = commissionBps,
                 labourChargePaisa = labourPaisa,
                 netFarmerPayablePaisa = if (isSettled) calc!!.netFarmerPayablePaisa else 0L,
@@ -390,6 +438,7 @@ class DealEntryViewModel(
                 ratePaisaPerUnit = ratePaisa,
                 grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
                 farmerCommissionPaisa = if (isSettled) calc!!.farmerCommissionPaisa else 0L,
+                buyerCommissionPaisa = if (isSettled) calc!!.buyerCommissionPaisa else 0L,
                 farmerCommissionBps = commissionBps,
                 labourChargePaisa = labourPaisa,
                 netFarmerPayablePaisa = if (isSettled) calc!!.netFarmerPayablePaisa else 0L,

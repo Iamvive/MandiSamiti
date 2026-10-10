@@ -114,8 +114,93 @@ class DealEntryViewModelTest {
             viewModel.saveDeal()
             val event = awaitItem()
             assertTrue(event is DealEntryEvent.DealSavedSuccess)
-            assertEquals(DealStatus.SETTLED, (event as DealEntryEvent.DealSavedSuccess).deal.dealStatus)
+            val savedDeal = (event as DealEntryEvent.DealSavedSuccess).deal
+            assertEquals(DealStatus.SETTLED, savedDeal.dealStatus)
+            assertTrue(savedDeal.buyerCommissionPaisa > 0L)
+            assertEquals(savedDeal.grossAmountPaisa + savedDeal.buyerCommissionPaisa, savedDeal.netBuyerReceivablePaisa)
             assertTrue((event as DealEntryEvent.DealSavedSuccess).ttsSpeechText.contains("रामवीर सिंह"))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun testCustomTradeSettingsDefaultsAndBuyerCommission() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val tradeRepo = com.appwork.mandisamiti.data.repository.OfflineFirstTradeSettingsRepository(database, ioDispatcher = ioDispatcher)
+        val ttsManager = SoundboxTtsManager()
+
+        seedShopAndParties(shopRepo, partyRepo)
+
+        // Save customized trade settings: 2.0% farmer comm, 1.0% buyer comm, ₹200 labour, 0.40 qtl tare
+        tradeRepo.saveTradeSettings(
+            com.appwork.mandisamiti.domain.model.TradeSettings(
+                farmerCommissionBps = 200L,
+                buyerCommissionBps = 100L,
+                defaultLabourPaisa = 20000L,
+                defaultTareGrams = 40000L
+            )
+        )
+
+        val viewModel = DealEntryViewModel(
+            shopId = "shop-1",
+            existingDealId = null,
+            dealRepository = dealRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            tradeSettingsRepository = tradeRepo,
+            ttsManager = ttsManager,
+            viewModelScope = backgroundScope
+        )
+
+        val farmer = partyRepo.getPartyById("farmer-1")!!
+        val buyer = partyRepo.getPartyById("buyer-1")!!
+        viewModel.onSelectFarmer(farmer)
+        viewModel.onSelectBuyer(buyer)
+
+        // Verify custom defaults were picked up
+        val initialUi = viewModel.uiState.value
+        assertEquals("2", initialUi.commissionPercentText)
+        assertEquals("1", initialUi.buyerCommissionPercentText)
+        assertEquals("200", initialUi.labourChargesText)
+        assertEquals("0.4", initialUi.tareWeightText)
+
+        // Enter weight: 20.40 qtl (net = 20.00 qtl)
+        viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_2)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_0)
+        viewModel.onKeypadAction(KeypadAction.DECIMAL)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_4)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_0)
+
+        viewModel.toggleSettlementStage(true)
+
+        // Enter rate: ₹3000/qtl -> Gross = 20 * 3000 = ₹60,000 (6,000,000 paisa)
+        viewModel.onFocusField(ActiveInputField.RATE_PER_QUINTAL)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_3)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_0)
+        viewModel.onKeypadAction(KeypadAction.DOUBLE_ZERO)
+
+        val calcUi = viewModel.uiState.value
+        assertEquals(6_000_000L, calcUi.grossAmountPaisa) // ₹60,000
+        // Buyer commission at 1.0% = ₹600 (60,000 paisa)
+        assertEquals(60_000L, calcUi.buyerCommissionPaisa)
+        assertEquals(6_060_000L, calcUi.netBuyerReceivablePaisa) // ₹60,600
+
+        // Farmer commission at 2.0% = ₹1,200 (120,000 paisa), labour = ₹200 (20,000 paisa)
+        // Net payable = 60,000 - 1,200 - 200 = ₹58,600 (5,860,000 paisa)
+        assertEquals(5_860_000L, calcUi.netFarmerPayablePaisa)
+
+        viewModel.events.test {
+            viewModel.saveDeal()
+            val event = awaitItem() as DealEntryEvent.DealSavedSuccess
+            val deal = event.deal
+            assertEquals(60_000L, deal.buyerCommissionPaisa)
+            assertEquals(6_060_000L, deal.netBuyerReceivablePaisa)
+            assertEquals(5_860_000L, deal.netFarmerPayablePaisa)
             cancelAndIgnoreRemainingEvents()
         }
     }

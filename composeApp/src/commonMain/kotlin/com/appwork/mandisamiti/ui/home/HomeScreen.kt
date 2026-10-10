@@ -143,7 +143,8 @@ fun HomeScreen(
                             isEnglish = uiState.isEnglish,
                             onLanguageToggle = { viewModel.setLanguage(it) },
                             onToggleSound = { viewModel.toggleSoundSetting() },
-                            onSignOutClick = onSignOut
+                            onSignOutClick = onSignOut,
+                            onUpdateTradeSettings = { viewModel.updateTradeSettings(it) }
                         )
                     }
                 }

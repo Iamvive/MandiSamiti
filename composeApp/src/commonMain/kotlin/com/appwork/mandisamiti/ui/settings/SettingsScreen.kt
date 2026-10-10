@@ -58,6 +58,11 @@ import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
+import androidx.compose.material.icons.filled.Percent
+import androidx.compose.material3.OutlinedTextField
+import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.model.TradeSettings
+
 @Composable
 fun SettingsScreen(
     uiState: HomeUiState,
@@ -65,9 +70,15 @@ fun SettingsScreen(
     onLanguageToggle: (Boolean) -> Unit,
     onToggleSound: () -> Unit,
     onSignOutClick: () -> Unit,
+    onUpdateTradeSettings: (TradeSettings) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
+    var showEditTradeSettingsDialog by remember { mutableStateOf(false) }
+    var editFarmerCommInput by remember { mutableStateOf("") }
+    var editBuyerCommInput by remember { mutableStateOf("") }
+    var editLabourInput by remember { mutableStateOf("") }
+    var editTareInput by remember { mutableStateOf("") }
 
     if (showSignOutConfirmDialog) {
         AlertDialog(
@@ -98,6 +109,85 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutConfirmDialog = false }) {
+                    Text(text = if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
+                }
+            },
+            containerColor = MandiSurface
+        )
+    }
+
+    if (showEditTradeSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditTradeSettingsDialog = false },
+            title = {
+                Text(
+                    text = if (isEnglish) "Trade & Commission Rates" else "व्यापार व आढ़त दरें",
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = if (isEnglish) "Set standard default rates for new deals:" else "नए सौदों के लिए डिफ़ॉल्ट दरें तय करें:",
+                        fontSize = 13.sp,
+                        color = MandiTextSecondary
+                    )
+                    OutlinedTextField(
+                        value = editFarmerCommInput,
+                        onValueChange = { editFarmerCommInput = it },
+                        label = { Text(if (isEnglish) "Farmer Commission (%)" else "किसान आढ़त (%)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editBuyerCommInput,
+                        onValueChange = { editBuyerCommInput = it },
+                        label = { Text(if (isEnglish) "Buyer Commission (%)" else "व्यापारी आढ़त (%)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editLabourInput,
+                        onValueChange = { editLabourInput = it },
+                        label = { Text(if (isEnglish) "Labour Charge (₹)" else "हम्माली / पल्लेदारी (₹)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editTareInput,
+                        onValueChange = { editTareInput = it },
+                        label = { Text(if (isEnglish) "Default Tare Weight (Qtl)" else "डिफ़ॉल्ट काट / बारदाना (कुंतल)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val farmerBps = MandiMathEngine.parsePercentToBasisPoints(editFarmerCommInput).takeIf { it > 0L } ?: uiState.tradeSettings.farmerCommissionBps
+                        val buyerBps = MandiMathEngine.parsePercentToBasisPoints(editBuyerCommInput).takeIf { it > 0L } ?: uiState.tradeSettings.buyerCommissionBps
+                        val labourPaisa = MandiMathEngine.parseRupeesToPaisa(editLabourInput).takeIf { it > 0L } ?: uiState.tradeSettings.defaultLabourPaisa
+                        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(editTareInput).takeIf { it > 0L } ?: uiState.tradeSettings.defaultTareGrams
+
+                        onUpdateTradeSettings(
+                            TradeSettings(
+                                farmerCommissionBps = farmerBps,
+                                buyerCommissionBps = buyerBps,
+                                defaultLabourPaisa = labourPaisa,
+                                defaultTareGrams = tareGrams
+                            )
+                        )
+                        showEditTradeSettingsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MandiPrimaryAction)
+                ) {
+                    Text(text = if (isEnglish) "Save" else "सहेजें", color = MandiPrimaryActionText)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditTradeSettingsDialog = false }) {
                     Text(text = if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             },
@@ -186,7 +276,112 @@ fun SettingsScreen(
             }
         }
 
-        // 3. Vernacular Voice Soundbox Card
+        // 3. Trade & Commission Rates Card (व्यापार व आढ़त दरें)
+        item {
+            SettingsGroupCard(title = if (isEnglish) "Trade & Commission Rates" else "व्यापार व आढ़त दरें") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Farmer Commission:" else "किसान आढ़त दर:",
+                            fontSize = 14.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "${MandiMathEngine.paisaToInputString(uiState.tradeSettings.farmerCommissionBps)}%",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Buyer Commission:" else "व्यापारी आढ़त दर:",
+                            fontSize = 14.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "${MandiMathEngine.paisaToInputString(uiState.tradeSettings.buyerCommissionBps)}%",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Labour Charge:" else "हम्माली / पल्लेदारी:",
+                            fontSize = 14.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "₹${MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.defaultLabourPaisa)}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Default Tare Weight:" else "डिफ़ॉल्ट काट / बारदाना:",
+                            fontSize = 14.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "${MandiMathEngine.gramsToQuintalsInputString(uiState.tradeSettings.defaultTareGrams)} Qtl",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MandiSurfaceElevated)
+                            .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                            .clickable {
+                                editFarmerCommInput = MandiMathEngine.paisaToInputString(uiState.tradeSettings.farmerCommissionBps)
+                                editBuyerCommInput = MandiMathEngine.paisaToInputString(uiState.tradeSettings.buyerCommissionBps)
+                                editLabourInput = MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.defaultLabourPaisa)
+                                editTareInput = MandiMathEngine.gramsToQuintalsInputString(uiState.tradeSettings.defaultTareGrams)
+                                showEditTradeSettingsDialog = true
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Edit Default Rates" else "दरें बदलें",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiPrimaryAction
+                        )
+                    }
+                }
+            }
+        }
+
+        // 4. Vernacular Voice Soundbox Card
         item {
             SettingsGroupCard(title = if (isEnglish) "Sound & Voice Assistant" else "ध्वनि एवं वॉइस साउंडबॉक्स") {
                 Row(
