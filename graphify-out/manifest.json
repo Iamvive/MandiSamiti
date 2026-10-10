@@ -372,10 +372,10 @@
     "semantic_hash": "af216fad4e9037defec50c5e2a20cfbb"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/App.kt": {
-    "mtime": 1791395127.090979,
-    "seen": 1791395379.965773,
-    "ast_hash": "d3fcb9a854499c08b2e7537c2d02be60",
-    "semantic_hash": "d3fcb9a854499c08b2e7537c2d02be60"
+    "mtime": 1791395884.0913208,
+    "seen": 1791396315.491271,
+    "ast_hash": "bdb58f436aba678393458766cbc80829",
+    "semantic_hash": "bdb58f436aba678393458766cbc80829"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/platform/CameraSlipPicker.kt": {
     "mtime": 1790748097.0,
@@ -438,10 +438,10 @@
     "semantic_hash": "122d2e2e1162859960738d13396308dc"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/home/HomeScreen.kt": {
-    "mtime": 1791395081.0381167,
-    "seen": 1791395379.96606,
-    "ast_hash": "e0d9a0fe7c8e5715d78a309d1f764e39",
-    "semantic_hash": "e0d9a0fe7c8e5715d78a309d1f764e39"
+    "mtime": 1791395846.719505,
+    "seen": 1791396315.491588,
+    "ast_hash": "e9ef2313f75a6e803f4ccd26cb1783dc",
+    "semantic_hash": "e9ef2313f75a6e803f4ccd26cb1783dc"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/home/HomeViewModel.kt": {
     "mtime": 1791395029.7799158,
@@ -450,10 +450,10 @@
     "semantic_hash": "c6cb3ebf9910c8b13bb37ff8ae9a0c6a"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerScreen.kt": {
-    "mtime": 1791394257.6301231,
-    "seen": 1791394297.03019,
-    "ast_hash": "2d62d9880f696df7c69cc9d5da356ca4",
-    "semantic_hash": "2d62d9880f696df7c69cc9d5da356ca4"
+    "mtime": 1791396083.0808468,
+    "seen": 1791396315.49162,
+    "ast_hash": "a30c6bf038eda95cc160afb633d7dd3c",
+    "semantic_hash": "a30c6bf038eda95cc160afb633d7dd3c"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModel.kt": {
     "mtime": 1790748097.0,
@@ -462,10 +462,10 @@
     "semantic_hash": "6a14d0a76634f8f93cd4e021c2face4e"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyCashRegisterScreen.kt": {
-    "mtime": 1791394214.7761855,
-    "seen": 1791394297.0302238,
-    "ast_hash": "9655550a637fb4f772e5f6ce7ae7cfa7",
-    "semantic_hash": "9655550a637fb4f772e5f6ce7ae7cfa7"
+    "mtime": 1791396011.4135597,
+    "seen": 1791396315.4917068,
+    "ast_hash": "8f1fcadecde1c109cdcc27fda0b80850",
+    "semantic_hash": "8f1fcadecde1c109cdcc27fda0b80850"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterViewModel.kt": {
     "mtime": 1790748097.0,
@@ -486,10 +486,10 @@
     "semantic_hash": "ee7d5d968f4831c1775ad3f0142a3305"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/theme/Color.kt": {
-    "mtime": 1791394098.3896227,
-    "seen": 1791394297.03029,
-    "ast_hash": "0423579a50df03f398404a15032c016b",
-    "semantic_hash": "0423579a50df03f398404a15032c016b"
+    "mtime": 1791395934.219563,
+    "seen": 1791396315.4918232,
+    "ast_hash": "6670852f4eed19490ef3684f2cd158e2",
+    "semantic_hash": "6670852f4eed19490ef3684f2cd158e2"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/theme/Theme.kt": {
     "mtime": 1791100158.788043,
@@ -774,10 +774,10 @@
     "semantic_hash": "9ea7f2fb1bc613d95ea1ae647aad1dfa"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/KhataLedgerTabScreen.kt": {
-    "mtime": 1791394988.7876112,
-    "seen": 1791395379.966061,
-    "ast_hash": "ae234030f42c678f8df3aefd72ea2d4d",
-    "semantic_hash": "ae234030f42c678f8df3aefd72ea2d4d"
+    "mtime": 1791395901.2988675,
+    "seen": 1791396315.49162,
+    "ast_hash": "c901177e1b77297fec590f322eea248d",
+    "semantic_hash": "c901177e1b77297fec590f322eea248d"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/navigation/MandiBottomBar.kt": {
     "mtime": 1791394964.465487,
@@ -796,5 +796,29 @@
     "seen": 1791395379.96618,
     "ast_hash": "1df044b719d454be0f9f2f4166cc6879",
     "semantic_hash": "1df044b719d454be0f9f2f4166cc6879"
+  },
+  "composeApp/src/androidMain/kotlin/com/appwork/mandisamiti/platform/MandiBackHandler.android.kt": {
+    "mtime": 1791395799.349229,
+    "seen": 1791396315.4912121,
+    "ast_hash": "f0e2524c55b25906f6392f5261845b10",
+    "semantic_hash": "f0e2524c55b25906f6392f5261845b10"
+  },
+  "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/platform/MandiBackHandler.kt": {
+    "mtime": 1791395790.7223167,
+    "seen": 1791396315.4913,
+    "ast_hash": "be566cef04f77d58fa0c37a144b192eb",
+    "semantic_hash": "be566cef04f77d58fa0c37a144b192eb"
+  },
+  "composeApp/src/iosMain/kotlin/com/appwork/mandisamiti/platform/MandiBackHandler.ios.kt": {
+    "mtime": 1791395818.1389918,
+    "seen": 1791396315.491908,
+    "ast_hash": "8ea78c3e1b9b29e34565a8664ca49b12",
+    "semantic_hash": "8ea78c3e1b9b29e34565a8664ca49b12"
+  },
+  "composeApp/src/jvmMain/kotlin/com/appwork/mandisamiti/platform/MandiBackHandler.jvm.kt": {
+    "mtime": 1791395808.527815,
+    "seen": 1791396315.492039,
+    "ast_hash": "35060f8358e1a33b5e0ac5a2a39ba8be",
+    "semantic_hash": "35060f8358e1a33b5e0ac5a2a39ba8be"
   }
 }
