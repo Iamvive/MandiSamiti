@@ -36,6 +36,8 @@ import com.appwork.mandisamiti.ui.dashboard.DashboardScreen
 import com.appwork.mandisamiti.ui.ledger.KhataLedgerTabScreen
 import com.appwork.mandisamiti.ui.navigation.MandiBottomBar
 import com.appwork.mandisamiti.ui.navigation.NavigationTab
+import com.appwork.mandisamiti.ui.register.DailyCashRegisterScreen
+import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
 import com.appwork.mandisamiti.ui.settings.SettingsScreen
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.theme.MandiBackground
@@ -48,8 +50,10 @@ fun HomeScreen(
     shopId: String,
     onNavigateToNewEntry: () -> Unit,
     onNavigateToPartyKhata: (Party) -> Unit,
-    onNavigateToDayClosing: () -> Unit,
+    onNavigateToDayClosing: () -> Unit = {},
     onSignOut: () -> Unit,
+    registerViewModel: DailyRegisterViewModel? = null,
+    onShareWhatsApp: ((String) -> Unit)? = null,
     needsLogin: Boolean = false,
     onReLogin: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -77,11 +81,7 @@ fun HomeScreen(
             MandiBottomBar(
                 currentTab = uiState.currentTab,
                 onTabSelected = { tab ->
-                    if (tab == NavigationTab.GALLA) {
-                        onNavigateToDayClosing()
-                    } else {
-                        viewModel.selectTab(tab)
-                    }
+                    viewModel.selectTab(tab)
                 },
                 isEnglish = uiState.isEnglish
             )
@@ -134,7 +134,15 @@ fun HomeScreen(
                     }
 
                     NavigationTab.GALLA -> {
-                        // Handled via onNavigateToDayClosing
+                        if (registerViewModel != null) {
+                            DailyCashRegisterScreen(
+                                viewModel = registerViewModel,
+                                onNavigateBack = { viewModel.selectTab(NavigationTab.DASHBOARD) },
+                                onShareWhatsApp = onShareWhatsApp,
+                                isEnglish = uiState.isEnglish,
+                                showBackButton = false
+                            )
+                        }
                     }
 
                     NavigationTab.SETTINGS -> {

@@ -20,11 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -85,8 +85,10 @@ import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 @Composable
 fun DailyCashRegisterScreen(
     viewModel: DailyRegisterViewModel,
-    onNavigateBack: () -> Unit,
-    onShareWhatsApp: ((String) -> Unit)? = null
+    onNavigateBack: () -> Unit = {},
+    onShareWhatsApp: ((String) -> Unit)? = null,
+    isEnglish: Boolean = false,
+    showBackButton: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -98,21 +100,23 @@ fun DailyCashRegisterScreen(
 
     Scaffold(
         topBar = {
-            SoundboxTopBar(
-                shopName = "दैनिक गल्ला रोकड़ बही",
-                mandiLocation = "दुकान: ${uiState.shopProfile?.shopName ?: "मंडी रोकड़"}",
-                isSoundEnabled = uiState.isSoundEnabled,
-                onToggleSound = {},
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "पीछे जाएं",
-                            tint = MandiTextPrimary
-                        )
+            if (showBackButton) {
+                SoundboxTopBar(
+                    shopName = if (isEnglish) "Daily Cash Register" else "दैनिक गल्ला रोकड़ बही",
+                    mandiLocation = if (isEnglish) "Shop: ${uiState.shopProfile?.shopName ?: "Cash Desk"}" else "दुकान: ${uiState.shopProfile?.shopName ?: "मंडी रोकड़"}",
+                    isSoundEnabled = uiState.isSoundEnabled,
+                    onToggleSound = {},
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = if (isEnglish) "Go back" else "पीछे जाएं",
+                                tint = MandiTextPrimary
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         containerColor = MandiBackground
     ) { paddingValues ->
@@ -143,7 +147,7 @@ fun DailyCashRegisterScreen(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "गल्ले में कुल नकदी (Cash In Hand)",
+                                text = if (isEnglish) "Cash In Hand (Total)" else "गल्ले में कुल नकदी (Cash In Hand)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MandiTextSecondary
@@ -167,14 +171,14 @@ fun DailyCashRegisterScreen(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ReceiptLong,
+                                imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                                 contentDescription = null,
                                 tint = MandiAmberDark,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.size(5.dp))
                             Text(
-                                text = "दैनिक रोज़नामा",
+                                text = if (isEnglish) "Day Closing" else "दैनिक रोज़नामा",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MandiAmberDark
@@ -183,7 +187,7 @@ fun DailyCashRegisterScreen(
                     }
 
                     CashBreakdownItem(
-                        label = "पिछला शेष (Opening)",
+                        label = if (isEnglish) "Opening Balance" else "पिछला शेष (Opening)",
                         amountPaisa = uiState.openingCashPaisa,
                         color = MandiNavy,
                         modifier = Modifier.fillMaxWidth()
@@ -195,13 +199,13 @@ fun DailyCashRegisterScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         CashBreakdownItem(
-                            label = "कुल जमा (In)",
+                            label = if (isEnglish) "Total Cash In" else "कुल जमा (In)",
                             amountPaisa = uiState.todayCashInPaisa,
                             color = MandiGreenPayable,
                             modifier = Modifier.weight(1f)
                         )
                         CashBreakdownItem(
-                            label = "कुल निकासी (Out)",
+                            label = if (isEnglish) "Total Cash Out" else "कुल निकासी (Out)",
                             amountPaisa = uiState.todayCashOutPaisa,
                             color = MandiRedReceivable,
                             modifier = Modifier.weight(1f)
@@ -236,7 +240,7 @@ fun DailyCashRegisterScreen(
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
-                        text = "नकद आवक (जमा)",
+                        text = if (isEnglish) "Cash In (Deposit)" else "नकद आवक (जमा)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiBtnSuccessFg
@@ -262,7 +266,7 @@ fun DailyCashRegisterScreen(
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
-                        text = "नकद निकासी (खर्च)",
+                        text = if (isEnglish) "Cash Out (Expense)" else "नकद निकासी (खर्च)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiBtnDangerFg
@@ -281,13 +285,13 @@ fun DailyCashRegisterScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "आज का रोकड़ लेन-देन (${uiState.todayTransactions.size})",
+                    text = if (isEnglish) "Today's Cash Entries (${uiState.todayTransactions.size})" else "आज का रोकड़ लेन-देन (${uiState.todayTransactions.size})",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MandiTextPrimary
                 )
                 Text(
-                    text = "रोकड़ प्रविष्टियाँ",
+                    text = if (isEnglish) "Cash Entries" else "रोकड़ प्रविष्टियाँ",
                     fontSize = 12.sp,
                     color = MandiTextMuted
                 )
@@ -357,15 +361,15 @@ fun DailyCashRegisterScreen(
                                         val modeTag = when (item.transaction.paymentMode) {
                                             PaymentMode.CASH -> null
                                             PaymentMode.UPI -> "UPI"
-                                            PaymentMode.BANK -> "बैंक"
-                                            PaymentMode.BOOK_ENTRY -> "बही"
+                                            PaymentMode.BANK -> if (isEnglish) "Bank" else "बैंक"
+                                            PaymentMode.BOOK_ENTRY -> if (isEnglish) "Khata" else "बही"
                                         }
                                         if (modeTag != null) {
                                             Text(text = modeTag, fontSize = 12.sp, color = MandiTextSecondary)
                                         }
                                     }
                                     Text(
-                                        text = if (!remarks.isNullOrBlank()) remarks else if (isDeposit) "नकद जमा" else "नकद निकासी",
+                                        text = if (!remarks.isNullOrBlank()) remarks else if (isDeposit) (if (isEnglish) "Cash Deposit" else "नकद जमा") else (if (isEnglish) "Cash Expense" else "नकद निकासी"),
                                         fontSize = 12.sp,
                                         color = MandiTextSecondary
                                     )
@@ -382,8 +386,13 @@ fun DailyCashRegisterScreen(
                         }
 
                         if (isVoid) {
+                            val voidReasonText = if (isEnglish) {
+                                item.transaction.voidReason?.name ?: "VOID"
+                            } else {
+                                item.transaction.voidReason?.labelHi ?: ""
+                            }
                             Text(
-                                text = "रद्द" + (item.transaction.voidReason?.let { " · ${it.labelHi}" } ?: ""),
+                                text = (if (isEnglish) "Voided" else "रद्द") + if (voidReasonText.isNotBlank()) " · $voidReasonText" else "",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MandiTextSecondary
@@ -402,7 +411,7 @@ fun DailyCashRegisterScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "आज कोई रोकड़ प्रविष्टि नहीं है",
+                                text = if (isEnglish) "No cash entries recorded today" else "आज कोई रोकड़ प्रविष्टि नहीं है",
                                 color = MandiTextMuted,
                                 fontSize = 14.sp
                             )
@@ -428,13 +437,13 @@ fun DailyCashRegisterScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ReceiptLong,
+                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                         contentDescription = null,
                         tint = MandiAmberDark,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "दैनिक रोज़नामा (Day Closing)",
+                        text = if (isEnglish) "Day Closing Reconciliation" else "दैनिक रोज़नामा (Day Closing)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
                         color = MandiTextPrimary
@@ -453,20 +462,20 @@ fun DailyCashRegisterScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("पिछला शेष (Opening):", fontSize = 13.sp, color = MandiTextSecondary)
+                            Text(if (isEnglish) "Opening Balance:" else "पिछला शेष (Opening):", fontSize = 13.sp, color = MandiTextSecondary)
                             Text("₹${MandiMathEngine.paisaToRupeesString(uiState.openingCashPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MandiNavy)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("कुल नकद आवक (In):", fontSize = 13.sp, color = MandiTextSecondary)
+                            Text(if (isEnglish) "Total Cash In:" else "कुल नकद आवक (In):", fontSize = 13.sp, color = MandiTextSecondary)
                             Text("+₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashInPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiGreenPayable)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("कुल नकद निकासी (Out):", fontSize = 13.sp, color = MandiTextSecondary)
+                            Text(if (isEnglish) "Total Cash Out:" else "कुल नकद निकासी (Out):", fontSize = 13.sp, color = MandiTextSecondary)
                             Text("-₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashOutPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiRedReceivable)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("गल्ले में शुद्ध नकदी (Expected):", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
+                            Text(if (isEnglish) "Expected Cash In Hand:" else "गल्ले में शुद्ध नकदी (Expected):", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
                             Text("₹${MandiMathEngine.paisaToRupeesString(expectedInHand)}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MandiNavy)
                         }
                     }
@@ -475,8 +484,8 @@ fun DailyCashRegisterScreen(
                     OutlinedTextField(
                         value = physicalCashInput,
                         onValueChange = { physicalCashInput = it },
-                        label = { Text("वास्तविक गल्ला गिनती ₹ (वैकल्पिक)") },
-                        placeholder = { Text("गल्ले में गिने हुए रुपये दर्ज करें") },
+                        label = { Text(if (isEnglish) "Physical Cash Count ₹ (Optional)" else "वास्तविक गल्ला गिनती ₹ (वैकल्पिक)") },
+                        placeholder = { Text(if (isEnglish) "Enter counted cash in drawer" else "गल्ले में गिने हुए रुपये दर्ज करें") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -489,9 +498,9 @@ fun DailyCashRegisterScreen(
                             else -> MandiRedReceivable
                         }
                         val diffLabel = when {
-                            diffPaisa == 0L -> "हिसाब बिल्कुल बराबर है (₹0)"
-                            diffPaisa > 0L -> "फालतू नकदी: +₹${MandiMathEngine.paisaToRupeesString(diffPaisa)}"
-                            else -> "कमी: -₹${MandiMathEngine.paisaToRupeesString(-diffPaisa)}"
+                            diffPaisa == 0L -> if (isEnglish) "Cash matches perfectly (₹0)" else "हिसाब बिल्कुल बराबर है (₹0)"
+                            diffPaisa > 0L -> if (isEnglish) "Surplus Cash: +₹${MandiMathEngine.paisaToRupeesString(diffPaisa)}" else "फालतू नकदी: +₹${MandiMathEngine.paisaToRupeesString(diffPaisa)}"
+                            else -> if (isEnglish) "Shortage: -₹${MandiMathEngine.paisaToRupeesString(-diffPaisa)}" else "कमी: -₹${MandiMathEngine.paisaToRupeesString(-diffPaisa)}"
                         }
                         Text(
                             text = diffLabel,
@@ -507,7 +516,7 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth().height(42.dp),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("साउंडबॉक्स पर सुनें", color = MandiTextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (isEnglish) "Announce on Soundbox" else "साउंडबॉक्स पर सुनें", color = MandiTextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             },
@@ -526,12 +535,12 @@ fun DailyCashRegisterScreen(
                 ) {
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, tint = MandiPrimaryActionText, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text("व्हाट्सएप शेयर", color = MandiPrimaryActionText, fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Share on WhatsApp" else "व्हाट्सएप शेयर", color = MandiPrimaryActionText, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeDayClosingSummary() }) {
-                    Text("बंद करें", color = MandiTextSecondary)
+                    Text(if (isEnglish) "Close" else "बंद करें", color = MandiTextSecondary)
                 }
             }
         )
@@ -544,7 +553,7 @@ fun DailyCashRegisterScreen(
             onDismissRequest = { showDirectCashDialog = null },
             title = {
                 Text(
-                    text = if (isDeposit) "नकद जमा प्रविष्टि" else "नकद निकासी प्रविष्टि",
+                    text = if (isDeposit) (if (isEnglish) "Record Cash Deposit" else "नकद जमा प्रविष्टि") else (if (isEnglish) "Record Cash Withdrawal" else "नकद निकासी प्रविष्टि"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = MandiTextPrimary
@@ -555,7 +564,7 @@ fun DailyCashRegisterScreen(
                     // Party selector
                     if (uiState.availableParties.isNotEmpty()) {
                         Text(
-                            text = "खाता चुनें (वैकल्पिक):",
+                            text = if (isEnglish) "Select Account (Optional):" else "खाता चुनें (वैकल्पिक):",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = MandiTextSecondary
@@ -581,7 +590,7 @@ fun DailyCashRegisterScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "${party.name} (${party.village ?: "गांव"})",
+                                        text = "${party.name} (${party.village ?: (if (isEnglish) "Village" else "गांव")})",
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                         color = MandiTextPrimary
@@ -602,14 +611,14 @@ fun DailyCashRegisterScreen(
                     OutlinedTextField(
                         value = directAmountInput,
                         onValueChange = { directAmountInput = it },
-                        label = { Text("राशि (₹)") },
+                        label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = directRemarksInput,
                         onValueChange = { directRemarksInput = it },
-                        label = { Text("विवरण / नोट (वैकल्पिक)") },
+                        label = { Text(if (isEnglish) "Remarks / Note (Optional)" else "विवरण / नोट (वैकल्पिक)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -639,12 +648,12 @@ fun DailyCashRegisterScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text("सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Save Entry" else "सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDirectCashDialog = null; selectedPartyId = "" }) {
-                    Text("रद्द करें", color = MandiTextSecondary)
+                    Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             }
         )

@@ -158,9 +158,21 @@ fun App(
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
                 }
+                val registerViewModel = remember(shopId) {
+                    DailyRegisterViewModel(
+                        shopId = shopId!!,
+                        cashRepository = cashRepo,
+                        partyRepository = partyRepo,
+                        shopProfileRepository = shopRepo,
+                        ttsManager = ttsManager,
+                        viewModelScope = coroutineScope,
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
+                    )
+                }
                 val needsLogin by produceState(false, shopId) { value = syncEngine.needsLogin() }
                 HomeScreen(
                     viewModel = homeViewModel,
+                    registerViewModel = registerViewModel,
                     shopId = shopId!!,
                     needsLogin = needsLogin,
                     onReLogin = {
@@ -177,6 +189,9 @@ fun App(
                     },
                     onNavigateToDayClosing = {
                         currentScreen = Screen.DailyRegister
+                    },
+                    onShareWhatsApp = { reportText ->
+                        whatsAppShareManager.shareText(reportText, null)
                     },
                     onSignOut = {
                         // Ignore a second tap while a sign-out is already running.
@@ -292,6 +307,7 @@ fun App(
 
             is Screen.DailyRegister -> {
                 MandiBackHandler { currentScreen = Screen.Home }
+                val tradeSettings by tradeSettingsRepo.getTradeSettingsStream().collectAsState(initial = null)
                 val registerViewModel = remember(shopId) {
                     DailyRegisterViewModel(
                         shopId = shopId!!,
@@ -308,7 +324,9 @@ fun App(
                     onNavigateBack = { currentScreen = Screen.Home },
                     onShareWhatsApp = { reportText ->
                         whatsAppShareManager.shareText(reportText, null)
-                    }
+                    },
+                    isEnglish = tradeSettings?.isEnglish ?: false,
+                    showBackButton = true
                 )
             }
         }
