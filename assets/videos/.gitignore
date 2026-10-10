@@ -1,0 +1,4 @@
+# Ignore raw intermediary capture videos
+demo_recording.mp4
+deal_demo.mp4
+*.raw.mp4
