@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     OTP_STATIC_ENABLED: bool = True   # Static-code OTP (no SMS provider yet)
     OTP_STATIC_CODE: str = "123456"
 
+    # Observability (all optional; unset = off). See app/core/observability.py
+    SENTRY_DSN: str = ""
+    SENTRY_ENVIRONMENT: str = ""  # defaults to APP_ENV
+    OPS_TELEGRAM_BOT_TOKEN: str = ""
+    OPS_TELEGRAM_CHAT_ID: str = ""
+
     @model_validator(mode="after")
     def _check_prod_secrets(self):
         if self.APP_ENV.strip().lower() not in ("prod", "production"):

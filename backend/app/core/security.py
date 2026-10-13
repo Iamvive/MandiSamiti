@@ -6,6 +6,7 @@ from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from app.config import settings
+from app.core.observability import bind_shop
 
 security_bearer = HTTPBearer()
 
@@ -71,4 +72,5 @@ async def get_current_user_payload(credentials: HTTPAuthorizationCredentials = S
             detail="Invalid access token type",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    bind_shop(payload.get("shop_id"))
     return payload
