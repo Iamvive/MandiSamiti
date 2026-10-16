@@ -20,6 +20,13 @@ if [[ "$HEALTH_RES" != *"healthy"* ]]; then
   exit 1
 fi
 
+READY_RES=$(curl -s "$TARGET_URL/health/ready" || true)
+echo "Readiness Check Response: $READY_RES"
+if [[ "$READY_RES" != *"\"status\":\"ready\""* ]]; then
+  echo "❌ Readiness check (/health/ready) failed!"
+  exit 1
+fi
+
 OTP_RES=$(curl -s -X POST "$TARGET_URL/api/v1/auth/otp/send" -H "Content-Type: application/json" -d '{"phone": "9876543210"}')
 echo "OTP Send Response: $OTP_RES"
 if [[ "$OTP_RES" != *"sent"* ]]; then
