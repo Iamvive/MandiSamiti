@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class BuyEntry(
     val id: String,
     val shopId: String,
