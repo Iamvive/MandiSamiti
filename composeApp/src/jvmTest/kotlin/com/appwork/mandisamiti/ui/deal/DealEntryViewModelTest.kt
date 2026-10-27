@@ -443,4 +443,30 @@ class DealEntryViewModelTest {
         type(ActiveInputField.RATE_PER_QUINTAL, k1, k1, k1, k1, k1, k1, k1, k1, k1, k1, k1)
         assertEquals("111111111", viewModel.uiState.value.ratePerQuintalText) // 9 characters max
     }
+
+    @Test
+    fun nextOnTareWeightAdvancesToStage2Pricing() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        seedShopAndParties(shopRepo, partyRepo)
+        val viewModel = DealEntryViewModel(
+            shopId = "shop-1", existingDealId = null, dealRepository = dealRepo,
+            partyRepository = partyRepo, shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope
+        )
+        viewModel.uiState.first { it.selectedFarmer != null }
+
+        // Stage 1: fill weighing fields and press NEXT on the last field (TARE_WEIGHT)
+        viewModel.onFocusField(ActiveInputField.TARE_WEIGHT)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_1)
+        assertEquals(false, viewModel.uiState.value.isSettledStage)
+
+        viewModel.onKeypadAction(KeypadAction.NEXT)
+
+        assertEquals(true, viewModel.uiState.value.isSettledStage)
+        assertEquals(ActiveInputField.RATE_PER_QUINTAL, viewModel.uiState.value.activeField)
+    }
 }

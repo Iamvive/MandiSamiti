@@ -227,10 +227,15 @@ class DealEntryViewModel(
     }
 
     private fun moveToNextField() {
+        if (_uiState.value.activeField == ActiveInputField.TARE_WEIGHT && !_uiState.value.isSettledStage) {
+            toggleSettlementStage(true)
+            _uiState.value = _uiState.value.copy(activeField = ActiveInputField.RATE_PER_QUINTAL)
+            return
+        }
         val next = when (_uiState.value.activeField) {
             ActiveInputField.BAGS_COUNT -> ActiveInputField.GROSS_WEIGHT
             ActiveInputField.GROSS_WEIGHT -> ActiveInputField.TARE_WEIGHT
-            ActiveInputField.TARE_WEIGHT -> if (_uiState.value.isSettledStage) ActiveInputField.RATE_PER_QUINTAL else ActiveInputField.BAGS_COUNT
+            ActiveInputField.TARE_WEIGHT -> ActiveInputField.RATE_PER_QUINTAL
             ActiveInputField.RATE_PER_QUINTAL -> ActiveInputField.COMMISSION_PERCENT
             ActiveInputField.COMMISSION_PERCENT -> ActiveInputField.BUYER_COMMISSION_PERCENT
             ActiveInputField.BUYER_COMMISSION_PERCENT -> ActiveInputField.LABOUR_CHARGES

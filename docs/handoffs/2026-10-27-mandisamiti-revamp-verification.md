@@ -28,3 +28,16 @@
 
 ## 4. Unverified Items
 - Interactive manual tap-through of every individual form screen on device display (requires physical interactive user session via `scrcpy -s d93c743`).
+
+## 5. ADB Tap-Through (Oct 27, 21:48-21:51 IST)
+Driven via `adb shell input tap` + `screencap` (no scrcpy session available in this agent environment). This touched the **live shop** ("Maa Sharda Traders", Orai Mandi, real farmer accounts Dharmendra ₹7,050 / Manoj ₹1,000) — no form was submitted, to keep the real ledger untouched.
+
+- [x] App launch clean, no crash in logcat, `MainActivity` focused.
+- [x] Dashboard: KPI cards (Receivable/Payable), Active Ledger Accounts list, speed-dial FAB — vector icons, no emoji, no overflow.
+- [x] Bottom nav: Dashboard / Ledger / Cash Drawer / Settings all route correctly.
+- [x] Ledger tab: search bar, All/Receivable/Payable filter chips, Add Party FAB.
+- [x] Cash Drawer: Cash In Hand, Opening Balance, Total In/Out, Cash In/Out buttons, Today's Cash Entries list — correct red/green coding.
+- [x] Settings: shop profile, Hindi/English toggle, Trade & Commission Rates, Voice Confirmation switch, Local Offline Storage status, Sign Out — no theme toggle in-app.
+- [x] New Trade Entry (स्टेज 1: आवक व तौल) for Dharmendra/Wheat: typed gross weight 123 Qtl with taar 0.35 Qtl prefilled → net weight computed live and correctly as 122.65 क्विंटल. Custom numeric keypad (0-9, 00, ., C, काटें, अगला) all tappable. Backed out via ← without saving.
+- [ ] **Dark theme not verifiable**: `adb shell settings put secure ui_night_mode 2` has no effect on this MIUI/Redmi Note 7 build (MIUI uses its own dark-mode setting, not AOSP `ui_night_mode`). Confirms the existing note in feature-status.md under Authentication & Sign Out. Needs either a manual toggle via MIUI Settings > Display > Dark mode, or a non-MIUI test device.
+- [ ] Stage 2 (नीलामी व भाव) of Buy entry, and the full Sell/Lend/Expense entry flows, not tap-tested this pass — same caution applies: real farmer accounts, so any full run should either use a disposable test party or be void-reverted immediately after.
