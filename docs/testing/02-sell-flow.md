@@ -54,7 +54,7 @@ Each sale can contain $N \ge 1$ crop lots (e.g. Lokwan 20 bags @ ₹2600 + Sharb
 | :--- | :--- | :--- | :--- | :--- |
 | **TC-SELL-01** | Normal + Customer (Single Lot) | Customer "Ramesh Kumar", 10 bags @ 50kg, ₹2600/Qtl, 2% comm, ₹5/bag labour | Gross: ₹13,000, Comm: +₹260, Labour: +₹50, Total: ₹13,310 | **PASS on Device** |
 | **TC-SELL-02** | Normal + Customer (Multi-Lot) | Lot 1: 10 bags @ ₹2600, Lot 2: 10 bags @ ₹2800, 2% comm, ₹5/bag labour | Gross: ₹27,000, Comm: +₹540, Labour: +₹100, Total: ₹27,640 | **PASS (JVM Unit)** |
-| **TC-SELL-03** | Normal + Merchant | Merchant "Shree Agro", 20 bags @ ₹2500, 1.5% comm, ₹4/bag labour | Gross: ₹25,000, Comm: +₹375, Labour: +₹80, Total: ₹25,455, Category: Merchant | **PASS (JVM Unit)** |
+| **TC-SELL-03** | Normal + Merchant | Merchant "Shree Balaji Traders", 20 bags @ ₹2500, 1.5% comm, ₹4/bag labour | Gross: ₹25,000, Comm: +₹375, Labour: +₹80, Total: ₹25,455, Category: Merchant | **PASS on Device** |
 | **TC-SELL-04** | Customer BOS Disabled | Party = Customer | "सप्लाई बिल (Bill of Supply)" chip is disabled ("सप्लाई बिल केवल व्यापारियों हेतु") | **PASS on Device** |
 | **TC-SELL-05** | BOS + Merchant (Full Mandi Tax) | Merchant "Vijay Traders", GSTIN `23AAAAA0000A1Z5`, StateCode `23`, 20 bags @ ₹2600 (10 Qtl), Tulak ₹1/qtl, Labour ₹5/bag | Gross: ₹26,000, Mandi (1.5%): ₹390, Cess (0.5%): ₹130, Labour: ₹100, Tulak: ₹10, Total: ₹26,630 | **PASS (JVM Unit)** |
 | **TC-SELL-06** | BOS Multi-Item Lots | Merchant "Shree Ganesh Traders", GSTIN `23AAAAA0000A1Z5`, StateCode `23`, Lot 1: 20 bags Sharbati @ ₹2600, Lot 2: 10 bags Chana @ ₹5200 | Gross: ₹52,000, Mandi (1.5%): ₹780, Cess (0.5%): ₹260, Labour: ₹150, Tulak: ₹15, Total: ₹53,205 | **PASS on Device** |
@@ -118,4 +118,23 @@ Each sale can contain $N \ge 1$ crop lots (e.g. Lokwan 20 bags @ ₹2600 + Sharb
   - Live Math Preview: `docs/testing/evidence/sell/09_customer_math_preview.png`
   - S6 Receipt Screen: `docs/testing/evidence/sell/10_customer_receipt_screen.png`
   - S5 Transaction List (Both Cards): `docs/testing/evidence/sell/11_sell_list_both_transactions.png`
+
+### Scenario C: Merchant + Normal Slip Single Lot
+- **Merchant Details:** Shree Balaji Traders (`9425012345`), Category: `व्यापारी (Merchant)`, Mode: `सामान्य बिल (Normal)`.
+- **Fields Gating:** GSTIN, StateCode, and Calendar Date are NOT required or shown; Commission % and Labour are active.
+- **Item 1:** गेहूं शरबती (20 बोरी @ 50 किग्रा = 10.0 क्विंटल @ ₹2,500/क्विंटल) = सकल ₹25,000.
+- **Live Calculations:**
+  - कुल सकल राशि (Gross): ₹25,000
+  - कमीशन जोड़ (+ 1.5%): + ₹375
+  - मजदूरी जोड़ (+ ₹4/बोरी): + ₹80
+  - मंडी कर / उपकर: ₹0 (Not Applied)
+  - प्राप्त राशि: Not Required / Removed
+  - **कुल देय राशि (Total Receivable): ₹25,455**
+- **Receipt Bill Number:** `#7dfc61`
+- **Screenshots:**
+  - Merchant Normal Form: `docs/testing/evidence/sell/12_merchant_normal_form.png`
+  - Live Math Preview: `docs/testing/evidence/sell/13_merchant_normal_preview.png`
+  - S6 Receipt Screen: `docs/testing/evidence/sell/14_merchant_normal_receipt.png`
+  - S5 Transaction List (All 3 Cards): `docs/testing/evidence/sell/15_all_three_cards_list.png`
+
 
