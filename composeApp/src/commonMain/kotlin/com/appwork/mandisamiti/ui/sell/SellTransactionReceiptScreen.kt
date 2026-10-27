@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BillMode
+import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
+import com.appwork.mandisamiti.domain.model.SellPartyKind
+import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +53,13 @@ fun SellTransactionReceiptScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (entry?.billMode == BillMode.BILL_OF_SUPPLY) "सप्लाई बिल (Bill of Supply)" else "बिक्री रसीद") },
+                title = {
+                    Text(
+                        if (entry?.billMode == BillMode.BILL_OF_SUPPLY) "सप्लाई बिल (Bill of Supply)"
+                        else if (entry?.partyKind == SellPartyKind.MERCHANT) "व्यापारी बिक्री पर्चा"
+                        else "ग्राहक बिक्री पर्चा"
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
@@ -76,9 +86,18 @@ fun SellTransactionReceiptScreen(
             if (entry == null) {
                 Text("बिल लोड हो रहा है...")
             } else {
+                val lots = try {
+                    entry.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
+                } catch (_: Exception) {
+                    null
+                }
+                val isBos = entry.billMode == BillMode.BILL_OF_SUPPLY
+                val phoneNum = entry.vehicleNumber
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -90,7 +109,7 @@ fun SellTransactionReceiptScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                if (entry.billMode == BillMode.BILL_OF_SUPPLY) "Bill of Supply" else "बिक्री रसीद",
+                                if (isBos) "सप्लाई बिल (Bill of Supply)" else "बिक्री पर्चा (Buyer Slip)",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -106,28 +125,89 @@ fun SellTransactionReceiptScreen(
                             }
                         }
 
-                        ReceiptLine("खरीदार", buyerName)
+                        ReceiptLine(
+                            if (entry.partyKind == SellPartyKind.MERCHANT) "व्यापारी नाम" else "ग्राहक नाम",
+                            entry.buyerId.ifBlank { buyerName }
+                        )
+                        if (!phoneNum.isNullOrBlank()) {
+                            ReceiptLine("मोबाइल नंबर", phoneNum)
+                        }
                         ReceiptLine("बिल क्रमांक", "#${entry.invoiceNumber ?: entry.id.takeLast(6)}")
+
                         val gstin = entry.gstin
                         if (!gstin.isNullOrBlank()) {
                             ReceiptLine("GSTIN", gstin)
                         }
-                        ReceiptLine("बोरी संख्या", "${entry.bagsCount} बोरी")
-                        ReceiptLine("वजन", "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल")
-                        ReceiptLine("भाव", "₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)} /क्विंटल")
 
-                        Spacer(Modifier.height(8.dp))
-                        ReceiptLine("मूल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-                        if (entry.billMode == BillMode.BILL_OF_SUPPLY) {
-                            ReceiptLine("आढ़त (Arat)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}")
-                            ReceiptLine("तुलाई (Tulak)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}")
-                            ReceiptLine("मंडी शुल्क (1.5%)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}")
+                        Spacer(Modifier.height(4.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(4.dp))
+
+                        Text("फसल विक्रय विवरण:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+
+                        if (!lots.isNullOrEmpty()) {
+                            lots.forEachIndexed { i, lot ->
+                                val lotWeightQtl = MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)
+                                val lotRate = MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)
+                                val lotGross = MandiMathEngine.paisaToRupeesString(lot.grossPaisa)
+                                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("${i + 1}. ${lot.cropName}", fontWeight = FontWeight.SemiBold)
+                                        Text("₹$lotGross", fontWeight = FontWeight.Bold)
+                                    }
+                                    Text(
+                                        "${lot.bags} बोरी • $lotWeightQtl क्विंटल @ ₹$lotRate/क्विंटल",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        } else {
+                            ReceiptLine("जिंस / फसल", entry.commodityId)
+                            ReceiptLine("बोरी संख्या", "${entry.bagsCount} बोरी")
+                            ReceiptLine("वजन", "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल")
+                            ReceiptLine("भाव", "₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)} /क्विंटल")
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(4.dp))
+
+                        ReceiptLine("कुल बोरी", "${entry.bagsCount} बोरी")
+                        ReceiptLine("कुल वजन", "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल")
+                        ReceiptLine("कुल सकल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
+
+                        if (!isBos) {
+                            if (entry.aratPaisa > 0) {
+                                ReceiptLine("कमीशन जोड़ (+)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}")
+                            }
+                            // Labour = total - gross - arat
+                            val labourAmt = entry.totalReceivablePaisa - entry.grossPaisa - entry.aratPaisa
+                            if (labourAmt > 0) {
+                                ReceiptLine("मजदूरी जोड़ (+)", "+ ₹${MandiMathEngine.paisaToRupeesString(labourAmt)}")
+                            }
+                        } else {
+                            if (entry.mandiShulkPaisa > 0) {
+                                ReceiptLine("मंडी प्रभार एवं उपकर (2%)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}")
+                            }
+                            if (entry.tulakPaisa > 0) {
+                                ReceiptLine("तुलाई (Tulak)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}")
+                            }
+                            val remainingCharges = entry.totalReceivablePaisa - entry.grossPaisa - entry.mandiShulkPaisa - entry.tulakPaisa
+                            if (remainingCharges > 0) {
+                                ReceiptLine("हमाली / मजदूरी", "+ ₹${MandiMathEngine.paisaToRupeesString(remainingCharges)}")
+                            }
                         }
 
                         Spacer(Modifier.height(8.dp))
-                        ReceiptLine("कुल प्राप्य (Total)", "₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}", isBold = true)
-                        ReceiptLine("प्राप्त राशि", "₹${MandiMathEngine.paisaToRupeesString(entry.receivedPaisa)}")
-                        ReceiptLine("बकाया राशि (Balance Due)", "₹${MandiMathEngine.paisaToRupeesString(entry.balanceDuePaisa)}", isBold = true)
+                        ReceiptLine(
+                            "कुल देय राशि (Total Receivable)",
+                            "₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}",
+                            isBold = true
+                        )
                     }
                 }
 
@@ -145,20 +225,37 @@ fun SellTransactionReceiptScreen(
     }
 }
 
-fun buildSellBillText(entry: SellEntry, buyerName: String): String = """
-*${if (entry.billMode == BillMode.BILL_OF_SUPPLY) "सप्लाई बिल (Bill of Supply)" else "बिक्री रसीद"}*
+fun buildSellBillText(entry: SellEntry, buyerName: String): String {
+    val lots = try {
+        entry.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
+    } catch (_: Exception) {
+        null
+    }
+    val isBos = entry.billMode == BillMode.BILL_OF_SUPPLY
+    val title = if (isBos) "सप्लाई बिल (Bill of Supply)" else "बिक्री पर्चा (Mandi Sale Bill)"
+
+    val lotsText = if (!lots.isNullOrEmpty()) {
+        lots.mapIndexed { i, lot ->
+            "${i + 1}. ${lot.cropName}: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}\n   (${lot.bags} बोरी • ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}/qtl)"
+        }.joinToString("\n")
+    } else {
+        "जिंस: ${entry.commodityId}\nबोरी: ${entry.bagsCount} • वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}/qtl"
+    }
+
+    return """
+*$title*
 बिल #: ${entry.invoiceNumber ?: entry.id.takeLast(6)}
-खरीदार: $buyerName
-${if (!entry.gstin.isNullOrBlank()) "GSTIN: ${entry.gstin}\n" else ""}बोरी: ${entry.bagsCount}
-वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल
-भाव: ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}/क्विंटल
+क्रेता: ${entry.buyerId.ifBlank { buyerName }}
+${if (!entry.gstin.isNullOrBlank()) "GSTIN: ${entry.gstin}\n" else ""}--------------------
+$lotsText
 --------------------
-मूल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
-${if (entry.billMode == BillMode.BILL_OF_SUPPLY) "आढ़त: +₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}\nतुलाई: +₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}\nमंडी शुल्क (1.5%): +₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}\n" else ""}--------------------
-*कुल बिल: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}*
-प्राप्त: ₹${MandiMathEngine.paisaToRupeesString(entry.receivedPaisa)}
-*बकाया: ₹${MandiMathEngine.paisaToRupeesString(entry.balanceDuePaisa)}*
-""".trimIndent()
+कुल बोरी: ${entry.bagsCount}
+कुल वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल
+कुल सकल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
+${if (!isBos && entry.aratPaisa > 0) "कमीशन जोड़: +₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}\n" else ""}${if (isBos && entry.mandiShulkPaisa > 0) "मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}\n" else ""}${if (isBos && entry.tulakPaisa > 0) "तुलाई: +₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}\n" else ""}--------------------
+*कुल देय राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}*
+    """.trimIndent()
+}
 
 @Composable
 private fun ReceiptLine(label: String, value: String, isBold: Boolean = false) {

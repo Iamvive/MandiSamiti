@@ -23,6 +23,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -126,7 +128,7 @@ private fun SellEntryCard(entry: SellEntry, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
@@ -134,39 +136,51 @@ private fun SellEntryCard(entry: SellEntry, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "बिल #${entry.invoiceNumber ?: entry.id.takeLast(6)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "कुल: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Column {
+                    Text(
+                        text = entry.buyerId.ifBlank { "खरीदार" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "बिल #${entry.invoiceNumber ?: entry.id.takeLast(6)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (entry.billMode == com.appwork.mandisamiti.domain.model.BillMode.BILL_OF_SUPPLY) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text("सप्लाई बिल") },
+                        colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    )
+                } else {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(if (entry.partyKind == com.appwork.mandisamiti.domain.model.SellPartyKind.MERCHANT) "व्यापारी" else "ग्राहक") },
+                        colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                if (entry.balanceDuePaisa > 0) {
-                    Text(
-                        text = "बकाया: ₹${MandiMathEngine.paisaToRupeesString(entry.balanceDuePaisa)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    Text(
-                        text = "पूर्ण चुकता",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    text = "देय: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

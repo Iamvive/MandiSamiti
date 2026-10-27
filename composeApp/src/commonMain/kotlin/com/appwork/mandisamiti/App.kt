@@ -384,8 +384,20 @@ fun App(
             is Screen.BuyEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 BuyEntryScreen(
+                    shopId = shopId ?: "",
                     existingId = screen.existingId,
-                    onSaved = { id -> currentScreen = Screen.BuyReceipt(id) },
+                    buyRepository = buyRepo,
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            if (screen.existingId == null) {
+                                buyRepo.saveBuyEntry(entry)
+                            } else {
+                                buyRepo.editBuyEntry(entry)
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.BuyReceipt(entry.id)
+                        }
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
@@ -415,8 +427,20 @@ fun App(
             is Screen.SellEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 SellEntryScreen(
+                    shopId = shopId ?: "",
                     existingId = screen.existingId,
-                    onSaved = { id -> currentScreen = Screen.SellReceipt(id) },
+                    sellRepository = sellRepo,
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            if (screen.existingId == null) {
+                                sellRepo.saveSellEntry(entry)
+                            } else {
+                                sellRepo.editSellEntry(entry)
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.SellReceipt(entry.id)
+                        }
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
