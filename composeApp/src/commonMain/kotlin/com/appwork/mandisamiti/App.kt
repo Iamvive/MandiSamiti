@@ -1,5 +1,17 @@
 package com.appwork.mandisamiti
 
+import com.appwork.mandisamiti.ui.buy.BuyEntryScreen
+import com.appwork.mandisamiti.ui.buy.BuyTransactionsListScreen
+import com.appwork.mandisamiti.ui.buy.BuyTransactionReceiptScreen
+import com.appwork.mandisamiti.ui.sell.SellEntryScreen
+import com.appwork.mandisamiti.ui.sell.SellTransactionsListScreen
+import com.appwork.mandisamiti.ui.sell.SellTransactionReceiptScreen
+import com.appwork.mandisamiti.ui.lend.LendEntryScreen
+import com.appwork.mandisamiti.ui.lend.LendTransactionsListScreen
+import com.appwork.mandisamiti.ui.expense.ExpenseEntryScreen
+import com.appwork.mandisamiti.ui.stock.StockBreakdownSheet
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -105,6 +117,11 @@ fun App(
     val dealRepo = remember { OfflineFirstDealRepository(database) }
     val cashRepo = remember { OfflineFirstCashTransactionRepository(database) }
     val tradeSettingsRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstTradeSettingsRepository(database) }
+    val buyRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database) }
+    val sellRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(database) }
+    val lendRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database) }
+    val expenseRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database) }
+    val stockUseCase = remember { com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo) }
     val wiper = remember { LocalDataWiper(database) }
     val authRepo = remember {
         AuthRepository(
@@ -223,6 +240,10 @@ fun App(
                     onShareWhatsApp = { reportText ->
                         whatsAppShareManager.shareText(reportText, null)
                     },
+                    onNavigateToBuy = { currentScreen = Screen.BuyEntry(null) },
+                    onNavigateToSell = { currentScreen = Screen.SellEntry(null) },
+                    onNavigateToLend = { currentScreen = Screen.LendEntry },
+                    onNavigateToExpense = { currentScreen = Screen.ExpenseEntry },
                     onSignOut = {
                         // Ignore a second tap while a sign-out is already running.
                         if (!signOutInFlight) {
@@ -362,43 +383,98 @@ fun App(
 
             is Screen.BuyEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("खरीद एंट्री (BuyEntry: ${screen.existingId})")
+                BuyEntryScreen(
+                    existingId = screen.existingId,
+                    onSaved = { id -> currentScreen = Screen.BuyReceipt(id) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.BuyList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("खरीद सूची (BuyList)")
+                val buys by buyRepo.getBuyEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                BuyTransactionsListScreen(
+                    entries = buys,
+                    onOpen = { id -> currentScreen = Screen.BuyReceipt(id) },
+                    onNew = { currentScreen = Screen.BuyEntry(null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.BuyReceipt -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("किसान पर्चा (BuyReceipt: ${screen.id})")
+                var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
+                LaunchedEffect(screen.id) {
+                    buyEntry = buyRepo.getBuyEntryById(screen.id)
+                }
+                BuyTransactionReceiptScreen(
+                    id = screen.id,
+                    entry = buyEntry,
+                    onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.SellEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("बिक्री एंट्री (SellEntry: ${screen.existingId})")
+                SellEntryScreen(
+                    existingId = screen.existingId,
+                    onSaved = { id -> currentScreen = Screen.SellReceipt(id) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.SellList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("बिक्री सूची (SellList)")
+                val sells by sellRepo.getSellEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                SellTransactionsListScreen(
+                    entries = sells,
+                    onOpen = { id -> currentScreen = Screen.SellReceipt(id) },
+                    onNew = { currentScreen = Screen.SellEntry(null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.SellReceipt -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("बिक्री रसीद (SellReceipt: ${screen.id})")
+                var sellEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.SellEntry?>(null) }
+                LaunchedEffect(screen.id) {
+                    sellEntry = sellRepo.getSellEntryById(screen.id)
+                }
+                SellTransactionReceiptScreen(
+                    id = screen.id,
+                    entry = sellEntry,
+                    onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.LendEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("उधार एंट्री (LendEntry)")
+                LendEntryScreen(
+                    onSaved = { currentScreen = Screen.LendList },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.LendList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("उधार खाता (LendList)")
+                val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                LendTransactionsListScreen(
+                    entries = lends,
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.ExpenseEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("खर्च एंट्री (ExpenseEntry)")
+                ExpenseEntryScreen(
+                    onSaved = { currentScreen = Screen.Home },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
             }
             is Screen.StockSheet -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                androidx.compose.material3.Text("स्टॉक विवरण (StockSheet)")
+                var stockLines by remember { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
+                LaunchedEffect(shopId) {
+                    shopId?.let { stockLines = stockUseCase.lines(it) }
+                }
+                StockBreakdownSheet(
+                    stockLines = stockLines,
+                    onDismiss = { currentScreen = screen.backTarget() }
+                )
             }
         }
     }

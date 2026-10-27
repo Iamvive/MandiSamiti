@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
+import com.appwork.mandisamiti.ui.components.SpeedDialFab
 import com.appwork.mandisamiti.ui.dashboard.DashboardScreen
 import com.appwork.mandisamiti.ui.ledger.KhataLedgerTabScreen
 import com.appwork.mandisamiti.ui.navigation.MandiBottomBar
@@ -60,6 +61,10 @@ fun HomeScreen(
     onShareWhatsApp: ((String) -> Unit)? = null,
     needsLogin: Boolean = false,
     onReLogin: () -> Unit = {},
+    onNavigateToBuy: () -> Unit = {},
+    onNavigateToSell: () -> Unit = {},
+    onNavigateToLend: () -> Unit = {},
+    onNavigateToExpense: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -99,6 +104,16 @@ fun HomeScreen(
                 },
                 isEnglish = uiState.isEnglish
             )
+        },
+        floatingActionButton = {
+            if (uiState.currentTab == NavigationTab.DASHBOARD) {
+                SpeedDialFab(
+                    onBuy = onNavigateToBuy,
+                    onSell = onNavigateToSell,
+                    onLend = onNavigateToLend,
+                    onExpense = onNavigateToExpense
+                )
+            }
         },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
