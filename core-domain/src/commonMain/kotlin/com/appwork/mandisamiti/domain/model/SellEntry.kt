@@ -1,8 +1,11 @@
 package com.appwork.mandisamiti.domain.model
 
+import kotlinx.serialization.Serializable
+
 enum class BillMode { NORMAL, BILL_OF_SUPPLY }
 enum class SellPartyKind { MERCHANT, CUSTOMER }
 
+@Serializable
 data class SellEntry(
     val id: String,
     val shopId: String,

@@ -29,7 +29,13 @@ class FakeSyncApiClient : MandiSyncApiClient {
         return pushResponses.removeFirstOrNull() ?: Result.success(
             SyncPushResponseDto(
                 synced_parties = request.parties.map { it.id }, synced_deals = request.deals.map { it.id },
-                synced_transactions = request.transactions.map { it.id }, synced_revisions = request.revisions.map { it.id }
+                synced_transactions = request.transactions.map { it.id },
+                synced_buy_entries = request.buy_entries.map { it.id },
+                synced_sell_entries = request.sell_entries.map { it.id },
+                synced_lend_entries = request.lend_entries.map { it.id },
+                synced_lend_settlements = request.lend_settlements.map { it.id },
+                synced_expenses = request.expenses.map { it.id },
+                synced_revisions = request.revisions.map { it.id }
             )
         )
     }
@@ -348,5 +354,108 @@ class SyncEngineTest {
         fake.pushResponses += Result.failure(RuntimeException("offline"))
         assertTrue(engine.pushThenPull("shop-1").isFailure)
         assertEquals(listOf("push"), fake.calls)
+    }
+
+    @Test
+    fun pendingBuyEntryIsPushedAndAcked() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(db).saveBuyEntry(
+            com.appwork.mandisamiti.domain.model.BuyEntry(
+                id = "b1", shopId = "shop-1", farmerId = "farmer-1", commodityId = "comm-1", entryDate = 1000L,
+                bagsCount = 10, weightPerBagGrams = 50_000, extraWeightGrams = 0, totalWeightGrams = 500_000,
+                ratePaisaPerQuintal = 250_000, commissionBps = 200, labourPerBagPaisa = 500, advancePaidPaisa = 0,
+                grossPaisa = 1_250_000, commissionPaisa = 25_000, labourPaisa = 5_000, netPayablePaisa = 1_220_000,
+                createdAt = 1000L, updatedAt = 1000L,
+            )
+        )
+        assertTrue(engine.pushPendingChanges().isSuccess)
+        assertEquals(1, fake.pushed.flatMap { it.buy_entries }.size)
+        assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pendingSellEntryIsPushedAndAcked() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(db).saveSellEntry(
+            com.appwork.mandisamiti.domain.model.SellEntry(
+                id = "s1", shopId = "shop-1", buyerId = "buyer-1", commodityId = "comm-1", entryDate = 1000L,
+                billMode = com.appwork.mandisamiti.domain.model.BillMode.NORMAL,
+                partyKind = com.appwork.mandisamiti.domain.model.SellPartyKind.MERCHANT,
+                bagsCount = 20, weightPerBagGrams = 50_000, totalWeightGrams = 1_000_000,
+                ratePaisaPerQuintal = 260_000, aratBps = 0, tulakPaisa = 0, grossPaisa = 2_600_000,
+                aratPaisa = 0, mandiShulkPaisa = 0, totalReceivablePaisa = 2_600_000, receivedPaisa = 0,
+                balanceDuePaisa = 2_600_000, createdAt = 1000L, updatedAt = 1000L,
+            )
+        )
+        assertTrue(engine.pushPendingChanges().isSuccess)
+        assertEquals(1, fake.pushed.flatMap { it.sell_entries }.size)
+        assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pendingLendEntryAndSettlementArePushedAndAcked() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(db)
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "l1", shopId = "shop-1", partyId = "party-1",
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY, entryDate = 1000L,
+                amountPaisa = 1_000_000L, createdAt = 1000L, updatedAt = 1000L,
+            )
+        )
+        lendRepo.settle(
+            com.appwork.mandisamiti.domain.model.LendSettlement(
+                id = "set1", shopId = "shop-1", lendId = "l1", settledAt = 2000L, amountPaisa = 400_000L,
+                createdAt = 2000L, updatedAt = 2000L,
+            )
+        )
+        assertTrue(engine.pushPendingChanges().isSuccess)
+        assertEquals(1, fake.pushed.flatMap { it.lend_entries }.size)
+        assertEquals(1, fake.pushed.flatMap { it.lend_settlements }.size)
+        assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pendingExpenseIsPushedAndAcked() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(db).saveExpense(
+            com.appwork.mandisamiti.domain.model.ExpenseEntry(
+                id = "e1", shopId = "shop-1", entryDate = 1000L,
+                category = com.appwork.mandisamiti.domain.model.ExpenseCategory.HAMMALI, amountPaisa = 50_000L,
+                createdAt = 1000L, updatedAt = 1000L,
+            )
+        )
+        assertTrue(engine.pushPendingChanges().isSuccess)
+        assertEquals(1, fake.pushed.flatMap { it.expenses }.size)
+        assertEquals(0L, engine.getPendingCount())
+    }
+
+    @Test
+    fun pullNeverOverwritesAPendingLocalBuySellLendExpenseEdit() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
+        com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(db).saveBuyEntry(
+            com.appwork.mandisamiti.domain.model.BuyEntry(
+                id = "b1", shopId = "shop-1", farmerId = "farmer-1", commodityId = "comm-1", entryDate = 1000L,
+                bagsCount = 10, weightPerBagGrams = 50_000, extraWeightGrams = 0, totalWeightGrams = 500_000,
+                ratePaisaPerQuintal = 250_000, commissionBps = 200, labourPerBagPaisa = 500, advancePaidPaisa = 0,
+                grossPaisa = 1_250_000, commissionPaisa = 25_000, labourPaisa = 5_000, netPayablePaisa = 1_220_000,
+                paidPaisa = 999_000, createdAt = 1000L, updatedAt = 1000L,
+            )
+        )
+        fake.pullResponses += Result.success(
+            SyncPullResponseDto(
+                next_seq = 1,
+                buy_entries = listOf(
+                    BuyEntrySyncDto(
+                        id = "b1", farmer_id = "farmer-1", commodity_id = "comm-1", paid_paisa = 0L, updated_at = 1L,
+                    )
+                )
+            )
+        )
+        engine.pullRemoteChanges("shop-1").getOrThrow()
+        assertEquals(999_000L, db.appDatabaseQueries.getBuyEntryById("b1").executeAsOne().paid_paisa)
+        // The buy entry itself plus its CREATE revision row are both still pending.
+        assertEquals(2L, engine.getPendingCount())
     }
 }
