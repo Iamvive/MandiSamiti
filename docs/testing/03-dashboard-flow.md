@@ -87,5 +87,9 @@ graph TD
 | Screenshot Reference | Screen Name | Key Evidence Displayed |
 | :--- | :--- | :--- |
 | `docs/testing/evidence/dashboard/01_dashboard_revamp_live.png` | Live Revamped Dashboard | 4 Quick Action tiles (`खरीद`, `बिक्री`, `उधार`, `खर्च`), `कुल खरीद` ₹38,500, `कुल बिक्री` ₹90,000, `अनुमानित शुद्ध लाभ` ₹51,500, Godown Stock with oversold warning badges |
-| `scratch/buy_list_nav.png` | Deep-link to Buy Entry / List | Tapping `खरीद` opens S1 Buy Entry screen with multi-crop lots |
-| `scratch/sell_list_nav.png` | Deep-link to Sell List | Tapping `कुल बिक्री` opens S5 Sell List showing Balaji, Ramesh Kumar, and Shree Ganesh BOS |
+| `docs/testing/evidence/dashboard/02_buy_entry_nav.png` | Deep-link to Buy Entry / List | Tapping `खरीद` opens S1 Buy Entry screen with multi-crop lots |
+| `docs/testing/evidence/dashboard/03_sell_list_nav.png` | Deep-link to Sell List | Tapping `कुल बिक्री` opens S5 Sell List showing Balaji, Ramesh Kumar, and Shree Ganesh BOS |
+| `docs/testing/evidence/dashboard/04_stock_sheet_modal.png` | Godown Stock Inventory Sheet | Tapping Godown Stock card opens full commodity breakdown modal with warning chips |
+| `docs/testing/evidence/dashboard/05_quick_action_buy.png` | Quick Action: Buy Entry | Direct 1-tap navigation from dashboard tile to S1 Buy Entry |
+| `docs/testing/evidence/dashboard/06_quick_action_sell.png` | Quick Action: Sell Entry | Direct 1-tap navigation from dashboard tile to S4 Sell Entry |
+| `docs/testing/evidence/dashboard/07_dashboard_overview.png` | Dashboard State After All Actions | Full financial overview intact and real-time reactive |

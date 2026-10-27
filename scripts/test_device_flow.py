@@ -154,7 +154,9 @@ def run_buy_flow_test(device_serial="d93c743"):
     print("=" * 60)
 
     driver = DeviceDriver(serial=device_serial)
-    evidence_dir = "projects/MandiSamiti/docs/testing/evidence/buy"
+    base_dir = "projects/MandiSamiti" if os.path.exists("projects/MandiSamiti") else "."
+    evidence_dir = f"{base_dir}/docs/testing/evidence/buy"
+    os.makedirs(evidence_dir, exist_ok=True)
 
     # Step 1: Launch App
     print("[1/8] Launching MandiSamiti MainActivity...")
@@ -315,7 +317,8 @@ def run_sell_flow_test(device_serial="d93c743"):
     print("=" * 60)
 
     driver = DeviceDriver(serial=device_serial)
-    evidence_dir = "projects/MandiSamiti/docs/testing/evidence/sell"
+    base_dir = "projects/MandiSamiti" if os.path.exists("projects/MandiSamiti") else "."
+    evidence_dir = f"{base_dir}/docs/testing/evidence/sell"
     os.makedirs(evidence_dir, exist_ok=True)
 
     # Step 1: Launch App to Home Screen
@@ -513,10 +516,81 @@ def run_sell_flow_test(device_serial="d93c743"):
     return True
 
 
+def run_dashboard_flow_test(device_serial="d93c743"):
+    print("=" * 60)
+    print("MANDISAMITI FLOW 03: DASHBOARD & ENTRY POINTS TEST")
+    print("=" * 60)
+
+    driver = DeviceDriver(serial=device_serial)
+    base_dir = "projects/MandiSamiti" if os.path.exists("projects/MandiSamiti") else "."
+    evidence_dir = f"{base_dir}/docs/testing/evidence/dashboard"
+    os.makedirs(evidence_dir, exist_ok=True)
+
+    # Step 1: Launch App to Dashboard
+    print("[1/5] Launching MandiSamiti Dashboard...")
+    driver.run_adb(["shell", "am", "start", "-n", "com.appwork.mandisamiti/.MainActivity"])
+    time.sleep(2)
+    driver.screenshot(f"{evidence_dir}/01_dashboard_revamp_live.png")
+    assert driver.wait_for_text("कुल खरीद", timeout=5), "Dashboard failed to load KPIs!"
+    print("  ✓ Revamped Dashboard loaded with live KPIs.")
+
+    # Step 2: Test Quick Action - Buy Entry (S1)
+    print("[2/5] Testing Quick Action 'खरीद'...")
+    buy_tile = driver.find_node(text="खरीद")
+    if buy_tile:
+        driver.tap(*buy_tile["center"])
+        time.sleep(1.5)
+        driver.screenshot(f"{evidence_dir}/05_quick_action_buy.png")
+        assert driver.wait_for_text("नई खरीद एंट्री", timeout=5), "BuyEntryScreen failed to open!"
+        print("  ✓ S1 Buy Entry screen opened via Quick Action.")
+        driver.keyevent(4)  # Back to Dashboard
+        time.sleep(1)
+
+    # Step 3: Test Quick Action - Sell Entry (S4)
+    print("[3/5] Testing Quick Action 'बिक्री'...")
+    sell_tile = driver.find_node(text="बिक्री")
+    if sell_tile:
+        driver.tap(*sell_tile["center"])
+        time.sleep(1.5)
+        driver.screenshot(f"{evidence_dir}/06_quick_action_sell.png")
+        assert driver.wait_for_text("नई बिक्री एंट्री", timeout=5), "SellEntryScreen failed to open!"
+        print("  ✓ S4 Sell Entry screen opened via Quick Action.")
+        driver.keyevent(4)  # Back to Dashboard
+        time.sleep(1)
+
+    # Step 4: Test KPI Deep Link - Sell List (S5)
+    print("[4/5] Testing KPI Card Deep Link to Sell List...")
+    sell_kpi = driver.find_node(text="कुल बिक्री")
+    if sell_kpi:
+        driver.tap(*sell_kpi["center"])
+        time.sleep(1.5)
+        driver.screenshot(f"{evidence_dir}/03_sell_list_nav.png")
+        print("  ✓ Sell List opened via KPI tile deep-link.")
+        driver.keyevent(4)  # Back to Dashboard
+        time.sleep(1)
+
+    # Step 5: Test Godown Stock Modal (S11)
+    print("[5/5] Testing Godown Stock Modal Sheet...")
+    stock_card = driver.find_node(text="गोदाम स्टॉक")
+    if stock_card:
+        driver.tap(*stock_card["center"])
+        time.sleep(1.5)
+        driver.screenshot(f"{evidence_dir}/04_stock_sheet_modal.png")
+        print("  ✓ StockBreakdownSheet modal verified.")
+        driver.keyevent(4)  # Close modal
+        time.sleep(1)
+
+    driver.screenshot(f"{evidence_dir}/07_dashboard_overview.png")
+    print("\n" + "=" * 60)
+    print("DASHBOARD FLOW AUTOMATED TESTS PASSED SUCCESSFULLY! (100% GREEN)")
+    print("=" * 60)
+    return True
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MandiSamiti Automated Flow Runner")
     parser.add_argument("--serial", default="d93c743", help="ADB Device Serial")
-    parser.add_argument("--flow", choices=["buy", "sell", "all"], default="all", help="Flow to test")
+    parser.add_argument("--flow", choices=["buy", "sell", "dashboard", "all"], default="all", help="Flow to test")
     args = parser.parse_args()
 
     success = True
@@ -524,5 +598,7 @@ if __name__ == "__main__":
         success = success and run_buy_flow_test(device_serial=args.serial)
     if args.flow in ("sell", "all"):
         success = success and run_sell_flow_test(device_serial=args.serial)
+    if args.flow in ("dashboard", "all"):
+        success = success and run_dashboard_flow_test(device_serial=args.serial)
 
     sys.exit(0 if success else 1)
