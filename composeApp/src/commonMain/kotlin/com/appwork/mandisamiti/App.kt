@@ -201,6 +201,11 @@ fun App(
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
                         tradeSettingsRepository = tradeSettingsRepo,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
+                        stockUseCase = stockUseCase,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
@@ -229,7 +234,7 @@ fun App(
                     },
                     snackbarHostState = snackbarHostState,
                     onNavigateToNewEntry = {
-                        currentScreen = Screen.DealEntry()
+                        currentScreen = Screen.BuyEntry(null)
                     },
                     onNavigateToPartyKhata = { party ->
                         currentScreen = Screen.PartyLedger(party.id)
@@ -244,6 +249,10 @@ fun App(
                     onNavigateToSell = { currentScreen = Screen.SellEntry(null) },
                     onNavigateToLend = { currentScreen = Screen.LendEntry },
                     onNavigateToExpense = { currentScreen = Screen.ExpenseEntry },
+                    onNavigateToBuyList = { currentScreen = Screen.BuyList },
+                    onNavigateToSellList = { currentScreen = Screen.SellList },
+                    onNavigateToLendList = { currentScreen = Screen.LendList },
+                    onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
                     onSignOut = {
                         // Ignore a second tap while a sign-out is already running.
                         if (!signOutInFlight) {

@@ -18,6 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -54,9 +60,17 @@ import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 @Composable
 fun DashboardScreen(
     uiState: HomeUiState,
-    onNavigateToNewEntry: () -> Unit,
-    onNavigateToPartyKhata: (Party) -> Unit,
-    onNavigateToAllKhata: () -> Unit,
+    onNavigateToBuy: () -> Unit = {},
+    onNavigateToSell: () -> Unit = {},
+    onNavigateToLend: () -> Unit = {},
+    onNavigateToExpense: () -> Unit = {},
+    onNavigateToBuyList: () -> Unit = {},
+    onNavigateToSellList: () -> Unit = {},
+    onNavigateToLendList: () -> Unit = {},
+    onNavigateToStockSheet: () -> Unit = {},
+    onNavigateToPartyKhata: (Party) -> Unit = {},
+    onNavigateToAllKhata: () -> Unit = {},
+    onNavigateToNewEntry: () -> Unit = onNavigateToBuy,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -108,7 +122,44 @@ fun DashboardScreen(
             }
         }
 
-        // 2. High-Trust Financial Metric Tiles
+        // 2. Modern 4-Way Quick Actions
+        item {
+            QuickActionsRow(
+                onBuy = onNavigateToBuy,
+                onSell = onNavigateToSell,
+                onLend = onNavigateToLend,
+                onExpense = onNavigateToExpense,
+                isEnglish = isEnglish
+            )
+        }
+
+        // 3. Core Financial KPIs Grid
+        item {
+            RevampKpiGrid(
+                kpis = uiState.kpis,
+                onBuyClick = onNavigateToBuyList,
+                onSellClick = onNavigateToSellList,
+                onLendClick = onNavigateToLendList,
+                onExpenseClick = onNavigateToExpense
+            )
+        }
+
+        // 4. Profit & Loss Card
+        item {
+            ProfitLossCard(
+                profitLossPaisa = uiState.kpis.profitLossPaisa
+            )
+        }
+
+        // 5. Godown Stock Summary Card
+        item {
+            GodownStockSummaryCard(
+                stockLines = uiState.stockLines,
+                onViewAllClick = onNavigateToStockSheet
+            )
+        }
+
+        // 6. High-Trust Financial Metric Tiles (Ledger Balances)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -132,34 +183,6 @@ fun DashboardScreen(
                     icon = Icons.AutoMirrored.Filled.TrendingDown,
                     iconTint = MandiGreenPayable,
                     modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // 3. Prominent CTA Action Button
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MandiPrimaryAction)
-                    .clickable { onNavigateToNewEntry() },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    tint = MandiPrimaryActionText,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text(
-                    text = if (isEnglish) "New Trade Entry / Inward" else "नया सौदा / आवक दर्ज करें",
-                    color = MandiPrimaryActionText,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -286,3 +309,100 @@ private fun DashboardMetricCard(
         }
     }
 }
+
+@Composable
+fun QuickActionsRow(
+    onBuy: () -> Unit,
+    onSell: () -> Unit,
+    onLend: () -> Unit,
+    onExpense: () -> Unit,
+    isEnglish: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        QuickActionButton(
+            label = if (isEnglish) "Buy" else "खरीद",
+            subLabel = if (isEnglish) "Inward" else "आवक",
+            icon = Icons.Default.ShoppingCart,
+            containerColor = MandiGreenPayable.copy(alpha = 0.12f),
+            contentColor = MandiGreenPayable,
+            onClick = onBuy,
+            modifier = Modifier.weight(1f)
+        )
+        QuickActionButton(
+            label = if (isEnglish) "Sell" else "बिक्री",
+            subLabel = if (isEnglish) "Outward" else "जावक",
+            icon = Icons.AutoMirrored.Filled.TrendingUp,
+            containerColor = MandiPrimaryAction.copy(alpha = 0.12f),
+            contentColor = MandiPrimaryAction,
+            onClick = onSell,
+            modifier = Modifier.weight(1f)
+        )
+        QuickActionButton(
+            label = if (isEnglish) "Lend" else "उधार",
+            subLabel = if (isEnglish) "Advance" else "पेशगी",
+            icon = Icons.Default.AccountBalanceWallet,
+            containerColor = Color(0xFFF57C00).copy(alpha = 0.12f),
+            contentColor = Color(0xFFE65100),
+            onClick = onLend,
+            modifier = Modifier.weight(1f)
+        )
+        QuickActionButton(
+            label = if (isEnglish) "Expense" else "खर्च",
+            subLabel = if (isEnglish) "Mandi" else "मंडी व्यय",
+            icon = Icons.Default.MonetizationOn,
+            containerColor = Color(0xFFD81B60).copy(alpha = 0.12f),
+            contentColor = Color(0xFFC2185B),
+            onClick = onExpense,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun QuickActionButton(
+    label: String,
+    subLabel: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = contentColor,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = contentColor
+            )
+            Text(
+                text = subLabel,
+                fontSize = 10.sp,
+                color = contentColor.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+

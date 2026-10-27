@@ -5,14 +5,24 @@ import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.StockLine
+import com.appwork.mandisamiti.domain.repository.BuyRepository
+import com.appwork.mandisamiti.domain.repository.ExpenseRepository
+import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
+import com.appwork.mandisamiti.domain.repository.SellRepository
 import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
+import com.appwork.mandisamiti.domain.repository.TradeSettingsRepository
+import com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase
+import com.appwork.mandisamiti.ui.dashboard.DashboardKpis
+import com.appwork.mandisamiti.ui.dashboard.computeKpis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -36,6 +46,8 @@ data class HomeUiState(
     val tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings = com.appwork.mandisamiti.domain.model.TradeSettings(),
     val totalMarketReceivablePaisa: Long = 0L,
     val totalFarmerPayablePaisa: Long = 0L,
+    val kpis: DashboardKpis = DashboardKpis(0L, 0L, 0L, 0L, 0L),
+    val stockLines: List<StockLine> = emptyList(),
     val searchQuery: String = "",
     val activeFilter: PartyFilter = PartyFilter.ALL,
     val allParties: List<PartyWithBalance> = emptyList(),
@@ -53,7 +65,12 @@ class HomeViewModel(
     private val shopId: String,
     private val shopProfileRepository: ShopProfileRepository,
     private val partyRepository: PartyRepository,
-    private val tradeSettingsRepository: com.appwork.mandisamiti.domain.repository.TradeSettingsRepository? = null,
+    private val tradeSettingsRepository: TradeSettingsRepository? = null,
+    private val buyRepository: BuyRepository? = null,
+    private val sellRepository: SellRepository? = null,
+    private val lendRepository: LendRepository? = null,
+    private val expenseRepository: ExpenseRepository? = null,
+    private val stockUseCase: StockInventoryUseCase? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val onLocalWrite: () -> Unit = {}
 ) {
@@ -63,6 +80,7 @@ class HomeViewModel(
 
     init {
         loadShopProfileAndParties()
+        observeDashboardData()
     }
 
     /** Parties always follow the session's [shopId]; the profile row is only used for display. */
@@ -81,6 +99,28 @@ class HomeViewModel(
             ?.launchIn(viewModelScope)
 
         observeParties(shopId)
+    }
+
+    private fun observeDashboardData() {
+        if (buyRepository == null && sellRepository == null && lendRepository == null && expenseRepository == null) {
+            return
+        }
+
+        val buysFlow = buyRepository?.getBuyEntriesStream(shopId) ?: flowOf(emptyList())
+        val sellsFlow = sellRepository?.getSellEntriesStream(shopId) ?: flowOf(emptyList())
+        val lendsFlow = lendRepository?.getLendEntriesStream(shopId) ?: flowOf(emptyList())
+        val expensesFlow = expenseRepository?.getExpensesStream(shopId) ?: flowOf(emptyList())
+
+        combine(buysFlow, sellsFlow, lendsFlow, expensesFlow) { buys, sells, lends, expenses ->
+            val computedKpis = computeKpis(buys, sells, lends, expenses)
+            val lines = stockUseCase?.lines(shopId) ?: emptyList()
+            Pair(computedKpis, lines)
+        }.onEach { (kpis, lines) ->
+            _uiState.value = _uiState.value.copy(
+                kpis = kpis,
+                stockLines = lines
+            )
+        }.launchIn(viewModelScope)
     }
 
     private var partyBalanceJobs = mutableListOf<kotlinx.coroutines.Job>()

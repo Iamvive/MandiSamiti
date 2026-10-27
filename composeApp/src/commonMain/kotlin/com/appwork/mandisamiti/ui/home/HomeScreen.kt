@@ -65,6 +65,10 @@ fun HomeScreen(
     onNavigateToSell: () -> Unit = {},
     onNavigateToLend: () -> Unit = {},
     onNavigateToExpense: () -> Unit = {},
+    onNavigateToBuyList: () -> Unit = {},
+    onNavigateToSellList: () -> Unit = {},
+    onNavigateToLendList: () -> Unit = {},
+    onNavigateToStockSheet: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -139,9 +143,17 @@ fun HomeScreen(
                     NavigationTab.DASHBOARD -> {
                         DashboardScreen(
                             uiState = uiState,
-                            onNavigateToNewEntry = onNavigateToNewEntry,
+                            onNavigateToBuy = onNavigateToBuy,
+                            onNavigateToSell = onNavigateToSell,
+                            onNavigateToLend = onNavigateToLend,
+                            onNavigateToExpense = onNavigateToExpense,
+                            onNavigateToBuyList = onNavigateToBuyList,
+                            onNavigateToSellList = onNavigateToSellList,
+                            onNavigateToLendList = onNavigateToLendList,
+                            onNavigateToStockSheet = onNavigateToStockSheet,
                             onNavigateToPartyKhata = onNavigateToPartyKhata,
                             onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
+                            onNavigateToNewEntry = onNavigateToNewEntry,
                             isEnglish = uiState.isEnglish
                         )
                     }
