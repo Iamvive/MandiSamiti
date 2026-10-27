@@ -58,6 +58,36 @@ sealed interface Screen {
     data class PartyLedger(val partyId: String) : Screen
     data class ReceiptPreview(val deal: Deal, val farmer: Party, val buyer: Party?) : Screen
     data object DailyRegister : Screen
+
+    // Revamp Screens (Tasks 11-15)
+    data class BuyEntry(val existingId: String? = null) : Screen
+    data object BuyList : Screen
+    data class BuyReceipt(val id: String) : Screen
+    data class SellEntry(val existingId: String? = null) : Screen
+    data object SellList : Screen
+    data class SellReceipt(val id: String) : Screen
+    data object LendEntry : Screen
+    data object LendList : Screen
+    data object ExpenseEntry : Screen
+    data object StockSheet : Screen
+}
+
+fun Screen.backTarget(): Screen = when (this) {
+    is Screen.BuyEntry -> Screen.BuyList
+    is Screen.BuyReceipt -> Screen.BuyList
+    is Screen.BuyList -> Screen.Home
+    is Screen.SellEntry -> Screen.SellList
+    is Screen.SellReceipt -> Screen.SellList
+    is Screen.SellList -> Screen.Home
+    is Screen.LendEntry -> Screen.LendList
+    is Screen.LendList -> Screen.Home
+    is Screen.ExpenseEntry -> Screen.Home
+    is Screen.StockSheet -> Screen.Home
+    is Screen.DealEntry -> Screen.Home
+    is Screen.PartyLedger -> Screen.Home
+    is Screen.ReceiptPreview -> Screen.Home
+    is Screen.DailyRegister -> Screen.Home
+    Screen.Register, Screen.FirstSync, Screen.Home -> Screen.Home
 }
 
 @Composable
@@ -328,6 +358,47 @@ fun App(
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     showBackButton = true
                 )
+            }
+
+            is Screen.BuyEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("खरीद एंट्री (BuyEntry: ${screen.existingId})")
+            }
+            is Screen.BuyList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("खरीद सूची (BuyList)")
+            }
+            is Screen.BuyReceipt -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("किसान पर्चा (BuyReceipt: ${screen.id})")
+            }
+            is Screen.SellEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("बिक्री एंट्री (SellEntry: ${screen.existingId})")
+            }
+            is Screen.SellList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("बिक्री सूची (SellList)")
+            }
+            is Screen.SellReceipt -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("बिक्री रसीद (SellReceipt: ${screen.id})")
+            }
+            is Screen.LendEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("उधार एंट्री (LendEntry)")
+            }
+            is Screen.LendList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("उधार खाता (LendList)")
+            }
+            is Screen.ExpenseEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("खर्च एंट्री (ExpenseEntry)")
+            }
+            is Screen.StockSheet -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                androidx.compose.material3.Text("स्टॉक विवरण (StockSheet)")
             }
         }
     }
