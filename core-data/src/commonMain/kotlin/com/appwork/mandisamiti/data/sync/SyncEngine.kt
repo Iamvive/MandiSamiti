@@ -149,6 +149,65 @@ class SyncEngine(
             )
         }
 
+        val buyEntries = queries.getPendingSyncBuyEntries().executeAsList().map {
+            BuyEntrySyncDto(
+                id = it.id, farmer_id = it.farmer_id, commodity_id = it.commodity_id, entry_date = it.entry_date,
+                bags_count = it.bags_count, weight_per_bag_grams = it.weight_per_bag_grams,
+                extra_weight_grams = it.extra_weight_grams, total_weight_grams = it.total_weight_grams,
+                rate_paisa_per_quintal = it.rate_paisa_per_quintal, commission_bps = it.commission_bps,
+                labour_per_bag_paisa = it.labour_per_bag_paisa, advance_paid_paisa = it.advance_paid_paisa,
+                gross_paisa = it.gross_paisa, commission_paisa = it.commission_paisa, labour_paisa = it.labour_paisa,
+                net_payable_paisa = it.net_payable_paisa, paid_paisa = it.paid_paisa,
+                vehicle_number = it.vehicle_number, slip_number = it.slip_number, remarks = it.remarks,
+                is_void = it.is_void.toInt(), void_reason = it.void_reason, revision = it.revision.toInt(),
+                is_deleted = it.is_deleted.toInt(), created_at = it.created_at, updated_at = it.updated_at
+            )
+        }
+
+        val sellEntries = queries.getPendingSyncSellEntries().executeAsList().map {
+            SellEntrySyncDto(
+                id = it.id, buyer_id = it.buyer_id, commodity_id = it.commodity_id, entry_date = it.entry_date,
+                bill_mode = it.bill_mode, party_kind = it.party_kind, gstin = it.gstin, bags_count = it.bags_count,
+                weight_per_bag_grams = it.weight_per_bag_grams, total_weight_grams = it.total_weight_grams,
+                rate_paisa_per_quintal = it.rate_paisa_per_quintal, arat_bps = it.arat_bps, tulak_paisa = it.tulak_paisa,
+                gross_paisa = it.gross_paisa, arat_paisa = it.arat_paisa, mandi_shulk_paisa = it.mandi_shulk_paisa,
+                total_receivable_paisa = it.total_receivable_paisa, received_paisa = it.received_paisa,
+                balance_due_paisa = it.balance_due_paisa, vehicle_number = it.vehicle_number,
+                invoice_number = it.invoice_number, remarks = it.remarks, is_void = it.is_void.toInt(),
+                void_reason = it.void_reason, revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
+                created_at = it.created_at, updated_at = it.updated_at
+            )
+        }
+
+        val lendEntries = queries.getPendingSyncLendEntries().executeAsList().map {
+            LendEntrySyncDto(
+                id = it.id, party_id = it.party_id, lend_type = it.lend_type, entry_date = it.entry_date,
+                amount_paisa = it.amount_paisa, commodity_id = it.commodity_id, bags_count = it.bags_count,
+                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, notes = it.notes,
+                status = it.status, is_void = it.is_void.toInt(), void_reason = it.void_reason,
+                revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
+                created_at = it.created_at, updated_at = it.updated_at
+            )
+        }
+
+        val lendSettlements = queries.getPendingSyncLendSettlements().executeAsList().map {
+            LendSettlementSyncDto(
+                id = it.id, lend_id = it.lend_id, settled_at = it.settled_at, amount_paisa = it.amount_paisa,
+                weight_grams = it.weight_grams, bags_count = it.bags_count, is_void = it.is_void.toInt(),
+                void_reason = it.void_reason, revision = it.revision.toInt(),
+                created_at = it.created_at, updated_at = it.updated_at
+            )
+        }
+
+        val expenses = queries.getPendingSyncExpenses().executeAsList().map {
+            ExpenseEntrySyncDto(
+                id = it.id, entry_date = it.entry_date, category = it.category, amount_paisa = it.amount_paisa,
+                paid_to = it.paid_to, payment_mode = it.payment_mode, remarks = it.remarks,
+                is_void = it.is_void.toInt(), void_reason = it.void_reason, revision = it.revision.toInt(),
+                is_deleted = it.is_deleted.toInt(), created_at = it.created_at, updated_at = it.updated_at
+            )
+        }
+
         val revisions = queries.getPendingSyncRevisions().executeAsList().map {
             EntryRevisionSyncDto(
                 id = it.id,
@@ -162,16 +221,23 @@ class SyncEngine(
             )
         }
 
-        if (parties.isEmpty() && deals.isEmpty() && txs.isEmpty() && revisions.isEmpty()) {
+        if (parties.isEmpty() && deals.isEmpty() && txs.isEmpty() && buyEntries.isEmpty() && sellEntries.isEmpty() &&
+            lendEntries.isEmpty() && lendSettlements.isEmpty() && expenses.isEmpty() && revisions.isEmpty()
+        ) {
             return@withContext Result.success(0)
         }
 
         var acked = 0
-        // One kind per request, parents before children (parties -> deals -> cash -> revisions),
+        // One kind per request, parents before children (parties -> deals -> cash -> buy/sell -> lend -> settlements -> expenses -> revisions),
         // so the server's foreign keys are always satisfied by earlier, already-acked requests.
         val requests = parties.chunked(PUSH_BATCH).map { SyncPushRequestDto(parties = it) } +
             deals.chunked(PUSH_BATCH).map { SyncPushRequestDto(deals = it) } +
             txs.chunked(PUSH_BATCH).map { SyncPushRequestDto(transactions = it) } +
+            buyEntries.chunked(PUSH_BATCH).map { SyncPushRequestDto(buy_entries = it) } +
+            sellEntries.chunked(PUSH_BATCH).map { SyncPushRequestDto(sell_entries = it) } +
+            lendEntries.chunked(PUSH_BATCH).map { SyncPushRequestDto(lend_entries = it) } +
+            lendSettlements.chunked(PUSH_BATCH).map { SyncPushRequestDto(lend_settlements = it) } +
+            expenses.chunked(PUSH_BATCH).map { SyncPushRequestDto(expenses = it) } +
             revisions.chunked(PUSH_BATCH).map { SyncPushRequestDto(revisions = it) }
         for (req in requests) {
             val res = client.pushSync(req).getOrElse { return@withContext Result.failure(it) }
@@ -186,6 +252,26 @@ class SyncEngine(
                 }
                 req.transactions.filter { res.synced_transactions.contains(it.id) }.forEach {
                     queries.markTransactionSynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                req.buy_entries.filter { res.synced_buy_entries.contains(it.id) }.forEach {
+                    queries.markBuyEntrySynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                req.sell_entries.filter { res.synced_sell_entries.contains(it.id) }.forEach {
+                    queries.markSellEntrySynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                req.lend_entries.filter { res.synced_lend_entries.contains(it.id) }.forEach {
+                    queries.markLendEntrySynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                req.lend_settlements.filter { res.synced_lend_settlements.contains(it.id) }.forEach {
+                    queries.markLendSettlementSynced(it.id, it.revision.toLong())
+                    acked++
+                }
+                req.expenses.filter { res.synced_expenses.contains(it.id) }.forEach {
+                    queries.markExpenseSynced(it.id, it.revision.toLong())
                     acked++
                 }
                 // Conflicted revisions are stored aside by the server and also listed here.
@@ -217,7 +303,9 @@ class SyncEngine(
             }
 
             val res = pageResult.getOrThrow()
-            val pageItemsCount = res.parties.size + res.deals.size + res.transactions.size + res.revisions.size
+            val pageItemsCount = res.parties.size + res.deals.size + res.transactions.size +
+                res.buy_entries.size + res.sell_entries.size + res.lend_entries.size +
+                res.lend_settlements.size + res.expenses.size + res.revisions.size
 
             val applied = database.transactionWithResult {
                 // Logged out / switched shop while this page was in flight: write nothing, not even the cursor.
@@ -297,6 +385,141 @@ class SyncEngine(
                         revision = t.revision.toLong(),
                         is_void = t.is_void.toLong(),
                         void_reason = t.void_reason
+                    )
+                }
+
+                res.buy_entries.forEach { b ->
+                    queries.deleteSyncedBuyEntry(b.id)
+                    queries.insertBuyEntryIfAbsent(
+                        id = b.id,
+                        shop_id = shopId,
+                        farmer_id = b.farmer_id,
+                        commodity_id = b.commodity_id,
+                        entry_date = b.entry_date.takeIf { it > 0 } ?: res.server_sync_time,
+                        bags_count = b.bags_count,
+                        weight_per_bag_grams = b.weight_per_bag_grams,
+                        extra_weight_grams = b.extra_weight_grams,
+                        total_weight_grams = b.total_weight_grams,
+                        rate_paisa_per_quintal = b.rate_paisa_per_quintal,
+                        commission_bps = b.commission_bps,
+                        labour_per_bag_paisa = b.labour_per_bag_paisa,
+                        advance_paid_paisa = b.advance_paid_paisa,
+                        gross_paisa = b.gross_paisa,
+                        commission_paisa = b.commission_paisa,
+                        labour_paisa = b.labour_paisa,
+                        net_payable_paisa = b.net_payable_paisa,
+                        paid_paisa = b.paid_paisa,
+                        vehicle_number = b.vehicle_number,
+                        slip_number = b.slip_number,
+                        remarks = b.remarks,
+                        created_at = b.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        updated_at = b.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        is_deleted = b.is_deleted.toLong(),
+                        sync_status = 1L,
+                        revision = b.revision.toLong(),
+                        is_void = b.is_void.toLong(),
+                        void_reason = b.void_reason
+                    )
+                }
+
+                res.sell_entries.forEach { s ->
+                    queries.deleteSyncedSellEntry(s.id)
+                    queries.insertSellEntryIfAbsent(
+                        id = s.id,
+                        shop_id = shopId,
+                        buyer_id = s.buyer_id,
+                        commodity_id = s.commodity_id,
+                        entry_date = s.entry_date.takeIf { it > 0 } ?: res.server_sync_time,
+                        bill_mode = s.bill_mode,
+                        party_kind = s.party_kind,
+                        gstin = s.gstin,
+                        bags_count = s.bags_count,
+                        weight_per_bag_grams = s.weight_per_bag_grams,
+                        total_weight_grams = s.total_weight_grams,
+                        rate_paisa_per_quintal = s.rate_paisa_per_quintal,
+                        arat_bps = s.arat_bps,
+                        tulak_paisa = s.tulak_paisa,
+                        gross_paisa = s.gross_paisa,
+                        arat_paisa = s.arat_paisa,
+                        mandi_shulk_paisa = s.mandi_shulk_paisa,
+                        total_receivable_paisa = s.total_receivable_paisa,
+                        received_paisa = s.received_paisa,
+                        balance_due_paisa = s.balance_due_paisa,
+                        vehicle_number = s.vehicle_number,
+                        invoice_number = s.invoice_number,
+                        remarks = s.remarks,
+                        created_at = s.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        updated_at = s.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        is_deleted = s.is_deleted.toLong(),
+                        sync_status = 1L,
+                        revision = s.revision.toLong(),
+                        is_void = s.is_void.toLong(),
+                        void_reason = s.void_reason
+                    )
+                }
+
+                res.lend_entries.forEach { l ->
+                    queries.deleteSyncedLendEntry(l.id)
+                    queries.insertLendEntryIfAbsent(
+                        id = l.id,
+                        shop_id = shopId,
+                        party_id = l.party_id,
+                        lend_type = l.lend_type,
+                        entry_date = l.entry_date.takeIf { it > 0 } ?: res.server_sync_time,
+                        amount_paisa = l.amount_paisa,
+                        commodity_id = l.commodity_id,
+                        bags_count = l.bags_count,
+                        weight_grams = l.weight_grams,
+                        expected_return_date = l.expected_return_date,
+                        notes = l.notes,
+                        status = l.status,
+                        created_at = l.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        updated_at = l.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        is_deleted = l.is_deleted.toLong(),
+                        sync_status = 1L,
+                        revision = l.revision.toLong(),
+                        is_void = l.is_void.toLong(),
+                        void_reason = l.void_reason
+                    )
+                }
+
+                res.lend_settlements.forEach { s ->
+                    queries.deleteSyncedLendSettlement(s.id)
+                    queries.insertLendSettlementIfAbsent(
+                        id = s.id,
+                        shop_id = shopId,
+                        lend_id = s.lend_id,
+                        settled_at = s.settled_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        amount_paisa = s.amount_paisa,
+                        weight_grams = s.weight_grams,
+                        bags_count = s.bags_count,
+                        created_at = s.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        updated_at = s.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        sync_status = 1L,
+                        revision = s.revision.toLong(),
+                        is_void = s.is_void.toLong(),
+                        void_reason = s.void_reason
+                    )
+                }
+
+                res.expenses.forEach { e ->
+                    queries.deleteSyncedExpenseEntry(e.id)
+                    queries.insertExpenseEntryIfAbsent(
+                        id = e.id,
+                        shop_id = shopId,
+                        entry_date = e.entry_date.takeIf { it > 0 } ?: res.server_sync_time,
+                        category = e.category,
+                        amount_paisa = e.amount_paisa,
+                        paid_to = e.paid_to,
+                        payment_mode = e.payment_mode,
+                        remarks = e.remarks,
+                        created_at = e.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        updated_at = e.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                        is_deleted = e.is_deleted.toLong(),
+                        sync_status = 1L,
+                        revision = e.revision.toLong(),
+                        is_void = e.is_void.toLong(),
+                        void_reason = e.void_reason
                     )
                 }
 

@@ -1,8 +1,11 @@
 package com.appwork.mandisamiti.domain.model
 
+import kotlinx.serialization.Serializable
+
 enum class LendType { MONEY, GRAIN }
 enum class LendStatus { OPEN, PARTIAL, SETTLED }
 
+@Serializable
 data class LendEntry(
     val id: String,
     val shopId: String,

@@ -9,6 +9,11 @@ class LocalDataWiper(private val database: AppDatabase) {
         database.transaction {
             q.wipeSyncMetadata()
             q.wipeRevisions()
+            q.wipeLendSettlements()
+            q.wipeLendEntries()
+            q.wipeBuyEntries()
+            q.wipeSellEntries()
+            q.wipeExpenses()
             q.wipeCashTransactions()
             q.wipeDeals()
             q.wipeCommodities()
