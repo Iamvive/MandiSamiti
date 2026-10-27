@@ -1,0 +1,132 @@
+CREATE TABLE buyEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    farmer_id TEXT NOT NULL,
+    commodity_id TEXT NOT NULL,
+    entry_date INTEGER NOT NULL,
+    bags_count INTEGER NOT NULL,
+    weight_per_bag_grams INTEGER NOT NULL,
+    extra_weight_grams INTEGER NOT NULL DEFAULT 0,
+    total_weight_grams INTEGER NOT NULL,
+    rate_paisa_per_quintal INTEGER NOT NULL,
+    commission_bps INTEGER NOT NULL DEFAULT 0,
+    labour_per_bag_paisa INTEGER NOT NULL DEFAULT 0,
+    advance_paid_paisa INTEGER NOT NULL DEFAULT 0,
+    gross_paisa INTEGER NOT NULL,
+    commission_paisa INTEGER NOT NULL,
+    labour_paisa INTEGER NOT NULL,
+    net_payable_paisa INTEGER NOT NULL,
+    paid_paisa INTEGER NOT NULL DEFAULT 0,
+    vehicle_number TEXT,
+    slip_number TEXT,
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
+);
+CREATE INDEX idx_buy_shop_date ON buyEntryEntity(shop_id, entry_date);
+CREATE INDEX idx_buy_farmer ON buyEntryEntity(farmer_id);
+
+CREATE TABLE sellEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    buyer_id TEXT NOT NULL,
+    commodity_id TEXT NOT NULL,
+    entry_date INTEGER NOT NULL,
+    bill_mode TEXT NOT NULL,          -- 'NORMAL' | 'BILL_OF_SUPPLY'
+    party_kind TEXT NOT NULL,         -- 'MERCHANT' | 'CUSTOMER'
+    gstin TEXT,
+    bags_count INTEGER NOT NULL,
+    weight_per_bag_grams INTEGER NOT NULL,
+    total_weight_grams INTEGER NOT NULL,
+    rate_paisa_per_quintal INTEGER NOT NULL,
+    arat_bps INTEGER NOT NULL DEFAULT 0,
+    tulak_paisa INTEGER NOT NULL DEFAULT 0,
+    gross_paisa INTEGER NOT NULL,
+    arat_paisa INTEGER NOT NULL,
+    mandi_shulk_paisa INTEGER NOT NULL,
+    total_receivable_paisa INTEGER NOT NULL,
+    received_paisa INTEGER NOT NULL DEFAULT 0,
+    balance_due_paisa INTEGER NOT NULL,
+    vehicle_number TEXT,
+    invoice_number TEXT,
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
+);
+CREATE INDEX idx_sell_shop_date ON sellEntryEntity(shop_id, entry_date);
+CREATE INDEX idx_sell_buyer ON sellEntryEntity(buyer_id);
+
+CREATE TABLE lendEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    party_id TEXT NOT NULL,
+    lend_type TEXT NOT NULL,          -- 'MONEY' | 'GRAIN'
+    entry_date INTEGER NOT NULL,
+    amount_paisa INTEGER NOT NULL DEFAULT 0,
+    commodity_id TEXT,
+    bags_count INTEGER NOT NULL DEFAULT 0,
+    weight_grams INTEGER NOT NULL DEFAULT 0,
+    expected_return_date INTEGER,
+    notes TEXT,
+    status TEXT NOT NULL DEFAULT 'OPEN', -- 'OPEN' | 'PARTIAL' | 'SETTLED'
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(party_id) REFERENCES partyEntity(id)
+);
+CREATE INDEX idx_lend_shop_status ON lendEntryEntity(shop_id, status);
+
+CREATE TABLE lendSettlementEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    lend_id TEXT NOT NULL,
+    settled_at INTEGER NOT NULL,
+    amount_paisa INTEGER NOT NULL DEFAULT 0,
+    weight_grams INTEGER NOT NULL DEFAULT 0,
+    bags_count INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(lend_id) REFERENCES lendEntryEntity(id)
+);
+CREATE INDEX idx_settle_lend ON lendSettlementEntity(lend_id);
+
+CREATE TABLE expenseEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    entry_date INTEGER NOT NULL,
+    category TEXT NOT NULL,           -- 'HAMMALI' | 'KIRAYA' | 'BIJLI' | 'CHAI_PANI' | 'MAJDOORI' | 'OTHER'
+    amount_paisa INTEGER NOT NULL,
+    paid_to TEXT,
+    payment_mode TEXT NOT NULL DEFAULT 'CASH', -- 'CASH' | 'ONLINE' | 'CHEQUE'
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT
+);
+CREATE INDEX idx_expense_shop_date ON expenseEntryEntity(shop_id, entry_date);
