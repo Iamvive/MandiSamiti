@@ -52,7 +52,17 @@ fun BuyTransactionsListScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredEntries = entries
-        .filter { !it.isVoid && (it.farmerId.contains(searchQuery, ignoreCase = true) || it.slipNumber?.contains(searchQuery, ignoreCase = true) == true) }
+        .filter { entry ->
+            if (entry.isVoid) return@filter false
+            if (searchQuery.isBlank()) return@filter true
+            val q = searchQuery.trim()
+            val village = extractVillage(entry.remarks)
+            entry.farmerId.contains(q, ignoreCase = true) ||
+                entry.slipNumber?.contains(q, ignoreCase = true) == true ||
+                entry.vehicleNumber?.contains(q, ignoreCase = true) == true ||
+                entry.commodityId.contains(q, ignoreCase = true) ||
+                (village != null && village.contains(q, ignoreCase = true))
+        }
         .sortedByDescending { it.entryDate }
 
     Scaffold(
@@ -84,7 +94,7 @@ fun BuyTransactionsListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("किसान या पर्चा नंबर खोजें") },
+                label = { Text("किसान, गाँव या पर्चा नंबर खोजें") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -114,6 +124,10 @@ fun BuyTransactionsListScreen(
 
 @Composable
 private fun BuyEntryCard(entry: BuyEntry, onClick: () -> Unit) {
+    val farmerName = entry.farmerId.ifBlank { "किसान" }
+    val village = extractVillage(entry.remarks)
+    val slipNumber = entry.slipNumber
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -121,27 +135,42 @@ private fun BuyEntryCard(entry: BuyEntry, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = "पर्चा #${entry.slipNumber ?: entry.id.takeLast(6)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = farmerName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val subtitleParts = buildList {
+                        if (!village.isNullOrBlank()) add("गाँव: $village")
+                        if (!slipNumber.isNullOrBlank()) add("पर्चा #$slipNumber")
+                    }
+                    if (subtitleParts.isNotEmpty()) {
+                        Text(
+                            text = subtitleParts.joinToString(" • "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 StatusChip(status = entry.paymentStatus)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                val cropLabel = entry.commodityId.ifBlank { "फसल" }
                 Text(
-                    text = "${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल",
+                    text = "$cropLabel • ${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(

@@ -130,5 +130,16 @@ class BuyEntryFormStateTest {
         assertEquals("2", restoredForm.commissionPercent)
         assertEquals("5", restoredForm.labourPerBag)
         assertEquals("1000", restoredForm.advancePaid)
+        assertEquals("खेड़ा", restoredForm.village)
+        assertEquals("खेड़ा", extractVillage(entry.remarks))
+    }
+
+    @Test
+    fun extractVillageHandlesVariousRemarksFormats() {
+        assertEquals("विशनपुर", extractVillage("गाँव: विशनपुर | DATA: []"))
+        assertEquals("विशनपुर", extractVillage("गाँव: विशनपुर"))
+        assertEquals(null, extractVillage("DATA: []"))
+        assertEquals(null, extractVillage(""))
+        assertEquals(null, extractVillage(null))
     }
 }

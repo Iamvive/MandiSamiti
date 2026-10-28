@@ -265,9 +265,7 @@ class BuyEntryFormState {
 
         // Try extracting village and lots from remarks
         entry.remarks?.let { rem ->
-            if (rem.contains("गाँव:")) {
-                village = rem.substringAfter("गाँव:").substringBefore("|").trim()
-            }
+            extractVillage(rem)?.let { village = it }
             if (rem.contains("DATA: ")) {
                 val jsonPart = rem.substringAfter("DATA: ").trim()
                 try {
@@ -305,3 +303,13 @@ class BuyEntryFormState {
         )
     }
 }
+
+fun extractVillage(remarks: String?): String? {
+    if (remarks.isNullOrBlank()) return null
+    if (remarks.contains("गाँव:")) {
+        val v = remarks.substringAfter("गाँव:").substringBefore("|").trim()
+        if (v.isNotBlank()) return v
+    }
+    return null
+}
+

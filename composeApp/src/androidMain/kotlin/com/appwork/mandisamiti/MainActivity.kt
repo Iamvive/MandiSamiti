@@ -23,6 +23,12 @@ class MainActivity : ComponentActivity() {
         ttsManager = SoundboxTtsManager(applicationContext)
         val whatsAppShareManager = WhatsAppShareManager(applicationContext)
         val sessionStore = AndroidSessionStore(applicationContext)
+        if (sessionStore.current() == null) {
+            val existingShop = database.appDatabaseQueries.getShopProfile().executeAsOneOrNull()
+            if (existingShop != null) {
+                sessionStore.save(com.appwork.mandisamiti.data.auth.Session(existingShop.id, "local_offline", "local_offline"))
+            }
+        }
         val authApi = AuthApi(mandiHttpClient(), apiBaseUrl)
         val syncScheduler = com.appwork.mandisamiti.sync.AndroidSyncScheduler(applicationContext)
         if (sessionStore.current() != null) syncScheduler.schedulePeriodicSync()

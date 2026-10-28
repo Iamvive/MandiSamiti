@@ -115,6 +115,10 @@ fun BuyTransactionReceiptScreen(
                         if (!phoneNum.isNullOrBlank()) {
                             ReceiptLine("मोबाइल नंबर", phoneNum)
                         }
+                        val village = extractVillage(entry.remarks)
+                        if (!village.isNullOrBlank()) {
+                            ReceiptLine("गाँव", village)
+                        }
                         ReceiptLine("पर्चा क्रमांक", "#${entry.slipNumber ?: entry.id.takeLast(6)}")
 
                         // Multi-crop lots section
@@ -195,6 +199,10 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
     appendLine("*किसान खरीद पर्चा*")
     appendLine("पर्चा #: ${entry.slipNumber ?: entry.id.takeLast(6)}")
     appendLine("किसान: $farmerName")
+    val village = extractVillage(entry.remarks)
+    if (!village.isNullOrBlank()) {
+        appendLine("गाँव: $village")
+    }
     if (!entry.vehicleNumber.isNullOrBlank()) {
         appendLine("मोबाइल: ${entry.vehicleNumber}")
     }
