@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.StockLine
 
@@ -111,12 +112,13 @@ private fun KpiCard(
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
-                style = MaterialTheme.typography.titleMedium,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -186,7 +188,7 @@ fun GodownStockSummaryCard(
             ) {
                 Text(
                     text = DashboardStrings.godownTitle(isEnglish),
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Icon(
@@ -198,7 +200,7 @@ fun GodownStockSummaryCard(
             if (stockLines.isEmpty()) {
                 Text(
                     text = DashboardStrings.godownEmpty(isEnglish),
-                    style = MaterialTheme.typography.bodySmall
+                    fontSize = 14.sp
                 )
             } else {
                 stockLines.take(3).forEach { line ->
@@ -208,12 +210,12 @@ fun GodownStockSummaryCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(line.commodityId, style = MaterialTheme.typography.bodyMedium)
+                        Text(line.commodityId, fontSize = 14.sp)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             if (isNeg) {
                                 SuggestionChip(
                                     onClick = {},
-                                    label = { Text(DashboardStrings.godownOversold(isEnglish)) },
+                                    label = { Text(DashboardStrings.godownOversold(isEnglish), fontSize = 12.sp) },
                                     colors = SuggestionChipDefaults.suggestionChipColors(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         labelColor = MaterialTheme.colorScheme.onError
@@ -222,7 +224,7 @@ fun GodownStockSummaryCard(
                             }
                             Text(
                                 text = "${MandiMathEngine.gramsToQuintals(line.onHandGrams)} qtl",
-                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isNeg) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                             )

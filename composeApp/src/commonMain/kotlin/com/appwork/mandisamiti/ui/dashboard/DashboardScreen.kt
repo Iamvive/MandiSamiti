@@ -131,7 +131,7 @@ fun DashboardScreen(
                 }
                 Text(
                     text = if (isEnglish) "Today's Mandi" else "आज का बहीखाता",
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = MandiTextSecondary
                 )
@@ -200,7 +200,7 @@ fun DashboardScreen(
             ) {
                 Text(
                     text = if (isEnglish) "Active Ledger Accounts" else "सक्रिय खाते (हाल का लेन-देन)",
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MandiTextPrimary
                 )
@@ -211,7 +211,7 @@ fun DashboardScreen(
                 ) {
                     Text(
                         text = if (isEnglish) "View All" else "सभी देखें",
-                        fontSize = 12.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MandiTextSecondary
                     )
@@ -219,7 +219,7 @@ fun DashboardScreen(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
                         tint = MandiTextSecondary,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -283,7 +283,7 @@ private fun DashboardMetricCard(
             ) {
                 Text(
                     text = title,
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = MandiTextSecondary
                 )
@@ -291,7 +291,7 @@ private fun DashboardMetricCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
 
@@ -304,7 +304,7 @@ private fun DashboardMetricCard(
 
             Text(
                 text = subtitle,
-                fontSize = 11.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
                 color = MandiTextMuted
             )
@@ -396,13 +396,13 @@ private fun QuickActionButton(
             )
             Text(
                 text = label,
-                fontSize = 13.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
             Text(
                 text = subLabel,
-                fontSize = 10.sp,
+                fontSize = 14.sp,
                 color = contentColor
             )
         }
