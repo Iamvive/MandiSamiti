@@ -31,7 +31,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
@@ -70,6 +74,8 @@ import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiAccent
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
@@ -162,66 +168,91 @@ fun DailyCashRegisterScreen(
                 shadowElevation = 8.dp,
                 border = BorderStroke(1.dp, MandiBorder)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = { showDirectCashDialog = TransactionType.JAMA_RECEIVED },
+                if (!uiState.isReadOnly) {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MandiBtnSuccessBg,
-                            contentColor = MandiBtnSuccessFg
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = MandiBtnSuccessFg,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.size(6.dp))
-                        Text(
-                            text = if (isEnglish) "Cash In (Jama)" else "नकद जमा (In)",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiBtnSuccessFg,
-                            maxLines = 1
-                        )
-                    }
+                        Button(
+                            onClick = { showDirectCashDialog = TransactionType.JAMA_RECEIVED },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiBtnSuccessBg,
+                                contentColor = MandiBtnSuccessFg
+                            ),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = MandiBtnSuccessFg,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = if (isEnglish) "Cash In (Jama)" else "नकद जमा (In)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiBtnSuccessFg,
+                                maxLines = 1
+                            )
+                        }
 
-                    Button(
-                        onClick = { showDirectCashDialog = TransactionType.UDHAR_GIVEN },
+                        Button(
+                            onClick = { showDirectCashDialog = TransactionType.UDHAR_GIVEN },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiBtnDangerBg,
+                                contentColor = MandiBtnDangerFg
+                            ),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Remove,
+                                contentDescription = null,
+                                tint = MandiBtnDangerFg,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = if (isEnglish) "Cash Out (Naame)" else "नकद निकासी (Out)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiBtnDangerFg,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                } else {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MandiBtnDangerBg,
-                            contentColor = MandiBtnDangerFg
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Remove,
+                            imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = MandiBtnDangerFg,
+                            tint = MandiTextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.size(6.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isEnglish) "Cash Out (Naame)" else "नकद निकासी (Out)",
+                            text = if (isEnglish) "Historical bahi is view-only. Cash entry disabled." else "पुराने दिन की बही सुरक्षित है — नया लेन-देन बंद है।",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiBtnDangerFg,
-                            maxLines = 1
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextSecondary
                         )
                     }
                 }
@@ -254,7 +285,7 @@ fun DailyCashRegisterScreen(
                     Column(
                         modifier = Modifier
                             .weight(1.3f)
-                            .clickable {
+                            .clickable(enabled = !uiState.isReadOnly) {
                                 physicalCashInput = uiState.physicalCountPaisa?.let { (it / 100L).toString() } ?: ""
                                 viewModel.openDayClosingSummary()
                             },
@@ -282,7 +313,7 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier
                             .weight(1.1f)
                             .padding(start = 6.dp)
-                            .clickable {
+                            .clickable(enabled = !uiState.isReadOnly) {
                                 openingBalanceInput = if (uiState.openingCashPaisa > 0) (uiState.openingCashPaisa / 100L).toString() else ""
                                 openingBalanceRemarks = ""
                                 showOpeningBalanceDialog = true
@@ -449,6 +480,123 @@ fun DailyCashRegisterScreen(
                                 text = if (isEnglish) "Set Float" else "रोकड़ दर्ज करें",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Sticky Date Navigation Bar (दैनिक तारीख चयन)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MandiSurface),
+                border = BorderStroke(1.dp, MandiBorder)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { viewModel.navigateToPreviousDay() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = if (isEnglish) "Previous Day" else "पिछला दिन",
+                            tint = MandiNavy,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = formatBahiDate(uiState.selectedDate, isEnglish, uiState.isToday),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiNavy
+                        )
+                        if (uiState.isReadOnly) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MandiNeutralLight)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (isEnglish) "Archived" else "सुरक्षित",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MandiTextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.navigateToNextDay() },
+                        enabled = !uiState.isToday,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = if (isEnglish) "Next Day" else "अगला दिन",
+                            tint = if (!uiState.isToday) MandiNavy else MandiTextMuted.copy(alpha = 0.4f),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            // View-Only Past Day Banner
+            if (uiState.isReadOnly) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MandiNeutralLight),
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MandiTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (isEnglish) "Past date — View Only" else "पिछला दिन, सिर्फ देखने के लिए (View Only)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = { viewModel.navigateToToday() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = if (isEnglish) "Back to Today" else "आज पर जाएं",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiAmberDark
                             )
                         }
                     }
@@ -1615,6 +1763,66 @@ private fun BahiAnchorRow(
                 color = color
             )
         }
+    }
+}
+
+private fun formatBahiDate(date: LocalDate, isEnglish: Boolean, isToday: Boolean): String {
+    val dayNameHindi = when (date.dayOfWeek) {
+        DayOfWeek.MONDAY -> "सोमवार"
+        DayOfWeek.TUESDAY -> "मंगलवार"
+        DayOfWeek.WEDNESDAY -> "बुधवार"
+        DayOfWeek.THURSDAY -> "गुरुवार"
+        DayOfWeek.FRIDAY -> "शुक्रवार"
+        DayOfWeek.SATURDAY -> "शनिवार"
+        DayOfWeek.SUNDAY -> "रविवार"
+        else -> ""
+    }
+    val monthNameHindi = when (date.monthNumber) {
+        1 -> "जनवरी"
+        2 -> "फ़रवरी"
+        3 -> "मार्च"
+        4 -> "अप्रैल"
+        5 -> "मई"
+        6 -> "जून"
+        7 -> "जुलाई"
+        8 -> "अगस्त"
+        9 -> "सितंबर"
+        10 -> "अक्टूबर"
+        11 -> "नवंबर"
+        12 -> "दिसंबर"
+        else -> ""
+    }
+    val monthNameEnglish = when (date.monthNumber) {
+        1 -> "Jan"
+        2 -> "Feb"
+        3 -> "Mar"
+        4 -> "Apr"
+        5 -> "May"
+        6 -> "Jun"
+        7 -> "Jul"
+        8 -> "Aug"
+        9 -> "Sep"
+        10 -> "Oct"
+        11 -> "Nov"
+        12 -> "Dec"
+        else -> ""
+    }
+    val dayNameEnglish = when (date.dayOfWeek) {
+        DayOfWeek.MONDAY -> "Monday"
+        DayOfWeek.TUESDAY -> "Tuesday"
+        DayOfWeek.WEDNESDAY -> "Wednesday"
+        DayOfWeek.THURSDAY -> "Thursday"
+        DayOfWeek.FRIDAY -> "Friday"
+        DayOfWeek.SATURDAY -> "Saturday"
+        DayOfWeek.SUNDAY -> "Sunday"
+        else -> ""
+    }
+    return if (isEnglish) {
+        if (isToday) "Today, ${date.dayOfMonth} $monthNameEnglish ${date.year}"
+        else "${date.dayOfMonth} $monthNameEnglish ${date.year}, $dayNameEnglish"
+    } else {
+        if (isToday) "आज, ${date.dayOfMonth} $monthNameHindi ${date.year}"
+        else "${date.dayOfMonth} $monthNameHindi ${date.year}, $dayNameHindi"
     }
 }
 

@@ -25,7 +25,14 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 
 data class TransactionWithParty(
     val transaction: CashTransaction,
@@ -36,6 +43,10 @@ data class TransactionWithParty(
 data class DailyRegisterUiState(
     val shopProfile: ShopProfile? = null,
     val isSoundEnabled: Boolean = true,
+    val selectedDate: LocalDate = LocalDate(2026, 1, 1),
+    val selectedInstant: Instant = Clock.System.now(),
+    val isToday: Boolean = true,
+    val isReadOnly: Boolean = false,
     val openingCashPaisa: Long = 0L,
     val todayCashInPaisa: Long = 0L,
     val todayCashOutPaisa: Long = 0L,
@@ -47,6 +58,8 @@ data class DailyRegisterUiState(
     val isDayClosingSummaryOpen: Boolean = false,
     val isSaving: Boolean = false
 ) {
+    val isPastDate: Boolean
+        get() = isReadOnly
     val reconciliationStatus: BahiReconciliationStatus
         get() = when {
             physicalCountPaisa == null -> BahiReconciliationStatus.NOT_COUNTED
@@ -97,7 +110,15 @@ class DailyRegisterViewModel(
     private val onLocalWrite: () -> Unit = {}
 ) {
 
-    private val _uiState = MutableStateFlow(DailyRegisterUiState())
+    private val todayDate: LocalDate get() = clock.now().toLocalDateTime(timeZone).date
+    private val _selectedDate = MutableStateFlow(clock.now().toLocalDateTime(timeZone).date)
+
+    private val _uiState = MutableStateFlow(
+        DailyRegisterUiState(
+            selectedDate = clock.now().toLocalDateTime(timeZone).date,
+            selectedInstant = clock.now()
+        )
+    )
     val uiState: StateFlow<DailyRegisterUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<DailyRegisterEvent>()
@@ -122,10 +143,13 @@ class DailyRegisterViewModel(
         // Combined so a party list that loads after the cash list still renames the rows.
         combine(
             partyRepository.getPartiesStream(shopId),
-            cashRepository.getTransactionsByShopStream(shopId)
-        ) { parties, allTx -> parties to allTx }
-            .onEach { (parties, allTx) ->
-                val window = CashDrawer.dayWindow(clock.now(), timeZone)
+            cashRepository.getTransactionsByShopStream(shopId),
+            _selectedDate
+        ) { parties, allTx, date ->
+            Triple(parties, allTx, date)
+        }
+            .onEach { (parties, allTx, date) ->
+                val window = CashDrawer.dayWindow(date, timeZone)
                 val summary = CashDrawer.summarize(allTx, window)
                 val partyMap = parties.associateBy { it.id }
                 val todays = allTx
@@ -140,7 +164,14 @@ class DailyRegisterViewModel(
                         }
                         TransactionWithParty(transaction = tx, partyName = resolvedName, village = party?.village)
                     }
+                val currentToday = todayDate
+                val isCurrentToday = (date == currentToday)
+                val isPast = (date < currentToday)
                 _uiState.value = _uiState.value.copy(
+                    selectedDate = date,
+                    selectedInstant = date.atStartOfDayIn(timeZone),
+                    isToday = isCurrentToday,
+                    isReadOnly = isPast,
                     availableParties = parties,
                     openingCashPaisa = summary.openingPaisa,
                     todayCashInPaisa = summary.cashInPaisa,
@@ -150,6 +181,41 @@ class DailyRegisterViewModel(
                 )
             }
             .launchIn(viewModelScope)
+    }
+
+    fun selectDate(date: LocalDate) {
+        val currentToday = todayDate
+        if (date <= currentToday) {
+            _selectedDate.value = date
+        }
+    }
+
+    fun selectDate(instant: Instant) {
+        selectDate(instant.toLocalDateTime(timeZone).date)
+    }
+
+    fun navigateDay(deltaDays: Int) {
+        if (deltaDays < 0) {
+            repeat(-deltaDays) { navigateToPreviousDay() }
+        } else if (deltaDays > 0) {
+            repeat(deltaDays) { navigateToNextDay() }
+        }
+    }
+
+    fun navigateToPreviousDay() {
+        _selectedDate.value = _selectedDate.value.minus(1, DateTimeUnit.DAY)
+    }
+
+    fun navigateToNextDay() {
+        val currentToday = todayDate
+        val nextDate = _selectedDate.value.plus(1, DateTimeUnit.DAY)
+        if (nextDate <= currentToday) {
+            _selectedDate.value = nextDate
+        }
+    }
+
+    fun navigateToToday() {
+        _selectedDate.value = todayDate
     }
 
     fun openAddEntryDialog() {
@@ -169,12 +235,14 @@ class DailyRegisterViewModel(
     }
 
     fun setPhysicalCashCount(countRs: Long?) {
+        if (_uiState.value.isReadOnly) return
         _uiState.value = _uiState.value.copy(
             physicalCountPaisa = countRs?.let { it * 100L }
         )
     }
 
     fun setPhysicalCashCountPaisa(countPaisa: Long?) {
+        if (_uiState.value.isReadOnly) return
         _uiState.value = _uiState.value.copy(
             physicalCountPaisa = countPaisa
         )
@@ -250,6 +318,7 @@ class DailyRegisterViewModel(
         paymentMode: PaymentMode = PaymentMode.CASH,
         remarks: String? = null
     ) {
+        if (_uiState.value.isReadOnly) return
         if (amountRs <= 0L) return
 
         val now = clock.now().toEpochMilliseconds()
@@ -290,6 +359,7 @@ class DailyRegisterViewModel(
     }
 
     fun setOrAdjustOpeningBalance(targetOpeningRs: Long, remarks: String? = null) {
+        if (_uiState.value.isReadOnly) return
         val targetPaisa = targetOpeningRs * 100L
         val currentOpening = _uiState.value.openingCashPaisa
         val deltaPaisa = targetPaisa - currentOpening
@@ -332,6 +402,7 @@ class DailyRegisterViewModel(
     }
 
     fun recordCashWithdrawalHome(amountRs: Long, remarks: String? = null) {
+        if (_uiState.value.isReadOnly) return
         if (amountRs <= 0L) return
         val now = clock.now().toEpochMilliseconds()
         val amountPaisa = amountRs * 100L
@@ -361,6 +432,7 @@ class DailyRegisterViewModel(
     }
 
     fun recordDiscrepancyAdjustment(differencePaisa: Long) {
+        if (_uiState.value.isReadOnly) return
         if (differencePaisa == 0L) return
         val now = clock.now().toEpochMilliseconds()
         val isSurplus = differencePaisa > 0L
