@@ -17,19 +17,24 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.StockLine
 
 object DashboardStrings {
-    fun kpiPurchases(isEnglish: Boolean) = if (isEnglish) "Total Purchases" else "कुल खरीद"
-    fun kpiSales(isEnglish: Boolean) = if (isEnglish) "Total Sales" else "कुल बिक्री"
-    fun kpiOutstanding(isEnglish: Boolean) = if (isEnglish) "Total Outstanding (Lend)" else "कुल उधार (बाकी)"
-    fun kpiExpenses(isEnglish: Boolean) = if (isEnglish) "Total Expenses" else "कुल खर्च"
+    fun kpiPurchases(isEnglish: Boolean) = if (isEnglish) "Total Purchases (All-time)" else "कुल खरीद (अब तक)"
+    fun kpiSales(isEnglish: Boolean) = if (isEnglish) "Total Sales (All-time)" else "कुल बिक्री (अब तक)"
+    fun kpiOutstanding(isEnglish: Boolean) = if (isEnglish) "Total Outstanding (All-time)" else "कुल उधार (अब तक)"
+    fun kpiExpenses(isEnglish: Boolean) = if (isEnglish) "Total Expenses (All-time)" else "कुल खर्च (अब तक)"
     fun profitLossNetLoss(isEnglish: Boolean) = if (isEnglish) "Estimated Net Loss" else "अनुमानित शुद्ध हानि (Loss)"
     fun profitLossNetProfit(isEnglish: Boolean) = if (isEnglish) "Estimated Net Profit" else "अनुमानित शुद्ध लाभ (Profit)"
     fun godownTitle(isEnglish: Boolean) = if (isEnglish) "Godown Stock" else "गोदाम स्टॉक (Godown Stock)"
@@ -69,12 +74,14 @@ fun RevampKpiGrid(
                 label = DashboardStrings.kpiPurchases(isEnglish),
                 amountPaisa = kpis.totalBuyPaisa,
                 onClick = onBuyClick,
+                isEnglish = isEnglish,
                 modifier = Modifier.weight(1f)
             )
             KpiCard(
                 label = DashboardStrings.kpiSales(isEnglish),
                 amountPaisa = kpis.totalSellPaisa,
                 onClick = onSellClick,
+                isEnglish = isEnglish,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -83,13 +90,22 @@ fun RevampKpiGrid(
                 label = DashboardStrings.kpiOutstanding(isEnglish),
                 amountPaisa = kpis.totalLendPaisa,
                 onClick = onLendClick,
+                isEnglish = isEnglish,
                 modifier = Modifier.weight(1f)
             )
             KpiCard(
                 label = DashboardStrings.kpiExpenses(isEnglish),
                 amountPaisa = kpis.totalExpensePaisa,
                 onClick = onExpenseClick,
+                isEnglish = isEnglish,
                 modifier = Modifier.weight(1f)
+            )
+        }
+        if (kpis.totalBuyPaisa > 100 * kpis.totalSellPaisa && kpis.totalSellPaisa > 0) {
+            Text(
+                text = if (isEnglish) "• Purchases exceed 100x recorded sales" else "• कुल खरीद दर्ज बिक्री से 100 गुना अधिक है",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -100,10 +116,15 @@ private fun KpiCard(
     label: String,
     amountPaisa: Long,
     onClick: () -> Unit,
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var showExact by remember { mutableStateOf(false) }
     Card(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable {
+            showExact = !showExact
+            onClick()
+        },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -117,7 +138,8 @@ private fun KpiCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
+                text = if (showExact) "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}"
+                       else MandiCurrencyFormatter.formatCompactRupees(amountPaisa, isEnglish),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -215,7 +237,7 @@ fun GodownStockSummaryCard(
                             if (isNeg) {
                                 SuggestionChip(
                                     onClick = {},
-                                    label = { Text(DashboardStrings.godownOversold(isEnglish), fontSize = 12.sp) },
+                                    label = { Text(DashboardStrings.godownOversold(isEnglish), fontSize = 14.sp) },
                                     colors = SuggestionChipDefaults.suggestionChipColors(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         labelColor = MaterialTheme.colorScheme.onError
