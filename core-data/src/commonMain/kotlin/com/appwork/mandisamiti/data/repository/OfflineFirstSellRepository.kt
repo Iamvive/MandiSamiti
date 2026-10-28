@@ -39,6 +39,23 @@ class OfflineFirstSellRepository(
             val created = entry.copy(revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordRevision(created, "CREATE", created.updatedAt)
+
+            if (entry.buyerId.isNotBlank()) {
+                queries.insertPartyIfAbsent(
+                    id = entry.buyerId,
+                    shop_id = entry.shopId,
+                    name = entry.buyerId,
+                    phone = null,
+                    village = null,
+                    party_type = "BUYER",
+                    monthly_interest_rate = null,
+                    photo_uri = null,
+                    created_at = created.createdAt,
+                    updated_at = created.updatedAt,
+                    is_deleted = 0L,
+                    sync_status = 0L
+                )
+            }
         }
     }
 

@@ -77,4 +77,26 @@ class BuyEntryRepositoryTest {
             repo.editBuyEntry(sampleBuyEntry(id = "b1").copy(paidPaisa = 1L))
         }
     }
+
+    @Test
+    fun saveBuyEntryAutoProvisionsPartyAccountAndReflectsNetPayable() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstBuyRepository(db, clock = clock)
+        val entry = sampleBuyEntry("b-unseeded").copy(
+            farmerId = "राधे श्याम",
+            netPayablePaisa = 3_758_000L,
+            paidPaisa = 0L,
+            remarks = "गाँव: राया | DATA: []"
+        )
+        repo.saveBuyEntry(entry)
+
+        val party = db.appDatabaseQueries.getPartyById("राधे श्याम").executeAsOneOrNull()
+        kotlin.test.assertNotNull(party)
+        assertEquals("राधे श्याम", party.name)
+        assertEquals("राया", party.village)
+        assertEquals("FARMER", party.party_type)
+
+        val balance = db.appDatabaseQueries.getPartyBalance("राधे श्याम").executeAsOne()
+        assertEquals(-3_758_000L, balance.balance_paisa)
+    }
 }

@@ -66,4 +66,22 @@ class LendEntryRepositoryTest {
             repo.settle(LendSettlement(id = "settle-1", shopId = "shop", lendId = "l1", settledAt = 2_000L, amountPaisa = 100_000L, createdAt = 2_000L, updatedAt = 2_000L))
         }
     }
+
+    @Test
+    fun saveLendEntryAutoProvisionsPartyAccountAndReflectsReceivable() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstLendRepository(db, clock = clock)
+        val entry = sampleLendEntry("l-unseeded", amountPaisa = 1_000_000L).copy(
+            partyId = "कैलाश किसान"
+        )
+        repo.saveLendEntry(entry)
+
+        val party = db.appDatabaseQueries.getPartyById("कैलाश किसान").executeAsOneOrNull()
+        kotlin.test.assertNotNull(party)
+        assertEquals("कैलाश किसान", party.name)
+        assertEquals("FARMER", party.party_type)
+
+        val balance = db.appDatabaseQueries.getPartyBalance("कैलाश किसान").executeAsOne()
+        assertEquals(1_000_000L, balance.balance_paisa)
+    }
 }

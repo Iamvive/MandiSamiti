@@ -455,7 +455,7 @@ class SyncEngineTest {
         )
         engine.pullRemoteChanges("shop-1").getOrThrow()
         assertEquals(999_000L, db.appDatabaseQueries.getBuyEntryById("b1").executeAsOne().paid_paisa)
-        // The buy entry itself plus its CREATE revision row are both still pending.
-        assertEquals(2L, engine.getPendingCount())
+        // The buy entry itself, its CREATE revision row, and the auto-provisioned party row are all pending.
+        assertEquals(3L, engine.getPendingCount())
     }
 }

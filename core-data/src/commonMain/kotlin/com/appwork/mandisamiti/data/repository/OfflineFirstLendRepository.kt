@@ -45,6 +45,23 @@ class OfflineFirstLendRepository(
             val created = entry.copy(revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordLendRevision(created, "CREATE", created.updatedAt)
+
+            if (entry.partyId.isNotBlank()) {
+                queries.insertPartyIfAbsent(
+                    id = entry.partyId,
+                    shop_id = entry.shopId,
+                    name = entry.partyId,
+                    phone = null,
+                    village = null,
+                    party_type = "FARMER",
+                    monthly_interest_rate = null,
+                    photo_uri = null,
+                    created_at = created.createdAt,
+                    updated_at = created.updatedAt,
+                    is_deleted = 0L,
+                    sync_status = 0L
+                )
+            }
         }
     }
 

@@ -20,6 +20,11 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val database = AppDatabaseHolder.get(applicationContext)
+        database.transaction {
+            database.appDatabaseQueries.backfillPartiesFromBuyEntries()
+            database.appDatabaseQueries.backfillPartiesFromSellEntries()
+            database.appDatabaseQueries.backfillPartiesFromLendEntries()
+        }
         ttsManager = SoundboxTtsManager(applicationContext)
         val whatsAppShareManager = WhatsAppShareManager(applicationContext)
         val sessionStore = AndroidSessionStore(applicationContext)

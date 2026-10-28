@@ -350,13 +350,13 @@ class HomeViewModelTest {
             viewModelScope = backgroundScope
         )
 
-        // Save 1 money lend entry for ₹10,000 without any registered party in partyRepo
+        // 1. Save 1 money lend entry with a party name - auto-provisions party account in partyRepo
         val lendAmountPaisa = 1_000_000L // ₹10,000
         lendRepo.saveLendEntry(
             com.appwork.mandisamiti.domain.model.LendEntry(
                 id = "lend-1",
                 shopId = shopId,
-                partyId = "Kailash Farmer", // Unlinked name
+                partyId = "Kailash Farmer",
                 lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
                 entryDate = 1730000000000L,
                 amountPaisa = lendAmountPaisa,
@@ -366,10 +366,31 @@ class HomeViewModelTest {
             )
         )
 
-        val state = viewModel.uiState.first { it.kpis.totalLendPaisa == lendAmountPaisa }
+        val state = viewModel.uiState.first { it.kpis.totalLendPaisa == lendAmountPaisa && it.totalMarketReceivablePaisa == lendAmountPaisa }
         assertEquals(lendAmountPaisa, state.kpis.totalLendPaisa)
         assertEquals(lendAmountPaisa, state.totalMarketReceivablePaisa)
-        assertEquals(lendAmountPaisa, state.unlinkedLendAmountPaisa)
-        assertEquals(1, state.unlinkedLendCount)
+        assertEquals(1, state.allParties.size)
+        assertEquals("Kailash Farmer", state.allParties.first().party.name)
+        assertEquals(lendAmountPaisa, state.allParties.first().balancePaisa)
+
+        // 2. Save 1 unlinked lend with empty partyId - reflects honestly as unlinked
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "lend-unlinked",
+                shopId = shopId,
+                partyId = "", // Legitimate unlinked lend
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                entryDate = 1730000000000L,
+                amountPaisa = 500_000L,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val stateWithUnlinked = viewModel.uiState.first { it.unlinkedLendCount == 1 }
+        assertEquals(500_000L, stateWithUnlinked.unlinkedLendAmountPaisa)
+        assertEquals(1, stateWithUnlinked.unlinkedLendCount)
+        assertEquals(1_500_000L, stateWithUnlinked.totalMarketReceivablePaisa)
     }
 }

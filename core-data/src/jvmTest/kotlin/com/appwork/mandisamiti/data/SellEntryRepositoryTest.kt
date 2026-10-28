@@ -82,4 +82,24 @@ class SellEntryRepositoryTest {
             db.appDatabaseQueries.getRevisionsForEntry("s1").executeAsList().last().change_kind,
         )
     }
+
+    @Test
+    fun saveSellEntryAutoProvisionsBuyerPartyAccountAndReflectsReceivable() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstSellRepository(db, clock = clock)
+        val entry = sampleSellEntry("s-unseeded").copy(
+            buyerId = "सुनील ट्रेडर्स",
+            totalReceivablePaisa = 2_600_000L,
+            receivedPaisa = 600_000L
+        )
+        repo.saveSellEntry(entry)
+
+        val party = db.appDatabaseQueries.getPartyById("सुनील ट्रेडर्स").executeAsOneOrNull()
+        kotlin.test.assertNotNull(party)
+        assertEquals("सुनील ट्रेडर्स", party.name)
+        assertEquals("BUYER", party.party_type)
+
+        val balance = db.appDatabaseQueries.getPartyBalance("सुनील ट्रेडर्स").executeAsOne()
+        assertEquals(2_000_000L, balance.balance_paisa)
+    }
 }

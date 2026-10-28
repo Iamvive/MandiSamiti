@@ -37,7 +37,30 @@ class OfflineFirstBuyRepository(
             val created = entry.copy(revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordRevision(created, "CREATE", created.updatedAt)
+
+            if (entry.farmerId.isNotBlank()) {
+                queries.insertPartyIfAbsent(
+                    id = entry.farmerId,
+                    shop_id = entry.shopId,
+                    name = entry.farmerId,
+                    phone = null,
+                    village = extractVillage(entry.remarks),
+                    party_type = "FARMER",
+                    monthly_interest_rate = null,
+                    photo_uri = null,
+                    created_at = created.createdAt,
+                    updated_at = created.updatedAt,
+                    is_deleted = 0L,
+                    sync_status = 0L
+                )
+            }
         }
+    }
+
+    private fun extractVillage(remarks: String?): String? {
+        if (remarks.isNullOrBlank()) return null
+        val match = Regex("""(?:गाँव|Village):\s*([^|]+)""").find(remarks)
+        return match?.groupValues?.get(1)?.trim()?.ifBlank { null }
     }
 
     override suspend fun editBuyEntry(entry: BuyEntry) = withContext(ioDispatcher) {
