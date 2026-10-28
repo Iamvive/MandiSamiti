@@ -1,0 +1,60 @@
+# MandiSamiti Revamp — Flow 06: Galla Management (दैनिक गल्ला रोकड़ बही एवं मिलान)
+
+## 1. Flow Overview & Scope
+Galla Management handles the physical cash drawer reconciliation (दैनिक गल्ला रोकड़ बही / रोज़नामा) for the mandi shop. It provides real-time auditability of in-hand physical cash, tracks opening balances carried forward from previous trading days, records direct cash inflows and outflows, incorporates operational expenses and farmer loans, supports evening cash count verification with discrepancy detection, and produces WhatsApp-shareable day-closing summaries alongside Soundbox Hindi voice announcements.
+
+### Key Capabilities & Mechanics
+- **Opening Balance Automatic Roll-Forward:** Previous day net cash entries (`transactionDate < window.startMs`) automatically roll forward into `openingCashPaisa` without cluttering today's transaction roster.
+- **Physical Drawer Equation:**
+  $$\text{Closing In-Hand Cash} = \text{Opening Balance} + \text{Today's Cash In} - \text{Today's Cash Out}$$
+- **Direct Cash Operations:**
+  - Quick **नकद जमा (Cash In)**: Records `TransactionType.JAMA_RECEIVED` with associated party selection and remarks.
+  - Quick **नकद निकासी (Cash Out)**: Records `TransactionType.UDHAR_GIVEN` for cash disbursements.
+- **Multi-Flow Cash Integration:**
+  - **Expense Outflow (Flow 05):** Cash expenses (hammali, tea/snacks, electricity) deduct from the drawer in real time.
+  - **Loan Advances & Repayments (Flow 04):** Money loans disbursed reduce the drawer; cash loan repayments increase the drawer.
+- **Day Closing Reconciliation & Discrepancy Detection:**
+  - Physical note count comparison against expected cash drawer balance.
+  - Detects **बिल्कुल बराबर (MATCH)**, **फालतू नकदी (SURPLUS)**, or **कमी (SHORTAGE)**.
+- **Soundbox & WhatsApp Exports:**
+  - Hindi voice announcement via `SoundboxTtsManager`: *"आज का दिन समाप्त। गल्ले में कुल नकदी ₹... है।"*
+  - Formatted WhatsApp text summary including optional physical cash reconciliation verification.
+- **Void Audit Integrity:**
+  - Voided transactions (`isVoid = true`) are visually rendered with strikethrough styling and a void badge, and are strictly excluded from all opening, incoming, and outgoing monetary sums.
+
+---
+
+## 2. Test Cases Matrix & Verification
+
+| Case ID | Scenario | Input / Precondition | Expected Output | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-GAL-01** | Opening Balance Carry-Forward | Previous day net cash +₹12,000; today +₹5,000 In, -₹2,000 Out | Opening = ₹12,000, Closing = ₹15,000; previous day entry excluded from today's list | **PASS (Unit Verified)** |
+| **TC-GAL-02** | Direct Cash Inflow (Jama) | Record cash in ₹15,000 from buyer | `todayCashInPaisa` = 1,500,000, `inHandCashDrawerPaisa` = 1,500,000 | **PASS (Unit Verified)** |
+| **TC-GAL-03** | Direct Cash Outflow (Udhar) | Drawer has ₹10,000; record cash out ₹3,500 advance | `todayCashOutPaisa` = 350,000, `inHandCashDrawerPaisa` = 650,000 (₹6,500) | **PASS (Unit Verified)** |
+| **TC-GAL-04** | Cash Expense Integration | Drawer has ₹5,000; Hammali cash expense ₹800 recorded | Cash out = ₹800, Closing in drawer = ₹4,200 | **PASS (Unit Verified)** |
+| **TC-GAL-05** | Loan Advance & Repayment | Initial ₹20,000; loan ₹4,000 cash out, loan repayment ₹1,500 cash in | Cash In = ₹21,500, Cash Out = ₹4,000, Closing = ₹17,500 | **PASS (Unit Verified)** |
+| **TC-GAL-06** | Physical Cash Reconciliation | Expected in hand ₹10,000 | Count ₹10,000 -> MATCH (₹0); Count ₹10,500 -> SURPLUS (+₹500); Count ₹9,800 -> SHORTAGE (-₹200) | **PASS (Unit Verified)** |
+| **TC-GAL-07** | Day Closing WhatsApp Report | Shop: "बालाजी ट्रेडर्स", Cash In: ₹2,500 | Formatted text with shop, mandi, date, opening, in, out, closing, and optional reconciliation | **PASS (Unit Verified)** |
+| **TC-GAL-08** | Soundbox Hindi Voice Announcement | In hand cash ₹1,800; trigger announcement | Speaks: *"आज का दिन समाप्त। गल्ले में कुल नकदी ₹1,800 है।"* | **PASS (Unit Verified)** |
+| **TC-GAL-09** | Voided Transaction Exclusion | Valid ₹1,000 JAMA, Voided ₹500 JAMA | Closing = ₹1,000; voided ₹500 strictly excluded from drawer totals | **PASS (Unit Verified)** |
+
+---
+
+## 3. Automated Test Coverage
+- Verified via automated test suite in `composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/register/GallaFlowTest.kt`:
+  - `tcGal01_openingBalanceCarriedForwardFromPreviousDays`
+  - `tcGal02_todayDirectCashInflow_incrementsCashInAndClosing`
+  - `tcGal03_todayDirectCashOutflow_incrementsCashOutAndReducesClosing`
+  - `tcGal04_expenseOutflow_reducesCashDrawer`
+  - `tcGal05_lendOutflowAndRepayInflow_reconcilesCashDrawer`
+  - `tcGal06_physicalCashReconciliation_computesExactDifference`
+  - `tcGal07_dayClosingReportFormatting_includesAllMetricsAndReconciliation`
+  - `tcGal08_voiceAnnouncement_speaksClosingBalanceInHindi`
+  - `tcGal09_voidedTransactions_excludedFromDrawerTotals`
+- Unit tests in `composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterViewModelTest.kt`:
+  - `testDailyRegisterCashDrawerReconciliation`
+  - `gallaShowsOnlyTodayWithOpeningCarriedForward`
+  - `transactionRecordedBeforePartiesEmitStillShowsThePartyName`
+  - `testDayClosingReportGeneration`
+  - `recordingAnEntryAsksForASync`
+- Full test suite execution: **100% GREEN (All modules passed)**.

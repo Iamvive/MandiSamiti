@@ -527,7 +527,7 @@ fun DailyCashRegisterScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val reportText = viewModel.generateDayClosingReportText()
+                        val reportText = viewModel.generateDayClosingReportText(physicalCashInput.toLongOrNull())
                         if (onShareWhatsApp != null) {
                             onShareWhatsApp(reportText)
                         }

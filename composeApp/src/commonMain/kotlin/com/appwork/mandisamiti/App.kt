@@ -488,6 +488,22 @@ fun App(
                     onSaved = { entry ->
                         coroutineScope.launch {
                             lendRepo.saveLendEntry(entry)
+                            if (entry.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY && entry.amountPaisa > 0L) {
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = shopId ?: "",
+                                        partyId = entry.partyId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                        amountPaisa = entry.amountPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = entry.entryDate,
+                                        remarks = "उधार ऋण: ${entry.notes ?: ""}".trim(),
+                                        createdAt = entry.createdAt,
+                                        updatedAt = entry.updatedAt,
+                                    )
+                                )
+                            }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = Screen.LendList
                         }
@@ -517,6 +533,23 @@ fun App(
                                     updatedAt = now,
                                 )
                             )
+                            if (amountPaisa > 0L) {
+                                val settledLend = lends.find { it.id == lendId }
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = shopId ?: "",
+                                        partyId = settledLend?.partyId ?: "किसान",
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = amountPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = now,
+                                        remarks = "उधार वापसी जमा: ${note ?: ""}".trim(),
+                                        createdAt = now,
+                                        updatedAt = now,
+                                    )
+                                )
+                            }
                             syncScheduler.scheduleOneTimeSync()
                         }
                     },

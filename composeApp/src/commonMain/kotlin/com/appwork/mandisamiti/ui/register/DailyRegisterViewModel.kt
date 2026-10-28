@@ -51,6 +51,15 @@ sealed interface DailyRegisterEvent {
     data class EntryRecorded(val speechText: String) : DailyRegisterEvent
 }
 
+enum class CashReconciliationStatus { MATCH, SURPLUS, SHORTAGE }
+
+data class CashReconciliation(
+    val expectedPaisa: Long,
+    val countedPaisa: Long,
+    val differencePaisa: Long,
+    val status: CashReconciliationStatus
+)
+
 class DailyRegisterViewModel(
     private val shopId: String,
     private val cashRepository: CashTransactionRepository,
@@ -128,7 +137,24 @@ class DailyRegisterViewModel(
         _uiState.value = _uiState.value.copy(isDayClosingSummaryOpen = false)
     }
 
-    fun generateDayClosingReportText(): String {
+    fun reconcilePhysicalCash(countedRs: Long): CashReconciliation {
+        val expected = _uiState.value.inHandCashDrawerPaisa
+        val countedPaisa = countedRs * 100L
+        val diff = countedPaisa - expected
+        val status = when {
+            diff == 0L -> CashReconciliationStatus.MATCH
+            diff > 0L -> CashReconciliationStatus.SURPLUS
+            else -> CashReconciliationStatus.SHORTAGE
+        }
+        return CashReconciliation(
+            expectedPaisa = expected,
+            countedPaisa = countedPaisa,
+            differencePaisa = diff,
+            status = status
+        )
+    }
+
+    fun generateDayClosingReportText(physicalCountRs: Long? = null): String {
         val profile = _uiState.value.shopProfile
         val shopName = profile?.shopName ?: "मंडी आढ़त"
         val mandiLocation = profile?.mandiName ?: "मंडी समिति"
@@ -140,6 +166,17 @@ class DailyRegisterViewModel(
 
         val dateStr = clock.now().toString().take(10)
 
+        val reconciliationPart = if (physicalCountRs != null) {
+            val recon = reconcilePhysicalCash(physicalCountRs)
+            val countedStr = MandiMathEngine.paisaToRupeesString(recon.countedPaisa)
+            val diffStr = MandiMathEngine.paisaToRupeesString(if (recon.differencePaisa >= 0) recon.differencePaisa else -recon.differencePaisa)
+            when (recon.status) {
+                CashReconciliationStatus.MATCH -> "\n🔍 *गल्ला मिलान:* ₹$countedStr (बिल्कुल बराबर)"
+                CashReconciliationStatus.SURPLUS -> "\n🔍 *गल्ला मिलान:* ₹$countedStr (फालतू: +₹$diffStr)"
+                CashReconciliationStatus.SHORTAGE -> "\n🔍 *गल्ला मिलान:* ₹$countedStr (कमी: -₹$diffStr)"
+            }
+        } else ""
+
         return """
             🌾 *दैनिक गल्ला रोकड़ बही — रोज़नामा*
             🏪 *दुकान:* $shopName ($mandiLocation)
@@ -149,17 +186,18 @@ class DailyRegisterViewModel(
             🟢 *आज की कुल आवक (Cash In):* ₹$cashIn
             🔴 *आज की कुल निकासी (Cash Out):* ₹$cashOut
             ━━━━━━━━━━━━━━━━━━
-            💰 *गल्ले में शुद्ध नकदी (Closing In Hand):* ₹$closing
+            💰 *गल्ले में शुद्ध नकदी (Closing In Hand):* ₹$closing$reconciliationPart
             📝 *कुल लेन-देन संख्या:* $txnCount प्रविष्टियाँ
             ━━━━━━━━━━━━━━━━━━
             _मंडी समिति डिजिटल बहीखाता_
         """.trimIndent()
     }
 
-    fun announceDayClosingSummary() {
+    fun announceDayClosingSummary(): String {
         val closing = MandiMathEngine.paisaToRupeesString(_uiState.value.inHandCashDrawerPaisa)
         val speech = "आज का दिन समाप्त। गल्ले में कुल नकदी ₹$closing है।"
         ttsManager.speak(speech, _uiState.value.isSoundEnabled)
+        return speech
     }
 
     fun recordDailyEntry(
