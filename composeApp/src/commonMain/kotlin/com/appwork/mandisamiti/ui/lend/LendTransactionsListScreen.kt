@@ -1,7 +1,9 @@
 package com.appwork.mandisamiti.ui.lend
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -44,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -51,7 +55,9 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
+import com.appwork.mandisamiti.ui.components.VoidEntryDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,11 +66,13 @@ fun LendTransactionsListScreen(
     onNew: () -> Unit = {},
     entries: List<LendEntry> = emptyList(),
     onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit = { _, _, _, _, _ -> },
+    onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedLendForRepayment by remember { mutableStateOf<LendEntry?>(null) }
     var showSettledSection by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var voidTarget by remember { mutableStateOf<LendEntry?>(null) }
 
     val filtered = entries.filter {
         if (it.isVoid) return@filter false
@@ -128,7 +136,11 @@ fun LendTransactionsListScreen(
                     }
 
                     items(activeEntries, key = { it.id }) { entry ->
-                        LendCard(entry = entry, onRepayClick = { selectedLendForRepayment = entry })
+                        LendCard(
+                            entry = entry,
+                            onRepayClick = { selectedLendForRepayment = entry },
+                            onLongClick = { voidTarget = entry }
+                        )
                     }
 
                     if (settledEntries.isNotEmpty()) {
@@ -156,7 +168,11 @@ fun LendTransactionsListScreen(
 
                         if (showSettledSection) {
                             items(settledEntries, key = { it.id }) { entry ->
-                                LendCard(entry = entry, onRepayClick = null)
+                                LendCard(
+                                    entry = entry,
+                                    onRepayClick = null,
+                                    onLongClick = { voidTarget = entry }
+                                )
                             }
                         }
                     }
@@ -174,17 +190,40 @@ fun LendTransactionsListScreen(
                 }
             )
         }
+
+        voidTarget?.let { target ->
+            VoidEntryDialog(
+                title = "उधार प्रविष्टि रद्द करें?",
+                subtitle = "रद्द उधार सूची से हट जाएगा और खाते का हिसाब शून्य हो जाएगा।",
+                onConfirm = { reason ->
+                    onVoid?.invoke(target.id, reason)
+                    voidTarget = null
+                },
+                onDismiss = { voidTarget = null }
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LendCard(entry: LendEntry, onRepayClick: (() -> Unit)?) {
+private fun LendCard(
+    entry: LendEntry,
+    onRepayClick: (() -> Unit)?,
+    onLongClick: () -> Unit = {}
+) {
     val isMoney = entry.lendType == LendType.MONEY
     val returnDate = entry.expectedReturnDate
     val isOverdue = returnDate != null && returnDate < System.currentTimeMillis()
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongClick
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(

@@ -428,7 +428,13 @@ fun App(
                     entries = buys,
                     onOpen = { id -> currentScreen = Screen.BuyReceipt(id) },
                     onNew = { currentScreen = Screen.BuyEntry(null) },
-                    onBack = { currentScreen = screen.backTarget() }
+                    onBack = { currentScreen = screen.backTarget() },
+                    onVoid = { id, reason ->
+                        coroutineScope.launch {
+                            buyRepo.voidBuyEntry(id, reason)
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    }
                 )
             }
             is Screen.BuyReceipt -> {
@@ -471,7 +477,13 @@ fun App(
                     entries = sells,
                     onOpen = { id -> currentScreen = Screen.SellReceipt(id) },
                     onNew = { currentScreen = Screen.SellEntry(null) },
-                    onBack = { currentScreen = screen.backTarget() }
+                    onBack = { currentScreen = screen.backTarget() },
+                    onVoid = { id, reason ->
+                        coroutineScope.launch {
+                            sellRepo.voidSellEntry(id, reason)
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    }
                 )
             }
             is Screen.SellReceipt -> {
@@ -556,6 +568,12 @@ fun App(
                                     )
                                 )
                             }
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    },
+                    onVoid = { id, reason ->
+                        coroutineScope.launch {
+                            lendRepo.voidLendEntry(id, reason)
                             syncScheduler.scheduleOneTimeSync()
                         }
                     },

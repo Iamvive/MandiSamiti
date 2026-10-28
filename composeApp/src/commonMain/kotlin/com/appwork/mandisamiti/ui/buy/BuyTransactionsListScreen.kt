@@ -1,6 +1,8 @@
 package com.appwork.mandisamiti.ui.buy
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -34,12 +37,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.PaymentStatus
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
+import com.appwork.mandisamiti.ui.components.VoidEntryDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,9 +54,11 @@ fun BuyTransactionsListScreen(
     onNew: () -> Unit,
     onBack: () -> Unit,
     entries: List<BuyEntry> = emptyList(),
+    onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var voidTarget by remember { mutableStateOf<BuyEntry?>(null) }
 
     val filteredEntries = entries
         .filter { entry ->
@@ -117,16 +125,37 @@ fun BuyTransactionsListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredEntries, key = { it.id }) { entry ->
-                        BuyEntryCard(entry = entry, onClick = { onOpen(entry.id) })
+                        BuyEntryCard(
+                            entry = entry,
+                            onClick = { onOpen(entry.id) },
+                            onLongClick = { voidTarget = entry }
+                        )
                     }
                 }
             }
         }
     }
+
+    voidTarget?.let { target ->
+        VoidEntryDialog(
+            title = "खरीद सौदा रद्द करें?",
+            subtitle = "रद्द सौदा सूची से हट जाएगा और किसान का हिसाब शून्य हो जाएगा।",
+            onConfirm = { reason ->
+                onVoid?.invoke(target.id, reason)
+                voidTarget = null
+            },
+            onDismiss = { voidTarget = null }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BuyEntryCard(entry: BuyEntry, onClick: () -> Unit) {
+private fun BuyEntryCard(
+    entry: BuyEntry,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
+) {
     val farmerName = entry.farmerId.ifBlank { "किसान" }
     val village = extractVillage(entry.remarks)
     val slipNumber = entry.slipNumber
@@ -134,7 +163,11 @@ private fun BuyEntryCard(entry: BuyEntry, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
