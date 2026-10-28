@@ -81,13 +81,26 @@ data class AggregatedBuyPreview(
 class BuyEntryFormState {
     var farmerName by mutableStateOf("")
     var phone by mutableStateOf("")
-    var village by mutableStateOf("")
+    private var _village by mutableStateOf("")
+    var village: String
+        get() = _village
+        set(value) {
+            _village = MandiValidators.sanitizeVillage(value)
+        }
 
     val lots = mutableStateListOf<BuyLotItemState>()
 
     var commissionPercent by mutableStateOf("2")
     var labourPerBag by mutableStateOf("5")
     var advancePaid by mutableStateOf("") // Optional, default blank
+    var showRateOutlierConfirmation by mutableStateOf(false)
+
+    fun hasRateOutlier(): Boolean {
+        return lots.any { lot ->
+            val ratePaisa = MandiMathEngine.parseRupeesToPaisa(lot.ratePerQuintal.ifBlank { "0" })
+            MandiValidators.isRateOutlier(ratePaisa)
+        }
+    }
 
     init {
         if (lots.isEmpty()) {
@@ -220,8 +233,9 @@ class BuyEntryFormState {
         // Build lots domain list
         val domainLots = lots.map { it.calculateLot() }
         val lotsJson = Json.encodeToString(domainLots)
+        val cleanVillage = MandiValidators.sanitizeVillage(village)
         val combinedRemarks = buildString {
-            if (village.isNotBlank()) append("गाँव: ${village.trim()} | ")
+            if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
             append("DATA: $lotsJson")
         }
 

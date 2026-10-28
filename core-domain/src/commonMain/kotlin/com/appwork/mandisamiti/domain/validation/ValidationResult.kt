@@ -78,6 +78,16 @@ object MandiValidators {
         }
     }
 
+    const val RATE_OUTLIER_THRESHOLD_PAISA: Long = 20_000_00L // ₹20,000 / quintal
+
+    fun sanitizeVillage(input: String): String {
+        return input.replace(Regex("\\d+.*"), "").trim()
+    }
+
+    fun isRateOutlier(ratePaisa: Long): Boolean {
+        return ratePaisa > RATE_OUTLIER_THRESHOLD_PAISA
+    }
+
     fun validateNonNegativeNumber(input: String, fieldName: String): ValidationResult {
         if (input.isBlank()) return ValidationResult.Valid
         val num = input.toDoubleOrNull()

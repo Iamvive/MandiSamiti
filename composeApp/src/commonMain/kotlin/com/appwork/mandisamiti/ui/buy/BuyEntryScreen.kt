@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.repository.BuyRepository
+import com.appwork.mandisamiti.domain.validation.MandiValidators
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +70,9 @@ fun BuyEntryScreen(
     modifier: Modifier = Modifier
 ) {
     var existingEntry by remember { mutableStateOf<BuyEntry?>(null) }
+    var showRateOutlierConfirmation by remember { mutableStateOf(false) }
+    var pendingEntryToSave by remember { mutableStateOf<BuyEntry?>(null) }
+
     LaunchedEffect(existingId) {
         if (existingId != null && buyRepository != null) {
             val entry = buyRepository.getBuyEntryById(existingId)
@@ -278,8 +285,12 @@ fun BuyEntryScreen(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 isError = lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null,
                                 supportingText = {
+                                    val ratePaisa = MandiMathEngine.parseRupeesToPaisa(lot.ratePerQuintal.ifBlank { "0" })
+                                    val isOutlier = MandiValidators.isRateOutlier(ratePaisa)
                                     if (lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null) {
                                         Text(lotVal.rateError, color = MaterialTheme.colorScheme.error)
+                                    } else if (isOutlier) {
+                                        Text("⚠️ असामान्य भाव (> ₹20,000/क्विंटल)", color = MandiAmberDark, fontWeight = FontWeight.SemiBold)
                                     }
                                 },
                                 modifier = Modifier.weight(1f)
@@ -433,12 +444,68 @@ fun BuyEntryScreen(
                         existingId = existingId,
                         existingEntry = existingEntry
                     )
-                    onSaved(entry)
+                    if (formState.hasRateOutlier()) {
+                        pendingEntryToSave = entry
+                        showRateOutlierConfirmation = true
+                    } else {
+                        onSaved(entry)
+                    }
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 Text("सुरक्षित करें (सौदा पक्का)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+
+            if (showRateOutlierConfirmation && pendingEntryToSave != null) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showRateOutlierConfirmation = false
+                        pendingEntryToSave = null
+                    },
+                    icon = {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MandiAmberDark,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = "असामान्य भाव पुष्टि (Rate Outlier)",
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "दर्ज किया गया भाव ₹20,000/क्विंटल से अधिक है। क्या भाव सही है अथवा कोई अतिरिक्त शून्य दर्ज हो गया है?",
+                            fontSize = 14.sp
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val entry = pendingEntryToSave!!
+                                showRateOutlierConfirmation = false
+                                pendingEntryToSave = null
+                                onSaved(entry)
+                            }
+                        ) {
+                            Text("हाँ, भाव सही है (सौदा सुरक्षित करें)")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showRateOutlierConfirmation = false
+                                pendingEntryToSave = null
+                            }
+                        ) {
+                            Text("सुधारें (Edit)")
+                        }
+                    }
+                )
             }
 
             Spacer(Modifier.height(80.dp))
