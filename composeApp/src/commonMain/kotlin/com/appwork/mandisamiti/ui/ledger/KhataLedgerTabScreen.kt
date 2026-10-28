@@ -57,6 +57,10 @@ import com.appwork.mandisamiti.ui.home.PartyFilter
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Store
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -71,6 +75,7 @@ fun KhataLedgerTabScreen(
     onFilterSelected: (PartyFilter) -> Unit,
     onPartyClick: (Party) -> Unit,
     onCreateParty: (name: String, village: String?, phone: String?, type: PartyType) -> Unit,
+    onNavigateToStockSheet: () -> Unit = {},
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -159,7 +164,64 @@ fun KhataLedgerTabScreen(
                 )
             }
 
-            // 2. Segmented Filter Chips
+            // 2. Godown Stock Tile (Warehouse Inventory Audit)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MandiSurfaceElevated)
+                        .border(1.dp, MandiBorder, RoundedCornerShape(10.dp))
+                        .clickable { onNavigateToStockSheet() }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Store,
+                            contentDescription = null,
+                            tint = MandiNavy,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = if (isEnglish) "Godown Stock (Inventory)" else "गोदाम स्टॉक (जिंस इन्वेंटरी)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiNavy
+                            )
+                            Text(
+                                text = if (isEnglish) "Check bags and weight in warehouse" else "गोदाम में उपलब्ध बोरी एवं वजन देखें",
+                                fontSize = 11.sp,
+                                color = MandiTextSecondary
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "View Stock" else "स्टॉक देखें",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiAmberDark
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MandiAmberDark,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            // 3. Segmented Filter Chips
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

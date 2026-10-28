@@ -109,16 +109,6 @@ fun HomeScreen(
                 isEnglish = uiState.isEnglish
             )
         },
-        floatingActionButton = {
-            if (uiState.currentTab == NavigationTab.DASHBOARD) {
-                SpeedDialFab(
-                    onBuy = onNavigateToBuy,
-                    onSell = onNavigateToSell,
-                    onLend = onNavigateToLend,
-                    onExpense = onNavigateToExpense
-                )
-            }
-        },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
@@ -170,6 +160,7 @@ fun HomeScreen(
                                     onNavigateToPartyKhata(newParty)
                                 }
                             },
+                            onNavigateToStockSheet = onNavigateToStockSheet,
                             isEnglish = uiState.isEnglish
                         )
                     }

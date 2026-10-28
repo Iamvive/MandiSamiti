@@ -21,18 +21,19 @@ Each tile reflects live gross aggregates and deep-links to its dedicated transac
 3. **कुल उधार (बाकी) (Active Outstandings):** Sum of active money lends from `LendEntry`. Tapping opens `LendTransactionsListScreen` (S8).
 4. **कुल खर्च (Operational Expenses):** Sum of all recorded business expenses. Tapping opens `ExpenseEntryScreen` (S10).
 
-### C. Profit & Loss Card (शुद्ध लाभ / हानि)
-- **Formula:** $\text{Profit/Loss} = \text{Total Sales} - \text{Total Purchases} - \text{Total Expenses}$
-- Dynamic color theme: Primary container when profitable ($\ge ₹0$), Error container when negative ($< ₹0$).
+### C. Profit & Loss Card (शुद्ध लाभ / हानि) — Privacy Relocation
+- To protect trader discretion and prevent bystander farmers or rival agents from viewing estimated margins in open mandi sheds, Profit & Loss is moved to the private Evening Day Closing Reconciliation (Galla) and owner Reports.
 
-### D. Godown Stock Inventory Card (गोदाम स्टॉक)
-- Summarizes on-hand commodity balances in Quintals ($Qtl$).
-- **Data Honesty Guardrail:** Flags negative balances with a prominent badge `[स्टॉक से ज्यादा बिक्री]` whenever sales exceed recorded purchases, rather than hiding or falsifying the ledger.
-- Tapping anywhere on the card or "सभी देखें" opens the full modal `StockBreakdownSheet` (S11) showing commodity-by-commodity bought vs sold vs on-hand breakdown.
+### D. Godown Stock Inventory (गोदाम स्टॉक) — Khata Tab Integration
+- Relocated from the primary operational dashboard to the **खाता बही (Ledger)** tab.
+- Accessible via a prominent **गोदाम स्टॉक (जिंस इन्वेंटरी)** tile right above the account filter chips, opening the complete commodity-by-commodity bought vs sold vs on-hand breakdown sheet (`StockBreakdownSheet`).
 
 ### E. Market Ledger Balance Cards
 - **कुल लेना (बाजार बाकी):** Outstanding receivables from market parties.
 - **कुल देना (किसान जमा):** Outstanding payables to farmers.
+
+### F. Single Primary Entry Model
+- Removed floating speed dial FAB overlay; the 4-tile QuickActionsRow serves as the sole, tactile entry point for transactions.
 
 ---
 

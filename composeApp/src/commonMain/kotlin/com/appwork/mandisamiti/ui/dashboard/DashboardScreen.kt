@@ -144,22 +144,7 @@ fun DashboardScreen(
             )
         }
 
-        // 4. Profit & Loss Card
-        item {
-            ProfitLossCard(
-                profitLossPaisa = uiState.kpis.profitLossPaisa
-            )
-        }
-
-        // 5. Godown Stock Summary Card
-        item {
-            GodownStockSummaryCard(
-                stockLines = uiState.stockLines,
-                onViewAllClick = onNavigateToStockSheet
-            )
-        }
-
-        // 6. High-Trust Financial Metric Tiles (Ledger Balances)
+        // 4. High-Trust Financial Metric Tiles (Ledger Balances)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
