@@ -3,24 +3,24 @@
 ## 1. Flow Overview & Scope
 Galla Management handles the physical cash drawer reconciliation (दैनिक गल्ला रोकड़ बही / रोज़नामा) for the mandi shop. It provides real-time auditability of in-hand physical cash, tracks opening balances carried forward from previous trading days, records direct cash inflows and outflows, incorporates operational expenses and farmer loans, supports evening cash count verification with discrepancy detection, and produces WhatsApp-shareable day-closing summaries alongside Soundbox Hindi voice announcements.
 
-### Key Capabilities & Mechanics
-- **Opening Balance Automatic Roll-Forward:** Previous day net cash entries (`transactionDate < window.startMs`) automatically roll forward into `openingCashPaisa` without cluttering today's transaction roster.
-- **Physical Drawer Equation:**
-  $$\text{Closing In-Hand Cash} = \text{Opening Balance} + \text{Today's Cash In} - \text{Today's Cash Out}$$
-- **Direct Cash Operations:**
-  - Quick **नकद जमा (Cash In)**: Records `TransactionType.JAMA_RECEIVED` with associated party selection and remarks.
-  - Quick **नकद निकासी (Cash Out)**: Records `TransactionType.UDHAR_GIVEN` for cash disbursements.
-- **Multi-Flow Cash Integration:**
-  - **Expense Outflow (Flow 05):** Cash expenses (hammali, tea/snacks, electricity) deduct from the drawer in real time.
-  - **Loan Advances & Repayments (Flow 04):** Money loans disbursed reduce the drawer; cash loan repayments increase the drawer.
-- **Day Closing Reconciliation & Discrepancy Detection:**
-  - Physical note count comparison against expected cash drawer balance.
-  - Detects **बिल्कुल बराबर (MATCH)**, **फालतू नकदी (SURPLUS)**, or **कमी (SHORTAGE)**.
-- **Soundbox & WhatsApp Exports:**
-  - Hindi voice announcement via `SoundboxTtsManager`: *"आज का दिन समाप्त। गल्ले में कुल नकदी ₹... है।"*
-  - Formatted WhatsApp text summary including optional physical cash reconciliation verification.
-- **Void Audit Integrity:**
-  - Voided transactions (`isVoid = true`) are visually rendered with strikethrough styling and a void badge, and are strictly excluded from all opening, incoming, and outgoing monetary sums.
+### Traditional Indian Baniya Rokad Bahi Architecture (दो पल्ला रोकड़ बही)
+Rooted in traditional Indian merchant bahi-khata accounting (देशी नामा बही-खाता पद्धति), the ledger uses an authentic two-column Left & Right folded ledger sheet (दो पल्ला):
+- **बायां पल्ला (Left Wing) — जमा पक्ष (Jama / आवक / Cash In):**
+  - **Top Row (बाकी निकाला / Siri):** Opening cash balance carried forward from previous trading days.
+  - **Entries:** All daily cash receipts, direct collections, and loan repayments in bold green (`+₹`).
+  - **Bottom Total (कुल जमा जोड़):** $\text{Opening Balance} + \text{Today's Cash In}$.
+- **दायां पल्ला (Right Wing) — नामे पक्ष (Name / निकासी / Cash Out):**
+  - **Entries:** All daily operational disbursements, purchase payments, expenses (hammali, tea), and loan advances in bold red (`-₹`).
+  - **Bottom Anchor (सिल्क बाकी / Silak):** Physical cash remaining in the drawer ($\text{In-Hand Closing Cash}$).
+  - **Bottom Total (कुल नामे जोड़):** $\text{Today's Cash Out} + \text{Closing Cash in Hand}$.
+- **Tally Bar (बही मिलान / जोड़ बराबर):**
+  - Since $\text{Closing Cash} = \text{Opening} + \text{In} - \text{Out}$, mathematically:
+    $$\text{Left Total (कुल जमा)} \equiv \text{Right Total (कुल नामे)}$$
+  - When balanced, the bahi displays **जोड़ बराबर (Tally Matched)** with a verified badge.
+- **Dynamic View Modes (पल्ला चयन):**
+  - `दो पल्ला (Split L/R)`: Side-by-side split bahi with central fold line (default).
+  - `जमा पक्ष (Cash In)`: Full-width left side for itemized receipts.
+  - `नामे पक्ष (Cash Out)`: Full-width right side for itemized expenses and advances.
 
 ---
 
