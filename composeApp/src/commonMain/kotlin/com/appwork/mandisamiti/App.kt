@@ -9,6 +9,7 @@ import com.appwork.mandisamiti.ui.sell.SellTransactionReceiptScreen
 import com.appwork.mandisamiti.ui.lend.LendEntryScreen
 import com.appwork.mandisamiti.ui.lend.LendTransactionsListScreen
 import com.appwork.mandisamiti.ui.expense.ExpenseEntryScreen
+import com.appwork.mandisamiti.ui.expense.labelHi
 import com.appwork.mandisamiti.ui.stock.StockBreakdownSheet
 import androidx.compose.runtime.LaunchedEffect
 
@@ -525,7 +526,30 @@ fun App(
             is Screen.ExpenseEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 ExpenseEntryScreen(
-                    onSaved = { currentScreen = Screen.Home },
+                    shopId = shopId ?: "",
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            expenseRepo.saveExpense(entry)
+                            if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = shopId ?: "",
+                                        partyId = entry.paidTo?.ifBlank { null } ?: entry.category.name,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                        amountPaisa = entry.amountPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = entry.entryDate,
+                                        remarks = "खर्च: ${entry.category.labelHi()} ${entry.remarks ?: ""}".trim(),
+                                        createdAt = entry.createdAt,
+                                        updatedAt = entry.updatedAt,
+                                    )
+                                )
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.Home
+                        }
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }

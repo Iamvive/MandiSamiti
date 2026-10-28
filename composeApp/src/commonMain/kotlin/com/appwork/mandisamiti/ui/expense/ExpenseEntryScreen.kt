@@ -31,8 +31,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.ExpenseCategory
+import com.appwork.mandisamiti.domain.model.ExpenseEntry
 import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
+import kotlinx.datetime.Clock
 
 fun ExpenseCategory.labelHi(): String = when (this) {
     ExpenseCategory.HAMMALI -> "हम्माली"
@@ -46,7 +50,8 @@ fun ExpenseCategory.labelHi(): String = when (this) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ExpenseEntryScreen(
-    onSaved: () -> Unit,
+    shopId: String = "",
+    onSaved: (ExpenseEntry) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -56,12 +61,12 @@ fun ExpenseEntryScreen(
     var paymentMode by remember { mutableStateOf(ExpensePaymentMode.CASH) }
     var remarks by remember { mutableStateOf("") }
 
-    val canSave = amount.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0.0
+    val canSave = amount.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amount) > 0L
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("खर्च दर्ज करें") },
+                title = { Text("खर्च दर्ज करें (Expense)") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
@@ -95,7 +100,7 @@ fun ExpenseEntryScreen(
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("खर्च राशि (रु)") },
+                label = { Text("खर्च राशि (रु) *") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -103,7 +108,7 @@ fun ExpenseEntryScreen(
             OutlinedTextField(
                 value = paidTo,
                 onValueChange = { paidTo = it },
-                label = { Text("किसे दिया (नाम)") },
+                label = { Text("किसे दिया (नाम / विवरण)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -134,7 +139,24 @@ fun ExpenseEntryScreen(
             )
 
             Button(
-                onClick = onSaved,
+                onClick = {
+                    if (canSave) {
+                        val now = Clock.System.now().toEpochMilliseconds()
+                        val entry = ExpenseEntry(
+                            id = IdGenerator.newId(),
+                            shopId = shopId,
+                            entryDate = now,
+                            category = selectedCategory,
+                            amountPaisa = MandiMathEngine.parseRupeesToPaisa(amount),
+                            paidTo = paidTo.trim().ifEmpty { null },
+                            paymentMode = paymentMode,
+                            remarks = remarks.trim().ifEmpty { null },
+                            createdAt = now,
+                            updatedAt = now,
+                        )
+                        onSaved(entry)
+                    }
+                },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
