@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Warning
@@ -23,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,15 +56,18 @@ import com.appwork.mandisamiti.domain.model.LendType
 @Composable
 fun LendTransactionsListScreen(
     onBack: () -> Unit,
+    onNew: () -> Unit = {},
     entries: List<LendEntry> = emptyList(),
-    onRepay: (lendId: String, amountPaisa: Long, note: String) -> Unit = { _, _, _ -> },
+    onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit = { _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var selectedLendForRepayment by remember { mutableStateOf<LendEntry?>(null) }
     var showSettledSection by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
-    val activeEntries = entries.filter { !it.isVoid && it.status != LendStatus.SETTLED }
-    val settledEntries = entries.filter { !it.isVoid && it.status == LendStatus.SETTLED }
+    val filtered = entries.filter { !it.isVoid && (it.partyId.contains(searchQuery, ignoreCase = true) || it.commodityId?.contains(searchQuery, ignoreCase = true) == true) }
+    val activeEntries = filtered.filter { it.status != LendStatus.SETTLED }
+    val settledEntries = filtered.filter { it.status == LendStatus.SETTLED }
 
     Scaffold(
         topBar = {
@@ -74,58 +79,80 @@ fun LendTransactionsListScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNew,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "नया उधार")
+            }
         }
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(paddingValues)
         ) {
-            if (activeEntries.isEmpty() && settledEntries.isEmpty()) {
-                item {
-                    Text("कोई उधार रिकॉर्ड नहीं मिला", style = MaterialTheme.typography.bodyLarge)
-                }
-            } else {
-                item {
-                    Text(
-                        "सक्रिय एवं बकाया उधार (${activeEntries.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("किसान या जिंस खोजें") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
 
-                items(activeEntries, key = { it.id }) { entry ->
-                    LendCard(entry = entry, onRepayClick = { selectedLendForRepayment = entry })
-                }
-
-                if (settledEntries.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (activeEntries.isEmpty() && settledEntries.isEmpty()) {
                     item {
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showSettledSection = !showSettledSection }
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "पूर्ण चुकता उधार (${settledEntries.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Icon(
-                                if (showSettledSection) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = null
-                            )
-                        }
+                        Text("कोई उधार रिकॉर्ड नहीं मिला", style = MaterialTheme.typography.bodyLarge)
+                    }
+                } else {
+                    item {
+                        Text(
+                            "सक्रिय एवं बकाया उधार (${activeEntries.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
-                    if (showSettledSection) {
-                        items(settledEntries, key = { it.id }) { entry ->
-                            LendCard(entry = entry, onRepayClick = null)
+                    items(activeEntries, key = { it.id }) { entry ->
+                        LendCard(entry = entry, onRepayClick = { selectedLendForRepayment = entry })
+                    }
+
+                    if (settledEntries.isNotEmpty()) {
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showSettledSection = !showSettledSection }
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "पूर्ण चुकता उधार (${settledEntries.size})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    if (showSettledSection) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null
+                                )
+                            }
+                        }
+
+                        if (showSettledSection) {
+                            items(settledEntries, key = { it.id }) { entry ->
+                                LendCard(entry = entry, onRepayClick = null)
+                            }
                         }
                     }
                 }
@@ -136,8 +163,8 @@ fun LendTransactionsListScreen(
             RepaymentBottomSheet(
                 lend = lend,
                 onDismiss = { selectedLendForRepayment = null },
-                onConfirm = { amountPaisa, note ->
-                    onRepay(lend.id, amountPaisa, note)
+                onConfirm = { amountPaisa, weightGrams, bagsCount, note ->
+                    onRepay(lend.id, amountPaisa, weightGrams, bagsCount, note)
                     selectedLendForRepayment = null
                 }
             )
@@ -238,11 +265,14 @@ private fun StatusChip(status: LendStatus) {
 private fun RepaymentBottomSheet(
     lend: LendEntry,
     onDismiss: () -> Unit,
-    onConfirm: (amountPaisa: Long, note: String) -> Unit
+    onConfirm: (amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
+    var weightText by remember { mutableStateOf("") }
+    var bagsText by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
+    val isMoney = lend.lendType == LendType.MONEY
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -255,29 +285,58 @@ private fun RepaymentBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("उधार वापसी दर्ज करें", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("व्यक्ति: ${lend.partyId}")
+            Text("व्यक्ति: ${lend.partyId} • ${if (isMoney) "नकद उधार" else "जिंस उधार (${lend.commodityId ?: "अनाज"})"}")
 
-            OutlinedTextField(
-                value = amountText,
-                onValueChange = { amountText = it },
-                label = { Text("वापसी राशि (रु)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
+            if (isMoney) {
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    label = { Text("वापसी राशि (रु) *") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = bagsText,
+                        onValueChange = { bagsText = it },
+                        label = { Text("बोरी संख्या") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = weightText,
+                        onValueChange = { weightText = it },
+                        label = { Text("वापसी वजन (किग्रा) *") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
-                label = { Text("नोट / विवरण") },
+                label = { Text("नोट / विवरण (वैकल्पिक)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
+            val canConfirm = if (isMoney) {
+                MandiMathEngine.parseRupeesToPaisa(amountText) > 0L
+            } else {
+                MandiMathEngine.parseKgToGrams(weightText) > 0L
+            }
+
             Button(
                 onClick = {
-                    val paisa = MandiMathEngine.parseRupeesToPaisa(amountText.ifBlank { "0" })
-                    if (paisa > 0) onConfirm(paisa, note)
+                    if (canConfirm) {
+                        val amountPaisa = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountText) else 0L
+                        val weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightText) else 0L
+                        val bags = if (!isMoney) bagsText.trim().toLongOrNull() ?: 0L else 0L
+                        onConfirm(amountPaisa, weightGrams, bags, note)
+                    }
                 },
-                enabled = amountText.isNotBlank(),
+                enabled = canConfirm,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Text("वापसी सुरक्षित करें")

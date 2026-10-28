@@ -392,10 +392,14 @@ fun App(
 
             is Screen.BuyEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
+                val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 BuyEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
+                    activeLoanChecker = { farmerName ->
+                        lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
+                    },
                     onSaved = { entry ->
                         coroutineScope.launch {
                             if (screen.existingId == null) {
@@ -479,7 +483,14 @@ fun App(
             is Screen.LendEntry -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 LendEntryScreen(
-                    onSaved = { currentScreen = Screen.LendList },
+                    shopId = shopId ?: "",
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            lendRepo.saveLendEntry(entry)
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.LendList
+                        }
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
@@ -488,6 +499,26 @@ fun App(
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 LendTransactionsListScreen(
                     entries = lends,
+                    onNew = { currentScreen = Screen.LendEntry },
+                    onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
+                        coroutineScope.launch {
+                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            lendRepo.settle(
+                                com.appwork.mandisamiti.domain.model.LendSettlement(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = shopId ?: "",
+                                    lendId = lendId,
+                                    settledAt = now,
+                                    amountPaisa = amountPaisa,
+                                    weightGrams = weightGrams,
+                                    bagsCount = bagsCount,
+                                    createdAt = now,
+                                    updatedAt = now,
+                                )
+                            )
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }

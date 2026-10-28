@@ -29,12 +29,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.model.LendEntry
+import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
+import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LendEntryScreen(
-    onSaved: () -> Unit,
+    shopId: String = "",
+    onSaved: (LendEntry) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -49,9 +55,9 @@ fun LendEntryScreen(
 
     val isMoney = lendType == LendType.MONEY
     val canSave = partyPhoneOrName.isNotBlank() && if (isMoney) {
-        amountRupees.isNotBlank() && (amountRupees.toDoubleOrNull() ?: 0.0) > 0.0
+        amountRupees.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amountRupees) > 0L
     } else {
-        commodityName.isNotBlank() && weightKg.isNotBlank()
+        commodityName.isNotBlank() && MandiMathEngine.parseKgToGrams(weightKg) > 0L
     }
 
     Scaffold(
@@ -91,7 +97,7 @@ fun LendEntryScreen(
             OutlinedTextField(
                 value = partyPhoneOrName,
                 onValueChange = { partyPhoneOrName = it },
-                label = { Text("किसान / व्यक्ति का नाम या फोन") },
+                label = { Text("किसान / व्यक्ति का नाम या फोन *") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -99,7 +105,7 @@ fun LendEntryScreen(
                 OutlinedTextField(
                     value = amountRupees,
                     onValueChange = { amountRupees = it },
-                    label = { Text("उधार राशि (रु)") },
+                    label = { Text("उधार राशि (रु) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -107,7 +113,7 @@ fun LendEntryScreen(
                 OutlinedTextField(
                     value = commodityName,
                     onValueChange = { commodityName = it },
-                    label = { Text("जिंस / फसल का नाम (उदा. गेहूं, चना)") },
+                    label = { Text("जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -121,7 +127,7 @@ fun LendEntryScreen(
                     OutlinedTextField(
                         value = weightKg,
                         onValueChange = { weightKg = it },
-                        label = { Text("कुल वजन (किग्रा)") },
+                        label = { Text("कुल वजन (किग्रा) *") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -131,7 +137,7 @@ fun LendEntryScreen(
             OutlinedTextField(
                 value = expectedReturnDate,
                 onValueChange = { expectedReturnDate = it },
-                label = { Text("अपेक्षित वापसी तारीख (उदा. 15/11/2026)") },
+                label = { Text("अपेक्षित वापसी तारीख (उदा. 30 दिन या 15/11/2026)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -143,7 +149,33 @@ fun LendEntryScreen(
             )
 
             Button(
-                onClick = onSaved,
+                onClick = {
+                    if (canSave) {
+                        val now = Clock.System.now().toEpochMilliseconds()
+                        val returnDays = expectedReturnDate.trim().toLongOrNull()
+                        val returnMillis = if (returnDays != null && returnDays > 0) {
+                            now + returnDays * 24 * 3600 * 1000L
+                        } else null
+
+                        val entry = LendEntry(
+                            id = IdGenerator.newId(),
+                            shopId = shopId,
+                            partyId = partyPhoneOrName.trim(),
+                            lendType = lendType,
+                            entryDate = now,
+                            amountPaisa = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountRupees) else 0L,
+                            commodityId = if (!isMoney) commodityName.trim() else null,
+                            bagsCount = if (!isMoney) bagsCount.trim().toLongOrNull() ?: 0L else 0L,
+                            weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightKg) else 0L,
+                            expectedReturnDate = returnMillis,
+                            notes = notes.trim().ifEmpty { null },
+                            status = LendStatus.OPEN,
+                            createdAt = now,
+                            updatedAt = now,
+                        )
+                        onSaved(entry)
+                    }
+                },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {

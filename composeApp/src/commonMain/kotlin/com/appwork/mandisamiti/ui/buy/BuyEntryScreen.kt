@@ -61,6 +61,7 @@ fun BuyEntryScreen(
     onBack: () -> Unit,
     formState: BuyEntryFormState = remember { BuyEntryFormState() },
     hasActiveLoan: Boolean = false,
+    activeLoanChecker: ((String) -> Boolean)? = null,
     buyRepository: BuyRepository? = null,
     modifier: Modifier = Modifier
 ) {
@@ -156,7 +157,8 @@ fun BuyEntryScreen(
                         )
                     }
 
-                    if (hasActiveLoan) {
+                    val showActiveLoan = hasActiveLoan || (activeLoanChecker != null && formState.farmerName.isNotBlank() && activeLoanChecker(formState.farmerName.trim()))
+                    if (showActiveLoan) {
                         SuggestionChip(
                             onClick = {},
                             label = { Text("सक्रिय उधार मौजूद है (हिसाब में कटौती संभव)") },
