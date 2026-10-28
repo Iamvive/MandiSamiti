@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.PaymentStatus
+import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,13 +56,15 @@ fun BuyTransactionsListScreen(
         .filter { entry ->
             if (entry.isVoid) return@filter false
             if (searchQuery.isBlank()) return@filter true
-            val q = searchQuery.trim()
             val village = extractVillage(entry.remarks)
-            entry.farmerId.contains(q, ignoreCase = true) ||
-                entry.slipNumber?.contains(q, ignoreCase = true) == true ||
-                entry.vehicleNumber?.contains(q, ignoreCase = true) == true ||
-                entry.commodityId.contains(q, ignoreCase = true) ||
-                (village != null && village.contains(q, ignoreCase = true))
+            BilingualSearchEngine.matchesAny(
+                searchQuery,
+                entry.farmerId,
+                village,
+                entry.slipNumber,
+                entry.vehicleNumber,
+                entry.commodityId
+            )
         }
         .sortedByDescending { it.entryDate }
 
