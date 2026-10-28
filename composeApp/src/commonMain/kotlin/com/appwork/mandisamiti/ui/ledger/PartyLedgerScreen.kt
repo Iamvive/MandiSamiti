@@ -74,7 +74,7 @@ import com.appwork.mandisamiti.ui.theme.MandiBtnDangerBg
 import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
@@ -83,7 +83,7 @@ import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiNeutralText
 import com.appwork.mandisamiti.ui.theme.MandiRedBorder
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -181,8 +181,8 @@ fun PartyLedgerScreen(
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = when {
-                                isReceivable -> MandiRedReceivable
-                                isPayable -> MandiGreenPayable
+                                isReceivable -> MandiGreenReceivable
+                                isPayable -> MandiRedPayable
                                 else -> MandiTextPrimary
                             }
                         )
@@ -195,8 +195,8 @@ fun PartyLedgerScreen(
                         else -> "हिसाब चुकता"
                     }
                     val statusColor = when {
-                        isReceivable -> MandiRedText
-                        isPayable -> MandiGreenText
+                        isReceivable -> MandiGreenText
+                        isPayable -> MandiRedText
                         else -> MandiNeutralText
                     }
                     Box(
@@ -226,7 +226,7 @@ fun PartyLedgerScreen(
                 FintechActionButton(
                     label = "जमा मिला",
                     icon = Icons.Default.ArrowDownward,
-                    color = MandiGreenPayable,
+                    color = MandiGreenReceivable,
                     backgroundColor = MandiGreenLight,
                     borderColor = MandiGreenBorder,
                     textColor = MandiGreenText,
@@ -236,7 +236,7 @@ fun PartyLedgerScreen(
                 FintechActionButton(
                     label = "भुगतान दिया",
                     icon = Icons.Default.ArrowUpward,
-                    color = MandiRedReceivable,
+                    color = MandiRedPayable,
                     backgroundColor = MandiRedLight,
                     borderColor = MandiRedBorder,
                     textColor = MandiRedText,
@@ -473,7 +473,7 @@ fun PartyLedgerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("ब्याज राशि:", fontSize = 13.sp, color = MandiTextSecondary)
-                            Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.accruedInterestPaisa)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MandiRedReceivable)
+                            Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.accruedInterestPaisa)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MandiGreenReceivable)
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -599,7 +599,7 @@ private fun FintechDealCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Synced",
-                            tint = MandiGreenPayable,
+                            tint = MandiGreenReceivable,
                             modifier = Modifier.size(14.dp)
                         )
                     } else {
@@ -661,14 +661,14 @@ private fun FintechDealCard(
                                 text = "किसान से लेना है",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MandiRedReceivable
+                                color = MandiGreenReceivable
                             )
                         }
                         Text(
                             text = "₹${MandiMathEngine.paisaToRupeesString(kotlin.math.abs(deal.netFarmerPayablePaisa))}",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (farmerOwesShop) MandiRedReceivable else MandiAmberDark,
+                            color = if (farmerOwesShop) MandiGreenReceivable else MandiAmberDark,
                             textDecoration = if (isVoid) TextDecoration.LineThrough else null
                         )
                     }
@@ -728,7 +728,7 @@ private fun FintechCashCard(
                     Icon(
                         imageVector = if (isDeposit) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
                         contentDescription = null,
-                        tint = if (isDeposit) MandiGreenPayable else MandiRedReceivable,
+                        tint = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -748,7 +748,7 @@ private fun FintechCashCard(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Synced",
-                                tint = MandiGreenPayable,
+                                tint = MandiGreenReceivable,
                                 modifier = Modifier.size(14.dp)
                             )
                         } else {
@@ -774,7 +774,7 @@ private fun FintechCashCard(
                 text = "${if (isDeposit) "+" else "-"}₹${MandiMathEngine.paisaToRupeesString(transaction.amountPaisa)}",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isDeposit) MandiGreenPayable else MandiRedReceivable,
+                color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
                 textDecoration = if (isVoid) TextDecoration.LineThrough else null
             )
         }

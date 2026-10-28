@@ -73,13 +73,13 @@ import com.appwork.mandisamiti.ui.theme.MandiBtnDangerFg
 import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessFg
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
@@ -234,13 +234,13 @@ fun DailyCashRegisterScreen(
                         CashBreakdownItem(
                             label = if (isEnglish) "Total Cash In" else "कुल जमा (In)",
                             amountPaisa = uiState.todayCashInPaisa,
-                            color = MandiGreenPayable,
+                            color = MandiGreenReceivable,
                             modifier = Modifier.weight(1f)
                         )
                         CashBreakdownItem(
                             label = if (isEnglish) "Total Cash Out" else "कुल निकासी (Out)",
                             amountPaisa = uiState.todayCashOutPaisa,
-                            color = MandiRedReceivable,
+                            color = MandiRedPayable,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -404,7 +404,7 @@ fun DailyCashRegisterScreen(
                         .background(if (bahiViewMode == BahiViewMode.JAMA) MandiGreenLight else MandiSurface)
                         .border(
                             width = 1.dp,
-                            color = if (bahiViewMode == BahiViewMode.JAMA) MandiGreenPayable else MandiBorder,
+                            color = if (bahiViewMode == BahiViewMode.JAMA) MandiGreenReceivable else MandiBorder,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .clickable { bahiViewMode = BahiViewMode.JAMA },
@@ -414,7 +414,7 @@ fun DailyCashRegisterScreen(
                         text = if (isEnglish) "Jama (${jamaList.size})" else "जमा पक्ष (${jamaList.size})",
                         fontSize = 12.sp,
                         fontWeight = if (bahiViewMode == BahiViewMode.JAMA) FontWeight.Bold else FontWeight.Medium,
-                        color = if (bahiViewMode == BahiViewMode.JAMA) MandiGreenPayable else MandiTextSecondary
+                        color = if (bahiViewMode == BahiViewMode.JAMA) MandiGreenReceivable else MandiTextSecondary
                     )
                 }
 
@@ -427,7 +427,7 @@ fun DailyCashRegisterScreen(
                         .background(if (bahiViewMode == BahiViewMode.NAME) MandiRedLight else MandiSurface)
                         .border(
                             width = 1.dp,
-                            color = if (bahiViewMode == BahiViewMode.NAME) MandiRedReceivable else MandiBorder,
+                            color = if (bahiViewMode == BahiViewMode.NAME) MandiRedPayable else MandiBorder,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .clickable { bahiViewMode = BahiViewMode.NAME },
@@ -437,7 +437,7 @@ fun DailyCashRegisterScreen(
                         text = if (isEnglish) "Name (${nameList.size})" else "नामे पक्ष (${nameList.size})",
                         fontSize = 12.sp,
                         fontWeight = if (bahiViewMode == BahiViewMode.NAME) FontWeight.Bold else FontWeight.Medium,
-                        color = if (bahiViewMode == BahiViewMode.NAME) MandiRedReceivable else MandiTextSecondary
+                        color = if (bahiViewMode == BahiViewMode.NAME) MandiRedPayable else MandiTextSecondary
                     )
                 }
             }
@@ -473,12 +473,12 @@ fun DailyCashRegisterScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MandiGreenPayable))
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MandiGreenReceivable))
                                         Text(
                                             text = if (isEnglish) "JAMA (Cash In)" else "जमा पक्ष (आवक)",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = MandiGreenPayable
+                                            color = MandiGreenReceivable
                                         )
                                     }
                                     Text(
@@ -505,12 +505,12 @@ fun DailyCashRegisterScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MandiRedReceivable))
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MandiRedPayable))
                                         Text(
                                             text = if (isEnglish) "NAME (Cash Out)" else "नामे पक्ष (निकासी)",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = MandiRedReceivable
+                                            color = MandiRedPayable
                                         )
                                     }
                                     Text(
@@ -643,7 +643,7 @@ fun DailyCashRegisterScreen(
                                         text = "₹${MandiMathEngine.paisaToRupeesString(totalJamaSidePaisa)}",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MandiGreenPayable
+                                        color = MandiGreenReceivable
                                     )
                                 }
 
@@ -658,14 +658,14 @@ fun DailyCashRegisterScreen(
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = if (isTallied) MandiGreenPayable else MandiAmberDark,
+                                        tint = if (isTallied) MandiGreenReceivable else MandiAmberDark,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Text(
                                         text = if (isTallied) (if (isEnglish) "Balanced" else "जोड़ बराबर") else (if (isEnglish) "Difference" else "अंतर"),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isTallied) MandiGreenPayable else MandiAmberDark
+                                        color = if (isTallied) MandiGreenReceivable else MandiAmberDark
                                     )
                                 }
 
@@ -679,7 +679,7 @@ fun DailyCashRegisterScreen(
                                         text = "₹${MandiMathEngine.paisaToRupeesString(totalNameSidePaisa)}",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MandiRedReceivable
+                                        color = MandiRedPayable
                                     )
                                 }
                             }
@@ -759,7 +759,7 @@ fun DailyCashRegisterScreen(
                                         text = "₹${MandiMathEngine.paisaToRupeesString(totalJamaSidePaisa)}",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MandiGreenPayable
+                                        color = MandiGreenReceivable
                                     )
                                 }
                             }
@@ -837,7 +837,7 @@ fun DailyCashRegisterScreen(
                                         text = "₹${MandiMathEngine.paisaToRupeesString(totalNameSidePaisa)}",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MandiRedReceivable
+                                        color = MandiRedPayable
                                     )
                                 }
                             }
@@ -894,11 +894,11 @@ fun DailyCashRegisterScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(if (isEnglish) "Total Cash In:" else "कुल नकद आवक (In):", fontSize = 13.sp, color = MandiTextSecondary)
-                            Text("+₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashInPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiGreenPayable)
+                            Text("+₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashInPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiGreenReceivable)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(if (isEnglish) "Total Cash Out:" else "कुल नकद निकासी (Out):", fontSize = 13.sp, color = MandiTextSecondary)
-                            Text("-₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashOutPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiRedReceivable)
+                            Text("-₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashOutPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiRedPayable)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -920,9 +920,9 @@ fun DailyCashRegisterScreen(
                     // Difference / Discrepancy Indicator
                     if (diffPaisa != null) {
                         val diffColor = when {
-                            diffPaisa == 0L -> MandiGreenPayable
+                            diffPaisa == 0L -> MandiGreenReceivable
                             diffPaisa > 0L -> MandiAmberDark
-                            else -> MandiRedReceivable
+                            else -> MandiRedPayable
                         }
                         val diffLabel = when {
                             diffPaisa == 0L -> if (isEnglish) "Cash matches perfectly (₹0)" else "हिसाब बिल्कुल बराबर है (₹0)"
@@ -1313,7 +1313,7 @@ private fun BahiTransactionItem(
                     text = "${if (isDeposit) "+" else "-"}₹$amountStr",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDeposit) MandiGreenPayable else MandiRedReceivable,
+                    color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
                     textDecoration = if (isVoid) TextDecoration.LineThrough else null
                 )
             }
@@ -1347,7 +1347,7 @@ private fun BahiTransactionItem(
                     text = if (isEnglish) "VOID" else "रद्द प्रविष्टि",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MandiRedReceivable
+                    color = MandiRedPayable
                 )
             }
         }

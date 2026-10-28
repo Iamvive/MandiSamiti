@@ -49,12 +49,12 @@ import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiBlueSell
 import com.appwork.mandisamiti.ui.theme.MandiGreenBuy
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiOrangeLend
 import com.appwork.mandisamiti.ui.theme.MandiPinkExpense
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
@@ -171,9 +171,9 @@ fun DashboardScreen(
                     title = if (isEnglish) "Receivable (Market)" else "कुल लेना (बाजार बाकी)",
                     subtitle = receivableSubtitle,
                     amountPaisa = uiState.totalMarketReceivablePaisa,
-                    textColor = MandiRedReceivable,
+                    textColor = MandiGreenReceivable,
                     icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    iconTint = MandiRedReceivable,
+                    iconTint = MandiGreenReceivable,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -181,9 +181,9 @@ fun DashboardScreen(
                     title = if (isEnglish) "Payable (Farmers)" else "कुल देना (किसान जमा)",
                     subtitle = if (isEnglish) "To $payableCount accounts" else "$payableCount खातों को",
                     amountPaisa = uiState.totalFarmerPayablePaisa,
-                    textColor = MandiGreenPayable,
+                    textColor = MandiRedPayable,
                     icon = Icons.AutoMirrored.Filled.TrendingDown,
-                    iconTint = MandiGreenPayable,
+                    iconTint = MandiRedPayable,
                     modifier = Modifier.weight(1f)
                 )
             }

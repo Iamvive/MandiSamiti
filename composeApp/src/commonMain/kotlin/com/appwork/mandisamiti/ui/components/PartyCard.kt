@@ -32,14 +32,14 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiNeutralBorder
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiNeutralText
 import com.appwork.mandisamiti.ui.theme.MandiRedBorder
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -56,24 +56,24 @@ fun PartyCard(
     val cardShape = RoundedCornerShape(12.dp)
     val chipShape = RoundedCornerShape(6.dp)
 
-    val isReceivable = balancePaisa > 0 // लेना है (Red)
-    val isPayable = balancePaisa < 0    // देना है (Green)
+    val isReceivable = balancePaisa > 0 // लेना है (Green)
+    val isPayable = balancePaisa < 0    // देना है (Red)
 
     val balanceTextColor = when {
-        isReceivable -> MandiRedReceivable
-        isPayable -> MandiGreenPayable
+        isReceivable -> MandiGreenReceivable
+        isPayable -> MandiRedPayable
         else -> MandiTextSecondary
     }
 
     val chipBg = when {
-        isReceivable -> MandiRedLight
-        isPayable -> MandiGreenLight
+        isReceivable -> MandiGreenLight
+        isPayable -> MandiRedLight
         else -> MandiNeutralLight
     }
 
     val chipBorder = when {
-        isReceivable -> MandiRedBorder
-        isPayable -> MandiGreenBorder
+        isReceivable -> MandiGreenBorder
+        isPayable -> MandiRedBorder
         else -> MandiNeutralBorder
     }
 
@@ -84,14 +84,14 @@ fun PartyCard(
     }
 
     val chipTextColor = when {
-        isReceivable -> MandiRedText
-        isPayable -> MandiGreenText
+        isReceivable -> MandiGreenText
+        isPayable -> MandiRedText
         else -> MandiNeutralText
     }
 
     val leftAccentColor = when {
-        isReceivable -> MandiRedReceivable
-        isPayable -> MandiGreenPayable
+        isReceivable -> MandiGreenReceivable
+        isPayable -> MandiRedPayable
         else -> MandiBorder
     }
 
@@ -172,7 +172,7 @@ fun PartyCard(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Synced",
-                                tint = MandiGreenPayable,
+                                tint = MandiGreenReceivable,
                                 modifier = Modifier.size(14.dp)
                             )
                         } else {

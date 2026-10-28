@@ -158,7 +158,16 @@ val MandiNeutralText: Color
     get() = if (LocalIsDarkTheme.current) DarkNgdlTextPrimary else Color(0xFF090A0C)
 
 // High-Trust Financial Status Colors (Semantic Red / Green)
-val MandiRedReceivable = Color(0xFFDC2626)       // Receivable (लेना है)
+// Accounting: Receivable (लेना है / Money coming in) = Green, Payable (देना है / Money going out) = Red
+val MandiGreenReceivable = Color(0xFF16A34A)    // Receivable (लेना है)
+val MandiRedPayable = Color(0xFFDC2626)         // Payable (देना है)
+
+@Deprecated("Use MandiGreenReceivable or MandiRedPayable", ReplaceWith("MandiGreenReceivable"))
+val MandiGreenPayable = MandiGreenReceivable
+
+@Deprecated("Use MandiRedPayable or MandiGreenReceivable", ReplaceWith("MandiRedPayable"))
+val MandiRedReceivable = MandiRedPayable
+
 val MandiRedLight: Color
     @Composable
     @ReadOnlyComposable
@@ -174,7 +183,6 @@ val MandiRedText: Color
     @ReadOnlyComposable
     get() = if (LocalIsDarkTheme.current) Color(0xFFEF4444) else Color(0xFFB91C1C)
 
-val MandiGreenPayable = Color(0xFF16A34A)        // Payable (देना है)
 val MandiGreenLight: Color
     @Composable
     @ReadOnlyComposable
