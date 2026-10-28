@@ -63,6 +63,9 @@ object MandiMathEngine {
         return (wholeQuintals * GRAMS_PER_QUINTAL) + fractionalGrams
     }
 
+    /** "50" -> 50_000, "50.5" -> 50_500 (kg to grams, two decimals kept). */
+    fun parseKgToGrams(input: String): Long = parseFixedTwoDecimals(input) * 10
+
     /** "2275.50" -> 227_550. Blank or malformed input -> 0. Digits past 2 decimals are dropped; the keypad caps every field so it never produces them (rate, labour, commission: 2 decimals). */
     fun parseRupeesToPaisa(input: String): Long = parseFixedTwoDecimals(input)
 

@@ -242,4 +242,155 @@ class HomeViewModelTest {
         viewModel2.uiState.first { it.isEnglish }
         assertEquals(true, viewModel2.uiState.value.isEnglish)
     }
+
+    @Test
+    fun testHomeViewModelObservesKpisAndStockLines() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val buyRepo = com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database, ioDispatcher = ioDispatcher)
+        val sellRepo = com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+        val expenseRepo = com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database, ioDispatcher = ioDispatcher)
+        val stockUseCase = com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo)
+
+        val shopId = "test-shop"
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            buyRepository = buyRepo,
+            sellRepository = sellRepo,
+            lendRepository = lendRepo,
+            expenseRepository = expenseRepo,
+            stockUseCase = stockUseCase,
+            viewModelScope = backgroundScope
+        )
+
+        // Save a buy entry: 10 quintals of Wheat
+        buyRepo.saveBuyEntry(
+            com.appwork.mandisamiti.domain.model.BuyEntry(
+                id = "b-1",
+                shopId = shopId,
+                farmerId = "f-1",
+                commodityId = "Wheat",
+                entryDate = 1730000000000L,
+                bagsCount = 20L,
+                weightPerBagGrams = 50_000L,
+                extraWeightGrams = 0L,
+                totalWeightGrams = 1_000_000L,
+                ratePaisaPerQuintal = 250_000L,
+                commissionBps = 0L,
+                labourPerBagPaisa = 0L,
+                advancePaidPaisa = 0L,
+                grossPaisa = 25_000_00L,
+                commissionPaisa = 0L,
+                labourPaisa = 0L,
+                netPayablePaisa = 25_000_00L,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        // Save a sell entry: 5 quintals of Wheat
+        sellRepo.saveSellEntry(
+            com.appwork.mandisamiti.domain.model.SellEntry(
+                id = "s-1",
+                shopId = shopId,
+                buyerId = "m-1",
+                commodityId = "Wheat",
+                entryDate = 1730000000000L,
+                billMode = com.appwork.mandisamiti.domain.model.BillMode.NORMAL,
+                partyKind = com.appwork.mandisamiti.domain.model.SellPartyKind.CUSTOMER,
+                bagsCount = 10L,
+                weightPerBagGrams = 50_000L,
+                totalWeightGrams = 500_000L,
+                ratePaisaPerQuintal = 300_000L,
+                aratBps = 0L,
+                tulakPaisa = 0L,
+                grossPaisa = 15_000_00L,
+                aratPaisa = 0L,
+                mandiShulkPaisa = 0L,
+                totalReceivablePaisa = 15_000_00L,
+                receivedPaisa = 0L,
+                balanceDuePaisa = 15_000_00L,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val stateWithKpis = viewModel.uiState.first { it.kpis.totalBuyPaisa > 0 && it.kpis.totalSellPaisa > 0 }
+        assertEquals(25_000_00L, stateWithKpis.kpis.totalBuyPaisa)
+        assertEquals(15_000_00L, stateWithKpis.kpis.totalSellPaisa)
+        assertEquals(-10_000_00L, stateWithKpis.kpis.profitLossPaisa)
+
+        // Verify stock line for Wheat: bought 10 qtl (1M g), sold 5 qtl (500k g), onHand 5 qtl (500k g)
+        val wheatLine = stateWithKpis.stockLines.firstOrNull { it.commodityId == "Wheat" }
+        assertNotNull(wheatLine)
+        assertEquals(1_000_000L, wheatLine.boughtGrams)
+        assertEquals(500_000L, wheatLine.soldGrams)
+        assertEquals(500_000L, wheatLine.onHandGrams)
+    }
+
+    @Test
+    fun testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "test-shop"
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope
+        )
+
+        // 1. Save 1 money lend entry with a party name - auto-provisions party account in partyRepo
+        val lendAmountPaisa = 1_000_000L // ₹10,000
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "lend-1",
+                shopId = shopId,
+                partyId = "Kailash Farmer",
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                entryDate = 1730000000000L,
+                amountPaisa = lendAmountPaisa,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val state = viewModel.uiState.first { it.kpis.totalLendPaisa == lendAmountPaisa && it.totalMarketReceivablePaisa == lendAmountPaisa }
+        assertEquals(lendAmountPaisa, state.kpis.totalLendPaisa)
+        assertEquals(lendAmountPaisa, state.totalMarketReceivablePaisa)
+        assertEquals(1, state.allParties.size)
+        assertEquals("Kailash Farmer", state.allParties.first().party.name)
+        assertEquals(lendAmountPaisa, state.allParties.first().balancePaisa)
+
+        // 2. Save 1 unlinked lend with empty partyId - reflects honestly as unlinked
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "lend-unlinked",
+                shopId = shopId,
+                partyId = "", // Legitimate unlinked lend
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                entryDate = 1730000000000L,
+                amountPaisa = 500_000L,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val stateWithUnlinked = viewModel.uiState.first { it.unlinkedLendCount == 1 }
+        assertEquals(500_000L, stateWithUnlinked.unlinkedLendAmountPaisa)
+        assertEquals(1, stateWithUnlinked.unlinkedLendCount)
+        assertEquals(1_500_000L, stateWithUnlinked.totalMarketReceivablePaisa)
+    }
 }

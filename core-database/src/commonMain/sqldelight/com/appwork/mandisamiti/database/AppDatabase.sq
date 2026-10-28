@@ -143,6 +143,139 @@ CREATE TABLE entryRevisionEntity (
 );
 CREATE INDEX idx_revision_entry ON entryRevisionEntity(entry_id, revision);
 
+CREATE TABLE buyEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    farmer_id TEXT NOT NULL,
+    commodity_id TEXT NOT NULL,
+    entry_date INTEGER NOT NULL,
+    bags_count INTEGER NOT NULL,
+    weight_per_bag_grams INTEGER NOT NULL,
+    extra_weight_grams INTEGER NOT NULL DEFAULT 0,
+    total_weight_grams INTEGER NOT NULL,
+    rate_paisa_per_quintal INTEGER NOT NULL,
+    commission_bps INTEGER NOT NULL DEFAULT 0,
+    labour_per_bag_paisa INTEGER NOT NULL DEFAULT 0,
+    advance_paid_paisa INTEGER NOT NULL DEFAULT 0,
+    gross_paisa INTEGER NOT NULL,
+    commission_paisa INTEGER NOT NULL,
+    labour_paisa INTEGER NOT NULL,
+    net_payable_paisa INTEGER NOT NULL,
+    paid_paisa INTEGER NOT NULL DEFAULT 0,
+    vehicle_number TEXT,
+    slip_number TEXT,
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
+);
+CREATE INDEX idx_buy_shop_date ON buyEntryEntity(shop_id, entry_date);
+CREATE INDEX idx_buy_farmer ON buyEntryEntity(farmer_id);
+
+CREATE TABLE sellEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    buyer_id TEXT NOT NULL,
+    commodity_id TEXT NOT NULL,
+    entry_date INTEGER NOT NULL,
+    bill_mode TEXT NOT NULL,          -- 'NORMAL' | 'BILL_OF_SUPPLY'
+    party_kind TEXT NOT NULL,         -- 'MERCHANT' | 'CUSTOMER'
+    gstin TEXT,
+    bags_count INTEGER NOT NULL,
+    weight_per_bag_grams INTEGER NOT NULL,
+    total_weight_grams INTEGER NOT NULL,
+    rate_paisa_per_quintal INTEGER NOT NULL,
+    arat_bps INTEGER NOT NULL DEFAULT 0,
+    tulak_paisa INTEGER NOT NULL DEFAULT 0,
+    gross_paisa INTEGER NOT NULL,
+    arat_paisa INTEGER NOT NULL,
+    mandi_shulk_paisa INTEGER NOT NULL,
+    total_receivable_paisa INTEGER NOT NULL,
+    received_paisa INTEGER NOT NULL DEFAULT 0,
+    balance_due_paisa INTEGER NOT NULL,
+    vehicle_number TEXT,
+    invoice_number TEXT,
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
+);
+CREATE INDEX idx_sell_shop_date ON sellEntryEntity(shop_id, entry_date);
+CREATE INDEX idx_sell_buyer ON sellEntryEntity(buyer_id);
+
+CREATE TABLE lendEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    party_id TEXT NOT NULL,
+    lend_type TEXT NOT NULL,          -- 'MONEY' | 'GRAIN'
+    entry_date INTEGER NOT NULL,
+    amount_paisa INTEGER NOT NULL DEFAULT 0,
+    commodity_id TEXT,
+    bags_count INTEGER NOT NULL DEFAULT 0,
+    weight_grams INTEGER NOT NULL DEFAULT 0,
+    expected_return_date INTEGER,
+    notes TEXT,
+    status TEXT NOT NULL DEFAULT 'OPEN', -- 'OPEN' | 'PARTIAL' | 'SETTLED'
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(party_id) REFERENCES partyEntity(id)
+);
+CREATE INDEX idx_lend_shop_status ON lendEntryEntity(shop_id, status);
+
+CREATE TABLE lendSettlementEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    lend_id TEXT NOT NULL,
+    settled_at INTEGER NOT NULL,
+    amount_paisa INTEGER NOT NULL DEFAULT 0,
+    weight_grams INTEGER NOT NULL DEFAULT 0,
+    bags_count INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(lend_id) REFERENCES lendEntryEntity(id)
+);
+CREATE INDEX idx_settle_lend ON lendSettlementEntity(lend_id);
+
+CREATE TABLE expenseEntryEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    entry_date INTEGER NOT NULL,
+    category TEXT NOT NULL,           -- 'HAMMALI' | 'KIRAYA' | 'BIJLI' | 'CHAI_PANI' | 'MAJDOORI' | 'OTHER'
+    amount_paisa INTEGER NOT NULL,
+    paid_to TEXT,
+    payment_mode TEXT NOT NULL DEFAULT 'CASH', -- 'CASH' | 'ONLINE' | 'CHEQUE'
+    remarks TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT
+);
+CREATE INDEX idx_expense_shop_date ON expenseEntryEntity(shop_id, entry_date);
+
 -- ================= QUERIES =================
 
 -- Shop Profile Queries
@@ -229,8 +362,8 @@ SELECT
     p.village AS party_village,
     p.party_type AS party_type,
     (
-        -- 1. Cash Advances given to party (+)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
+        -- 1. Cash Advances given to party (+) (excluding those tagged as lend advances to avoid double counting)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR remarks NOT LIKE 'उधार ऋण:%')), 0)
         +
         -- 2. Interest added to party (+)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)
@@ -246,6 +379,18 @@ SELECT
         -
         -- 6. Deals where party is FARMER: Shop owes farmer (-)
         COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
+        +
+        -- 7. Sell Entries where party is BUYER: Buyer owes shop (+)
+        COALESCE((SELECT SUM(total_receivable_paisa - received_paisa) FROM sellEntryEntity WHERE buyer_id = p.id AND is_deleted = 0 AND is_void = 0), 0)
+        -
+        -- 8. Buy Entries where party is FARMER: Shop owes farmer (-)
+        COALESCE((SELECT SUM(net_payable_paisa - paid_paisa) FROM buyEntryEntity WHERE farmer_id = p.id AND is_deleted = 0 AND is_void = 0), 0)
+        +
+        -- 9. Lend Entries (MONEY) where party owes shop (+)
+        COALESCE((SELECT SUM(amount_paisa) FROM lendEntryEntity WHERE party_id = p.id AND lend_type = 'MONEY' AND is_deleted = 0 AND is_void = 0), 0)
+        -
+        -- 10. Lend Settlements (-)
+        COALESCE((SELECT SUM(s.amount_paisa) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0), 0)
     ) AS balance_paisa
 FROM partyEntity p
 WHERE p.id = ? AND p.is_deleted = 0;
@@ -277,6 +422,21 @@ DELETE FROM partyEntity WHERE id = ? AND sync_status = 1;
 insertPartyIfAbsent:
 INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+backfillPartiesFromBuyEntries:
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+SELECT DISTINCT farmer_id, shop_id, farmer_id, NULL, NULL, 'FARMER', NULL, NULL, entry_date, entry_date, 0, 0
+FROM buyEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND farmer_id IS NOT NULL AND farmer_id != '';
+
+backfillPartiesFromSellEntries:
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+SELECT DISTINCT buyer_id, shop_id, buyer_id, NULL, NULL, 'BUYER', NULL, NULL, entry_date, entry_date, 0, 0
+FROM sellEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND buyer_id IS NOT NULL AND buyer_id != '';
+
+backfillPartiesFromLendEntries:
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+SELECT DISTINCT party_id, shop_id, party_id, NULL, NULL, 'FARMER', NULL, NULL, entry_date, entry_date, 0, 0
+FROM lendEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND party_id IS NOT NULL AND party_id != '';
 
 deleteSyncedDeal:
 DELETE FROM dealEntity WHERE id = ? AND sync_status = 1;
@@ -328,7 +488,12 @@ SELECT (
     (SELECT COUNT(*) FROM partyEntity WHERE sync_status = 0) +
     (SELECT COUNT(*) FROM dealEntity WHERE sync_status = 0) +
     (SELECT COUNT(*) FROM cashTransactionEntity WHERE sync_status = 0) +
-    (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0)
+    (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM buyEntryEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM sellEntryEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM lendEntryEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM lendSettlementEntity WHERE sync_status = 0) +
+    (SELECT COUNT(*) FROM expenseEntryEntity WHERE sync_status = 0)
 ) AS pending_count;
 
 
@@ -342,6 +507,16 @@ SELECT COUNT(*) FROM (
     SELECT id FROM cashTransactionEntity WHERE sync_status = 0
     UNION
     SELECT entry_id FROM entryRevisionEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM buyEntryEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM sellEntryEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM lendEntryEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM lendSettlementEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM expenseEntryEntity WHERE sync_status = 0
 );
 
 -- Rows (deleted or not) that belong to any shop other than ?
@@ -352,7 +527,12 @@ SELECT (
     (SELECT COUNT(*) FROM commodityEntity WHERE shop_id != :shopId) +
     (SELECT COUNT(*) FROM dealEntity WHERE shop_id != :shopId) +
     (SELECT COUNT(*) FROM cashTransactionEntity WHERE shop_id != :shopId) +
-    (SELECT COUNT(*) FROM entryRevisionEntity WHERE shop_id != :shopId)
+    (SELECT COUNT(*) FROM entryRevisionEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM buyEntryEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM sellEntryEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM lendEntryEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM lendSettlementEntity WHERE shop_id != :shopId) +
+    (SELECT COUNT(*) FROM expenseEntryEntity WHERE shop_id != :shopId)
 ) AS foreign_count;
 
 -- Unsynced rows (sync_status = 0) belonging to another shop whose profile came from the server (sync_status = 1)
@@ -361,7 +541,12 @@ SELECT (
     (SELECT COUNT(*) FROM partyEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
     (SELECT COUNT(*) FROM dealEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
     (SELECT COUNT(*) FROM cashTransactionEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
-    (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1))
+    (SELECT COUNT(*) FROM entryRevisionEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM buyEntryEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM sellEntryEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM lendEntryEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM lendSettlementEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1)) +
+    (SELECT COUNT(*) FROM expenseEntryEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1))
 ) AS pending_count;
 
 -- Local data wipe (sign-out / account switch), children first
@@ -402,3 +587,159 @@ DELETE FROM syncMetadataEntity;
 
 shopProfileExists:
 SELECT COUNT(*) > 0 FROM shopProfileEntity WHERE id = ?;
+
+-- ===== Buy / Sell / Lend / Expense (migration 3) =====
+getBuyEntriesByShop:
+SELECT * FROM buyEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
+
+getBuyEntryById:
+SELECT * FROM buyEntryEntity WHERE id = ?;
+
+insertBuyEntry:
+INSERT OR REPLACE INTO buyEntryEntity(
+    id, shop_id, farmer_id, commodity_id, entry_date, bags_count, weight_per_bag_grams, extra_weight_grams,
+    total_weight_grams, rate_paisa_per_quintal, commission_bps, labour_per_bag_paisa, advance_paid_paisa,
+    gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, remarks,
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getSellEntriesByShop:
+SELECT * FROM sellEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
+
+getSellEntryById:
+SELECT * FROM sellEntryEntity WHERE id = ?;
+
+insertSellEntry:
+INSERT OR REPLACE INTO sellEntryEntity(
+    id, shop_id, buyer_id, commodity_id, entry_date, bill_mode, party_kind, gstin, bags_count, weight_per_bag_grams,
+    total_weight_grams, rate_paisa_per_quintal, arat_bps, tulak_paisa, gross_paisa, arat_paisa, mandi_shulk_paisa,
+    total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, remarks,
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getLendEntriesByShop:
+SELECT * FROM lendEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
+
+getLendEntryById:
+SELECT * FROM lendEntryEntity WHERE id = ?;
+
+insertLendEntry:
+INSERT OR REPLACE INTO lendEntryEntity(
+    id, shop_id, party_id, lend_type, entry_date, amount_paisa, commodity_id, bags_count, weight_grams,
+    expected_return_date, notes, status, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getLendSettlementsByLend:
+SELECT * FROM lendSettlementEntity WHERE lend_id = ? AND is_void = 0 ORDER BY settled_at ASC;
+
+insertLendSettlement:
+INSERT OR REPLACE INTO lendSettlementEntity(
+    id, shop_id, lend_id, settled_at, amount_paisa, weight_grams, bags_count,
+    created_at, updated_at, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getExpensesByShop:
+SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
+
+getExpenseById:
+SELECT * FROM expenseEntryEntity WHERE id = ?;
+
+insertExpenseEntry:
+INSERT OR REPLACE INTO expenseEntryEntity(
+    id, shop_id, entry_date, category, amount_paisa, paid_to, payment_mode, remarks,
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Pull-apply: delete-if-synced then insert-if-absent, so a pulled row never overwrites a pending local edit
+deleteSyncedBuyEntry:
+DELETE FROM buyEntryEntity WHERE id = ? AND sync_status = 1;
+
+insertBuyEntryIfAbsent:
+INSERT OR IGNORE INTO buyEntryEntity(
+    id, shop_id, farmer_id, commodity_id, entry_date, bags_count, weight_per_bag_grams, extra_weight_grams,
+    total_weight_grams, rate_paisa_per_quintal, commission_bps, labour_per_bag_paisa, advance_paid_paisa,
+    gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, remarks,
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncedSellEntry:
+DELETE FROM sellEntryEntity WHERE id = ? AND sync_status = 1;
+
+insertSellEntryIfAbsent:
+INSERT OR IGNORE INTO sellEntryEntity(
+    id, shop_id, buyer_id, commodity_id, entry_date, bill_mode, party_kind, gstin, bags_count, weight_per_bag_grams,
+    total_weight_grams, rate_paisa_per_quintal, arat_bps, tulak_paisa, gross_paisa, arat_paisa, mandi_shulk_paisa,
+    total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, remarks,
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncedLendEntry:
+DELETE FROM lendEntryEntity WHERE id = ? AND sync_status = 1;
+
+insertLendEntryIfAbsent:
+INSERT OR IGNORE INTO lendEntryEntity(
+    id, shop_id, party_id, lend_type, entry_date, amount_paisa, commodity_id, bags_count, weight_grams,
+    expected_return_date, notes, status, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncedLendSettlement:
+DELETE FROM lendSettlementEntity WHERE id = ? AND sync_status = 1;
+
+insertLendSettlementIfAbsent:
+INSERT OR IGNORE INTO lendSettlementEntity(
+    id, shop_id, lend_id, settled_at, amount_paisa, weight_grams, bags_count,
+    created_at, updated_at, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncedExpenseEntry:
+DELETE FROM expenseEntryEntity WHERE id = ? AND sync_status = 1;
+
+insertExpenseEntryIfAbsent:
+INSERT OR IGNORE INTO expenseEntryEntity(
+    id, shop_id, entry_date, category, amount_paisa, paid_to, payment_mode, remarks,
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Godown stock: grams bought and sold per commodity (void and deleted rows excluded)
+getStockBuyTotals:
+SELECT commodity_id, COALESCE(SUM(total_weight_grams), 0) AS grams
+FROM buyEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 GROUP BY commodity_id;
+
+getStockSellTotals:
+SELECT commodity_id, COALESCE(SUM(total_weight_grams), 0) AS grams
+FROM sellEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 GROUP BY commodity_id;
+
+-- Sync outbox
+getPendingSyncBuyEntries:
+SELECT * FROM buyEntryEntity WHERE sync_status = 0;
+getPendingSyncSellEntries:
+SELECT * FROM sellEntryEntity WHERE sync_status = 0;
+getPendingSyncLendEntries:
+SELECT * FROM lendEntryEntity WHERE sync_status = 0;
+getPendingSyncLendSettlements:
+SELECT * FROM lendSettlementEntity WHERE sync_status = 0;
+getPendingSyncExpenses:
+SELECT * FROM expenseEntryEntity WHERE sync_status = 0;
+
+markBuyEntrySynced:
+UPDATE buyEntryEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
+markSellEntrySynced:
+UPDATE sellEntryEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
+markLendEntrySynced:
+UPDATE lendEntryEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
+markLendSettlementSynced:
+UPDATE lendSettlementEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
+markExpenseSynced:
+UPDATE expenseEntryEntity SET sync_status = 1 WHERE id = ? AND revision = ?;
+
+-- Sign-out wipe, children first
+wipeLendSettlements:
+DELETE FROM lendSettlementEntity;
+wipeLendEntries:
+DELETE FROM lendEntryEntity;
+wipeBuyEntries:
+DELETE FROM buyEntryEntity;
+wipeSellEntries:
+DELETE FROM sellEntryEntity;
+wipeExpenses:
+DELETE FROM expenseEntryEntity;

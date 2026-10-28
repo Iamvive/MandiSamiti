@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,7 +49,8 @@ fun SoundboxTopBar(
     pendingSyncCount: Int = 0,
     isEnglish: Boolean = false,
     onOpenHelp: (() -> Unit)? = null,
-    navigationIcon: (@Composable () -> Unit)? = null
+    navigationIcon: (@Composable () -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     val soundBtnShape = RoundedCornerShape(20.dp)
     val monogramInitial = shopName.trim().take(1).ifEmpty { "मं" }
@@ -108,6 +110,9 @@ fun SoundboxTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (actions != null) {
+                actions()
+            }
             if (pendingSyncCount > 0) {
                 Row(
                     modifier = Modifier
@@ -154,12 +159,16 @@ fun SoundboxTopBar(
             ) {
                 Icon(
                     imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                    contentDescription = "वॉइस साउंडबॉक्स स्थिति",
+                    contentDescription = if (isEnglish) "Voice Soundbox Status" else "वॉइस साउंडबॉक्स स्थिति",
                     tint = if (isSoundEnabled) MandiGreenText else MandiTextMuted,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
-                    text = if (isSoundEnabled) "वॉइस ऑन" else "म्यूट",
+                    text = if (isSoundEnabled) {
+                        if (isEnglish) "Voice On" else "वॉइस ऑन"
+                    } else {
+                        if (isEnglish) "Mute" else "म्यूट"
+                    },
                     color = if (isSoundEnabled) MandiGreenText else MandiTextSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold

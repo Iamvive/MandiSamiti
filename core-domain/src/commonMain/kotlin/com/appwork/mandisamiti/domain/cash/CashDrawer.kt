@@ -5,6 +5,7 @@ import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
@@ -21,9 +22,13 @@ object CashDrawer {
 
     fun dayWindow(now: Instant, timeZone: TimeZone): DayWindow {
         val today = now.toLocalDateTime(timeZone).date
+        return dayWindow(today, timeZone)
+    }
+
+    fun dayWindow(date: LocalDate, timeZone: TimeZone): DayWindow {
         return DayWindow(
-            startMs = today.atStartOfDayIn(timeZone).toEpochMilliseconds(),
-            endMs = today.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone).toEpochMilliseconds()
+            startMs = date.atStartOfDayIn(timeZone).toEpochMilliseconds(),
+            endMs = date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone).toEpochMilliseconds()
         )
     }
 

@@ -31,9 +31,9 @@ import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 
@@ -68,7 +68,7 @@ fun MandiCalculatorKeypad(
             KeypadButton(
                 text = "C (साफ़)",
                 backgroundColor = MandiRedLight,
-                textColor = MandiRedReceivable,
+                textColor = MandiRedPayable,
                 modifier = Modifier.weight(1.2f)
             ) { onKeyPressed(KeypadAction.CLEAR) }
         }
@@ -100,7 +100,7 @@ fun MandiCalculatorKeypad(
             KeypadButton(
                 text = if (showSubmitInsteadOfNext) "पूर्ण" else "अगला",
                 icon = if (showSubmitInsteadOfNext) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
-                backgroundColor = if (showSubmitInsteadOfNext) MandiGreenPayable else MandiAmberPrimary,
+                backgroundColor = if (showSubmitInsteadOfNext) MandiBtnSuccessBg else MandiAmberPrimary,
                 textColor = Color.White,
                 modifier = Modifier.weight(1.2f)
             ) {

@@ -44,7 +44,7 @@ import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -107,7 +107,7 @@ fun ReceiptPreviewScreen(
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiGreenPayable)
+                    colors = ButtonDefaults.buttonColors(containerColor = MandiBtnSuccessBg)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,

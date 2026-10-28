@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     AUTH_PASS_EXPIRE_MINUTES: int = 10
     
     # Database (Default: local async SQLite; In Docker/VPS: PostgreSQL)
-    DATABASE_URL: str = "sqlite+aiosqlite:///./mandi_backend.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:////Users/appworx/Desktop/Vivek-K/projects/MandiSamiti/backend/mandi_backend.db"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

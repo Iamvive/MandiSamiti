@@ -1,5 +1,18 @@
 package com.appwork.mandisamiti
 
+import com.appwork.mandisamiti.ui.buy.BuyEntryScreen
+import com.appwork.mandisamiti.ui.buy.BuyTransactionsListScreen
+import com.appwork.mandisamiti.ui.buy.BuyTransactionReceiptScreen
+import com.appwork.mandisamiti.ui.sell.SellEntryScreen
+import com.appwork.mandisamiti.ui.sell.SellTransactionsListScreen
+import com.appwork.mandisamiti.ui.sell.SellTransactionReceiptScreen
+import com.appwork.mandisamiti.ui.lend.LendEntryScreen
+import com.appwork.mandisamiti.ui.lend.LendTransactionsListScreen
+import com.appwork.mandisamiti.ui.expense.ExpenseEntryScreen
+import com.appwork.mandisamiti.ui.expense.labelHi
+import com.appwork.mandisamiti.ui.stock.StockBreakdownSheet
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -58,6 +71,36 @@ sealed interface Screen {
     data class PartyLedger(val partyId: String) : Screen
     data class ReceiptPreview(val deal: Deal, val farmer: Party, val buyer: Party?) : Screen
     data object DailyRegister : Screen
+
+    // Revamp Screens (Tasks 11-15)
+    data class BuyEntry(val existingId: String? = null) : Screen
+    data object BuyList : Screen
+    data class BuyReceipt(val id: String) : Screen
+    data class SellEntry(val existingId: String? = null) : Screen
+    data object SellList : Screen
+    data class SellReceipt(val id: String) : Screen
+    data object LendEntry : Screen
+    data object LendList : Screen
+    data object ExpenseEntry : Screen
+    data object StockSheet : Screen
+}
+
+fun Screen.backTarget(): Screen = when (this) {
+    is Screen.BuyEntry -> Screen.BuyList
+    is Screen.BuyReceipt -> Screen.BuyList
+    is Screen.BuyList -> Screen.Home
+    is Screen.SellEntry -> Screen.SellList
+    is Screen.SellReceipt -> Screen.SellList
+    is Screen.SellList -> Screen.Home
+    is Screen.LendEntry -> Screen.LendList
+    is Screen.LendList -> Screen.Home
+    is Screen.ExpenseEntry -> Screen.Home
+    is Screen.StockSheet -> Screen.Home
+    is Screen.DealEntry -> Screen.Home
+    is Screen.PartyLedger -> Screen.Home
+    is Screen.ReceiptPreview -> Screen.Home
+    is Screen.DailyRegister -> Screen.Home
+    Screen.Register, Screen.FirstSync, Screen.Home -> Screen.Home
 }
 
 @Composable
@@ -75,6 +118,11 @@ fun App(
     val dealRepo = remember { OfflineFirstDealRepository(database) }
     val cashRepo = remember { OfflineFirstCashTransactionRepository(database) }
     val tradeSettingsRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstTradeSettingsRepository(database) }
+    val buyRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database) }
+    val sellRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(database) }
+    val lendRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database) }
+    val expenseRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database) }
+    val stockUseCase = remember { com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo) }
     val wiper = remember { LocalDataWiper(database) }
     val authRepo = remember {
         AuthRepository(
@@ -154,6 +202,11 @@ fun App(
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
                         tradeSettingsRepository = tradeSettingsRepo,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
+                        stockUseCase = stockUseCase,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
@@ -182,7 +235,7 @@ fun App(
                     },
                     snackbarHostState = snackbarHostState,
                     onNavigateToNewEntry = {
-                        currentScreen = Screen.DealEntry()
+                        currentScreen = Screen.BuyEntry(null)
                     },
                     onNavigateToPartyKhata = { party ->
                         currentScreen = Screen.PartyLedger(party.id)
@@ -193,6 +246,14 @@ fun App(
                     onShareWhatsApp = { reportText ->
                         whatsAppShareManager.shareText(reportText, null)
                     },
+                    onNavigateToBuy = { currentScreen = Screen.BuyEntry(null) },
+                    onNavigateToSell = { currentScreen = Screen.SellEntry(null) },
+                    onNavigateToLend = { currentScreen = Screen.LendEntry },
+                    onNavigateToExpense = { currentScreen = Screen.ExpenseEntry },
+                    onNavigateToBuyList = { currentScreen = Screen.BuyList },
+                    onNavigateToSellList = { currentScreen = Screen.SellList },
+                    onNavigateToLendList = { currentScreen = Screen.LendList },
+                    onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
                     onSignOut = {
                         // Ignore a second tap while a sign-out is already running.
                         if (!signOutInFlight) {
@@ -327,6 +388,213 @@ fun App(
                     },
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     showBackButton = true
+                )
+            }
+
+            is Screen.BuyEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                BuyEntryScreen(
+                    shopId = shopId ?: "",
+                    existingId = screen.existingId,
+                    buyRepository = buyRepo,
+                    activeLoanChecker = { farmerName ->
+                        lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
+                    },
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            if (screen.existingId == null) {
+                                buyRepo.saveBuyEntry(entry)
+                            } else {
+                                buyRepo.editBuyEntry(entry)
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.BuyReceipt(entry.id)
+                        }
+                    },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.BuyList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val buys by buyRepo.getBuyEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                BuyTransactionsListScreen(
+                    entries = buys,
+                    onOpen = { id -> currentScreen = Screen.BuyReceipt(id) },
+                    onNew = { currentScreen = Screen.BuyEntry(null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.BuyReceipt -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
+                LaunchedEffect(screen.id) {
+                    buyEntry = buyRepo.getBuyEntryById(screen.id)
+                }
+                BuyTransactionReceiptScreen(
+                    id = screen.id,
+                    entry = buyEntry,
+                    onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.SellEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                SellEntryScreen(
+                    shopId = shopId ?: "",
+                    existingId = screen.existingId,
+                    sellRepository = sellRepo,
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            if (screen.existingId == null) {
+                                sellRepo.saveSellEntry(entry)
+                            } else {
+                                sellRepo.editSellEntry(entry)
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.SellReceipt(entry.id)
+                        }
+                    },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.SellList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val sells by sellRepo.getSellEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                SellTransactionsListScreen(
+                    entries = sells,
+                    onOpen = { id -> currentScreen = Screen.SellReceipt(id) },
+                    onNew = { currentScreen = Screen.SellEntry(null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.SellReceipt -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                var sellEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.SellEntry?>(null) }
+                LaunchedEffect(screen.id) {
+                    sellEntry = sellRepo.getSellEntryById(screen.id)
+                }
+                SellTransactionReceiptScreen(
+                    id = screen.id,
+                    entry = sellEntry,
+                    onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.LendEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                LendEntryScreen(
+                    shopId = shopId ?: "",
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            lendRepo.saveLendEntry(entry)
+                            if (entry.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY && entry.amountPaisa > 0L) {
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = shopId ?: "",
+                                        partyId = entry.partyId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                        amountPaisa = entry.amountPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = entry.entryDate,
+                                        remarks = "उधार ऋण: ${entry.notes ?: ""}".trim(),
+                                        createdAt = entry.createdAt,
+                                        updatedAt = entry.updatedAt,
+                                    )
+                                )
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.LendList
+                        }
+                    },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.LendList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                LendTransactionsListScreen(
+                    entries = lends,
+                    onNew = { currentScreen = Screen.LendEntry },
+                    onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
+                        coroutineScope.launch {
+                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            lendRepo.settle(
+                                com.appwork.mandisamiti.domain.model.LendSettlement(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = shopId ?: "",
+                                    lendId = lendId,
+                                    settledAt = now,
+                                    amountPaisa = amountPaisa,
+                                    weightGrams = weightGrams,
+                                    bagsCount = bagsCount,
+                                    createdAt = now,
+                                    updatedAt = now,
+                                )
+                            )
+                            if (amountPaisa > 0L) {
+                                val settledLend = lends.find { it.id == lendId }
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = shopId ?: "",
+                                        partyId = settledLend?.partyId ?: "किसान",
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = amountPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = now,
+                                        remarks = "उधार वापसी जमा: ${note ?: ""}".trim(),
+                                        createdAt = now,
+                                        updatedAt = now,
+                                    )
+                                )
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.ExpenseEntry -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                ExpenseEntryScreen(
+                    shopId = shopId ?: "",
+                    onSaved = { entry ->
+                        coroutineScope.launch {
+                            expenseRepo.saveExpense(entry)
+                            if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = shopId ?: "",
+                                        partyId = entry.paidTo?.ifBlank { null } ?: entry.category.name,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                        amountPaisa = entry.amountPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = entry.entryDate,
+                                        remarks = "खर्च: ${entry.category.labelHi()} ${entry.remarks ?: ""}".trim(),
+                                        createdAt = entry.createdAt,
+                                        updatedAt = entry.updatedAt,
+                                    )
+                                )
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.Home
+                        }
+                    },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.StockSheet -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                var stockLines by remember { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
+                LaunchedEffect(shopId) {
+                    shopId?.let { stockLines = stockUseCase.lines(it) }
+                }
+                StockBreakdownSheet(
+                    stockLines = stockLines,
+                    onDismiss = { currentScreen = screen.backTarget() }
                 )
             }
         }

@@ -48,10 +48,11 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiBtnDangerBg
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
@@ -102,7 +103,7 @@ fun SettingsScreen(
                         showSignOutConfirmDialog = false
                         onSignOutClick()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiRedReceivable)
+                    colors = ButtonDefaults.buttonColors(containerColor = MandiBtnDangerBg)
                 ) {
                     Text(text = if (isEnglish) "Sign Out" else "साइन आउट", color = Color.White)
                 }
@@ -419,7 +420,7 @@ fun SettingsScreen(
                         onCheckedChange = { onToggleSound() },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = MandiGreenPayable
+                            checkedTrackColor = MandiGreenReceivable
                         )
                     )
                 }
@@ -441,7 +442,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.CloudDone,
                             contentDescription = null,
-                            tint = MandiGreenPayable,
+                            tint = MandiGreenReceivable,
                             modifier = Modifier.size(20.dp)
                         )
                         Column {
@@ -469,7 +470,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
                     .background(MandiSurface)
-                    .border(1.dp, MandiRedReceivable.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .border(1.dp, MandiRedPayable.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
                     .clickable { showSignOutConfirmDialog = true }
                     .padding(14.dp),
                 contentAlignment = Alignment.Center
@@ -481,12 +482,12 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
                         contentDescription = null,
-                        tint = MandiRedReceivable,
+                        tint = MandiRedPayable,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = if (isEnglish) "Sign Out / Switch Shop" else "साइन आउट करें (दुकान बदलें)",
-                        color = MandiRedReceivable,
+                        color = MandiRedPayable,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )

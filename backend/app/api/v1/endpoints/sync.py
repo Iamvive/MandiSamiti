@@ -8,6 +8,10 @@ from app.models.deal import Deal
 from app.models.transaction import CashTransaction
 from app.models.revision import EntryRevision
 from app.models.sync_conflict import SyncConflict
+from app.models.buy_entry import BuyEntry
+from app.models.sell_entry import SellEntry
+from app.models.lend_entry import LendEntry, LendSettlement
+from app.models.expense_entry import ExpenseEntry
 from app.core.sync_seq import lock_shop, next_seq
 from app.models.user import ShopProfile
 from app.schemas.sync import SyncPushRequest, SyncPushResponse, SyncPullResponse
@@ -15,6 +19,13 @@ from app.schemas.party import PartyResponse
 from app.schemas.deal import DealResponse
 from app.schemas.transaction import CashTransactionResponse
 from app.schemas.revision import EntryRevisionResponse
+from app.schemas.entries import (
+    BuyEntryResponse,
+    SellEntryResponse,
+    LendEntryResponse,
+    LendSettlementResponse,
+    ExpenseEntryResponse,
+)
 from app.core.security import get_current_user_payload
 
 router = APIRouter()
@@ -34,6 +45,11 @@ async def sync_push(
     synced_deals = []
     synced_txs = []
     synced_revisions = []
+    synced_buys = []
+    synced_sells = []
+    synced_lends = []
+    synced_lend_settlements = []
+    synced_expenses = []
     conflicts = []
 
     shop = await lock_shop(db, shop_id)
@@ -267,6 +283,306 @@ async def sync_push(
             conflicts.append(r_id)
         synced_revisions.append(r_id)
 
+    # 5. Sync Buy Entries
+    for b_in in payload.buy_entries:
+        b_id = b_in.id
+        if b_id is None:
+            continue
+        result = await db.execute(select(BuyEntry).where(BuyEntry.id == b_id))
+        existing_buy = result.scalars().first()
+        if existing_buy:
+            if existing_buy.shop_id == shop_id:
+                if b_in.revision > (existing_buy.revision or 0):
+                    existing_buy.farmer_id = b_in.farmer_id
+                    existing_buy.commodity_id = b_in.commodity_id
+                    existing_buy.entry_date = b_in.entry_date or existing_buy.entry_date
+                    existing_buy.bags_count = b_in.bags_count
+                    existing_buy.weight_per_bag_grams = b_in.weight_per_bag_grams
+                    existing_buy.extra_weight_grams = b_in.extra_weight_grams
+                    existing_buy.total_weight_grams = b_in.total_weight_grams
+                    existing_buy.rate_paisa_per_quintal = b_in.rate_paisa_per_quintal
+                    existing_buy.commission_bps = b_in.commission_bps
+                    existing_buy.labour_per_bag_paisa = b_in.labour_per_bag_paisa
+                    existing_buy.advance_paid_paisa = b_in.advance_paid_paisa
+                    existing_buy.gross_paisa = b_in.gross_paisa
+                    existing_buy.commission_paisa = b_in.commission_paisa
+                    existing_buy.labour_paisa = b_in.labour_paisa
+                    existing_buy.net_payable_paisa = b_in.net_payable_paisa
+                    existing_buy.paid_paisa = b_in.paid_paisa
+                    existing_buy.vehicle_number = b_in.vehicle_number
+                    existing_buy.slip_number = b_in.slip_number
+                    existing_buy.remarks = b_in.remarks
+                    existing_buy.is_void = b_in.is_void
+                    existing_buy.void_reason = b_in.void_reason
+                    existing_buy.revision = b_in.revision
+                    existing_buy.is_deleted = b_in.is_deleted
+                    existing_buy.sync_version += 1
+                    existing_buy.updated_at = now_ms
+                    existing_buy.server_seq = next_seq(shop)
+                elif b_in.revision < (existing_buy.revision or 0):
+                    existing_buy.server_seq = next_seq(shop)
+                synced_buys.append(b_id)
+        else:
+            new_buy = BuyEntry(
+                id=b_id,
+                shop_id=shop_id,
+                farmer_id=b_in.farmer_id,
+                commodity_id=b_in.commodity_id,
+                entry_date=b_in.entry_date or now_ms,
+                bags_count=b_in.bags_count,
+                weight_per_bag_grams=b_in.weight_per_bag_grams,
+                extra_weight_grams=b_in.extra_weight_grams,
+                total_weight_grams=b_in.total_weight_grams,
+                rate_paisa_per_quintal=b_in.rate_paisa_per_quintal,
+                commission_bps=b_in.commission_bps,
+                labour_per_bag_paisa=b_in.labour_per_bag_paisa,
+                advance_paid_paisa=b_in.advance_paid_paisa,
+                gross_paisa=b_in.gross_paisa,
+                commission_paisa=b_in.commission_paisa,
+                labour_paisa=b_in.labour_paisa,
+                net_payable_paisa=b_in.net_payable_paisa,
+                paid_paisa=b_in.paid_paisa,
+                vehicle_number=b_in.vehicle_number,
+                slip_number=b_in.slip_number,
+                remarks=b_in.remarks,
+                is_void=b_in.is_void,
+                void_reason=b_in.void_reason,
+                revision=b_in.revision,
+                is_deleted=b_in.is_deleted,
+                sync_version=1,
+                created_at=now_ms,
+                updated_at=now_ms,
+                server_seq=next_seq(shop)
+            )
+            db.add(new_buy)
+            synced_buys.append(b_id)
+
+    # 6. Sync Sell Entries
+    for s_in in payload.sell_entries:
+        s_id = s_in.id
+        if s_id is None:
+            continue
+        result = await db.execute(select(SellEntry).where(SellEntry.id == s_id))
+        existing_sell = result.scalars().first()
+        if existing_sell:
+            if existing_sell.shop_id == shop_id:
+                if s_in.revision > (existing_sell.revision or 0):
+                    existing_sell.buyer_id = s_in.buyer_id
+                    existing_sell.commodity_id = s_in.commodity_id
+                    existing_sell.entry_date = s_in.entry_date or existing_sell.entry_date
+                    existing_sell.bill_mode = s_in.bill_mode
+                    existing_sell.party_kind = s_in.party_kind
+                    existing_sell.gstin = s_in.gstin
+                    existing_sell.bags_count = s_in.bags_count
+                    existing_sell.weight_per_bag_grams = s_in.weight_per_bag_grams
+                    existing_sell.total_weight_grams = s_in.total_weight_grams
+                    existing_sell.rate_paisa_per_quintal = s_in.rate_paisa_per_quintal
+                    existing_sell.arat_bps = s_in.arat_bps
+                    existing_sell.tulak_paisa = s_in.tulak_paisa
+                    existing_sell.gross_paisa = s_in.gross_paisa
+                    existing_sell.arat_paisa = s_in.arat_paisa
+                    existing_sell.mandi_shulk_paisa = s_in.mandi_shulk_paisa
+                    existing_sell.total_receivable_paisa = s_in.total_receivable_paisa
+                    existing_sell.received_paisa = s_in.received_paisa
+                    existing_sell.balance_due_paisa = s_in.balance_due_paisa
+                    existing_sell.vehicle_number = s_in.vehicle_number
+                    existing_sell.invoice_number = s_in.invoice_number
+                    existing_sell.remarks = s_in.remarks
+                    existing_sell.is_void = s_in.is_void
+                    existing_sell.void_reason = s_in.void_reason
+                    existing_sell.revision = s_in.revision
+                    existing_sell.is_deleted = s_in.is_deleted
+                    existing_sell.sync_version += 1
+                    existing_sell.updated_at = now_ms
+                    existing_sell.server_seq = next_seq(shop)
+                elif s_in.revision < (existing_sell.revision or 0):
+                    existing_sell.server_seq = next_seq(shop)
+                synced_sells.append(s_id)
+        else:
+            new_sell = SellEntry(
+                id=s_id,
+                shop_id=shop_id,
+                buyer_id=s_in.buyer_id,
+                commodity_id=s_in.commodity_id,
+                entry_date=s_in.entry_date or now_ms,
+                bill_mode=s_in.bill_mode,
+                party_kind=s_in.party_kind,
+                gstin=s_in.gstin,
+                bags_count=s_in.bags_count,
+                weight_per_bag_grams=s_in.weight_per_bag_grams,
+                total_weight_grams=s_in.total_weight_grams,
+                rate_paisa_per_quintal=s_in.rate_paisa_per_quintal,
+                arat_bps=s_in.arat_bps,
+                tulak_paisa=s_in.tulak_paisa,
+                gross_paisa=s_in.gross_paisa,
+                arat_paisa=s_in.arat_paisa,
+                mandi_shulk_paisa=s_in.mandi_shulk_paisa,
+                total_receivable_paisa=s_in.total_receivable_paisa,
+                received_paisa=s_in.received_paisa,
+                balance_due_paisa=s_in.balance_due_paisa,
+                vehicle_number=s_in.vehicle_number,
+                invoice_number=s_in.invoice_number,
+                remarks=s_in.remarks,
+                is_void=s_in.is_void,
+                void_reason=s_in.void_reason,
+                revision=s_in.revision,
+                is_deleted=s_in.is_deleted,
+                sync_version=1,
+                created_at=now_ms,
+                updated_at=now_ms,
+                server_seq=next_seq(shop)
+            )
+            db.add(new_sell)
+            synced_sells.append(s_id)
+
+    # 7. Sync Lend Entries
+    for l_in in payload.lend_entries:
+        l_id = l_in.id
+        if l_id is None:
+            continue
+        result = await db.execute(select(LendEntry).where(LendEntry.id == l_id))
+        existing_lend = result.scalars().first()
+        if existing_lend:
+            if existing_lend.shop_id == shop_id:
+                if l_in.revision > (existing_lend.revision or 0):
+                    existing_lend.party_id = l_in.party_id
+                    existing_lend.lend_type = l_in.lend_type
+                    existing_lend.entry_date = l_in.entry_date or existing_lend.entry_date
+                    existing_lend.amount_paisa = l_in.amount_paisa
+                    existing_lend.commodity_id = l_in.commodity_id
+                    existing_lend.bags_count = l_in.bags_count
+                    existing_lend.weight_grams = l_in.weight_grams
+                    existing_lend.expected_return_date = l_in.expected_return_date
+                    existing_lend.notes = l_in.notes
+                    existing_lend.status = l_in.status
+                    existing_lend.is_void = l_in.is_void
+                    existing_lend.void_reason = l_in.void_reason
+                    existing_lend.revision = l_in.revision
+                    existing_lend.is_deleted = l_in.is_deleted
+                    existing_lend.sync_version += 1
+                    existing_lend.updated_at = now_ms
+                    existing_lend.server_seq = next_seq(shop)
+                elif l_in.revision < (existing_lend.revision or 0):
+                    existing_lend.server_seq = next_seq(shop)
+                synced_lends.append(l_id)
+        else:
+            new_lend = LendEntry(
+                id=l_id,
+                shop_id=shop_id,
+                party_id=l_in.party_id,
+                lend_type=l_in.lend_type,
+                entry_date=l_in.entry_date or now_ms,
+                amount_paisa=l_in.amount_paisa,
+                commodity_id=l_in.commodity_id,
+                bags_count=l_in.bags_count,
+                weight_grams=l_in.weight_grams,
+                expected_return_date=l_in.expected_return_date,
+                notes=l_in.notes,
+                status=l_in.status,
+                is_void=l_in.is_void,
+                void_reason=l_in.void_reason,
+                revision=l_in.revision,
+                is_deleted=l_in.is_deleted,
+                sync_version=1,
+                created_at=now_ms,
+                updated_at=now_ms,
+                server_seq=next_seq(shop)
+            )
+            db.add(new_lend)
+            synced_lends.append(l_id)
+
+    # 8. Sync Lend Settlements
+    for ls_in in payload.lend_settlements:
+        ls_id = ls_in.id
+        if ls_id is None:
+            continue
+        result = await db.execute(select(LendSettlement).where(LendSettlement.id == ls_id))
+        existing_ls = result.scalars().first()
+        if existing_ls:
+            if existing_ls.shop_id == shop_id:
+                if ls_in.revision > (existing_ls.revision or 0):
+                    existing_ls.lend_id = ls_in.lend_id
+                    existing_ls.settled_at = ls_in.settled_at or existing_ls.settled_at
+                    existing_ls.amount_paisa = ls_in.amount_paisa
+                    existing_ls.weight_grams = ls_in.weight_grams
+                    existing_ls.bags_count = ls_in.bags_count
+                    existing_ls.is_void = ls_in.is_void
+                    existing_ls.void_reason = ls_in.void_reason
+                    existing_ls.revision = ls_in.revision
+                    existing_ls.sync_version += 1
+                    existing_ls.updated_at = now_ms
+                    existing_ls.server_seq = next_seq(shop)
+                elif ls_in.revision < (existing_ls.revision or 0):
+                    existing_ls.server_seq = next_seq(shop)
+                synced_lend_settlements.append(ls_id)
+        else:
+            new_ls = LendSettlement(
+                id=ls_id,
+                shop_id=shop_id,
+                lend_id=ls_in.lend_id,
+                settled_at=ls_in.settled_at or now_ms,
+                amount_paisa=ls_in.amount_paisa,
+                weight_grams=ls_in.weight_grams,
+                bags_count=ls_in.bags_count,
+                is_void=ls_in.is_void,
+                void_reason=ls_in.void_reason,
+                revision=ls_in.revision,
+                sync_version=1,
+                created_at=now_ms,
+                updated_at=now_ms,
+                server_seq=next_seq(shop)
+            )
+            db.add(new_ls)
+            synced_lend_settlements.append(ls_id)
+
+    # 9. Sync Expense Entries
+    for e_in in payload.expense_entries:
+        e_id = e_in.id
+        if e_id is None:
+            continue
+        result = await db.execute(select(ExpenseEntry).where(ExpenseEntry.id == e_id))
+        existing_exp = result.scalars().first()
+        if existing_exp:
+            if existing_exp.shop_id == shop_id:
+                if e_in.revision > (existing_exp.revision or 0):
+                    existing_exp.entry_date = e_in.entry_date or existing_exp.entry_date
+                    existing_exp.category = e_in.category
+                    existing_exp.amount_paisa = e_in.amount_paisa
+                    existing_exp.paid_to = e_in.paid_to
+                    existing_exp.payment_mode = e_in.payment_mode
+                    existing_exp.remarks = e_in.remarks
+                    existing_exp.is_void = e_in.is_void
+                    existing_exp.void_reason = e_in.void_reason
+                    existing_exp.revision = e_in.revision
+                    existing_exp.is_deleted = e_in.is_deleted
+                    existing_exp.sync_version += 1
+                    existing_exp.updated_at = now_ms
+                    existing_exp.server_seq = next_seq(shop)
+                elif e_in.revision < (existing_exp.revision or 0):
+                    existing_exp.server_seq = next_seq(shop)
+                synced_expenses.append(e_id)
+        else:
+            new_exp = ExpenseEntry(
+                id=e_id,
+                shop_id=shop_id,
+                entry_date=e_in.entry_date or now_ms,
+                category=e_in.category,
+                amount_paisa=e_in.amount_paisa,
+                paid_to=e_in.paid_to,
+                payment_mode=e_in.payment_mode,
+                remarks=e_in.remarks,
+                is_void=e_in.is_void,
+                void_reason=e_in.void_reason,
+                revision=e_in.revision,
+                is_deleted=e_in.is_deleted,
+                sync_version=1,
+                created_at=now_ms,
+                updated_at=now_ms,
+                server_seq=next_seq(shop)
+            )
+            db.add(new_exp)
+            synced_expenses.append(e_id)
+
     await db.commit()
 
     return SyncPushResponse(
@@ -275,6 +591,11 @@ async def sync_push(
         synced_deals=synced_deals,
         synced_transactions=synced_txs,
         synced_revisions=synced_revisions,
+        synced_buy_entries=synced_buys,
+        synced_sell_entries=synced_sells,
+        synced_lend_entries=synced_lends,
+        synced_lend_settlements=synced_lend_settlements,
+        synced_expense_entries=synced_expenses,
         conflicts=conflicts,
         server_sync_time=now_ms,
         server_seq=shop.last_seq or 0
@@ -292,8 +613,17 @@ async def sync_pull(
     # so a push committing between the SELECTs below can't let a page jump over an unseen seq.
     max_seq = (await db.execute(select(ShopProfile.last_seq).where(ShopProfile.id == shop_id))).scalar() or 0
     # Each table's first `limit` rows after the cursor contain every row of the global first `limit`.
-    kinds = ((Party, PartyResponse), (Deal, DealResponse),
-             (CashTransaction, CashTransactionResponse), (EntryRevision, EntryRevisionResponse))
+    kinds = (
+        (Party, PartyResponse),
+        (Deal, DealResponse),
+        (CashTransaction, CashTransactionResponse),
+        (EntryRevision, EntryRevisionResponse),
+        (BuyEntry, BuyEntryResponse),
+        (SellEntry, SellEntryResponse),
+        (LendEntry, LendEntryResponse),
+        (LendSettlement, LendSettlementResponse),
+        (ExpenseEntry, ExpenseEntryResponse),
+    )
     merged = []
     for model, schema in kinds:
         res = await db.execute(
@@ -305,14 +635,31 @@ async def sync_pull(
     merged.sort(key=lambda t: t[0])
     page = merged[:limit]
 
-    out = {PartyResponse: [], DealResponse: [], CashTransactionResponse: [], EntryRevisionResponse: []}
+    out = {
+        PartyResponse: [],
+        DealResponse: [],
+        CashTransactionResponse: [],
+        EntryRevisionResponse: [],
+        BuyEntryResponse: [],
+        SellEntryResponse: [],
+        LendEntryResponse: [],
+        LendSettlementResponse: [],
+        ExpenseEntryResponse: [],
+    }
     for _, schema, row in page:
         out[schema].append(schema.model_validate(row))
     return SyncPullResponse(
         after_seq=after_seq,
         next_seq=page[-1][0] if page else after_seq,
         has_more=len(merged) > limit,
-        parties=out[PartyResponse], deals=out[DealResponse],
-        transactions=out[CashTransactionResponse], revisions=out[EntryRevisionResponse],
+        parties=out[PartyResponse],
+        deals=out[DealResponse],
+        transactions=out[CashTransactionResponse],
+        revisions=out[EntryRevisionResponse],
+        buy_entries=out[BuyEntryResponse],
+        sell_entries=out[SellEntryResponse],
+        lend_entries=out[LendEntryResponse],
+        lend_settlements=out[LendSettlementResponse],
+        expense_entries=out[ExpenseEntryResponse],
         server_sync_time=int(time.time() * 1000),
     )

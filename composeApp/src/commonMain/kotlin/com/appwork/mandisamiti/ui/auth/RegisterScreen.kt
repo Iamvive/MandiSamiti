@@ -73,7 +73,7 @@ import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessFg
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiRedBorder
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
@@ -441,7 +441,7 @@ private fun OtpVerificationSection(
                 Icon(
                     imageVector = Icons.Default.Security,
                     contentDescription = null,
-                    tint = MandiGreenPayable,
+                    tint = MandiGreenReceivable,
                     modifier = Modifier.size(26.dp)
                 )
             }

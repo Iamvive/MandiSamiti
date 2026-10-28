@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
+import com.appwork.mandisamiti.ui.components.SpeedDialFab
 import com.appwork.mandisamiti.ui.dashboard.DashboardScreen
 import com.appwork.mandisamiti.ui.ledger.KhataLedgerTabScreen
 import com.appwork.mandisamiti.ui.navigation.MandiBottomBar
@@ -60,6 +61,14 @@ fun HomeScreen(
     onShareWhatsApp: ((String) -> Unit)? = null,
     needsLogin: Boolean = false,
     onReLogin: () -> Unit = {},
+    onNavigateToBuy: () -> Unit = {},
+    onNavigateToSell: () -> Unit = {},
+    onNavigateToLend: () -> Unit = {},
+    onNavigateToExpense: () -> Unit = {},
+    onNavigateToBuyList: () -> Unit = {},
+    onNavigateToSellList: () -> Unit = {},
+    onNavigateToLendList: () -> Unit = {},
+    onNavigateToStockSheet: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -124,9 +133,17 @@ fun HomeScreen(
                     NavigationTab.DASHBOARD -> {
                         DashboardScreen(
                             uiState = uiState,
-                            onNavigateToNewEntry = onNavigateToNewEntry,
+                            onNavigateToBuy = onNavigateToBuy,
+                            onNavigateToSell = onNavigateToSell,
+                            onNavigateToLend = onNavigateToLend,
+                            onNavigateToExpense = onNavigateToExpense,
+                            onNavigateToBuyList = onNavigateToBuyList,
+                            onNavigateToSellList = onNavigateToSellList,
+                            onNavigateToLendList = onNavigateToLendList,
+                            onNavigateToStockSheet = onNavigateToStockSheet,
                             onNavigateToPartyKhata = onNavigateToPartyKhata,
                             onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
+                            onNavigateToNewEntry = onNavigateToNewEntry,
                             isEnglish = uiState.isEnglish
                         )
                     }
@@ -143,6 +160,7 @@ fun HomeScreen(
                                     onNavigateToPartyKhata(newParty)
                                 }
                             },
+                            onNavigateToStockSheet = onNavigateToStockSheet,
                             isEnglish = uiState.isEnglish
                         )
                     }

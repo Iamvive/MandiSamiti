@@ -59,9 +59,10 @@ import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
+import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiNavy
-import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
@@ -442,7 +443,7 @@ fun DealEntryScreen(
                                     label = if (farmerOwesShop) "किसान से लेना है" else "किसान को शुद्ध देय",
                                     amountPaisa = kotlin.math.abs(uiState.netFarmerPayablePaisa),
                                     isBold = true,
-                                    color = if (farmerOwesShop) MandiRedReceivable else MandiGreenPayable
+                                    color = if (farmerOwesShop) MandiGreenReceivable else MandiRedPayable
                                 )
                                 if (uiState.buyerCommissionPaisa > 0L) {
                                     InvoiceRow(label = "+ व्यापारी आढ़त (${uiState.buyerCommissionPercentText}%)", amountPaisa = uiState.buyerCommissionPaisa, isBold = false, color = MandiTextSecondary)
@@ -499,7 +500,7 @@ fun DealEntryScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (uiState.isSettledStage) MandiAmberPrimary else MandiGreenPayable
+                        containerColor = if (uiState.isSettledStage) MandiAmberPrimary else MandiBtnSuccessBg
                     )
                 ) {
                     Icon(

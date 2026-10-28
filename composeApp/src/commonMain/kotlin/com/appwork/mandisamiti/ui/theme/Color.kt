@@ -158,7 +158,16 @@ val MandiNeutralText: Color
     get() = if (LocalIsDarkTheme.current) DarkNgdlTextPrimary else Color(0xFF090A0C)
 
 // High-Trust Financial Status Colors (Semantic Red / Green)
-val MandiRedReceivable = Color(0xFFDC2626)       // Receivable (लेना है)
+// Accounting: Receivable (लेना है / Money coming in) = Green, Payable (देना है / Money going out) = Red
+val MandiGreenReceivable = Color(0xFF16A34A)    // Receivable (लेना है)
+val MandiRedPayable = Color(0xFFDC2626)         // Payable (देना है)
+
+@Deprecated("Use MandiGreenReceivable or MandiRedPayable", ReplaceWith("MandiGreenReceivable"))
+val MandiGreenPayable = MandiGreenReceivable
+
+@Deprecated("Use MandiRedPayable or MandiGreenReceivable", ReplaceWith("MandiRedPayable"))
+val MandiRedReceivable = MandiRedPayable
+
 val MandiRedLight: Color
     @Composable
     @ReadOnlyComposable
@@ -174,7 +183,6 @@ val MandiRedText: Color
     @ReadOnlyComposable
     get() = if (LocalIsDarkTheme.current) Color(0xFFEF4444) else Color(0xFFB91C1C)
 
-val MandiGreenPayable = Color(0xFF16A34A)        // Payable (देना है)
 val MandiGreenLight: Color
     @Composable
     @ReadOnlyComposable
@@ -195,5 +203,22 @@ val MandiBtnSuccessBg = Color(0xFF15803D)       // Solid dark green fill
 val MandiBtnSuccessFg = Color(0xFFFFFFFF)       // Crisp white text on success
 val MandiBtnDangerBg = Color(0xFFDC2626)        // Solid deep red fill
 val MandiBtnDangerFg = Color(0xFFFFFFFF)        // Crisp white text on danger
+
+// NGDL Action & Category Tokens (Opaque Tint Support)
+val MandiBlueSell = Color(0xFF2563EB)
+val MandiOrangeLend = Color(0xFFD97706)
+val MandiPinkExpense = Color(0xFFDB2777)
+val MandiGreenBuy = Color(0xFF16A34A)
+
+/**
+ * Composites [accent] over [background] with [alpha] to produce an opaque Color.
+ * Prevents elevation shadow bleed-through on elevated surfaces.
+ */
+fun opaqueTint(accent: Color, background: Color, alpha: Float = 0.12f): Color {
+    val r = accent.red * alpha + background.red * (1f - alpha)
+    val g = accent.green * alpha + background.green * (1f - alpha)
+    val b = accent.blue * alpha + background.blue * (1f - alpha)
+    return Color(red = r, green = g, blue = b, alpha = 1f)
+}
 
 
