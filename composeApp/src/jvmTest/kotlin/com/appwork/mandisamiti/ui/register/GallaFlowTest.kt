@@ -556,4 +556,116 @@ class GallaFlowTest {
         assertEquals(0L, summary.cashOutPaisa)
         assertEquals(100_000L, summary.closingPaisa)
     }
+
+    @Test
+    fun tcGal10_setOrAdjustOpeningBalance_updatesOpeningAndBalances() = runTest {
+        val db = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(db, ioDispatcher = io)
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = io, clock = testClock)
+
+        val shopId = "shop-opening-flex"
+        val vm = DailyRegisterViewModel(
+            shopId = shopId,
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope,
+            clock = testClock,
+            timeZone = kolkataTz
+        )
+
+        // Initial state: 0 opening
+        var state = vm.uiState.first()
+        assertEquals(0L, state.openingCashPaisa)
+        assertEquals(0L, state.inHandCashDrawerPaisa)
+
+        // Set opening cash float: ₹5,000
+        vm.setOrAdjustOpeningBalance(targetOpeningRs = 5000L, remarks = "Day 1 Seed Cash Float")
+
+        state = vm.uiState.first { it.openingCashPaisa == 500_000L }
+        assertEquals(500_000L, state.openingCashPaisa)
+        assertEquals(500_000L, state.inHandCashDrawerPaisa) // drawer has ₹5,000 opening
+
+        // Adjust opening cash to ₹4,500 (reduction of ₹500)
+        vm.setOrAdjustOpeningBalance(targetOpeningRs = 4500L, remarks = "Corrected float")
+        state = vm.uiState.first { it.openingCashPaisa == 450_000L }
+        assertEquals(450_000L, state.openingCashPaisa)
+        assertEquals(450_000L, state.inHandCashDrawerPaisa)
+    }
+
+    @Test
+    fun tcGal11_reconcileAndAdjustDiscrepancy_closesDifference() = runTest {
+        val db = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(db, ioDispatcher = io)
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = io, clock = testClock)
+
+        val shopId = "shop-discrepancy"
+        val vm = DailyRegisterViewModel(
+            shopId = shopId,
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope,
+            clock = testClock,
+            timeZone = kolkataTz
+        )
+
+        // Start with ₹10,000 opening cash
+        vm.setOrAdjustOpeningBalance(targetOpeningRs = 10000L)
+        vm.uiState.first { it.openingCashPaisa == 1_000_000L }
+
+        // Seth counts physical cash in drawer: ₹9,800 (Shortage of ₹200)
+        val recon = vm.reconcilePhysicalCash(countedRs = 9800L)
+        assertEquals(CashReconciliationStatus.SHORTAGE, recon.status)
+        assertEquals(-20_000L, recon.differencePaisa) // -₹200 difference
+
+        // Munim adjusts discrepancy
+        vm.recordDiscrepancyAdjustment(recon.differencePaisa)
+
+        // After adjustment, drawer cash is now exactly ₹9,800
+        val updatedState = vm.uiState.first { it.inHandCashDrawerPaisa == 980_000L }
+        val updatedRecon = vm.reconcilePhysicalCash(countedRs = 9800L)
+        assertEquals(CashReconciliationStatus.MATCH, updatedRecon.status)
+        assertEquals(0L, updatedRecon.differencePaisa)
+        assertEquals(980_000L, updatedState.inHandCashDrawerPaisa)
+    }
+
+    @Test
+    fun tcGal12_cashWithdrawalHome_deductsFromClosing() = runTest {
+        val db = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(db, ioDispatcher = io)
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = io, clock = testClock)
+
+        val shopId = "shop-drawings"
+        val vm = DailyRegisterViewModel(
+            shopId = shopId,
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope,
+            clock = testClock,
+            timeZone = kolkataTz
+        )
+
+        // Start with ₹25,000 in drawer
+        vm.setOrAdjustOpeningBalance(targetOpeningRs = 25000L)
+        vm.uiState.first { it.openingCashPaisa == 2_500_000L }
+
+        // Owner takes ₹20,000 home tonight, leaving ₹5,000 in the drawer for tomorrow
+        vm.recordCashWithdrawalHome(amountRs = 20000L, remarks = "रात को घर ले गए")
+
+        val state = vm.uiState.first { it.todayCashOutPaisa == 2_000_000L }
+        assertEquals(2_000_000L, state.todayCashOutPaisa) // ₹20,000 cash out
+        assertEquals(500_000L, state.inHandCashDrawerPaisa) // ₹5,000 remaining in hand for tomorrow
+    }
 }
+

@@ -107,6 +107,12 @@ fun DailyCashRegisterScreen(
     var directAmountInput by remember { mutableStateOf("") }
     var directRemarksInput by remember { mutableStateOf("") }
     var physicalCashInput by remember { mutableStateOf("") }
+    var showOpeningBalanceDialog by remember { mutableStateOf(false) }
+    var openingBalanceInput by remember { mutableStateOf("") }
+    var openingBalanceRemarks by remember { mutableStateOf("") }
+    var showCashHomeDialog by remember { mutableStateOf(false) }
+    var cashHomeInput by remember { mutableStateOf("") }
+    var cashHomeRemarks by remember { mutableStateOf("") }
     var bahiViewMode by remember { mutableStateOf(BahiViewMode.SPLIT) }
 
     val jamaList = remember(uiState.todayTransactions) {
@@ -208,10 +214,16 @@ fun DailyCashRegisterScreen(
                     }
 
                     CashBreakdownItem(
-                        label = if (isEnglish) "Opening Balance" else "पिछला शेष (Opening)",
+                        label = if (isEnglish) "Opening Balance" else "पिछला शेष (बाकी निकाला)",
                         amountPaisa = uiState.openingCashPaisa,
                         color = MandiNavy,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        actionLabel = if (isEnglish) "Set / Edit" else "बदलें / दर्ज करें",
+                        onClick = {
+                            openingBalanceInput = if (uiState.openingCashPaisa > 0) (uiState.openingCashPaisa / 100L).toString() else ""
+                            openingBalanceRemarks = ""
+                            showOpeningBalanceDialog = true
+                        }
                     )
 
                     // 2-Way Metrics Breakdown (In vs Out)
@@ -299,7 +311,59 @@ fun DailyCashRegisterScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            // Flexible Baniya Drawer Operations: Opening Float & Owner Cash Home
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MandiNeutralLight)
+                        .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                        .clickable {
+                            openingBalanceInput = if (uiState.openingCashPaisa > 0) (uiState.openingCashPaisa / 100L).toString() else ""
+                            openingBalanceRemarks = ""
+                            showOpeningBalanceDialog = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isEnglish) "Set Opening Float" else "शुरुआती रोकड़ दर्ज करें",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiNavy
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MandiNeutralLight)
+                        .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                        .clickable {
+                            cashHomeInput = ""
+                            cashHomeRemarks = ""
+                            showCashHomeDialog = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isEnglish) "Cash to Home" else "घर निकासी (Drawings)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiAmberDark
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Authentic Indian Bahi Mode Switcher (पल्ला चयन)
             Row(
@@ -479,7 +543,13 @@ fun DailyCashRegisterScreen(
                                             title = if (isEnglish) "Opening" else "बाकी निकाला",
                                             subtitle = if (isEnglish) "Opening Cash" else "पिछला रोकड़ शेष",
                                             amountPaisa = uiState.openingCashPaisa,
-                                            color = MandiNavy
+                                            color = MandiNavy,
+                                            actionLabel = if (isEnglish) "Edit" else "बदलें",
+                                            onClick = {
+                                                openingBalanceInput = if (uiState.openingCashPaisa > 0) (uiState.openingCashPaisa / 100L).toString() else ""
+                                                openingBalanceRemarks = ""
+                                                showOpeningBalanceDialog = true
+                                            }
                                         )
                                     }
 
@@ -543,7 +613,11 @@ fun DailyCashRegisterScreen(
                                             title = if (isEnglish) "Cash In Hand" else "सिल्क बाकी",
                                             subtitle = if (isEnglish) "Closing Drawer" else "गल्ले में शुद्ध नकदी",
                                             amountPaisa = uiState.inHandCashDrawerPaisa,
-                                            color = MandiNavy
+                                            color = MandiNavy,
+                                            actionLabel = if (isEnglish) "Milana" else "मिलान",
+                                            onClick = {
+                                                viewModel.openDayClosingSummary()
+                                            }
                                         )
                                     }
                                 }
@@ -627,7 +701,13 @@ fun DailyCashRegisterScreen(
                                 title = if (isEnglish) "Opening Balance" else "बाकी निकाला (Opening Balance)",
                                 subtitle = if (isEnglish) "Carried forward from yesterday" else "पिछला रोकड़ शेष",
                                 amountPaisa = uiState.openingCashPaisa,
-                                color = MandiNavy
+                                color = MandiNavy,
+                                actionLabel = if (isEnglish) "Edit" else "बदलें",
+                                onClick = {
+                                    openingBalanceInput = if (uiState.openingCashPaisa > 0) (uiState.openingCashPaisa / 100L).toString() else ""
+                                    openingBalanceRemarks = ""
+                                    showOpeningBalanceDialog = true
+                                }
                             )
                         }
 
@@ -726,7 +806,11 @@ fun DailyCashRegisterScreen(
                                 title = if (isEnglish) "Cash In Hand" else "सिल्क बाकी (Closing In Hand)",
                                 subtitle = if (isEnglish) "Physical cash balance in drawer" else "गल्ले में शुद्ध नकदी",
                                 amountPaisa = uiState.inHandCashDrawerPaisa,
-                                color = MandiNavy
+                                color = MandiNavy,
+                                actionLabel = if (isEnglish) "Milana" else "मिलान",
+                                onClick = {
+                                    viewModel.openDayClosingSummary()
+                                }
                             )
                         }
 
@@ -1001,6 +1085,144 @@ fun DailyCashRegisterScreen(
             }
         )
     }
+
+    // Opening Balance Setup Dialog
+    if (showOpeningBalanceDialog) {
+        AlertDialog(
+            onDismissRequest = { showOpeningBalanceDialog = false },
+            title = {
+                Text(
+                    text = if (isEnglish) "Set / Adjust Opening Cash" else "शुरुआती रोकड़ शेष (बाकी निकाला)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = if (isEnglish) {
+                            "Set opening cash float in drawer. Current: ₹${MandiMathEngine.paisaToRupeesString(uiState.openingCashPaisa)}"
+                        } else {
+                            "दुकान खोलने के समय गल्ले में उपलब्ध नकदी निर्धारित करें। वर्तमान: ₹${MandiMathEngine.paisaToRupeesString(uiState.openingCashPaisa)}"
+                        },
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    OutlinedTextField(
+                        value = openingBalanceInput,
+                        onValueChange = { openingBalanceInput = it },
+                        label = { Text(if (isEnglish) "Opening Cash Float ₹" else "प्रारंभिक रोकड़ शेष ₹") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = openingBalanceRemarks,
+                        onValueChange = { openingBalanceRemarks = it },
+                        label = { Text(if (isEnglish) "Note / Reason (Optional)" else "कारण / नोट (वैकल्पिक)") },
+                        placeholder = { Text(if (isEnglish) "e.g. Day 1 initial float" else "जैसे: पहला दिन या घर से लाई नकदी") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amount = openingBalanceInput.toLongOrNull() ?: 0L
+                        viewModel.setOrAdjustOpeningBalance(
+                            targetOpeningRs = amount,
+                            remarks = openingBalanceRemarks.ifBlank { null }
+                        )
+                        showOpeningBalanceDialog = false
+                        openingBalanceInput = ""
+                        openingBalanceRemarks = ""
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    )
+                ) {
+                    Text(if (isEnglish) "Save Opening Cash" else "रोकड़ शेष दर्ज करें", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOpeningBalanceDialog = false }) {
+                    Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
+                }
+            }
+        )
+    }
+
+    // Cash to Home (Owner Drawings) Dialog
+    if (showCashHomeDialog) {
+        AlertDialog(
+            onDismissRequest = { showCashHomeDialog = false },
+            title = {
+                Text(
+                    text = if (isEnglish) "Cash to Home (Owner Drawings)" else "गल्ले से घर निकासी (मालिक का आहरण)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = if (isEnglish) {
+                            "Record cash taken home from drawer. Current in drawer: ₹${MandiMathEngine.paisaToRupeesString(uiState.inHandCashDrawerPaisa)}"
+                        } else {
+                            "दुकानदार/मालिक द्वारा गल्ले से घर ले जाई गई नकदी दर्ज करें। वर्तमान गल्ला: ₹${MandiMathEngine.paisaToRupeesString(uiState.inHandCashDrawerPaisa)}"
+                        },
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    OutlinedTextField(
+                        value = cashHomeInput,
+                        onValueChange = { cashHomeInput = it },
+                        label = { Text(if (isEnglish) "Amount ₹" else "निकासी राशि ₹") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = cashHomeRemarks,
+                        onValueChange = { cashHomeRemarks = it },
+                        label = { Text(if (isEnglish) "Note (Optional)" else "विवरण / नोट (वैकल्पिक)") },
+                        placeholder = { Text(if (isEnglish) "e.g. Daily night drawings" else "जैसे: शाम को घर ले गए") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amount = cashHomeInput.toLongOrNull() ?: 0L
+                        if (amount > 0L) {
+                            viewModel.recordCashWithdrawalHome(
+                                amountRs = amount,
+                                remarks = cashHomeRemarks.ifBlank { null }
+                            )
+                            showCashHomeDialog = false
+                            cashHomeInput = ""
+                            cashHomeRemarks = ""
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiBtnDangerBg,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(if (isEnglish) "Record Cash Out" else "निकासी दर्ज करें", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCashHomeDialog = false }) {
+                    Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -1008,21 +1230,42 @@ private fun CashBreakdownItem(
     label: String,
     amountPaisa: Long,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(MandiNeutralLight)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(8.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = MandiTextSecondary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MandiTextSecondary
+                )
+                if (actionLabel != null) {
+                    Text(
+                        text = actionLabel,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiAmberDark,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MandiAmberLight)
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
             Text(
                 text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
                 fontSize = 14.sp,
@@ -1116,13 +1359,16 @@ private fun BahiAnchorRow(
     title: String,
     subtitle: String,
     amountPaisa: Long,
-    color: Color
+    color: Color,
+    actionLabel: String? = null,
+    onClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
             .background(color.copy(alpha = 0.08f))
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(6.dp)
     ) {
         Row(
@@ -1131,14 +1377,28 @@ private fun BahiAnchorRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = title,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = title,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = color,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (actionLabel != null) {
+                        Text(
+                            text = actionLabel,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiAmberDark,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MandiAmberLight)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
                 Text(
                     text = subtitle,
                     fontSize = 9.sp,

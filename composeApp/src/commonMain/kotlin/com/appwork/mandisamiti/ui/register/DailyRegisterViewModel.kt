@@ -240,4 +240,108 @@ class DailyRegisterViewModel(
             _events.emit(DailyRegisterEvent.EntryRecorded(speechText))
         }
     }
+
+    fun setOrAdjustOpeningBalance(targetOpeningRs: Long, remarks: String? = null) {
+        val targetPaisa = targetOpeningRs * 100L
+        val currentOpening = _uiState.value.openingCashPaisa
+        val deltaPaisa = targetPaisa - currentOpening
+        if (deltaPaisa == 0L) return
+
+        val window = CashDrawer.dayWindow(clock.now(), timeZone)
+        val txDate = window.startMs - 1000L
+        val now = clock.now().toEpochMilliseconds()
+        val isPositive = deltaPaisa > 0L
+        val amountPaisa = if (isPositive) deltaPaisa else -deltaPaisa
+        val type = if (isPositive) TransactionType.JAMA_RECEIVED else TransactionType.UDHAR_GIVEN
+        val defaultRemarks = if (isPositive) {
+            remarks ?: "प्रारंभिक रोकड़ शेष (Opening Float)"
+        } else {
+            remarks ?: "प्रारंभिक रोकड़ समायोजन (Opening Adjustment)"
+        }
+
+        val tx = CashTransaction(
+            id = IdGenerator.newId(),
+            shopId = shopId,
+            partyId = _uiState.value.availableParties.firstOrNull()?.id ?: "GALLA_DRAWER",
+            transactionType = type,
+            amountPaisa = amountPaisa,
+            paymentMode = PaymentMode.CASH,
+            transactionDate = txDate,
+            remarks = defaultRemarks,
+            createdAt = now,
+            updatedAt = now
+        )
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            cashRepository.recordTransaction(tx)
+            onLocalWrite()
+            val speech = "प्रारंभिक रोकड़ शेष ₹$targetOpeningRs निर्धारित किया गया।"
+            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
+            _uiState.value = _uiState.value.copy(isSaving = false)
+            _events.emit(DailyRegisterEvent.EntryRecorded(speech))
+        }
+    }
+
+    fun recordCashWithdrawalHome(amountRs: Long, remarks: String? = null) {
+        if (amountRs <= 0L) return
+        val now = clock.now().toEpochMilliseconds()
+        val amountPaisa = amountRs * 100L
+
+        val tx = CashTransaction(
+            id = IdGenerator.newId(),
+            shopId = shopId,
+            partyId = _uiState.value.availableParties.firstOrNull()?.id ?: "GALLA_DRAWER",
+            transactionType = TransactionType.UDHAR_GIVEN,
+            amountPaisa = amountPaisa,
+            paymentMode = PaymentMode.CASH,
+            transactionDate = now,
+            remarks = remarks ?: "घर ले गए / गल्ला निकासी (Owner Cash Home)",
+            createdAt = now,
+            updatedAt = now
+        )
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            cashRepository.recordTransaction(tx)
+            onLocalWrite()
+            val speech = "गल्ले से ₹$amountRs घर निकासी दर्ज।"
+            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
+            _uiState.value = _uiState.value.copy(isSaving = false)
+            _events.emit(DailyRegisterEvent.EntryRecorded(speech))
+        }
+    }
+
+    fun recordDiscrepancyAdjustment(differencePaisa: Long) {
+        if (differencePaisa == 0L) return
+        val now = clock.now().toEpochMilliseconds()
+        val isSurplus = differencePaisa > 0L
+        val amountPaisa = if (isSurplus) differencePaisa else -differencePaisa
+        val type = if (isSurplus) TransactionType.JAMA_RECEIVED else TransactionType.UDHAR_GIVEN
+        val remarks = if (isSurplus) "गल्ला मिलान बचत (Cash Surplus Adjustment)" else "गल्ला मिलान कमी (Cash Shortage Adjustment)"
+
+        val tx = CashTransaction(
+            id = IdGenerator.newId(),
+            shopId = shopId,
+            partyId = _uiState.value.availableParties.firstOrNull()?.id ?: "GALLA_DRAWER",
+            transactionType = type,
+            amountPaisa = amountPaisa,
+            paymentMode = PaymentMode.CASH,
+            transactionDate = now,
+            remarks = remarks,
+            createdAt = now,
+            updatedAt = now
+        )
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            cashRepository.recordTransaction(tx)
+            onLocalWrite()
+            val diffRs = MandiMathEngine.paisaToRupeesString(amountPaisa)
+            val speech = if (isSurplus) "गल्ला बचत ₹$diffRs समायोजित की गई।" else "गल्ला कमी ₹$diffRs समायोजित की गई।"
+            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
+            _uiState.value = _uiState.value.copy(isSaving = false)
+            _events.emit(DailyRegisterEvent.EntryRecorded(speech))
+        }
+    }
 }

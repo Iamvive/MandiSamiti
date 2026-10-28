@@ -37,6 +37,9 @@ Rooted in traditional Indian merchant bahi-khata accounting (देशी ना
 | **TC-GAL-07** | Day Closing WhatsApp Report | Shop: "बालाजी ट्रेडर्स", Cash In: ₹2,500 | Formatted text with shop, mandi, date, opening, in, out, closing, and optional reconciliation | **PASS (Unit Verified)** |
 | **TC-GAL-08** | Soundbox Hindi Voice Announcement | In hand cash ₹1,800; trigger announcement | Speaks: *"आज का दिन समाप्त। गल्ले में कुल नकदी ₹1,800 है।"* | **PASS (Unit Verified)** |
 | **TC-GAL-09** | Voided Transaction Exclusion | Valid ₹1,000 JAMA, Voided ₹500 JAMA | Closing = ₹1,000; voided ₹500 strictly excluded from drawer totals | **PASS (Unit Verified)** |
+| **TC-GAL-10** | Opening Balance Flexibility (Setup/Adjust) | Set initial float ₹5,000; adjust to ₹4,500 | Opening = ₹5,000 -> ₹4,500; drawer closing balance updates instantly | **PASS (Unit Verified)** |
+| **TC-GAL-11** | Discrepancy Auto-Adjustment | Expected ₹10,000, Counted ₹9,800 (-₹200 shortage); adjust | Records shortage adjustment; drawer re-balances to exact ₹9,800 match | **PASS (Unit Verified)** |
+| **TC-GAL-12** | Owner Cash Withdrawal Home (Drawings) | Drawer has ₹25,000; owner withdraws ₹20,000 to take home | Cash out = ₹20,000; ₹5,000 left in drawer for tomorrow's opening float | **PASS (Unit Verified)** |
 
 ---
 
@@ -51,10 +54,13 @@ Rooted in traditional Indian merchant bahi-khata accounting (देशी ना
   - `tcGal07_dayClosingReportFormatting_includesAllMetricsAndReconciliation`
   - `tcGal08_voiceAnnouncement_speaksClosingBalanceInHindi`
   - `tcGal09_voidedTransactions_excludedFromDrawerTotals`
+  - `tcGal10_setOrAdjustOpeningBalance_updatesOpeningAndBalances`
+  - `tcGal11_reconcileAndAdjustDiscrepancy_closesDifference`
+  - `tcGal12_cashWithdrawalHome_deductsFromClosing`
 - Unit tests in `composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterViewModelTest.kt`:
   - `testDailyRegisterCashDrawerReconciliation`
   - `gallaShowsOnlyTodayWithOpeningCarriedForward`
   - `transactionRecordedBeforePartiesEmitStillShowsThePartyName`
   - `testDayClosingReportGeneration`
   - `recordingAnEntryAsksForASync`
-- Full test suite execution: **100% GREEN (All modules passed)**.
+- Full test suite execution: **100% GREEN (12 Galla test cases passed, all modules green)**.
