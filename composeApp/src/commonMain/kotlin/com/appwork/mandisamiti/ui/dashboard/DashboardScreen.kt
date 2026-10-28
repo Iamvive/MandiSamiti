@@ -76,6 +76,17 @@ fun DashboardScreen(
 ) {
     val receivableCount = uiState.allParties.count { it.balancePaisa > 0 }
     val payableCount = uiState.allParties.count { it.balancePaisa < 0 }
+    val receivableSubtitle = when {
+        receivableCount > 0 && uiState.unlinkedLendCount > 0 ->
+            if (isEnglish) "$receivableCount accounts + ${uiState.unlinkedLendCount} unlinked"
+            else "$receivableCount खातों से + ${uiState.unlinkedLendCount} बिना खाते"
+        receivableCount > 0 ->
+            if (isEnglish) "From $receivableCount accounts" else "$receivableCount खातों से"
+        uiState.unlinkedLendCount > 0 ->
+            if (isEnglish) "${uiState.unlinkedLendCount} unlinked lend" else "${uiState.unlinkedLendCount} बिना खाते का उधार"
+        else ->
+            if (isEnglish) "From 0 accounts" else "0 खातों से"
+    }
 
     LazyColumn(
         modifier = modifier
@@ -152,7 +163,7 @@ fun DashboardScreen(
             ) {
                 DashboardMetricCard(
                     title = if (isEnglish) "Receivable (Market)" else "कुल लेना (बाजार बाकी)",
-                    subtitle = if (isEnglish) "From $receivableCount accounts" else "$receivableCount खातों से",
+                    subtitle = receivableSubtitle,
                     amountPaisa = uiState.totalMarketReceivablePaisa,
                     textColor = MandiRedReceivable,
                     icon = Icons.AutoMirrored.Filled.TrendingUp,

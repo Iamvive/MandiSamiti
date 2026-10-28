@@ -51,6 +51,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +66,11 @@ fun LendTransactionsListScreen(
     var showSettledSection by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    val filtered = entries.filter { !it.isVoid && (it.partyId.contains(searchQuery, ignoreCase = true) || it.commodityId?.contains(searchQuery, ignoreCase = true) == true) }
+    val filtered = entries.filter {
+        if (it.isVoid) return@filter false
+        if (searchQuery.isBlank()) return@filter true
+        BilingualSearchEngine.matchesAny(searchQuery, it.partyId, it.commodityId)
+    }
     val activeEntries = filtered.filter { it.status != LendStatus.SETTLED }
     val settledEntries = filtered.filter { it.status == LendStatus.SETTLED }
 

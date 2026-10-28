@@ -332,4 +332,44 @@ class HomeViewModelTest {
         assertEquals(500_000L, wheatLine.soldGrams)
         assertEquals(500_000L, wheatLine.onHandGrams)
     }
+
+    @Test
+    fun testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "test-shop"
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope
+        )
+
+        // Save 1 money lend entry for ₹10,000 without any registered party in partyRepo
+        val lendAmountPaisa = 1_000_000L // ₹10,000
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "lend-1",
+                shopId = shopId,
+                partyId = "Kailash Farmer", // Unlinked name
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                entryDate = 1730000000000L,
+                amountPaisa = lendAmountPaisa,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val state = viewModel.uiState.first { it.kpis.totalLendPaisa == lendAmountPaisa }
+        assertEquals(lendAmountPaisa, state.kpis.totalLendPaisa)
+        assertEquals(lendAmountPaisa, state.totalMarketReceivablePaisa)
+        assertEquals(lendAmountPaisa, state.unlinkedLendAmountPaisa)
+        assertEquals(1, state.unlinkedLendCount)
+    }
 }

@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.SellEntry
+import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +55,10 @@ fun SellTransactionsListScreen(
     val filteredEntries = entries
         .filter { !it.isVoid }
         .filter { !filterOnlyDue || it.balanceDuePaisa > 0 }
-        .filter { it.buyerId.contains(searchQuery, ignoreCase = true) || it.invoiceNumber?.contains(searchQuery, ignoreCase = true) == true }
+        .filter {
+            if (searchQuery.isBlank()) return@filter true
+            BilingualSearchEngine.matchesAny(searchQuery, it.buyerId, it.invoiceNumber)
+        }
         .sortedByDescending { it.entryDate }
 
     Scaffold(

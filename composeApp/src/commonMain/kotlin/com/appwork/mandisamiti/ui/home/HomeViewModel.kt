@@ -2,6 +2,7 @@ package com.appwork.mandisamiti.ui.home
 
 import com.appwork.mandisamiti.ui.ledger.isValidPartyPhone
 import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
@@ -46,6 +47,8 @@ data class HomeUiState(
     val tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings = com.appwork.mandisamiti.domain.model.TradeSettings(),
     val totalMarketReceivablePaisa: Long = 0L,
     val totalFarmerPayablePaisa: Long = 0L,
+    val unlinkedLendAmountPaisa: Long = 0L,
+    val unlinkedLendCount: Int = 0,
     val kpis: DashboardKpis = DashboardKpis(0L, 0L, 0L, 0L, 0L),
     val stockLines: List<StockLine> = emptyList(),
     val searchQuery: String = "",
@@ -114,11 +117,29 @@ class HomeViewModel(
         combine(buysFlow, sellsFlow, lendsFlow, expensesFlow) { buys, sells, lends, expenses ->
             val computedKpis = computeKpis(buys, sells, lends, expenses)
             val lines = stockUseCase?.lines(shopId) ?: emptyList()
-            Pair(computedKpis, lines)
-        }.onEach { (kpis, lines) ->
+            Triple(computedKpis, lines, lends)
+        }.onEach { (kpis, lines, lends) ->
+            val partyIds = _uiState.value.allParties.map { it.party.id }.toSet()
+            val unlinkedMoneyLends = lends.filter {
+                !it.isVoid &&
+                it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED &&
+                it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY &&
+                it.partyId !in partyIds
+            }
+            val unlinkedAmount = unlinkedMoneyLends.sumOf { it.amountPaisa }
+            val unlinkedCount = unlinkedMoneyLends.size
+
+            var partyRec = 0L
+            _uiState.value.allParties.forEach {
+                if (it.balancePaisa > 0) partyRec += it.balancePaisa
+            }
+
             _uiState.value = _uiState.value.copy(
                 kpis = kpis,
-                stockLines = lines
+                stockLines = lines,
+                unlinkedLendAmountPaisa = unlinkedAmount,
+                unlinkedLendCount = unlinkedCount,
+                totalMarketReceivablePaisa = partyRec + unlinkedAmount
             )
         }.launchIn(viewModelScope)
     }
@@ -166,7 +187,7 @@ class HomeViewModel(
 
                                 _uiState.value = _uiState.value.copy(
                                     allParties = currentList,
-                                    totalMarketReceivablePaisa = rec,
+                                    totalMarketReceivablePaisa = rec + _uiState.value.unlinkedLendAmountPaisa,
                                     totalFarmerPayablePaisa = pay,
                                     filteredParties = filterList(currentList, _uiState.value.searchQuery, _uiState.value.activeFilter),
                                     isLoading = false
@@ -253,11 +274,15 @@ class HomeViewModel(
         query: String,
         filter: PartyFilter
     ): List<PartyWithBalance> {
-        val cleanQuery = query.trim().lowercase()
+        val cleanQuery = query.trim()
         return list.filter { item ->
             val matchesQuery = cleanQuery.isEmpty() ||
-                    item.party.name.lowercase().contains(cleanQuery) ||
-                    (item.party.village?.lowercase()?.contains(cleanQuery) == true)
+                    BilingualSearchEngine.matchesAny(
+                        cleanQuery,
+                        item.party.name,
+                        item.party.village,
+                        item.party.phone
+                    )
 
             val matchesFilter = when (filter) {
                 PartyFilter.ALL -> true
