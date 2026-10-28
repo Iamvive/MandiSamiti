@@ -196,4 +196,21 @@ val MandiBtnSuccessFg = Color(0xFFFFFFFF)       // Crisp white text on success
 val MandiBtnDangerBg = Color(0xFFDC2626)        // Solid deep red fill
 val MandiBtnDangerFg = Color(0xFFFFFFFF)        // Crisp white text on danger
 
+// NGDL Action & Category Tokens (Opaque Tint Support)
+val MandiBlueSell = Color(0xFF2563EB)
+val MandiOrangeLend = Color(0xFFD97706)
+val MandiPinkExpense = Color(0xFFDB2777)
+val MandiGreenBuy = Color(0xFF16A34A)
+
+/**
+ * Composites [accent] over [background] with [alpha] to produce an opaque Color.
+ * Prevents elevation shadow bleed-through on elevated surfaces.
+ */
+fun opaqueTint(accent: Color, background: Color, alpha: Float = 0.12f): Color {
+    val r = accent.red * alpha + background.red * (1f - alpha)
+    val g = accent.green * alpha + background.green * (1f - alpha)
+    val b = accent.blue * alpha + background.blue * (1f - alpha)
+    return Color(red = r, green = g, blue = b, alpha = 1f)
+}
+
 

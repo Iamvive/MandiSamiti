@@ -47,7 +47,11 @@ import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiBlueSell
+import com.appwork.mandisamiti.ui.theme.MandiGreenBuy
 import com.appwork.mandisamiti.ui.theme.MandiGreenPayable
+import com.appwork.mandisamiti.ui.theme.MandiOrangeLend
+import com.appwork.mandisamiti.ui.theme.MandiPinkExpense
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedReceivable
@@ -56,6 +60,7 @@ import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
+import com.appwork.mandisamiti.ui.theme.opaqueTint
 
 @Composable
 fun DashboardScreen(
@@ -316,43 +321,44 @@ fun QuickActionsRow(
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val bg = MandiSurface
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         QuickActionButton(
-            label = if (isEnglish) "Buy" else "खरीद",
-            subLabel = if (isEnglish) "From Farmer" else "आवक",
+            label = DashboardStrings.quickActionBuy(isEnglish),
+            subLabel = DashboardStrings.quickActionBuySub(isEnglish),
             icon = Icons.Default.ShoppingCart,
-            containerColor = MandiGreenPayable.copy(alpha = 0.12f),
-            contentColor = MandiGreenPayable,
+            containerColor = opaqueTint(MandiGreenBuy, bg, 0.12f),
+            contentColor = MandiGreenBuy,
             onClick = onBuy,
             modifier = Modifier.weight(1f)
         )
         QuickActionButton(
-            label = if (isEnglish) "Sell" else "बिक्री",
-            subLabel = if (isEnglish) "To Buyer" else "जावक",
+            label = DashboardStrings.quickActionSell(isEnglish),
+            subLabel = DashboardStrings.quickActionSellSub(isEnglish),
             icon = Icons.AutoMirrored.Filled.TrendingUp,
-            containerColor = MandiPrimaryAction.copy(alpha = 0.12f),
-            contentColor = MandiPrimaryAction,
+            containerColor = opaqueTint(MandiBlueSell, bg, 0.12f),
+            contentColor = MandiBlueSell,
             onClick = onSell,
             modifier = Modifier.weight(1f)
         )
         QuickActionButton(
-            label = if (isEnglish) "Lend" else "उधार",
-            subLabel = if (isEnglish) "Advance" else "पेशगी",
+            label = DashboardStrings.quickActionLend(isEnglish),
+            subLabel = DashboardStrings.quickActionLendSub(isEnglish),
             icon = Icons.Default.AccountBalanceWallet,
-            containerColor = Color(0xFFF57C00).copy(alpha = 0.12f),
-            contentColor = Color(0xFFE65100),
+            containerColor = opaqueTint(MandiOrangeLend, bg, 0.12f),
+            contentColor = MandiOrangeLend,
             onClick = onLend,
             modifier = Modifier.weight(1f)
         )
         QuickActionButton(
-            label = if (isEnglish) "Expense" else "खर्च",
-            subLabel = if (isEnglish) "Mandi" else "मंडी व्यय",
+            label = DashboardStrings.quickActionExpense(isEnglish),
+            subLabel = DashboardStrings.quickActionExpenseSub(isEnglish),
             icon = Icons.Default.MonetizationOn,
-            containerColor = Color(0xFFD81B60).copy(alpha = 0.12f),
-            contentColor = Color(0xFFC2185B),
+            containerColor = opaqueTint(MandiPinkExpense, bg, 0.12f),
+            contentColor = MandiPinkExpense,
             onClick = onExpense,
             modifier = Modifier.weight(1f)
         )
@@ -384,7 +390,7 @@ private fun QuickActionButton(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = label,
+                contentDescription = null,
                 tint = contentColor,
                 modifier = Modifier.size(22.dp)
             )
@@ -397,7 +403,7 @@ private fun QuickActionButton(
             Text(
                 text = subLabel,
                 fontSize = 10.sp,
-                color = contentColor.copy(alpha = 0.8f)
+                color = contentColor
             )
         }
     }
