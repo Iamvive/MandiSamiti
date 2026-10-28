@@ -143,4 +143,62 @@ class PartyLedgerViewModelTest {
         val listed = after.ledgerItems.single() as LedgerItem.CashItem
         assertTrue(listed.transaction.isVoid)
     }
+
+    @Test
+    fun testPartyLedgerIncludesBuySellAndLendEntries() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val buyRepo = com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database, ioDispatcher = ioDispatcher)
+        val sellRepo = com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val farmer = Party(id = "farmer-1", shopId = "shop-1", name = "Bhagvan Singh", village = "Nagla", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        partyRepo.saveParty(farmer)
+
+        val buy = com.appwork.mandisamiti.domain.model.BuyEntry(
+            id = "buy-1",
+            shopId = "shop-1",
+            farmerId = "farmer-1",
+            commodityId = "गेहूं",
+            entryDate = 2000L,
+            bagsCount = 14,
+            weightPerBagGrams = 50_000L,
+            extraWeightGrams = 0L,
+            totalWeightGrams = 700_000L,
+            ratePaisaPerQuintal = 361600L,
+            commissionBps = 0L,
+            labourPerBagPaisa = 0L,
+            advancePaidPaisa = 0L,
+            grossPaisa = 2531200L,
+            commissionPaisa = 0L,
+            labourPaisa = 0L,
+            netPayablePaisa = 2531200L,
+            createdAt = 2000L,
+            updatedAt = 2000L
+        )
+        buyRepo.saveBuyEntry(buy)
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1",
+            partyId = "farmer-1",
+            partyRepository = partyRepo,
+            cashRepository = cashRepo,
+            dealRepository = dealRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            buyRepository = buyRepo,
+            sellRepository = sellRepo,
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() }.ledgerItems.single()
+        assertTrue(item is LedgerItem.BuyItem)
+        assertEquals("buy-1", item.buy.id)
+        assertEquals(2531200L, item.buy.netPayablePaisa)
+    }
 }

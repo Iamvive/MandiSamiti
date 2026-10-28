@@ -48,6 +48,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -96,7 +99,9 @@ fun PartyLedgerScreen(
     viewModel: PartyLedgerViewModel,
     onNavigateBack: () -> Unit,
     onShareWhatsAppReceipt: (String) -> Unit,
-    onEditDeal: (String) -> Unit = {}
+    onEditDeal: (String) -> Unit = {},
+    onOpenBuyReceipt: (String) -> Unit = {},
+    onOpenSellReceipt: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val party = uiState.party
@@ -286,6 +291,26 @@ fun PartyLedgerScreen(
             ) {
                 items(uiState.ledgerItems) { item ->
                     when (item) {
+                        is LedgerItem.BuyItem -> {
+                            FintechBuyCard(
+                                buy = item.buy,
+                                onOpenReceipt = { onOpenBuyReceipt(item.buy.id) },
+                                onLongPress = { voidTarget = item }
+                            )
+                        }
+                        is LedgerItem.SellItem -> {
+                            FintechSellCard(
+                                sell = item.sell,
+                                onOpenReceipt = { onOpenSellReceipt(item.sell.id) },
+                                onLongPress = { voidTarget = item }
+                            )
+                        }
+                        is LedgerItem.LendItem -> {
+                            FintechLendCard(
+                                lend = item.lend,
+                                onLongPress = { voidTarget = item }
+                            )
+                        }
                         is LedgerItem.DealItem -> {
                             FintechDealCard(
                                 deal = item.deal,
@@ -331,10 +356,10 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
-                    val filteredReasons = if (target is LedgerItem.DealItem) {
-                        VoidReason.entries.filter { it.appliesToDeal }
-                    } else {
+                    val filteredReasons = if (target is LedgerItem.CashItem) {
                         VoidReason.entries.filter { it.appliesToCash }
+                    } else {
+                        VoidReason.entries.filter { it.appliesToDeal }
                     }
                     filteredReasons.forEach { reason ->
                         OutlinedButton(
@@ -789,4 +814,308 @@ private fun FintechCashCard(
             }
       }
     }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun FintechBuyCard(
+    buy: com.appwork.mandisamiti.domain.model.BuyEntry,
+    onOpenReceipt: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val isVoid = buy.isVoid
+    val cropName = buy.commodityId.ifBlank { "फसल" }
+    val bagsText = "${buy.bagsCount} बोरी"
+    val weightText = "${MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)} क्विंटल"
+    val rateText = "₹${MandiMathEngine.paisaToRupeesString(buy.ratePaisaPerQuintal)}/क्विंटल"
+    val netRupees = MandiMathEngine.paisaToRupeesString(buy.netPayablePaisa)
+    val slipNumber = buy.slipNumber
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .combinedClickable(
+                onClick = { if (!isVoid) onOpenReceipt() },
+                onLongClick = { if (!isVoid) onLongPress() }
+            )
+            .background(MandiSurface)
+            .border(1.dp, MandiBorder, shape)
+            .padding(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.alpha(if (isVoid) 0.55f else 1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                        contentDescription = null,
+                        tint = MandiAmberPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (!slipNumber.isNullOrBlank()) "खरीद पर्ची #$slipNumber" else "खरीद #${buy.id.takeLast(5)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                }
+
+                Text(
+                    text = formatEpochDate(buy.entryDate),
+                    fontSize = 12.sp,
+                    color = MandiTextMuted
+                )
+            }
+
+            Text(
+                text = "$cropName • $bagsText • $weightText (@ $rateText)",
+                fontSize = 13.sp,
+                color = MandiTextSecondary
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "देना है (Payable)",
+                    fontSize = 12.sp,
+                    color = MandiRedPayable,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "₹$netRupees",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiRedPayable,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                )
+            }
+
+            if (isVoid) {
+                Text(
+                    text = "रद्द · ${buy.voidReason ?: ""}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MandiTextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun FintechSellCard(
+    sell: com.appwork.mandisamiti.domain.model.SellEntry,
+    onOpenReceipt: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val isVoid = sell.isVoid
+    val cropName = sell.commodityId.ifBlank { "फसल" }
+    val bagsText = "${sell.bagsCount} बोरी"
+    val weightText = "${MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)} क्विंटल"
+    val rateText = "₹${MandiMathEngine.paisaToRupeesString(sell.ratePaisaPerQuintal)}/क्विंटल"
+    val grossRupees = MandiMathEngine.paisaToRupeesString(sell.totalReceivablePaisa)
+    val invoiceNumber = sell.invoiceNumber
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .combinedClickable(
+                onClick = { if (!isVoid) onOpenReceipt() },
+                onLongClick = { if (!isVoid) onLongPress() }
+            )
+            .background(MandiSurface)
+            .border(1.dp, MandiBorder, shape)
+            .padding(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.alpha(if (isVoid) 0.55f else 1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                        contentDescription = null,
+                        tint = MandiGreenReceivable,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (!invoiceNumber.isNullOrBlank()) "बिक्री पर्ची #$invoiceNumber" else "बिक्री #${sell.id.takeLast(5)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                }
+
+                Text(
+                    text = formatEpochDate(sell.entryDate),
+                    fontSize = 12.sp,
+                    color = MandiTextMuted
+                )
+            }
+
+            Text(
+                text = "$cropName • $bagsText • $weightText (@ $rateText)",
+                fontSize = 13.sp,
+                color = MandiTextSecondary
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "लेना है (Receivable)",
+                    fontSize = 12.sp,
+                    color = MandiGreenReceivable,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "₹$grossRupees",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiGreenReceivable,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                )
+            }
+
+            if (isVoid) {
+                Text(
+                    text = "रद्द · ${sell.voidReason ?: ""}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MandiTextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun FintechLendCard(
+    lend: com.appwork.mandisamiti.domain.model.LendEntry,
+    onLongPress: () -> Unit
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val isVoid = lend.isVoid
+    val amountRupees = MandiMathEngine.paisaToRupeesString(lend.amountPaisa)
+    val isAdvanceGiven = lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .combinedClickable(
+                onClick = {},
+                onLongClick = { if (!isVoid) onLongPress() }
+            )
+            .background(MandiSurface)
+            .border(1.dp, MandiBorder, shape)
+            .padding(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.alpha(if (isVoid) 0.55f else 1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = null,
+                        tint = if (isAdvanceGiven) MandiGreenReceivable else MandiRedPayable,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (isAdvanceGiven) "उधारी / पेशगी #${lend.id.takeLast(5)}" else "बोरी उधारी #${lend.id.takeLast(5)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                }
+
+                Text(
+                    text = formatEpochDate(lend.createdAt),
+                    fontSize = 12.sp,
+                    color = MandiTextMuted
+                )
+            }
+
+            if (!lend.notes.isNullOrBlank()) {
+                Text(
+                    text = lend.notes ?: "",
+                    fontSize = 13.sp,
+                    color = MandiTextSecondary
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isAdvanceGiven) "लेना है (Receivable)" else "बोरी वापस लेना है",
+                    fontSize = 12.sp,
+                    color = if (isAdvanceGiven) MandiGreenReceivable else MandiTextSecondary,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "₹$amountRupees",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isAdvanceGiven) MandiGreenReceivable else MandiTextPrimary,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                )
+            }
+
+            if (isVoid) {
+                Text(
+                    text = "रद्द · ${lend.voidReason ?: ""}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MandiTextSecondary
+                )
+            }
+        }
+    }
+}
+
+private fun formatEpochDate(epochMs: Long): String {
+    val dt = Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault())
+    val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val monthStr = monthNames.getOrElse(dt.monthNumber - 1) { dt.month.name.take(3) }
+    return "${dt.dayOfMonth} $monthStr ${dt.year}"
 }

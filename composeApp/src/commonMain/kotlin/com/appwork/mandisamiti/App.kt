@@ -75,10 +75,10 @@ sealed interface Screen {
     // Revamp Screens (Tasks 11-15)
     data class BuyEntry(val existingId: String? = null) : Screen
     data object BuyList : Screen
-    data class BuyReceipt(val id: String) : Screen
+    data class BuyReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data class SellEntry(val existingId: String? = null) : Screen
     data object SellList : Screen
-    data class SellReceipt(val id: String) : Screen
+    data class SellReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data object LendEntry : Screen
     data object LendList : Screen
     data object ExpenseEntry : Screen
@@ -87,10 +87,10 @@ sealed interface Screen {
 
 fun Screen.backTarget(): Screen = when (this) {
     is Screen.BuyEntry -> Screen.BuyList
-    is Screen.BuyReceipt -> Screen.BuyList
+    is Screen.BuyReceipt -> returnScreen ?: Screen.BuyList
     is Screen.BuyList -> Screen.Home
     is Screen.SellEntry -> Screen.SellList
-    is Screen.SellReceipt -> Screen.SellList
+    is Screen.SellReceipt -> returnScreen ?: Screen.SellList
     is Screen.SellList -> Screen.Home
     is Screen.LendEntry -> Screen.LendList
     is Screen.LendList -> Screen.Home
@@ -208,7 +208,8 @@ fun App(
                         expenseRepository = expenseRepo,
                         stockUseCase = stockUseCase,
                         viewModelScope = coroutineScope,
-                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
+                        pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() }
                     )
                 }
                 val registerViewModel = remember(shopId) {
@@ -327,6 +328,9 @@ fun App(
                         dealRepository = dealRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
                         syncScheduler = syncScheduler,
                         viewModelScope = coroutineScope
                     )
@@ -346,7 +350,9 @@ fun App(
                             }
                         }
                     },
-                    onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) }
+                    onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) },
+                    onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId)) },
+                    onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId)) }
                 )
             }
 

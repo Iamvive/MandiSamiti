@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -58,6 +59,9 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
+import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiBlueSell
@@ -127,6 +131,13 @@ fun DashboardScreen(
                 onExpense = onNavigateToExpense,
                 isEnglish = isEnglish
             )
+        }
+
+        // Entries that exist only on this phone: a trader must know before clearing data or changing phones.
+        if (uiState.pendingSyncCount > 0) {
+            item {
+                SyncPendingLine(count = uiState.pendingSyncCount, isEnglish = isEnglish)
+            }
         }
 
         // 3. Core Financial KPIs Grid
@@ -412,6 +423,36 @@ private fun QuickActionButton(
                 color = contentColor
             )
         }
+    }
+}
+
+@Composable
+private fun SyncPendingLine(count: Int, isEnglish: Boolean) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MandiAmberLight)
+            .border(1.dp, MandiAmberBorder, shape)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Sync,
+            contentDescription = null,
+            tint = MandiAmberDark,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = if (isEnglish) "$count entries are saved on this phone only. They upload when the internet is on."
+            else "$count एंट्रियाँ सिर्फ इस फोन में हैं। इंटरनेट मिलते ही सर्वर पर जाएँगी।",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = MandiAmberDark,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

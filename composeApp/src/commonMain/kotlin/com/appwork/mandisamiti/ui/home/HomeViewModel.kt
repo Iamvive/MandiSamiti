@@ -19,6 +19,8 @@ import com.appwork.mandisamiti.ui.dashboard.DashboardKpis
 import com.appwork.mandisamiti.ui.dashboard.computeKpis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,6 +66,8 @@ data class HomeUiState(
     val allPartiesWithBalance: List<PartyWithBalance> get() = allParties
 }
 
+private const val PENDING_SYNC_POLL_MS = 5_000L
+
 class HomeViewModel(
     private val shopId: String,
     private val shopProfileRepository: ShopProfileRepository,
@@ -75,7 +79,9 @@ class HomeViewModel(
     private val expenseRepository: ExpenseRepository? = null,
     private val stockUseCase: StockInventoryUseCase? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
-    private val onLocalWrite: () -> Unit = {}
+    private val onLocalWrite: () -> Unit = {},
+    /** Entries saved on this phone that have not reached the server yet; null in tests and previews. */
+    private val pendingSyncCountProvider: (suspend () -> Int)? = null
 ) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -84,6 +90,22 @@ class HomeViewModel(
     init {
         loadShopProfileAndParties()
         observeDashboardData()
+        observePendingSyncCount()
+    }
+
+    /** A cheap count query every few seconds, so the "waiting to upload" line clears soon after a sync lands. */
+    private fun observePendingSyncCount() {
+        val provider = pendingSyncCountProvider ?: return
+        viewModelScope.launch {
+            while (isActive) {
+                runCatching { provider() }.onSuccess { count ->
+                    if (count != _uiState.value.pendingSyncCount) {
+                        _uiState.value = _uiState.value.copy(pendingSyncCount = count)
+                    }
+                }
+                delay(PENDING_SYNC_POLL_MS)
+            }
+        }
     }
 
     /** Parties always follow the session's [shopId]; the profile row is only used for display. */

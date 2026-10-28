@@ -6,15 +6,21 @@ import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.InterestCalculation
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
+import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Deal
+import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
+import com.appwork.mandisamiti.domain.repository.BuyRepository
 import com.appwork.mandisamiti.domain.repository.CashTransactionRepository
 import com.appwork.mandisamiti.domain.repository.DealRepository
+import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
+import com.appwork.mandisamiti.domain.repository.SellRepository
 import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -33,6 +40,21 @@ import kotlinx.datetime.Clock
 
 sealed interface LedgerItem {
     val timestamp: Long
+
+    data class BuyItem(
+        val buy: BuyEntry,
+        override val timestamp: Long = buy.entryDate
+    ) : LedgerItem
+
+    data class SellItem(
+        val sell: SellEntry,
+        override val timestamp: Long = sell.entryDate
+    ) : LedgerItem
+
+    data class LendItem(
+        val lend: LendEntry,
+        override val timestamp: Long = lend.createdAt
+    ) : LedgerItem
 
     data class DealItem(
         val deal: Deal,
@@ -70,6 +92,9 @@ class PartyLedgerViewModel(
     private val dealRepository: DealRepository,
     private val shopProfileRepository: ShopProfileRepository,
     private val ttsManager: SoundboxTtsManager,
+    private val buyRepository: BuyRepository? = null,
+    private val sellRepository: SellRepository? = null,
+    private val lendRepository: LendRepository? = null,
     private val syncScheduler: SyncScheduler = NoOpSyncScheduler(),
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
@@ -96,6 +121,7 @@ class PartyLedgerViewModel(
         viewModelScope.launch {
             val party = partyRepository.getPartyById(partyId)
             _uiState.value = _uiState.value.copy(party = party)
+            observeLedgerStream(party?.name)
         }
 
         partyRepository.getPartyBalanceStream(partyId)
@@ -105,15 +131,40 @@ class PartyLedgerViewModel(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun observeLedgerStream(partyName: String?) {
+        val buysFlow = buyRepository?.getBuyEntriesStream(shopId) ?: flowOf(emptyList())
+        val sellsFlow = sellRepository?.getSellEntriesStream(shopId) ?: flowOf(emptyList())
+        val lendsFlow = lendRepository?.getLendEntriesStream(shopId) ?: flowOf(emptyList())
 
         combine(
             cashRepository.getTransactionsByPartyStream(partyId),
-            dealRepository.getDealsByShopStream(shopId)
-        ) { cashList, dealsList ->
-            val partyDeals = dealsList.filter { it.farmerId == partyId || it.buyerId == partyId }
+            dealRepository.getDealsByShopStream(shopId),
+            buysFlow,
+            sellsFlow,
+            lendsFlow
+        ) { cashList, dealsList, buysList, sellsList, lendsList ->
             val allItems = mutableListOf<LedgerItem>()
+
+            // 1. Cash transactions
             cashList.forEach { allItems.add(LedgerItem.CashItem(it)) }
-            partyDeals.forEach { allItems.add(LedgerItem.DealItem(it)) }
+
+            // 2. Buy entries (farmer purchases)
+            buysList.filter { !it.isVoid && (it.farmerId == partyId || (partyName != null && it.farmerId.equals(partyName, ignoreCase = true))) }
+                .forEach { allItems.add(LedgerItem.BuyItem(it)) }
+
+            // 3. Sell entries (buyer sales)
+            sellsList.filter { !it.isVoid && (it.buyerId == partyId || (partyName != null && it.buyerId.equals(partyName, ignoreCase = true))) }
+                .forEach { allItems.add(LedgerItem.SellItem(it)) }
+
+            // 4. Lend entries (advances / loans)
+            lendsList.filter { !it.isVoid && (it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true))) }
+                .forEach { allItems.add(LedgerItem.LendItem(it)) }
+
+            // 5. Legacy deals
+            dealsList.filter { !it.isVoid && (it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true)))) }
+                .forEach { allItems.add(LedgerItem.DealItem(it)) }
 
             allItems.sortedByDescending { it.timestamp }
         }.onEach { sortedItems ->
@@ -231,6 +282,9 @@ class PartyLedgerViewModel(
             when (item) {
                 is LedgerItem.DealItem -> dealRepository.voidDeal(item.deal.id, reason)
                 is LedgerItem.CashItem -> cashRepository.voidTransaction(item.transaction.id, reason)
+                is LedgerItem.BuyItem -> buyRepository?.voidBuyEntry(item.buy.id, reason)
+                is LedgerItem.SellItem -> sellRepository?.voidSellEntry(item.sell.id, reason)
+                is LedgerItem.LendItem -> lendRepository?.voidLendEntry(item.lend.id, reason)
             }
             syncScheduler.scheduleOneTimeSync()
             val speech = "प्रविष्टि रद्द की गई: ${reason.labelHi}"
