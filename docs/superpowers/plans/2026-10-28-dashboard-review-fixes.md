@@ -29,22 +29,22 @@
 - `HomeUiState.unlinkedLendAmountPaisa`: Sum of active lends not linked to any registered party in `partyEntity`.
 - `HomeUiState.unlinkedLendCount`: Count of unlinked active lend entries.
 
-- [ ] **Step 1: Write the failing test in HomeViewModelTest.kt**
+- [x] **Step 1: Write the failing test in HomeViewModelTest.kt**
   Write `testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked()`:
   Setup `HomeViewModel` with 1 lend entry for ₹10,000 (`1_000_000L`) and 0 registered parties.
   Assert `state.kpis.totalLendPaisa == 1_000_000L`, `state.totalMarketReceivablePaisa == 1_000_000L`, and `state.unlinkedLendAmountPaisa == 1_000_000L`.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run `./gradlew :composeApp:testDebugUnitTest --tests com.appwork.mandisamiti.ui.home.HomeViewModelTest.testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked`.
 
-- [ ] **Step 3: Implement the root cause fix in HomeViewModel and DashboardScreen**
+- [x] **Step 3: Implement the root cause fix in HomeViewModel and DashboardScreen**
   In `HomeViewModel.observeDashboardData()`, combine `lendsFlow` with `observeParties` state to calculate total market receivables and track unlinked lends.
   In `DashboardScreen.kt`, update the metric subtitle to show `"₹10,000 दिया, कोई खाता लिंक नहीं"` / `"₹10,000 given, no party linked"` when `receivableCount == 0 && totalMarketReceivablePaisa > 0`.
 
-- [ ] **Step 4: Run tests to confirm passing**
+- [x] **Step 4: Run tests to confirm passing**
   Run `./gradlew test` in `projects/MandiSamiti`.
 
-- [ ] **Step 5: Commit 1**
+- [x] **Step 5: Commit 1**
   Commit message: `fix(dashboard): incorporate lends into market receivables with honest unlinked state`
 
 ---
@@ -61,21 +61,21 @@
 - `GodownStockSummaryCard(stockLines, isEnglish, ...)`
 - Quick action sub-labels: "Buy / from farmer" and "Sell / to buyer" in English mode.
 
-- [ ] **Step 1: Write failing test in DashboardBilingualTest.kt**
+- [x] **Step 1: Write failing test in DashboardBilingualTest.kt**
   Verify that when `isEnglish = true`, `RevampKpiGrid` and `GodownStockSummaryCard` labels contain 0 Devanagari characters (`\u0900-\u097F`).
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run `./gradlew :composeApp:testDebugUnitTest --tests com.appwork.mandisamiti.ui.dashboard.DashboardBilingualTest`.
 
-- [ ] **Step 3: Pass isEnglish through and update all hardcoded strings**
+- [x] **Step 3: Pass isEnglish through and update all hardcoded strings**
   Update `RevampKpiGrid` to render English labels ("Total Purchases", "Total Sales", "Total Outstanding (Lend)", "Total Expenses") and Hindi labels.
   Update `GodownStockSummaryCard` ("Godown Stock", "No stock recorded", "Oversold warning") and header sound toggle ("Mute" / "म्यूट").
   Update quick action sub-labels to "Buy / from farmer" and "Sell / to buyer".
 
-- [ ] **Step 4: Run tests to confirm passing**
+- [x] **Step 4: Run tests to confirm passing**
   Run `./gradlew test` in `projects/MandiSamiti`.
 
-- [ ] **Step 5: Commit 2**
+- [x] **Step 5: Commit 2**
   Commit message: `feat(dashboard): full bilingual parity and conversational english sublabels`
 
 ---
@@ -91,20 +91,20 @@
 - Function: `opaqueTint(accent: Color, background: Color, alpha: Float = 0.12f): Color`.
 - Content description on action icons set to `null`.
 
-- [ ] **Step 1: Add tokens and opaque tint helper in Color.kt**
+- [x] **Step 1: Add tokens and opaque tint helper in Color.kt**
   Define `MandiBlueSell = Color(0xFF2563EB)`, `MandiOrangeLend = Color(0xFFD97706)`, `MandiPinkExpense = Color(0xFFDB2777)`, `MandiGreenBuy = Color(0xFF16A34A)`.
   Add `opaqueTint` compositing function so elevation shadows don't bleed through transparent cards.
 
-- [ ] **Step 2: Update QuickActionButton in DashboardScreen.kt**
+- [x] **Step 2: Update QuickActionButton in DashboardScreen.kt**
   Replace hardcoded hex `Color(0xFFF57C00)` etc. with named tokens.
   Use `opaqueTint(...)` for `containerColor` instead of raw `.copy(alpha = 0.12f)` over elevation.
   Verify sub-label contrast >= 4.5:1 against the composited background.
   Set icon `contentDescription = null`.
 
-- [ ] **Step 3: Verify NGDL token parity**
+- [x] **Step 3: Verify NGDL token parity**
   Run `python3 tests/ngdl-tokens/test_token_parity.py`.
 
-- [ ] **Step 4: Commit 3**
+- [x] **Step 4: Commit 3**
   Commit message: `fix(dashboard): use opaque NGDL surface tints, named tokens, and 4.5:1 contrast`
 
 ---
@@ -121,22 +121,22 @@
 - `MandiGreenReceivable`: Color(0xFF16A34A) (Money coming in / लेना है)
 - `MandiRedPayable`: Color(0xFFDC2626) (Money going out / देना है)
 
-- [ ] **Step 1: Invert color semantics in Color.kt and Theme.kt**
+- [x] **Step 1: Invert color semantics in Color.kt and Theme.kt**
   Rename and align:
   Receivable (money owed to trader) = Green (`#16A34A`).
   Payable (money trader owes) = Red (`#DC2626`).
 
-- [ ] **Step 2: Update DashboardScreen.kt metric cards**
+- [x] **Step 2: Update DashboardScreen.kt metric cards**
   "Receivable (Market)" -> `MandiGreenReceivable` with `TrendingUp`.
   "Payable (Farmers)" -> `MandiRedPayable` with `TrendingDown`.
 
-- [ ] **Step 3: Audit and update all callers across the codebase**
+- [x] **Step 3: Audit and update all callers across the codebase**
   Grep all occurrences of `MandiRedReceivable` and `MandiGreenPayable` to ensure no conflicting semantics remain in Cash Drawer or Ledger.
 
-- [ ] **Step 4: Run tests to confirm passing**
+- [x] **Step 4: Run tests to confirm passing**
   Run `./gradlew test` in `projects/MandiSamiti`.
 
-- [ ] **Step 5: Commit 4**
+- [x] **Step 5: Commit 4**
   Commit message: `fix(theme): invert financial color semantics to green for receivable and red for payable`
 
 ---
@@ -155,13 +155,13 @@
 - Section title and "View All": 16sp (was 14sp / 12sp)
 - Metric card subtitle: 14sp (was 11sp)
 
-- [ ] **Step 1: Update typography scales in DashboardScreen.kt and DashboardRevampComponents.kt**
+- [x] **Step 1: Update typography scales in DashboardScreen.kt and DashboardRevampComponents.kt**
   Update all text styles to meet or exceed 14sp floor, and 16sp for actionable text.
 
-- [ ] **Step 2: Test at 390dp width**
+- [x] **Step 2: Test at 390dp width**
   Verify no clipped text, no horizontal scroll, and clean wrapping.
 
-- [ ] **Step 3: Commit 5**
+- [x] **Step 3: Commit 5**
   Commit message: `style(dashboard): increase typography to 14sp floor and 16sp action labels for readability`
 
 ---
@@ -174,7 +174,7 @@
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/dashboard/DashboardRevampComponents.kt`
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/dashboard/DashboardScreen.kt`
 
-- [ ] **Step 1: Write failing unit test MandiCurrencyFormatterTest.kt**
+- [x] **Step 1: Write failing unit test MandiCurrencyFormatterTest.kt**
   Test cases:
   - 99,999 -> "₹99,999" (en/hi)
   - 1,00,000 -> "₹1.00 L" / "₹1.00 लाख"
@@ -182,21 +182,21 @@
   - 1,00,00,000 -> "₹1.00 Cr" / "₹1.00 करोड़"
   - 12,27,31,344 -> "₹12.27 Cr" / "₹12.27 करोड़"
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run `./gradlew :composeApp:testDebugUnitTest --tests com.appwork.mandisamiti.domain.math.MandiCurrencyFormatterTest`.
 
-- [ ] **Step 3: Implement MandiCurrencyFormatter**
+- [x] **Step 3: Implement MandiCurrencyFormatter**
   Implement `formatCompactRupees(paisa: Long, isEnglish: Boolean): String`.
 
-- [ ] **Step 4: Integrate compact formatter in KpiCard and DashboardMetricCard**
+- [x] **Step 4: Integrate compact formatter in KpiCard and DashboardMetricCard**
   Show compact amount by default, and reveal exact full figure on click/toggle.
   Make all-time scope explicit in labels to match actual SQL query scope.
   Add small neutral indicator if purchases exceed 100x sales.
 
-- [ ] **Step 5: Run tests to confirm passing**
+- [x] **Step 5: Run tests to confirm passing**
   Run `./gradlew test` in `projects/MandiSamiti`.
 
-- [ ] **Step 6: Commit 6**
+- [x] **Step 6: Commit 6**
   Commit message: `feat(dashboard): compact indian currency formatting and explicit all-time data scope`
 
 ---
@@ -207,24 +207,24 @@
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/dashboard/DashboardScreen.kt`
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/dashboard/DashboardRevampComponents.kt`
 
-- [ ] **Step 1: Add actionable button to empty state**
+- [x] **Step 1: Add actionable button to empty state**
   When `previewParties.isEmpty() && !uiState.isLoading`, render "पहला खाता जोड़ें" / "Add first account" button that calls `onNavigateToAllKhata()`.
 
-- [ ] **Step 2: Implement Skeleton Shimmer / Placeholder while isLoading**
+- [x] **Step 2: Implement Skeleton Shimmer / Placeholder while isLoading**
   Render placeholder animated / subtle gray cards for the 4 action tiles and 4 KPI cards when `uiState.isLoading` is true.
 
-- [ ] **Step 3: Remove duplicate shop name greeting banner**
+- [x] **Step 3: Remove duplicate shop name greeting banner**
   Remove lines 88-123 in `DashboardScreen.kt` which duplicated the shop name from the header.
 
-- [ ] **Step 4: Device verification on physical phone**
+- [x] **Step 4: Device verification on physical phone**
   Rebuild and install on Redmi Note 7 (`adb -s d93c743`).
   Capture screenshots in light and dark mode, Hindi and English.
   Save evidence into `docs/testing/evidence/dashboard/`.
 
-- [ ] **Step 5: Run tests and token parity**
+- [x] **Step 5: Run tests and token parity**
   Run `./gradlew test` in `projects/MandiSamiti` and `python3 tests/ngdl-tokens/test_token_parity.py`.
 
-- [ ] **Step 6: Commit 7**
+- [x] **Step 6: Commit 7**
   Commit message: `feat(dashboard): add skeleton loader, actionable empty state, and remove duplicate greeting banner`
 
 ---
