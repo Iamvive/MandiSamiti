@@ -257,4 +257,72 @@ class DailyRegisterViewModelTest {
 
         assertEquals(1, writes)
     }
+
+    @Test
+    fun testPhysicalCashReconciliationLifecycle() = runTest {
+        val database = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = io)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = io)
+        val ttsManager = SoundboxTtsManager()
+
+        val shopId = "shop-recon"
+        val partyId = "farmer-recon"
+        partyRepo.saveParty(Party(id = partyId, shopId = shopId, name = "राधेश्याम", village = "मथुरा", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+
+        val viewModel = DailyRegisterViewModel(
+            shopId = shopId,
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = ttsManager,
+            viewModelScope = backgroundScope
+        )
+
+        // Record 10,000 cash in
+        viewModel.recordDailyEntry(partyId = partyId, transactionType = TransactionType.JAMA_RECEIVED, amountRs = 10000L)
+        viewModel.events.first()
+
+        // Wait until inHandCashDrawerPaisa reflects 10,000 (1_000_000 paisa)
+        val initialState = viewModel.uiState.first { it.inHandCashDrawerPaisa == 1_000_000L }
+
+        // 1. Initial State: Uncounted
+        assertEquals(null, initialState.physicalCountPaisa)
+        assertEquals(BahiReconciliationStatus.NOT_COUNTED, initialState.reconciliationStatus)
+        assertEquals(1_000_000L, initialState.effectiveClosingCashPaisa)
+        assertEquals(0L, initialState.discrepancyPaisa)
+
+        // 2. Exact match: Counted ₹10,000
+        viewModel.setPhysicalCashCount(10000L)
+        val matchState = viewModel.uiState.first { it.physicalCountPaisa == 1_000_000L }
+        assertEquals(BahiReconciliationStatus.BALANCED, matchState.reconciliationStatus)
+        assertEquals(0L, matchState.discrepancyPaisa)
+        assertEquals(1_000_000L, matchState.effectiveClosingCashPaisa)
+        assertEquals(matchState.totalJamaSidePaisa, matchState.totalNameSidePaisa)
+
+        // 3. Shortage: Counted ₹9,500 (₹500 short)
+        viewModel.setPhysicalCashCount(9500L)
+        val shortState = viewModel.uiState.first { it.physicalCountPaisa == 950_000L }
+        assertEquals(BahiReconciliationStatus.DISCREPANCY, shortState.reconciliationStatus)
+        assertEquals(-50_000L, shortState.discrepancyPaisa)
+        assertEquals(950_000L, shortState.effectiveClosingCashPaisa)
+        assertEquals(1_000_000L, shortState.totalJamaSidePaisa)
+        assertEquals(950_000L, shortState.totalNameSidePaisa)
+
+        // 4. Surplus: Counted ₹10,200 (+₹200)
+        viewModel.setPhysicalCashCount(10200L)
+        val surplusState = viewModel.uiState.first { it.physicalCountPaisa == 1_020_000L }
+        assertEquals(BahiReconciliationStatus.DISCREPANCY, surplusState.reconciliationStatus)
+        assertEquals(20_000L, surplusState.discrepancyPaisa)
+        assertEquals(1_020_000L, surplusState.effectiveClosingCashPaisa)
+        assertEquals(1_000_000L, surplusState.totalJamaSidePaisa)
+        assertEquals(1_020_000L, surplusState.totalNameSidePaisa)
+
+        // 5. Reset count to null
+        viewModel.setPhysicalCashCount(null)
+        val resetState = viewModel.uiState.first { it.physicalCountPaisa == null }
+        assertEquals(BahiReconciliationStatus.NOT_COUNTED, resetState.reconciliationStatus)
+        assertEquals(1_000_000L, resetState.effectiveClosingCashPaisa)
+    }
 }

@@ -40,18 +40,40 @@ data class DailyRegisterUiState(
     val todayCashInPaisa: Long = 0L,
     val todayCashOutPaisa: Long = 0L,
     val inHandCashDrawerPaisa: Long = 0L,
+    val physicalCountPaisa: Long? = null,
     val todayTransactions: List<TransactionWithParty> = emptyList(),
     val availableParties: List<Party> = emptyList(),
     val isAddEntryDialogOpen: Boolean = false,
     val isDayClosingSummaryOpen: Boolean = false,
     val isSaving: Boolean = false
-)
+) {
+    val reconciliationStatus: BahiReconciliationStatus
+        get() = when {
+            physicalCountPaisa == null -> BahiReconciliationStatus.NOT_COUNTED
+            physicalCountPaisa == inHandCashDrawerPaisa -> BahiReconciliationStatus.BALANCED
+            else -> BahiReconciliationStatus.DISCREPANCY
+        }
+
+    val discrepancyPaisa: Long
+        get() = (physicalCountPaisa ?: inHandCashDrawerPaisa) - inHandCashDrawerPaisa
+
+    val effectiveClosingCashPaisa: Long
+        get() = physicalCountPaisa ?: inHandCashDrawerPaisa
+
+    val totalJamaSidePaisa: Long
+        get() = openingCashPaisa + todayCashInPaisa
+
+    val totalNameSidePaisa: Long
+        get() = todayCashOutPaisa + effectiveClosingCashPaisa
+}
 
 sealed interface DailyRegisterEvent {
     data class EntryRecorded(val speechText: String) : DailyRegisterEvent
 }
 
 enum class CashReconciliationStatus { MATCH, SURPLUS, SHORTAGE }
+
+enum class BahiReconciliationStatus { NOT_COUNTED, BALANCED, DISCREPANCY }
 
 data class CashReconciliation(
     val expectedPaisa: Long,
@@ -135,6 +157,18 @@ class DailyRegisterViewModel(
 
     fun closeDayClosingSummary() {
         _uiState.value = _uiState.value.copy(isDayClosingSummaryOpen = false)
+    }
+
+    fun setPhysicalCashCount(countRs: Long?) {
+        _uiState.value = _uiState.value.copy(
+            physicalCountPaisa = countRs?.let { it * 100L }
+        )
+    }
+
+    fun setPhysicalCashCountPaisa(countPaisa: Long?) {
+        _uiState.value = _uiState.value.copy(
+            physicalCountPaisa = countPaisa
+        )
     }
 
     fun reconcilePhysicalCash(countedRs: Long): CashReconciliation {

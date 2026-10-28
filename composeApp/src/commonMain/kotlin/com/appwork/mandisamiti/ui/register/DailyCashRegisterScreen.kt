@@ -29,8 +29,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -121,9 +123,9 @@ fun DailyCashRegisterScreen(
     val nameList = remember(uiState.todayTransactions) {
         uiState.todayTransactions.filter { it.transaction.transactionType == TransactionType.UDHAR_GIVEN }
     }
-    val totalJamaSidePaisa = uiState.openingCashPaisa + uiState.todayCashInPaisa
-    val totalNameSidePaisa = uiState.todayCashOutPaisa + uiState.inHandCashDrawerPaisa
-    val isTallied = totalJamaSidePaisa == totalNameSidePaisa
+    val totalJamaSidePaisa = uiState.totalJamaSidePaisa
+    val totalNameSidePaisa = uiState.totalNameSidePaisa
+    val isTallied = uiState.reconciliationStatus == BahiReconciliationStatus.BALANCED
 
     Scaffold(
         topBar = {
@@ -611,11 +613,16 @@ fun DailyCashRegisterScreen(
                                     item {
                                         BahiAnchorRow(
                                             title = if (isEnglish) "Cash In Hand" else "सिल्क बाकी",
-                                            subtitle = if (isEnglish) "Closing Drawer" else "गल्ले में शुद्ध नकदी",
-                                            amountPaisa = uiState.inHandCashDrawerPaisa,
+                                            subtitle = if (uiState.physicalCountPaisa != null) {
+                                                if (isEnglish) "Counted physical cash" else "गिनी हुई शुद्ध नकदी"
+                                            } else {
+                                                if (isEnglish) "Book closing (uncounted)" else "बही शेष (गिनती बाकी)"
+                                            },
+                                            amountPaisa = uiState.effectiveClosingCashPaisa,
                                             color = MandiNavy,
-                                            actionLabel = if (isEnglish) "Milana" else "मिलान",
+                                            actionLabel = if (uiState.physicalCountPaisa == null) (if (isEnglish) "Count" else "गिनती") else (if (isEnglish) "Edit" else "बदलें"),
                                             onClick = {
+                                                physicalCashInput = uiState.physicalCountPaisa?.let { (it / 100L).toString() } ?: ""
                                                 viewModel.openDayClosingSummary()
                                             }
                                         )
@@ -650,22 +657,55 @@ fun DailyCashRegisterScreen(
                                 Row(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(if (isTallied) MandiGreenLight else MandiAmberLight)
+                                        .clickable {
+                                            physicalCashInput = uiState.physicalCountPaisa?.let { (it / 100L).toString() } ?: ""
+                                            viewModel.openDayClosingSummary()
+                                        }
+                                        .background(
+                                            when (uiState.reconciliationStatus) {
+                                                BahiReconciliationStatus.NOT_COUNTED -> MandiBorder.copy(alpha = 0.35f)
+                                                BahiReconciliationStatus.BALANCED -> MandiGreenLight
+                                                BahiReconciliationStatus.DISCREPANCY -> MandiAmberLight
+                                            }
+                                        )
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
+                                    val badgeIcon = when (uiState.reconciliationStatus) {
+                                        BahiReconciliationStatus.NOT_COUNTED -> Icons.Default.Info
+                                        BahiReconciliationStatus.BALANCED -> Icons.Default.CheckCircle
+                                        BahiReconciliationStatus.DISCREPANCY -> Icons.Default.Warning
+                                    }
+                                    val badgeColor = when (uiState.reconciliationStatus) {
+                                        BahiReconciliationStatus.NOT_COUNTED -> MandiTextSecondary
+                                        BahiReconciliationStatus.BALANCED -> MandiGreenReceivable
+                                        BahiReconciliationStatus.DISCREPANCY -> MandiAmberDark
+                                    }
+                                    val badgeText = when (uiState.reconciliationStatus) {
+                                        BahiReconciliationStatus.NOT_COUNTED -> if (isEnglish) "Count Pending" else "गिनती बाकी"
+                                        BahiReconciliationStatus.BALANCED -> if (isEnglish) "Balanced" else "जोड़ बराबर"
+                                        BahiReconciliationStatus.DISCREPANCY -> {
+                                            val diffAbs = if (uiState.discrepancyPaisa >= 0) uiState.discrepancyPaisa else -uiState.discrepancyPaisa
+                                            val diffStr = MandiMathEngine.paisaToRupeesString(diffAbs)
+                                            if (uiState.discrepancyPaisa > 0) {
+                                                if (isEnglish) "Diff: +₹$diffStr" else "अंतर: +₹$diffStr"
+                                            } else {
+                                                if (isEnglish) "Diff: -₹$diffStr" else "अंतर: -₹$diffStr"
+                                            }
+                                        }
+                                    }
                                     Icon(
-                                        imageVector = Icons.Default.CheckCircle,
+                                        imageVector = badgeIcon,
                                         contentDescription = null,
-                                        tint = if (isTallied) MandiGreenReceivable else MandiAmberDark,
+                                        tint = badgeColor,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Text(
-                                        text = if (isTallied) (if (isEnglish) "Balanced" else "जोड़ बराबर") else (if (isEnglish) "Difference" else "अंतर"),
+                                        text = badgeText,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isTallied) MandiGreenReceivable else MandiAmberDark
+                                        color = badgeColor
                                     )
                                 }
 
@@ -804,11 +844,16 @@ fun DailyCashRegisterScreen(
                         item {
                             BahiAnchorRow(
                                 title = if (isEnglish) "Cash In Hand" else "सिल्क बाकी (Closing In Hand)",
-                                subtitle = if (isEnglish) "Physical cash balance in drawer" else "गल्ले में शुद्ध नकदी",
-                                amountPaisa = uiState.inHandCashDrawerPaisa,
+                                subtitle = if (uiState.physicalCountPaisa != null) {
+                                    if (isEnglish) "Counted physical cash in drawer" else "गल्ले में गिनी हुई शुद्ध नकदी"
+                                } else {
+                                    if (isEnglish) "Book closing cash in drawer" else "बही शेष (गिनती बाकी)"
+                                },
+                                amountPaisa = uiState.effectiveClosingCashPaisa,
                                 color = MandiNavy,
-                                actionLabel = if (isEnglish) "Milana" else "मिलान",
+                                actionLabel = if (uiState.physicalCountPaisa == null) (if (isEnglish) "Count" else "गिनती") else (if (isEnglish) "Edit" else "बदलें"),
                                 onClick = {
+                                    physicalCashInput = uiState.physicalCountPaisa?.let { (it / 100L).toString() } ?: ""
                                     viewModel.openDayClosingSummary()
                                 }
                             )
@@ -937,6 +982,47 @@ fun DailyCashRegisterScreen(
                         )
                     }
 
+                    // Physical Cash Actions (Save & Reset)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                viewModel.setPhysicalCashCount(physicalCashInput.toLongOrNull())
+                                viewModel.closeDayClosingSummary()
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiGreenReceivable,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = if (isEnglish) "Save Count" else "गिनती दर्ज करें",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+
+                        if (uiState.physicalCountPaisa != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.setPhysicalCashCount(null)
+                                    physicalCashInput = ""
+                                    viewModel.closeDayClosingSummary()
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = if (isEnglish) "Reset" else "हटाएं",
+                                    color = MandiBtnDangerBg,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+
                     // Soundbox Speech Action
                     OutlinedButton(
                         onClick = { viewModel.announceDayClosingSummary() },
@@ -950,7 +1036,11 @@ fun DailyCashRegisterScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val reportText = viewModel.generateDayClosingReportText(physicalCashInput.toLongOrNull())
+                        val count = physicalCashInput.toLongOrNull()
+                        if (count != null) {
+                            viewModel.setPhysicalCashCount(count)
+                        }
+                        val reportText = viewModel.generateDayClosingReportText(count)
                         if (onShareWhatsApp != null) {
                             onShareWhatsApp(reportText)
                         }
