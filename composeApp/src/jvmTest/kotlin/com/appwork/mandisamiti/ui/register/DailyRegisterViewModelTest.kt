@@ -357,4 +357,38 @@ class DailyRegisterViewModelTest {
         assertTrue(state.isNegativeCash)
         assertEquals("-₹11,500", MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa))
     }
+
+    @Test
+    fun testUnlinkedPartyFallbackUsesCategoryOrRemarksNotGenericKhata() = runTest {
+        val database = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = io)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = io)
+        val ttsManager = SoundboxTtsManager()
+
+        val shopId = "shop-fallback"
+        val viewModel = DailyRegisterViewModel(
+            shopId = shopId,
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = ttsManager,
+            viewModelScope = backgroundScope
+        )
+
+        // Record entry with unlinked party id and custom remarks "हम्माली खर्च"
+        viewModel.recordDailyEntry(
+            partyId = "unknown-party-1",
+            transactionType = TransactionType.UDHAR_GIVEN,
+            amountRs = 500L,
+            remarks = "हम्माली खर्च"
+        )
+        viewModel.events.first()
+
+        val state = viewModel.uiState.first { it.todayTransactions.isNotEmpty() }
+        val item = state.todayTransactions.first()
+        assertEquals("हम्माली खर्च", item.partyName)
+        assertTrue(item.partyName != "खाता")
+    }
 }

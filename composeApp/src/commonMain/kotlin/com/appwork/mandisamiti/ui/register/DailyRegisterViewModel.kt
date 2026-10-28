@@ -132,7 +132,13 @@ class DailyRegisterViewModel(
                     .filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                     .map { tx ->
                         val party = partyMap[tx.partyId]
-                        TransactionWithParty(transaction = tx, partyName = party?.name ?: "खाता", village = party?.village)
+                        val resolvedName = when {
+                            !party?.name.isNullOrBlank() -> party!!.name
+                            !tx.remarks.isNullOrBlank() -> tx.remarks!!
+                            tx.transactionType == TransactionType.JAMA_RECEIVED -> "नकद जमा"
+                            else -> "विविध निकासी"
+                        }
+                        TransactionWithParty(transaction = tx, partyName = resolvedName, village = party?.village)
                     }
                 _uiState.value = _uiState.value.copy(
                     availableParties = parties,
@@ -268,7 +274,12 @@ class DailyRegisterViewModel(
             onLocalWrite()
 
             val party = partyRepository.getPartyById(partyId)
-            val partyName = party?.name ?: "खाता"
+            val partyName = when {
+                !party?.name.isNullOrBlank() -> party!!.name
+                !remarks.isNullOrBlank() -> remarks
+                transactionType == TransactionType.JAMA_RECEIVED -> "नकद जमा"
+                else -> "विविध निकासी"
+            }
             val typeHindi = if (transactionType == TransactionType.JAMA_RECEIVED) "जमा मिला" else "उधार दिया"
             val speechText = "$partyName, ₹${MandiMathEngine.paisaToRupeesString(amountPaisa)} $typeHindi, गल्ला हिसाब में दर्ज।"
 

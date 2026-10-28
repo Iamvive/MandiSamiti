@@ -526,7 +526,7 @@ fun DailyCashRegisterScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (isEnglish) "Name (${nameList.size})" else "नामे पक्ष (${nameList.size})",
+                        text = if (isEnglish) "Naame (${nameList.size})" else "नामे पक्ष (${nameList.size})",
                         fontSize = 12.sp,
                         fontWeight = if (bahiViewMode == BahiViewMode.NAME) FontWeight.Bold else FontWeight.Medium,
                         color = if (bahiViewMode == BahiViewMode.NAME) MandiRedPayable else MandiTextSecondary
@@ -567,7 +567,7 @@ fun DailyCashRegisterScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MandiGreenReceivable))
                                         Text(
-                                            text = if (isEnglish) "JAMA (Cash In)" else "जमा पक्ष (आवक)",
+                                            text = if (isEnglish) "Jama (Cash In)" else "जमा पक्ष (आवक)",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MandiGreenReceivable
@@ -599,7 +599,7 @@ fun DailyCashRegisterScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MandiRedPayable))
                                         Text(
-                                            text = if (isEnglish) "NAME (Cash Out)" else "नामे पक्ष (निकासी)",
+                                            text = if (isEnglish) "Naame (Cash Out)" else "नामे पक्ष (निकासी)",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MandiRedPayable
@@ -649,7 +649,8 @@ fun DailyCashRegisterScreen(
                                         BahiTransactionItem(
                                             item = item,
                                             isDeposit = true,
-                                            isEnglish = isEnglish
+                                            isEnglish = isEnglish,
+                                            isCompact = true
                                         )
                                     }
 
@@ -685,7 +686,8 @@ fun DailyCashRegisterScreen(
                                         BahiTransactionItem(
                                             item = item,
                                             isDeposit = false,
-                                            isEnglish = isEnglish
+                                            isEnglish = isEnglish,
+                                            isCompact = true
                                         )
                                     }
 
@@ -801,8 +803,8 @@ fun DailyCashRegisterScreen(
 
                                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = if (isEnglish) "Total Name Side" else "कुल नामे जोड़ (दायां)",
-                                        fontSize = 10.sp,
+                                        text = if (isEnglish) "Total Naame Side" else "कुल नामे जोड़ (दायां)",
+                                        fontSize = 11.sp,
                                         color = MandiTextSecondary
                                     )
                                     Text(
@@ -963,8 +965,8 @@ fun DailyCashRegisterScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = if (isEnglish) "Total Name (Outflows + Silak)" else "कुल नामे जोड़ (खर्च + सिल्क बाकी)",
-                                        fontSize = 12.sp,
+                                        text = if (isEnglish) "Total Naame (Outflows + Silak)" else "कुल नामे जोड़ (खर्च + सिल्क बाकी)",
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MandiTextPrimary
                                     )
@@ -1460,29 +1462,48 @@ private fun CashBreakdownItem(
 private fun BahiTransactionItem(
     item: TransactionWithParty,
     isDeposit: Boolean,
-    isEnglish: Boolean
+    isEnglish: Boolean,
+    isCompact: Boolean = false
 ) {
     val remarks = item.transaction.remarks
     val isVoid = item.transaction.isVoid
     val amountStr = MandiMathEngine.paisaToRupeesString(item.transaction.amountPaisa)
+    val displayName = when {
+        item.partyName.isNotBlank() && item.partyName != "खाता" -> item.partyName
+        !remarks.isNullOrBlank() -> remarks
+        isDeposit -> if (isEnglish) "Jama (Cash In)" else "नकद जमा"
+        else -> if (isEnglish) "Naame (Cash Out)" else "विविध निकासी (नामे)"
+    }
+    val secondaryText = buildString {
+        if (!item.village.isNullOrBlank()) {
+            append(item.village)
+        }
+        if (!remarks.isNullOrBlank() && remarks != displayName) {
+            if (isNotEmpty()) append(" • ")
+            append(remarks)
+        }
+        if (isEmpty()) {
+            append(if (isDeposit) (if (isEnglish) "Jama" else "जमा") else (if (isEnglish) "Naame" else "नामे"))
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(MandiNeutralLight)
             .alpha(if (isVoid) 0.5f else 1f)
-            .padding(6.dp)
+            .padding(8.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = item.partyName,
-                    fontSize = 12.sp,
+                    text = displayName,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MandiTextPrimary,
                     maxLines = 1,
@@ -1491,7 +1512,7 @@ private fun BahiTransactionItem(
                 )
                 Text(
                     text = "${if (isDeposit) "+" else "-"}₹$amountStr",
-                    fontSize = 12.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
                     textDecoration = if (isVoid) TextDecoration.LineThrough else null
@@ -1504,8 +1525,8 @@ private fun BahiTransactionItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (!remarks.isNullOrBlank()) remarks else (if (isDeposit) (if (isEnglish) "Cash In" else "नकद जमा") else (if (isEnglish) "Cash Out" else "नकद निकासी")),
-                    fontSize = 10.sp,
+                    text = secondaryText,
+                    fontSize = 14.sp,
                     color = MandiTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1515,9 +1536,9 @@ private fun BahiTransactionItem(
                 if (item.transaction.paymentMode != PaymentMode.CASH) {
                     Text(
                         text = item.transaction.paymentMode.name,
-                        fontSize = 9.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MandiTextMuted
+                        color = MandiTextSecondary
                     )
                 }
             }
@@ -1525,7 +1546,7 @@ private fun BahiTransactionItem(
             if (isVoid) {
                 Text(
                     text = if (isEnglish) "VOID" else "रद्द प्रविष्टि",
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MandiRedPayable
                 )
@@ -1546,21 +1567,21 @@ private fun BahiAnchorRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(color.copy(alpha = 0.08f))
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .padding(6.dp)
+            .padding(8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = title,
-                        fontSize = 11.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = color,
                         maxLines = 1,
@@ -1569,19 +1590,19 @@ private fun BahiAnchorRow(
                     if (actionLabel != null) {
                         Text(
                             text = actionLabel,
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MandiAmberDark,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(MandiAmberLight)
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
                         )
                     }
                 }
                 Text(
                     text = subtitle,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                     color = MandiTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1589,7 +1610,7 @@ private fun BahiAnchorRow(
             }
             Text(
                 text = MandiCurrencyFormatter.formatRupees(amountPaisa),
-                fontSize = 12.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
