@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.register
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
@@ -182,10 +184,10 @@ fun DailyCashRegisterScreen(
                                 color = MandiTextSecondary
                             )
                             Text(
-                                text = "₹${MandiMathEngine.paisaToRupeesString(uiState.inHandCashDrawerPaisa)}",
+                                text = MandiCurrencyFormatter.formatRupees(uiState.inHandCashDrawerPaisa),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiNavy
+                                color = if (uiState.isNegativeCash) MandiRedPayable else MandiNavy
                             )
                         }
 
@@ -245,6 +247,61 @@ fun DailyCashRegisterScreen(
                             color = MandiRedPayable,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                }
+            }
+
+            // Negative Cash Warning Banner (Opening float missing / cash below zero)
+            if (uiState.isNegativeCash) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MandiAmberLight
+                    ),
+                    border = BorderStroke(1.dp, MandiAmberDark.copy(alpha = 0.35f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MandiAmberDark,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = if (isEnglish) "Cash is below zero. Opening balance may be missing." else "गल्ले में रकम माइनस है। शुरुआती रोकड़ दर्ज करें?",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiAmberDark,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = {
+                                openingBalanceInput = if (uiState.openingCashPaisa > 0) (uiState.openingCashPaisa / 100L).toString() else ""
+                                openingBalanceRemarks = ""
+                                showOpeningBalanceDialog = true
+                            },
+                            shape = RoundedCornerShape(6.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiAmberDark,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = if (isEnglish) "Set Float" else "रोकड़ दर्ज करें",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -1357,7 +1414,7 @@ private fun CashBreakdownItem(
                 }
             }
             Text(
-                text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
+                text = MandiCurrencyFormatter.formatRupees(amountPaisa),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
@@ -1498,7 +1555,7 @@ private fun BahiAnchorRow(
                 )
             }
             Text(
-                text = "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}",
+                text = MandiCurrencyFormatter.formatRupees(amountPaisa),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = color

@@ -65,6 +65,9 @@ data class DailyRegisterUiState(
 
     val totalNameSidePaisa: Long
         get() = todayCashOutPaisa + effectiveClosingCashPaisa
+
+    val isNegativeCash: Boolean
+        get() = inHandCashDrawerPaisa < 0L
 }
 
 sealed interface DailyRegisterEvent {

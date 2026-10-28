@@ -9,6 +9,19 @@ object MandiCurrencyFormatter {
     private const val RUPEES_PER_LAKH = 100_000L
 
     /**
+     * Formats [paisa] into a standard rupee string with Indian grouping:
+     * - Positive: "₹11,500"
+     * - Zero: "₹0"
+     * - Negative: "-₹11,500" (never "₹-11,500")
+     */
+    fun formatRupees(paisa: Long): String {
+        val isNegative = paisa < 0
+        val absPaisa = abs(paisa)
+        val formatted = MandiMathEngine.paisaToRupeesString(absPaisa)
+        return if (isNegative) "-₹$formatted" else "₹$formatted"
+    }
+
+    /**
      * Formats [paisa] into a compact Indian currency string:
      * - Below ₹1,00,000: Full comma-formatted amount (e.g. "₹99,999")
      * - ₹1,00,000 to ₹99,99,999: "₹X.XX L" (English) or "₹X.XX लाख" (Hindi)

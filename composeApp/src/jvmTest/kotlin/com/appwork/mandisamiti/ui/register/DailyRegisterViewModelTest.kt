@@ -5,6 +5,7 @@ import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionReposi
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
 import com.appwork.mandisamiti.database.createTestDatabase
+import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
@@ -324,5 +325,36 @@ class DailyRegisterViewModelTest {
         val resetState = viewModel.uiState.first { it.physicalCountPaisa == null }
         assertEquals(BahiReconciliationStatus.NOT_COUNTED, resetState.reconciliationStatus)
         assertEquals(1_000_000L, resetState.effectiveClosingCashPaisa)
+    }
+
+    @Test
+    fun testNegativeCashStateDetection() = runTest {
+        val database = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = io)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = io)
+        val ttsManager = SoundboxTtsManager()
+
+        val shopId = "shop-neg"
+        val partyId = "farmer-neg"
+        partyRepo.saveParty(Party(id = partyId, shopId = shopId, name = "राधेश्याम", village = "मथुरा", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+
+        val viewModel = DailyRegisterViewModel(
+            shopId = shopId,
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = ttsManager,
+            viewModelScope = backgroundScope
+        )
+
+        // Record 11,500 cash out with 0 cash in
+        viewModel.recordDailyEntry(partyId = partyId, transactionType = TransactionType.UDHAR_GIVEN, amountRs = 11500L)
+        viewModel.events.first()
+
+        val state = viewModel.uiState.first { it.inHandCashDrawerPaisa == -1_150_000L }
+        assertTrue(state.isNegativeCash)
+        assertEquals("-₹11,500", MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa))
     }
 }
