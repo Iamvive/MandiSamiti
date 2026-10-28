@@ -362,8 +362,8 @@ SELECT
     p.village AS party_village,
     p.party_type AS party_type,
     (
-        -- 1. Cash Advances given to party (+)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
+        -- 1. Cash Advances given to party (+) (excluding those tagged as lend advances to avoid double counting)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND remarks NOT LIKE 'उधार ऋण:%'), 0)
         +
         -- 2. Interest added to party (+)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)
@@ -379,6 +379,18 @@ SELECT
         -
         -- 6. Deals where party is FARMER: Shop owes farmer (-)
         COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
+        +
+        -- 7. Sell Entries where party is BUYER: Buyer owes shop (+)
+        COALESCE((SELECT SUM(total_receivable_paisa - received_paisa) FROM sellEntryEntity WHERE buyer_id = p.id AND is_deleted = 0 AND is_void = 0), 0)
+        -
+        -- 8. Buy Entries where party is FARMER: Shop owes farmer (-)
+        COALESCE((SELECT SUM(net_payable_paisa - paid_paisa) FROM buyEntryEntity WHERE farmer_id = p.id AND is_deleted = 0 AND is_void = 0), 0)
+        +
+        -- 9. Lend Entries (MONEY) where party owes shop (+)
+        COALESCE((SELECT SUM(amount_paisa) FROM lendEntryEntity WHERE party_id = p.id AND lend_type = 'MONEY' AND is_deleted = 0 AND is_void = 0), 0)
+        -
+        -- 10. Lend Settlements (-)
+        COALESCE((SELECT SUM(s.amount_paisa) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0), 0)
     ) AS balance_paisa
 FROM partyEntity p
 WHERE p.id = ? AND p.is_deleted = 0;

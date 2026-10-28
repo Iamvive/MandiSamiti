@@ -24,6 +24,34 @@ import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.StockLine
 
+object DashboardStrings {
+    fun kpiPurchases(isEnglish: Boolean) = if (isEnglish) "Total Purchases" else "कुल खरीद"
+    fun kpiSales(isEnglish: Boolean) = if (isEnglish) "Total Sales" else "कुल बिक्री"
+    fun kpiOutstanding(isEnglish: Boolean) = if (isEnglish) "Total Outstanding (Lend)" else "कुल उधार (बाकी)"
+    fun kpiExpenses(isEnglish: Boolean) = if (isEnglish) "Total Expenses" else "कुल खर्च"
+    fun profitLossNetLoss(isEnglish: Boolean) = if (isEnglish) "Estimated Net Loss" else "अनुमानित शुद्ध हानि (Loss)"
+    fun profitLossNetProfit(isEnglish: Boolean) = if (isEnglish) "Estimated Net Profit" else "अनुमानित शुद्ध लाभ (Profit)"
+    fun godownTitle(isEnglish: Boolean) = if (isEnglish) "Godown Stock" else "गोदाम स्टॉक (Godown Stock)"
+    fun godownViewAll(isEnglish: Boolean) = if (isEnglish) "View All" else "सभी देखें"
+    fun godownEmpty(isEnglish: Boolean) = if (isEnglish) "No stock recorded" else "कोई स्टॉक रिकॉर्ड नहीं"
+    fun godownOversold(isEnglish: Boolean) = if (isEnglish) "Oversold warning" else "स्टॉक से ज्यादा बिक्री"
+    fun quickActionBuy(isEnglish: Boolean) = if (isEnglish) "Buy" else "खरीद"
+    fun quickActionBuySub(isEnglish: Boolean) = if (isEnglish) "From Farmer" else "आवक"
+    fun quickActionSell(isEnglish: Boolean) = if (isEnglish) "Sell" else "बिक्री"
+    fun quickActionSellSub(isEnglish: Boolean) = if (isEnglish) "To Buyer" else "जावक"
+    fun quickActionLend(isEnglish: Boolean) = if (isEnglish) "Lend" else "उधार"
+    fun quickActionLendSub(isEnglish: Boolean) = if (isEnglish) "Advance" else "पेशगी"
+    fun quickActionExpense(isEnglish: Boolean) = if (isEnglish) "Expense" else "खर्च"
+    fun quickActionExpenseSub(isEnglish: Boolean) = if (isEnglish) "Mandi" else "मंडी व्यय"
+    fun soundVoiceOn(isEnglish: Boolean) = if (isEnglish) "Voice On" else "वॉइस ऑन"
+    fun soundMute(isEnglish: Boolean) = if (isEnglish) "Mute" else "म्यूट"
+    fun metricReceivableTitle(isEnglish: Boolean) = if (isEnglish) "Receivable (Market)" else "कुल लेना (बाजार बाकी)"
+    fun metricPayableTitle(isEnglish: Boolean) = if (isEnglish) "Payable (Farmers)" else "कुल देना (किसान जमा)"
+    fun activeAccountsHeader(isEnglish: Boolean) = if (isEnglish) "Active Ledger Accounts" else "सक्रिय खाते (हाल का लेन-देन)"
+    fun viewAll(isEnglish: Boolean) = if (isEnglish) "View All" else "सभी देखें"
+    fun noAccountsEmpty(isEnglish: Boolean) = if (isEnglish) "No accounts added yet" else "अभी कोई खाता नहीं है"
+}
+
 @Composable
 fun RevampKpiGrid(
     kpis: DashboardKpis,
@@ -31,18 +59,19 @@ fun RevampKpiGrid(
     onSellClick: () -> Unit,
     onLendClick: () -> Unit,
     onExpenseClick: () -> Unit,
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KpiCard(
-                label = "कुल खरीद",
+                label = DashboardStrings.kpiPurchases(isEnglish),
                 amountPaisa = kpis.totalBuyPaisa,
                 onClick = onBuyClick,
                 modifier = Modifier.weight(1f)
             )
             KpiCard(
-                label = "कुल बिक्री",
+                label = DashboardStrings.kpiSales(isEnglish),
                 amountPaisa = kpis.totalSellPaisa,
                 onClick = onSellClick,
                 modifier = Modifier.weight(1f)
@@ -50,13 +79,13 @@ fun RevampKpiGrid(
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KpiCard(
-                label = "कुल उधार (बाकी)",
+                label = DashboardStrings.kpiOutstanding(isEnglish),
                 amountPaisa = kpis.totalLendPaisa,
                 onClick = onLendClick,
                 modifier = Modifier.weight(1f)
             )
             KpiCard(
-                label = "कुल खर्च",
+                label = DashboardStrings.kpiExpenses(isEnglish),
                 amountPaisa = kpis.totalExpensePaisa,
                 onClick = onExpenseClick,
                 modifier = Modifier.weight(1f)
@@ -97,6 +126,7 @@ private fun KpiCard(
 @Composable
 fun ProfitLossCard(
     profitLossPaisa: Long,
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val isLoss = profitLossPaisa < 0
@@ -117,7 +147,7 @@ fun ProfitLossCard(
         ) {
             Column {
                 Text(
-                    text = if (isLoss) "अनुमानित शुद्ध हानि (Loss)" else "अनुमानित शुद्ध लाभ (Profit)",
+                    text = if (isLoss) DashboardStrings.profitLossNetLoss(isEnglish) else DashboardStrings.profitLossNetProfit(isEnglish),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -136,6 +166,7 @@ fun ProfitLossCard(
 fun GodownStockSummaryCard(
     stockLines: List<StockLine>,
     onViewAllClick: () -> Unit,
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -154,15 +185,21 @@ fun GodownStockSummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "गोदाम स्टॉक (Godown Stock)",
+                    text = DashboardStrings.godownTitle(isEnglish),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "सभी देखें")
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = DashboardStrings.godownViewAll(isEnglish)
+                )
             }
 
             if (stockLines.isEmpty()) {
-                Text("कोई स्टॉक रिकॉर्ड नहीं", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = DashboardStrings.godownEmpty(isEnglish),
+                    style = MaterialTheme.typography.bodySmall
+                )
             } else {
                 stockLines.take(3).forEach { line ->
                     val isNeg = line.onHandGrams < 0
@@ -176,7 +213,7 @@ fun GodownStockSummaryCard(
                             if (isNeg) {
                                 SuggestionChip(
                                     onClick = {},
-                                    label = { Text("स्टॉक से ज्यादा बिक्री") },
+                                    label = { Text(DashboardStrings.godownOversold(isEnglish)) },
                                     colors = SuggestionChipDefaults.suggestionChipColors(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         labelColor = MaterialTheme.colorScheme.onError

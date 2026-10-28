@@ -154,12 +154,16 @@ fun SoundboxTopBar(
             ) {
                 Icon(
                     imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                    contentDescription = "वॉइस साउंडबॉक्स स्थिति",
+                    contentDescription = if (isEnglish) "Voice Soundbox Status" else "वॉइस साउंडबॉक्स स्थिति",
                     tint = if (isSoundEnabled) MandiGreenText else MandiTextMuted,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
-                    text = if (isSoundEnabled) "वॉइस ऑन" else "म्यूट",
+                    text = if (isSoundEnabled) {
+                        if (isEnglish) "Voice On" else "वॉइस ऑन"
+                    } else {
+                        if (isEnglish) "Mute" else "म्यूट"
+                    },
                     color = if (isSoundEnabled) MandiGreenText else MandiTextSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold

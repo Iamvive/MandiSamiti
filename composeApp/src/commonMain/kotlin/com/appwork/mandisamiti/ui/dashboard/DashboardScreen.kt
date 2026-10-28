@@ -151,7 +151,8 @@ fun DashboardScreen(
                 onBuyClick = onNavigateToBuyList,
                 onSellClick = onNavigateToSellList,
                 onLendClick = onNavigateToLendList,
-                onExpenseClick = onNavigateToExpense
+                onExpenseClick = onNavigateToExpense,
+                isEnglish = isEnglish
             )
         }
 
@@ -321,7 +322,7 @@ fun QuickActionsRow(
     ) {
         QuickActionButton(
             label = if (isEnglish) "Buy" else "खरीद",
-            subLabel = if (isEnglish) "Inward" else "आवक",
+            subLabel = if (isEnglish) "From Farmer" else "आवक",
             icon = Icons.Default.ShoppingCart,
             containerColor = MandiGreenPayable.copy(alpha = 0.12f),
             contentColor = MandiGreenPayable,
@@ -330,7 +331,7 @@ fun QuickActionsRow(
         )
         QuickActionButton(
             label = if (isEnglish) "Sell" else "बिक्री",
-            subLabel = if (isEnglish) "Outward" else "जावक",
+            subLabel = if (isEnglish) "To Buyer" else "जावक",
             icon = Icons.AutoMirrored.Filled.TrendingUp,
             containerColor = MandiPrimaryAction.copy(alpha = 0.12f),
             contentColor = MandiPrimaryAction,
