@@ -1,5 +1,11 @@
 package com.appwork.mandisamiti.ui.dashboard
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +39,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -98,6 +106,11 @@ fun DashboardScreen(
             if (isEnglish) "From 0 accounts" else "0 खातों से"
     }
 
+    if (uiState.isLoading) {
+        DashboardSkeleton(modifier = modifier)
+        return
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -105,45 +118,7 @@ fun DashboardScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Sleek Greeting Banner
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MandiSurfaceElevated)
-                    .border(1.dp, MandiBorder, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Store,
-                        contentDescription = null,
-                        tint = MandiTextPrimary,
-                        modifier = Modifier.size(17.dp)
-                    )
-                    Text(
-                        text = if (isEnglish) "Welcome, ${uiState.shopProfile?.shopName ?: "Trader"}" else "नमस्ते, ${uiState.shopProfile?.shopName ?: "आढ़ती जी"}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiTextPrimary
-                    )
-                }
-                Text(
-                    text = if (isEnglish) "Today's Mandi" else "आज का बहीखाता",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MandiTextSecondary
-                )
-            }
-        }
-
-        // 2. Modern 4-Way Quick Actions
+        // 1. Modern 4-Way Quick Actions
         item {
             QuickActionsRow(
                 onBuy = onNavigateToBuy,
@@ -242,19 +217,39 @@ fun DashboardScreen(
             )
         }
 
-        if (previewParties.isEmpty() && !uiState.isLoading) {
+        if (previewParties.isEmpty()) {
             item {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 30.dp),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MandiSurfaceElevated)
+                        .border(1.dp, MandiBorder, RoundedCornerShape(12.dp))
+                        .padding(vertical = 24.dp, horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
                         text = if (isEnglish) "No accounts added yet" else "अभी कोई खाता नहीं है",
                         color = MandiTextMuted,
                         fontSize = 14.sp
                     )
+                    OutlinedButton(
+                        onClick = onNavigateToAllKhata,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isEnglish) "Add First Account" else "पहला खाता जोड़ें",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -419,4 +414,92 @@ private fun QuickActionButton(
         }
     }
 }
+
+@Composable
+fun DashboardSkeleton(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition()
+    val alpha by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val shimmerColor = MandiSurfaceElevated.copy(alpha = alpha)
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MandiBackground)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Quick actions skeleton
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(4) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(shimmerColor)
+                )
+            }
+        }
+
+        // KPI grid skeleton (2x2)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(2) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    repeat(2) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(80.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(shimmerColor)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Ledger metric cards skeleton
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            repeat(2) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(88.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(shimmerColor)
+                )
+            }
+        }
+
+        // Account list item skeleton
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(shimmerColor)
+                )
+            }
+        }
+    }
+}
+
 
