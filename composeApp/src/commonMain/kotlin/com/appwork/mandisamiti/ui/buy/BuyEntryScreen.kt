@@ -54,6 +54,8 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.repository.BuyRepository
 import com.appwork.mandisamiti.domain.validation.MandiValidators
+import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,7 +73,18 @@ fun BuyEntryScreen(
 ) {
     var existingEntry by remember { mutableStateOf<BuyEntry?>(null) }
     var showRateOutlierConfirmation by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
     var pendingEntryToSave by remember { mutableStateOf<BuyEntry?>(null) }
+
+    val isDirty = formState.hasUnsavedChanges(existingEntry)
+
+    MandiBackHandler(enabled = true) {
+        if (isDirty) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
+    }
 
     LaunchedEffect(existingId) {
         if (existingId != null && buyRepository != null) {
@@ -92,7 +105,15 @@ fun BuyEntryScreen(
             TopAppBar(
                 title = { Text(if (existingId == null) "नई खरीद एंट्री (आवक सौदा)" else "खरीद एंट्री बदलें") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (isDirty) {
+                                showDiscardDialog = true
+                            } else {
+                                onBack()
+                            }
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
                     }
                 }
@@ -504,6 +525,18 @@ fun BuyEntryScreen(
                         ) {
                             Text("सुधारें (Edit)")
                         }
+                    }
+                )
+            }
+
+            if (showDiscardDialog) {
+                DiscardDraftDialog(
+                    onConfirmDiscard = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    onDismiss = {
+                        showDiscardDialog = false
                     }
                 )
             }

@@ -37,7 +37,11 @@ import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -46,11 +50,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BillMode
-import com.appwork.mandisamiti.domain.model.SellPartyKind
-
-import androidx.compose.runtime.LaunchedEffect
 import com.appwork.mandisamiti.domain.model.SellEntry
+import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.domain.repository.SellRepository
+import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,10 +68,24 @@ fun SellEntryScreen(
     sellRepository: SellRepository? = null,
     modifier: Modifier = Modifier
 ) {
+    var existingEntry by remember { mutableStateOf<SellEntry?>(null) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isDirty = formState.hasUnsavedChanges(existingEntry)
+
+    MandiBackHandler(enabled = true) {
+        if (isDirty) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
+    }
+
     LaunchedEffect(existingId) {
         if (existingId != null && sellRepository != null) {
             val existing = sellRepository.getSellEntryById(existingId)
             if (existing != null) {
+                existingEntry = existing
                 formState.populateFrom(existing)
             }
         }
@@ -87,7 +105,15 @@ fun SellEntryScreen(
             TopAppBar(
                 title = { Text(if (existingId == null) "नई बिक्री एंट्री (जावक सौदा)" else "बिक्री सौदा बदलें") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (isDirty) {
+                                showDiscardDialog = true
+                            } else {
+                                onBack()
+                            }
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
                     }
                 }
@@ -521,6 +547,18 @@ fun SellEntryScreen(
                     "सुरक्षित करें (बिक्री सौदा पक्का)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (showDiscardDialog) {
+                DiscardDraftDialog(
+                    onConfirmDiscard = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    onDismiss = {
+                        showDiscardDialog = false
+                    }
                 )
             }
 

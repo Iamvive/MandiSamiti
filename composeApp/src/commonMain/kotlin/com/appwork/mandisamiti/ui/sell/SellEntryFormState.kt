@@ -300,4 +300,17 @@ class SellEntryFormState {
             )
         }
     }
+
+    fun hasUnsavedChanges(originalEntry: SellEntry? = null): Boolean {
+        if (originalEntry == null) {
+            return buyerName.isNotBlank() ||
+                phone.isNotBlank() ||
+                gstin.isNotBlank() ||
+                invoiceDate.isNotBlank() ||
+                lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() }
+        }
+        return buyerName != originalEntry.buyerId ||
+            phone != (originalEntry.vehicleNumber ?: "") ||
+            aggregatePreview().grossPaisa != originalEntry.grossPaisa
+    }
 }

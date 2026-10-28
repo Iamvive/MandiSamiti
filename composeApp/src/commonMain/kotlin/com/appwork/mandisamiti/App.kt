@@ -398,7 +398,6 @@ fun App(
             }
 
             is Screen.BuyEntry -> {
-                MandiBackHandler { currentScreen = screen.backTarget() }
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 BuyEntryScreen(
                     shopId = shopId ?: "",
@@ -451,7 +450,6 @@ fun App(
                 )
             }
             is Screen.SellEntry -> {
-                MandiBackHandler { currentScreen = screen.backTarget() }
                 SellEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
@@ -500,7 +498,6 @@ fun App(
                 )
             }
             is Screen.LendEntry -> {
-                MandiBackHandler { currentScreen = screen.backTarget() }
                 LendEntryScreen(
                     shopId = shopId ?: "",
                     onSaved = { entry ->
@@ -581,7 +578,6 @@ fun App(
                 )
             }
             is Screen.ExpenseEntry -> {
-                MandiBackHandler { currentScreen = screen.backTarget() }
                 ExpenseEntryScreen(
                     shopId = shopId ?: "",
                     onSaved = { entry ->

@@ -316,6 +316,24 @@ class BuyEntryFormState {
             )
         )
     }
+
+    fun hasUnsavedChanges(originalEntry: BuyEntry? = null): Boolean {
+        if (originalEntry == null) {
+            return farmerName.isNotBlank() ||
+                phone.isNotBlank() ||
+                village.isNotBlank() ||
+                advancePaid.isNotBlank() ||
+                lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() }
+        }
+        val origVillage = extractVillage(originalEntry.remarks) ?: ""
+        val origPhone = originalEntry.vehicleNumber ?: ""
+        val origAdvance = if (originalEntry.advancePaidPaisa > 0) MandiMathEngine.paisaToInputString(originalEntry.advancePaidPaisa) else ""
+        return farmerName != originalEntry.farmerId ||
+            phone != origPhone ||
+            village != origVillage ||
+            advancePaid != origAdvance ||
+            preview().grossPaisa != originalEntry.grossPaisa
+    }
 }
 
 fun extractVillage(remarks: String?): String? {

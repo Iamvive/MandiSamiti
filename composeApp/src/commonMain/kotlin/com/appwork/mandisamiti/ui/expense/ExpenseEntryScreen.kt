@@ -36,6 +36,8 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.ExpenseCategory
 import com.appwork.mandisamiti.domain.model.ExpenseEntry
 import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
+import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import kotlinx.datetime.Clock
 
 fun ExpenseCategory.labelHi(): String = when (this) {
@@ -60,6 +62,17 @@ fun ExpenseEntryScreen(
     var paidTo by remember { mutableStateOf("") }
     var paymentMode by remember { mutableStateOf(ExpensePaymentMode.CASH) }
     var remarks by remember { mutableStateOf("") }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isDirty = amount.isNotBlank() || paidTo.isNotBlank() || remarks.isNotBlank()
+
+    MandiBackHandler(enabled = true) {
+        if (isDirty) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
+    }
 
     val canSave = amount.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amount) > 0L
 
@@ -68,7 +81,15 @@ fun ExpenseEntryScreen(
             TopAppBar(
                 title = { Text("खर्च दर्ज करें (Expense)") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (isDirty) {
+                                showDiscardDialog = true
+                            } else {
+                                onBack()
+                            }
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
                     }
                 }
@@ -161,6 +182,18 @@ fun ExpenseEntryScreen(
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Text("खर्च सुरक्षित करें")
+            }
+
+            if (showDiscardDialog) {
+                DiscardDraftDialog(
+                    onConfirmDiscard = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    onDismiss = {
+                        showDiscardDialog = false
+                    }
+                )
             }
         }
     }

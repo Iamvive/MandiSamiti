@@ -34,6 +34,8 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +54,23 @@ fun LendEntryScreen(
     var weightKg by remember { mutableStateOf("") }
     var expectedReturnDate by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val isDirty = partyPhoneOrName.isNotBlank() ||
+        amountRupees.isNotBlank() ||
+        commodityName.isNotBlank() ||
+        bagsCount.isNotBlank() ||
+        weightKg.isNotBlank() ||
+        expectedReturnDate.isNotBlank() ||
+        notes.isNotBlank()
+
+    MandiBackHandler(enabled = true) {
+        if (isDirty) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
+    }
 
     val isMoney = lendType == LendType.MONEY
     val canSave = partyPhoneOrName.isNotBlank() && if (isMoney) {
@@ -65,7 +84,15 @@ fun LendEntryScreen(
             TopAppBar(
                 title = { Text("उधार दर्ज करें (Lend)") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (isDirty) {
+                                showDiscardDialog = true
+                            } else {
+                                onBack()
+                            }
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
                     }
                 }
@@ -180,6 +207,18 @@ fun LendEntryScreen(
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Text("उधार सुरक्षित करें")
+            }
+
+            if (showDiscardDialog) {
+                DiscardDraftDialog(
+                    onConfirmDiscard = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    onDismiss = {
+                        showDiscardDialog = false
+                    }
+                )
             }
         }
     }
