@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,7 +49,8 @@ fun SoundboxTopBar(
     pendingSyncCount: Int = 0,
     isEnglish: Boolean = false,
     onOpenHelp: (() -> Unit)? = null,
-    navigationIcon: (@Composable () -> Unit)? = null
+    navigationIcon: (@Composable () -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     val soundBtnShape = RoundedCornerShape(20.dp)
     val monogramInitial = shopName.trim().take(1).ifEmpty { "मं" }
@@ -108,6 +110,9 @@ fun SoundboxTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (actions != null) {
+                actions()
+            }
             if (pendingSyncCount > 0) {
                 Row(
                     modifier = Modifier
