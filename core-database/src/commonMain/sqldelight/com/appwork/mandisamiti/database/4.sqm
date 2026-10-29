@@ -1,0 +1,24 @@
+-- Bahi slice 1 (D4, D9, D2): unblock Codex follow-ups. Additive only; existing rows keep working.
+-- Existing settlements were principal-only, so principal_paisa is backfilled from amount_paisa.
+ALTER TABLE lendSettlementEntity ADD COLUMN principal_paisa INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE lendSettlementEntity ADD COLUMN interest_paisa INTEGER NOT NULL DEFAULT 0;
+UPDATE lendSettlementEntity SET principal_paisa = amount_paisa;
+
+ALTER TABLE buyEntryEntity ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH';
+ALTER TABLE sellEntryEntity ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH';
+
+CREATE TABLE dayClosingEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    day_date INTEGER NOT NULL,
+    closed_at INTEGER NOT NULL,
+    expected_paisa INTEGER NOT NULL DEFAULT 0,
+    counted_paisa INTEGER NOT NULL DEFAULT 0,
+    difference_paisa INTEGER NOT NULL DEFAULT 0,
+    reason TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1
+);
+CREATE UNIQUE INDEX idx_day_closing_shop_day ON dayClosingEntity(shop_id, day_date);
