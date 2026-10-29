@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface LendRepository {
     fun getLendEntriesStream(shopId: String): Flow<List<LendEntry>>
+    fun getSettlementsStream(shopId: String): Flow<List<LendSettlement>>
     suspend fun getLendEntryById(id: String): LendEntry?
     suspend fun getSettlements(lendId: String): List<LendSettlement>
     suspend fun saveLendEntry(entry: LendEntry)

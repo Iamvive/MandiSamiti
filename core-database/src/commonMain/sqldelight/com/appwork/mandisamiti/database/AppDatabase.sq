@@ -363,13 +363,13 @@ SELECT
     p.party_type AS party_type,
     (
         -- 1. Cash Advances given to party (+) (excluding those tagged as lend advances to avoid double counting)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR remarks NOT LIKE 'उधार ऋण:%')), 0)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR (remarks NOT LIKE 'उधार ऋण%' AND remarks NOT LIKE '%[LEND:%' AND remarks NOT LIKE 'LEND%'))), 0)
         +
         -- 2. Interest added to party (+)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)
         -
-        -- 3. Cash Received from party (-)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0 AND is_void = 0), 0)
+        -- 3. Cash Received from party (-) (excluding loan repayments to avoid double counting with term 10)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR (remarks NOT LIKE 'उधार वापसी%' AND remarks NOT LIKE '%[SETTLE:%' AND remarks NOT LIKE 'LEND_REPAY%'))), 0)
         -
         -- 4. Discounts given to party (-)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'DISCOUNT_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
@@ -390,7 +390,7 @@ SELECT
         COALESCE((SELECT SUM(amount_paisa) FROM lendEntryEntity WHERE party_id = p.id AND lend_type = 'MONEY' AND is_deleted = 0 AND is_void = 0), 0)
         -
         -- 10. Lend Settlements (-)
-        COALESCE((SELECT SUM(s.amount_paisa) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0), 0)
+        COALESCE((SELECT SUM(s.amount_paisa) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0 AND l.is_void = 0 AND l.is_deleted = 0), 0)
     ) AS balance_paisa
 FROM partyEntity p
 WHERE p.id = ? AND p.is_deleted = 0;
@@ -632,6 +632,15 @@ INSERT OR REPLACE INTO lendEntryEntity(
 getLendSettlementsByLend:
 SELECT * FROM lendSettlementEntity WHERE lend_id = ? AND is_void = 0 ORDER BY settled_at ASC;
 
+getAllLendSettlementsByLend:
+SELECT * FROM lendSettlementEntity WHERE lend_id = ? ORDER BY settled_at ASC;
+
+getLendSettlementById:
+SELECT * FROM lendSettlementEntity WHERE id = ?;
+
+getLendSettlementsByShop:
+SELECT * FROM lendSettlementEntity WHERE shop_id = ? AND is_void = 0 ORDER BY settled_at ASC;
+
 insertLendSettlement:
 INSERT OR REPLACE INTO lendSettlementEntity(
     id, shop_id, lend_id, settled_at, amount_paisa, weight_grams, bags_count,
@@ -639,7 +648,10 @@ INSERT OR REPLACE INTO lendSettlementEntity(
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getExpensesByShop:
-SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
+SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 ORDER BY entry_date DESC;
+
+getCashTransactionsByTag:
+SELECT * FROM cashTransactionEntity WHERE is_deleted = 0 AND is_void = 0 AND remarks LIKE ('%' || :tag || '%');
 
 getExpenseById:
 SELECT * FROM expenseEntryEntity WHERE id = ?;

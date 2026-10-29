@@ -62,6 +62,125 @@ class OfflineFirstCashTransactionRepository(
             )
             insertOrReplace(voided)
             recordRevision(voided, "VOID", now)
+
+            // Cascade to settlements / lends / expenses
+            val remarks = current.remarks ?: ""
+            if (remarks.contains("[SETTLE:")) {
+                val tag = remarks.substringAfter("[SETTLE:").substringBefore("]")
+                val parts = tag.split(":")
+                val settleId = parts.getOrNull(0)
+                val lendId = parts.getOrNull(1)
+                if (settleId != null) {
+                    val sEntity = queries.getLendSettlementById(settleId).executeAsOneOrNull()
+                    if (sEntity != null && sEntity.is_void == 0L) {
+                        queries.insertLendSettlement(
+                            id = sEntity.id,
+                            shop_id = sEntity.shop_id,
+                            lend_id = sEntity.lend_id,
+                            settled_at = sEntity.settled_at,
+                            amount_paisa = sEntity.amount_paisa,
+                            weight_grams = sEntity.weight_grams,
+                            bags_count = sEntity.bags_count,
+                            created_at = sEntity.created_at,
+                            updated_at = now,
+                            sync_status = 0L,
+                            revision = sEntity.revision + 1L,
+                            is_void = 1L,
+                            void_reason = reason.name
+                        )
+                    }
+                    if (lendId != null) {
+                        val lendEntity = queries.getLendEntryById(lendId).executeAsOneOrNull()
+                        if (lendEntity != null && lendEntity.is_void == 0L) {
+                            val activeSettlements = queries.getLendSettlementsByLend(lendId).executeAsList()
+                                .filter { it.id != settleId && it.is_void == 0L }
+                            val repaidAmount = activeSettlements.sumOf { it.amount_paisa }
+                            val repaidGrams = activeSettlements.sumOf { it.weight_grams }
+                            val newStatus = when (lendEntity.lend_type) {
+                                "MONEY" -> when {
+                                    repaidAmount >= lendEntity.amount_paisa -> "SETTLED"
+                                    repaidAmount > 0 -> "PARTIAL"
+                                    else -> "OPEN"
+                                }
+                                else -> when {
+                                    repaidGrams >= lendEntity.weight_grams -> "SETTLED"
+                                    repaidGrams > 0 -> "PARTIAL"
+                                    else -> "OPEN"
+                                }
+                            }
+                            queries.insertLendEntry(
+                                id = lendEntity.id,
+                                shop_id = lendEntity.shop_id,
+                                party_id = lendEntity.party_id,
+                                lend_type = lendEntity.lend_type,
+                                entry_date = lendEntity.entry_date,
+                                amount_paisa = lendEntity.amount_paisa,
+                                commodity_id = lendEntity.commodity_id,
+                                bags_count = lendEntity.bags_count,
+                                weight_grams = lendEntity.weight_grams,
+                                expected_return_date = lendEntity.expected_return_date,
+                                notes = lendEntity.notes,
+                                status = newStatus,
+                                created_at = lendEntity.created_at,
+                                updated_at = now,
+                                is_deleted = lendEntity.is_deleted,
+                                sync_status = 0L,
+                                revision = lendEntity.revision + 1L,
+                                is_void = lendEntity.is_void,
+                                void_reason = lendEntity.void_reason
+                            )
+                        }
+                    }
+                }
+            } else if (remarks.contains("[LEND:")) {
+                val lendId = remarks.substringAfter("[LEND:").substringBefore("]")
+                val lendEntity = queries.getLendEntryById(lendId).executeAsOneOrNull()
+                if (lendEntity != null && lendEntity.is_void == 0L) {
+                    queries.insertLendEntry(
+                        id = lendEntity.id,
+                        shop_id = lendEntity.shop_id,
+                        party_id = lendEntity.party_id,
+                        lend_type = lendEntity.lend_type,
+                        entry_date = lendEntity.entry_date,
+                        amount_paisa = lendEntity.amount_paisa,
+                        commodity_id = lendEntity.commodity_id,
+                        bags_count = lendEntity.bags_count,
+                        weight_grams = lendEntity.weight_grams,
+                        expected_return_date = lendEntity.expected_return_date,
+                        notes = lendEntity.notes,
+                        status = lendEntity.status,
+                        created_at = lendEntity.created_at,
+                        updated_at = now,
+                        is_deleted = lendEntity.is_deleted,
+                        sync_status = 0L,
+                        revision = lendEntity.revision + 1L,
+                        is_void = 1L,
+                        void_reason = reason.name
+                    )
+                }
+            } else if (remarks.contains("[EXPENSE:")) {
+                val expId = remarks.substringAfter("[EXPENSE:").substringBefore("]")
+                val expEntity = queries.getExpenseById(expId).executeAsOneOrNull()
+                if (expEntity != null && expEntity.is_void == 0L) {
+                    queries.insertExpenseEntry(
+                        id = expEntity.id,
+                        shop_id = expEntity.shop_id,
+                        entry_date = expEntity.entry_date,
+                        category = expEntity.category,
+                        amount_paisa = expEntity.amount_paisa,
+                        paid_to = expEntity.paid_to,
+                        payment_mode = expEntity.payment_mode,
+                        remarks = expEntity.remarks,
+                        created_at = expEntity.created_at,
+                        updated_at = now,
+                        is_deleted = expEntity.is_deleted,
+                        sync_status = 0L,
+                        revision = expEntity.revision + 1L,
+                        is_void = 1L,
+                        void_reason = reason.name
+                    )
+                }
+            }
         }
     }
 

@@ -722,7 +722,7 @@ private fun FintechCashCard(
     val isVoid = transaction.isVoid
     val isDeposit = transaction.transactionType == TransactionType.JAMA_RECEIVED
     val shape = RoundedCornerShape(10.dp)
-    val remarks = transaction.remarks
+    val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(transaction.remarks)
 
     Box(
         modifier = Modifier

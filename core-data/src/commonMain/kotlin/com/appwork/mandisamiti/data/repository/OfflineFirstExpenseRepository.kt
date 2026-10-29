@@ -55,6 +55,41 @@ class OfflineFirstExpenseRepository(
             )
             insertOrReplace(voided)
             recordRevision(voided, "VOID", now)
+
+            // Cascade to linked cash transactions
+            val expTagMatches = queries.getCashTransactionsByTag("[EXPENSE:$id]").executeAsList()
+            expTagMatches.filter { it.is_void == 0L }.forEach { txEntity ->
+                queries.insertCashTransaction(
+                    id = txEntity.id,
+                    shop_id = txEntity.shop_id,
+                    party_id = txEntity.party_id,
+                    deal_id = txEntity.deal_id,
+                    transaction_type = txEntity.transaction_type,
+                    amount_paisa = txEntity.amount_paisa,
+                    payment_mode = txEntity.payment_mode,
+                    transaction_date = txEntity.transaction_date,
+                    voice_note_uri = txEntity.voice_note_uri,
+                    remarks = txEntity.remarks,
+                    created_at = txEntity.created_at,
+                    updated_at = now,
+                    is_deleted = txEntity.is_deleted,
+                    sync_status = 0L,
+                    revision = txEntity.revision + 1L,
+                    is_void = 1L,
+                    void_reason = reason.name
+                )
+                queries.insertRevision(
+                    id = IdGenerator.newId(),
+                    shop_id = txEntity.shop_id,
+                    entry_id = txEntity.id,
+                    entry_kind = "CASH",
+                    revision = txEntity.revision + 1L,
+                    change_kind = "VOID",
+                    snapshot_json = "",
+                    void_reason = reason.name,
+                    changed_at = now
+                )
+            }
         }
     }
 

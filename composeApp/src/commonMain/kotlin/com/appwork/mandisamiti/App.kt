@@ -504,6 +504,8 @@ fun App(
                         coroutineScope.launch {
                             lendRepo.saveLendEntry(entry)
                             if (entry.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY && entry.amountPaisa > 0L) {
+                                val noteText = entry.notes?.trim()
+                                val rem = if (noteText.isNullOrBlank()) "उधार ऋण" else "उधार ऋण: $noteText"
                                 cashRepo.recordTransaction(
                                     com.appwork.mandisamiti.domain.model.CashTransaction(
                                         id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
@@ -513,7 +515,7 @@ fun App(
                                         amountPaisa = entry.amountPaisa,
                                         paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
                                         transactionDate = entry.entryDate,
-                                        remarks = "उधार ऋण: ${entry.notes ?: ""}".trim(),
+                                        remarks = "$rem [LEND:${entry.id}]",
                                         createdAt = entry.createdAt,
                                         updatedAt = entry.updatedAt,
                                     )
@@ -535,9 +537,10 @@ fun App(
                     onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
                         coroutineScope.launch {
                             val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            val settleId = com.appwork.mandisamiti.domain.id.IdGenerator.newId()
                             lendRepo.settle(
                                 com.appwork.mandisamiti.domain.model.LendSettlement(
-                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    id = settleId,
                                     shopId = shopId ?: "",
                                     lendId = lendId,
                                     settledAt = now,
@@ -550,6 +553,8 @@ fun App(
                             )
                             if (amountPaisa > 0L) {
                                 val settledLend = lends.find { it.id == lendId }
+                                val noteText = note.trim()
+                                val rem = if (noteText.isBlank()) "उधार वापसी जमा" else "उधार वापसी जमा: $noteText"
                                 cashRepo.recordTransaction(
                                     com.appwork.mandisamiti.domain.model.CashTransaction(
                                         id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
@@ -559,7 +564,7 @@ fun App(
                                         amountPaisa = amountPaisa,
                                         paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
                                         transactionDate = now,
-                                        remarks = "उधार वापसी जमा: ${note ?: ""}".trim(),
+                                        remarks = "$rem [SETTLE:$settleId:$lendId]",
                                         createdAt = now,
                                         updatedAt = now,
                                     )
@@ -584,6 +589,8 @@ fun App(
                         coroutineScope.launch {
                             expenseRepo.saveExpense(entry)
                             if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
+                                val expRemarks = entry.remarks?.trim()
+                                val baseRem = if (expRemarks.isNullOrBlank()) "खर्च: ${entry.category.labelHi()}" else "खर्च: ${entry.category.labelHi()} $expRemarks"
                                 cashRepo.recordTransaction(
                                     com.appwork.mandisamiti.domain.model.CashTransaction(
                                         id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
@@ -593,7 +600,7 @@ fun App(
                                         amountPaisa = entry.amountPaisa,
                                         paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
                                         transactionDate = entry.entryDate,
-                                        remarks = "खर्च: ${entry.category.labelHi()} ${entry.remarks ?: ""}".trim(),
+                                        remarks = "$baseRem [EXPENSE:${entry.id}]",
                                         createdAt = entry.createdAt,
                                         updatedAt = entry.updatedAt,
                                     )

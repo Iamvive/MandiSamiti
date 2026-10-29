@@ -1613,7 +1613,7 @@ private fun BahiTransactionItem(
     isEnglish: Boolean,
     isCompact: Boolean = false
 ) {
-    val remarks = item.transaction.remarks
+    val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(item.transaction.remarks)
     val isVoid = item.transaction.isVoid
     val amountStr = MandiMathEngine.paisaToRupeesString(item.transaction.amountPaisa)
     val displayName = when {
