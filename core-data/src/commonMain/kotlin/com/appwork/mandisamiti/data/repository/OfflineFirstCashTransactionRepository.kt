@@ -73,21 +73,7 @@ class OfflineFirstCashTransactionRepository(
                 if (settleId != null) {
                     val sEntity = queries.getLendSettlementById(settleId).executeAsOneOrNull()
                     if (sEntity != null && sEntity.is_void == 0L) {
-                        queries.insertLendSettlement(
-                            id = sEntity.id,
-                            shop_id = sEntity.shop_id,
-                            lend_id = sEntity.lend_id,
-                            settled_at = sEntity.settled_at,
-                            amount_paisa = sEntity.amount_paisa,
-                            weight_grams = sEntity.weight_grams,
-                            bags_count = sEntity.bags_count,
-                            created_at = sEntity.created_at,
-                            updated_at = now,
-                            sync_status = 0L,
-                            revision = sEntity.revision + 1L,
-                            is_void = 1L,
-                            void_reason = reason.name
-                        )
+                        queries.voidLendSettlement(reason.name, sEntity.revision + 1L, now, sEntity.id)
                         cascadeRevision(sEntity.shop_id, sEntity.id, "LEND_SETTLEMENT", sEntity.revision + 1L, "VOID", reason, now)
                     }
                     if (lendId != null) {
@@ -95,7 +81,7 @@ class OfflineFirstCashTransactionRepository(
                         if (lendEntity != null && lendEntity.is_void == 0L) {
                             val activeSettlements = queries.getLendSettlementsByLend(lendId).executeAsList()
                                 .filter { it.id != settleId && it.is_void == 0L }
-                            val repaidAmount = activeSettlements.sumOf { it.amount_paisa }
+                            val repaidAmount = activeSettlements.sumOf { it.principal_paisa }
                             val repaidGrams = activeSettlements.sumOf { it.weight_grams }
                             val newStatus = when (lendEntity.lend_type) {
                                 "MONEY" -> when {

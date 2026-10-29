@@ -484,6 +484,10 @@ class SyncEngine(
                 }
 
                 res.lend_settlements.forEach { s ->
+                    // The server contract has no principal/interest split yet (open item). Keep the local split when the
+                    // amount is unchanged; otherwise treat the whole amount as principal, as legacy rows are.
+                    val local = queries.getLendSettlementById(s.id).executeAsOneOrNull()
+                        ?.takeIf { it.amount_paisa == s.amount_paisa }
                     queries.deleteSyncedLendSettlement(s.id)
                     queries.insertLendSettlementIfAbsent(
                         id = s.id,
@@ -498,7 +502,10 @@ class SyncEngine(
                         sync_status = 1L,
                         revision = s.revision.toLong(),
                         is_void = s.is_void.toLong(),
-                        void_reason = s.void_reason
+                        void_reason = s.void_reason,
+                        principal_paisa = local?.principal_paisa ?: s.amount_paisa,
+                        interest_paisa = local?.interest_paisa ?: 0L,
+                        calculated_interest_paisa = local?.calculated_interest_paisa ?: 0L,
                     )
                 }
 

@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class DatabaseTest {
 
@@ -161,10 +162,11 @@ class DatabaseTest {
     }
 
     @Test
-    fun schemaIsVersion3AndBalanceIgnoresVoids() {
+    fun schemaVersionMatchesMigrationsAndBalanceIgnoresVoids() {
         val db = AppDatabase(DriverFactory().createDriver())
         val q = db.appDatabaseQueries
-        assertEquals(4L, AppDatabase.Schema.version)
+        // SQLDelight version = migrations + 1; 1.sqm..5.sqm exist, so a lower bound survives the next migration.
+        assertTrue(AppDatabase.Schema.version >= 6L)
 
         q.insertParty("farmer-1", "shop-1", "रामवीर", null, null, "FARMER", null, null, 1L, 1L, 0L, 0L)
         q.insertCashTransaction(

@@ -1,0 +1,3 @@
+-- Bahi D4: remember what the app calculated as interest next to what the trader agreed (interest_paisa),
+-- so an adjusted amount stays visible later. Existing rows: 0 = never calculated.
+ALTER TABLE lendSettlementEntity ADD COLUMN calculated_interest_paisa INTEGER NOT NULL DEFAULT 0;
