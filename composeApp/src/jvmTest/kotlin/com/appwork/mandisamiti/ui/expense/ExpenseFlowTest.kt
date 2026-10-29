@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.domain.model.ExpenseEntry
 import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.ui.dashboard.computeKpis
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -213,5 +214,103 @@ class ExpenseFlowTest {
         assertEquals(255_000L, kpis.totalExpensePaisa)
         // Profit = Sales (0) - Buys (0) - Expenses (255,000) = -255,000 paisa (Loss)
         assertEquals(-255_000L, kpis.profitLossPaisa)
+    }
+
+    @Test
+    fun tcExp05_voidExpense_dropsTotalExpensesKpi() = runTest {
+        val db = createTestDatabase()
+        val expenseRepo = OfflineFirstExpenseRepository(
+            database = db,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            clock = testClock
+        )
+        val cashRepo = OfflineFirstCashTransactionRepository(
+            database = db,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            clock = testClock
+        )
+
+        // Expense 1: ₹1,500
+        val exp1 = ExpenseEntry(
+            id = "exp-1",
+            shopId = "shop-test",
+            entryDate = fixedNow.toEpochMilliseconds(),
+            category = ExpenseCategory.MAJDOORI,
+            amountPaisa = 150_000L, // ₹1,500
+            paidTo = "मजदूर",
+            paymentMode = ExpensePaymentMode.CASH,
+            createdAt = fixedNow.toEpochMilliseconds(),
+            updatedAt = fixedNow.toEpochMilliseconds(),
+        )
+        expenseRepo.saveExpense(exp1)
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "cash-exp-1",
+                shopId = "shop-test",
+                partyId = "मजदूर",
+                transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 150_000L,
+                paymentMode = PaymentMode.CASH,
+                transactionDate = fixedNow.toEpochMilliseconds(),
+                remarks = "खर्च: मजदूरी [EXPENSE:exp-1]",
+                createdAt = fixedNow.toEpochMilliseconds(),
+                updatedAt = fixedNow.toEpochMilliseconds(),
+            )
+        )
+
+        // Expense 2: ₹300
+        val exp2 = ExpenseEntry(
+            id = "exp-2",
+            shopId = "shop-test",
+            entryDate = fixedNow.toEpochMilliseconds(),
+            category = ExpenseCategory.CHAI_PANI,
+            amountPaisa = 30_000L, // ₹300
+            paidTo = "दुकान चायवाला",
+            paymentMode = ExpensePaymentMode.CASH,
+            createdAt = fixedNow.toEpochMilliseconds(),
+            updatedAt = fixedNow.toEpochMilliseconds(),
+        )
+        expenseRepo.saveExpense(exp2)
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "cash-exp-2",
+                shopId = "shop-test",
+                partyId = "दुकान चायवाला",
+                transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 30_000L,
+                paymentMode = PaymentMode.CASH,
+                transactionDate = fixedNow.toEpochMilliseconds(),
+                remarks = "खर्च: चाय-पानी [EXPENSE:exp-2]",
+                createdAt = fixedNow.toEpochMilliseconds(),
+                updatedAt = fixedNow.toEpochMilliseconds(),
+            )
+        )
+
+        // Initial KPI check: total expenses = ₹1,800 (180,000 paisa)
+        val initialExpenses = expenseRepo.getExpensesStream("shop-test").first()
+        val initialKpis = computeKpis(
+            buys = emptyList(),
+            sells = emptyList(),
+            lends = emptyList(),
+            expenses = initialExpenses
+        )
+        assertEquals(180_000L, initialKpis.totalExpensePaisa)
+
+        // Void the ₹300 expense
+        expenseRepo.voidExpense("exp-2", VoidReason.WRONG_ENTRY)
+
+        // Updated KPI check: total expenses should drop to ₹1,500 (150,000 paisa)
+        val updatedExpenses = expenseRepo.getExpensesStream("shop-test").first()
+        val updatedKpis = computeKpis(
+            buys = emptyList(),
+            sells = emptyList(),
+            lends = emptyList(),
+            expenses = updatedExpenses
+        )
+        assertEquals(150_000L, updatedKpis.totalExpensePaisa)
+
+        // Verify linked cash transaction is also voided
+        val cashTx2 = db.appDatabaseQueries.getCashTransactionById("cash-exp-2").executeAsOneOrNull()
+        assertTrue(cashTx2?.is_void == 1L)
     }
 }
