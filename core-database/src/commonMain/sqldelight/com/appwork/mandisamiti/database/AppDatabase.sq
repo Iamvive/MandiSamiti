@@ -172,6 +172,7 @@ CREATE TABLE buyEntryEntity (
     revision INTEGER NOT NULL DEFAULT 1,
     is_void INTEGER NOT NULL DEFAULT 0,
     void_reason TEXT,
+    payment_mode TEXT NOT NULL DEFAULT 'CASH',
     FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
     FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
 );
@@ -209,6 +210,7 @@ CREATE TABLE sellEntryEntity (
     revision INTEGER NOT NULL DEFAULT 1,
     is_void INTEGER NOT NULL DEFAULT 0,
     void_reason TEXT,
+    payment_mode TEXT NOT NULL DEFAULT 'CASH',
     FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
     FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
 );
@@ -253,9 +255,28 @@ CREATE TABLE lendSettlementEntity (
     revision INTEGER NOT NULL DEFAULT 1,
     is_void INTEGER NOT NULL DEFAULT 0,
     void_reason TEXT,
+    principal_paisa INTEGER NOT NULL DEFAULT 0,
+    interest_paisa INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(lend_id) REFERENCES lendEntryEntity(id)
 );
 CREATE INDEX idx_settle_lend ON lendSettlementEntity(lend_id);
+
+-- One row per closed day (D9). Day-close difference is posted separately as an expense line.
+CREATE TABLE dayClosingEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    day_date INTEGER NOT NULL,
+    closed_at INTEGER NOT NULL,
+    expected_paisa INTEGER NOT NULL DEFAULT 0,
+    counted_paisa INTEGER NOT NULL DEFAULT 0,
+    difference_paisa INTEGER NOT NULL DEFAULT 0,
+    reason TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1
+);
+CREATE UNIQUE INDEX idx_day_closing_shop_day ON dayClosingEntity(shop_id, day_date);
 
 CREATE TABLE expenseEntryEntity (
     id TEXT PRIMARY KEY NOT NULL,
