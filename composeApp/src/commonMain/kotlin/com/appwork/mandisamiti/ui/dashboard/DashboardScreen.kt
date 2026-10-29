@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -178,7 +181,7 @@ fun DashboardScreen(
         // 4. High-Trust Financial Metric Tiles (Ledger Balances)
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 DashboardMetricCard(
@@ -189,7 +192,7 @@ fun DashboardScreen(
                     icon = Icons.AutoMirrored.Filled.TrendingUp,
                     iconTint = MandiGreenReceivable,
                     isEnglish = isEnglish,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 DashboardMetricCard(
@@ -200,7 +203,7 @@ fun DashboardScreen(
                     icon = Icons.AutoMirrored.Filled.TrendingDown,
                     iconTint = MandiRedPayable,
                     isEnglish = isEnglish,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             }
         }
@@ -363,7 +366,7 @@ fun QuickActionsRow(
 ) {
     val bg = MandiSurface
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         QuickActionButton(
@@ -373,7 +376,7 @@ fun QuickActionsRow(
             containerColor = opaqueTint(MandiGreenBuy, bg, 0.12f),
             contentColor = MandiGreenBuy,
             onClick = onBuy,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         QuickActionButton(
             label = DashboardStrings.quickActionSell(isEnglish),
@@ -382,7 +385,7 @@ fun QuickActionsRow(
             containerColor = opaqueTint(MandiBlueSell, bg, 0.12f),
             contentColor = MandiBlueSell,
             onClick = onSell,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         QuickActionButton(
             label = DashboardStrings.quickActionLend(isEnglish),
@@ -391,7 +394,7 @@ fun QuickActionsRow(
             containerColor = opaqueTint(MandiOrangeLend, bg, 0.12f),
             contentColor = MandiOrangeLend,
             onClick = onLend,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         QuickActionButton(
             label = DashboardStrings.quickActionExpense(isEnglish),
@@ -400,7 +403,7 @@ fun QuickActionsRow(
             containerColor = opaqueTint(MandiPinkExpense, bg, 0.12f),
             contentColor = MandiPinkExpense,
             onClick = onExpense,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
     }
 }

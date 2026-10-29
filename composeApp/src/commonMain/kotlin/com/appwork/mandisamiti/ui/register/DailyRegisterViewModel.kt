@@ -52,6 +52,7 @@ data class DailyRegisterUiState(
     val todayCashOutPaisa: Long = 0L,
     val inHandCashDrawerPaisa: Long = 0L,
     val physicalCountPaisa: Long? = null,
+    val physicalCountReason: String? = null,
     val todayTransactions: List<TransactionWithParty> = emptyList(),
     val availableParties: List<Party> = emptyList(),
     val isAddEntryDialogOpen: Boolean = false,
@@ -234,10 +235,11 @@ class DailyRegisterViewModel(
         _uiState.value = _uiState.value.copy(isDayClosingSummaryOpen = false)
     }
 
-    fun setPhysicalCashCount(countRs: Long?) {
+    fun setPhysicalCashCount(countRs: Long?, reason: String? = null) {
         if (_uiState.value.isReadOnly) return
         _uiState.value = _uiState.value.copy(
-            physicalCountPaisa = countRs?.let { it * 100L }
+            physicalCountPaisa = countRs?.let { it * 100L },
+            physicalCountReason = reason?.trim()?.takeIf { it.isNotEmpty() }
         )
     }
 
@@ -464,4 +466,16 @@ class DailyRegisterViewModel(
             _events.emit(DailyRegisterEvent.EntryRecorded(speech))
         }
     }
+}
+
+fun dayClosingCountLabel(countedPaisa: Long, expectedPaisa: Long, isEnglish: Boolean): String {
+    val difference = countedPaisa - expectedPaisa
+    val counted = MandiMathEngine.formatIndianGrouping(countedPaisa / 100L)
+    val absoluteDifference = MandiMathEngine.formatIndianGrouping(kotlin.math.abs(difference) / 100L)
+    val result = when {
+        difference < 0L -> if (isEnglish) "short ₹$absoluteDifference" else "कमी ₹$absoluteDifference"
+        difference > 0L -> if (isEnglish) "over ₹$absoluteDifference" else "अधिक ₹$absoluteDifference"
+        else -> if (isEnglish) "matches" else "मिलान सही"
+    }
+    return if (isEnglish) "Count: ₹$counted · $result" else "गिनती: ₹$counted · $result"
 }

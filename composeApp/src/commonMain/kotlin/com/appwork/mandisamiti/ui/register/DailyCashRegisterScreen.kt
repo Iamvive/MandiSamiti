@@ -122,6 +122,7 @@ fun DailyCashRegisterScreen(
     var directAmountInput by remember { mutableStateOf("") }
     var directRemarksInput by remember { mutableStateOf("") }
     var physicalCashInput by remember { mutableStateOf("") }
+    var physicalCashReason by remember { mutableStateOf("") }
     var showOpeningBalanceDialog by remember { mutableStateOf(false) }
     var openingBalanceInput by remember { mutableStateOf("") }
     var openingBalanceRemarks by remember { mutableStateOf("") }
@@ -854,7 +855,11 @@ fun DailyCashRegisterScreen(
                                         BahiAnchorRow(
                                             title = if (isEnglish) "Cash In Hand" else "सिल्क बाकी",
                                             subtitle = if (uiState.physicalCountPaisa != null) {
-                                                if (isEnglish) "Counted physical cash" else "गिनी हुई शुद्ध नकदी"
+                                                dayClosingCountLabel(
+                                                    uiState.physicalCountPaisa ?: uiState.inHandCashDrawerPaisa,
+                                                    uiState.inHandCashDrawerPaisa,
+                                                    isEnglish
+                                                )
                                             } else {
                                                 if (isEnglish) "Book closing (uncounted)" else "बही शेष (गिनती बाकी)"
                                             },
@@ -1202,6 +1207,14 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    OutlinedTextField(
+                        value = physicalCashReason,
+                        onValueChange = { physicalCashReason = it },
+                        label = { Text(if (isEnglish) "Reason (optional)" else "कारण (वैकल्पिक)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     // Difference / Discrepancy Indicator
                     if (diffPaisa != null) {
                         val diffColor = when {
@@ -1229,7 +1242,7 @@ fun DailyCashRegisterScreen(
                     ) {
                         Button(
                             onClick = {
-                                viewModel.setPhysicalCashCount(physicalCashInput.toLongOrNull())
+                                viewModel.setPhysicalCashCount(physicalCashInput.toLongOrNull(), physicalCashReason)
                                 viewModel.closeDayClosingSummary()
                             },
                             modifier = Modifier.weight(1f),
