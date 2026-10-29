@@ -100,6 +100,7 @@ fun DashboardScreen(
     onNavigateToBuyReceipt: (String) -> Unit = {},
     onNavigateToSellReceipt: (String) -> Unit = {},
     onNavigateToNewEntry: () -> Unit = onNavigateToBuy,
+    needsLogin: Boolean = false,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -143,7 +144,7 @@ fun DashboardScreen(
         // Entries that exist only on this phone: a trader must know before clearing data or changing phones.
         if (uiState.pendingSyncCount > 0) {
             item {
-                SyncPendingLine(count = uiState.pendingSyncCount, isEnglish = isEnglish)
+                SyncPendingLine(count = uiState.pendingSyncCount, isEnglish = isEnglish, needsLogin = needsLogin)
             }
         }
 
@@ -449,7 +450,7 @@ private fun QuickActionButton(
 }
 
 @Composable
-private fun SyncPendingLine(count: Int, isEnglish: Boolean) {
+private fun SyncPendingLine(count: Int, isEnglish: Boolean, needsLogin: Boolean = false) {
     val shape = RoundedCornerShape(10.dp)
     Row(
         modifier = Modifier
@@ -468,8 +469,12 @@ private fun SyncPendingLine(count: Int, isEnglish: Boolean) {
             modifier = Modifier.size(20.dp)
         )
         Text(
-            text = if (isEnglish) "$count entries are saved on this phone only. They upload when the internet is on."
-            else "$count एंट्रियाँ सिर्फ इस फोन में हैं। इंटरनेट मिलते ही सर्वर पर जाएँगी।",
+            text = when {
+                needsLogin && isEnglish -> "$count entries saved on this phone. Log in to upload entries."
+                needsLogin -> "$count एंट्रियाँ सिर्फ इस फ़ोन में हैं। लॉगिन करें, फिर एंट्री अपलोड होंगी।"
+                isEnglish -> "$count entries are saved on this phone only. They upload when the internet is on."
+                else -> "$count एंट्रियाँ सिर्फ इस फोन में हैं। इंटरनेट मिलते ही सर्वर पर जाएँगी।"
+            },
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = MandiAmberDark,

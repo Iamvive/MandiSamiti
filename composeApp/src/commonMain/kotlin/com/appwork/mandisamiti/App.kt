@@ -64,7 +64,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
-    data object Register : Screen
+    data class Register(val isReLogin: Boolean = false) : Screen
     data object FirstSync : Screen
     data object Home : Screen
     data class DealEntry(val existingDealId: String? = null) : Screen
@@ -100,7 +100,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.PartyLedger -> Screen.Home
     is Screen.ReceiptPreview -> Screen.Home
     is Screen.DailyRegister -> Screen.Home
-    Screen.Register, Screen.FirstSync, Screen.Home -> Screen.Home
+    is Screen.Register, is Screen.FirstSync, is Screen.Home -> Screen.Home
 }
 
 @Composable
@@ -146,23 +146,25 @@ fun App(
 
     // The stored session alone decides the start screen, synchronously: no async lookup, no Register flash.
     var session by remember { mutableStateOf(sessionStore.current()) }
-    var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register) }
+    var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register()) }
     var signOutInFlight by remember { mutableStateOf(false) }
 
     MandiSamitiTheme {
         val activeSession = session
         // Every shop-scoped screen needs a session; without one the only place to go is Register.
-        val screen = if (activeSession == null) Screen.Register else currentScreen
+        val screen = if (activeSession == null) Screen.Register() else currentScreen
         val shopId = activeSession?.shopId
         val tradeSettings by tradeSettingsRepo.getTradeSettingsStream().collectAsState(initial = null)
         when (screen) {
             is Screen.Register -> {
-                // Leaving this branch drops the remembered VM, so after logout Register starts fresh at PHONE.
-                val registerViewModel = remember {
+                val shopProfile by shopRepo.getShopProfileStream().collectAsState(initial = null)
+                val prefillPhone = if (screen.isReLogin) shopProfile?.phoneNumber else null
+                val registerViewModel = remember(screen.isReLogin, prefillPhone) {
                     RegisterViewModel(
                         authRepository = authRepo,
                         ttsManager = ttsManager,
-                        viewModelScope = coroutineScope
+                        viewModelScope = coroutineScope,
+                        initialPhoneNumber = prefillPhone
                     )
                 }
                 RegisterScreen(
@@ -174,7 +176,10 @@ fun App(
                         syncScheduler.scheduleOneTimeSync()
                         coroutineScope.launch { syncEngine.setNeedsLogin(false) }
                         currentScreen = Screen.FirstSync
-                    }
+                    },
+                    onBack = if (screen.isReLogin || activeSession != null) {
+                        { currentScreen = Screen.Home }
+                    } else null
                 )
             }
 
@@ -231,9 +236,7 @@ fun App(
                     shopId = shopId!!,
                     needsLogin = needsLogin,
                     onReLogin = {
-                        // Data stays on the phone; AuthRepository.adopt keeps it when the same shop logs in again.
-                        sessionStore.clear()
-                        session = null
+                        currentScreen = Screen.Register(isReLogin = true)
                     },
                     snackbarHostState = snackbarHostState,
                     onNavigateToNewEntry = {
@@ -269,7 +272,7 @@ fun App(
                                             snackbarHostState.showSnackbar(logoutBlockedMessage(result.pendingCount))
                                         LogoutResult.LoggedOut -> {
                                             session = null
-                                            currentScreen = Screen.Register
+                                            currentScreen = Screen.Register()
                                         }
                                     }
                                 } catch (e: CancellationException) {

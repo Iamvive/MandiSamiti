@@ -88,10 +88,15 @@ import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel,
-    onRegistrationSuccess: (Session) -> Unit
+    onRegistrationSuccess: (Session) -> Unit,
+    onBack: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    if (uiState.step == AuthStep.PHONE && onBack != null) {
+        com.appwork.mandisamiti.platform.MandiBackHandler(onBack = onBack)
+    }
 
     LaunchedEffect(uiState.completedSession) {
         uiState.completedSession?.let {
@@ -139,6 +144,19 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "पीछे जाएं",
+                                    tint = MandiPrimaryActionText
+                                )
+                            }
+                        }
+                    } else if (onBack != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "मुख्य स्क्रीन पर वापस",
                                     tint = MandiPrimaryActionText
                                 )
                             }

@@ -14,10 +14,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -29,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.model.Party
@@ -148,6 +159,7 @@ fun HomeScreen(
                             onNavigateToBuyReceipt = onNavigateToBuyReceipt,
                             onNavigateToSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewEntry = onNavigateToNewEntry,
+                            needsLogin = needsLogin,
                             isEnglish = uiState.isEnglish
                         )
                     }
@@ -210,7 +222,7 @@ private fun ReLoginBanner(onReLogin: () -> Unit) {
     // Theme-aware colours (not the static light Mandi* aliases) so the banner is readable in dark mode too.
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(12.dp)
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -219,21 +231,48 @@ private fun ReLoginBanner(onReLogin: () -> Unit) {
             .background(colors.surfaceVariant)
             .border(1.dp, colors.outline, shape)
             .clickable(role = Role.Button, onClick = onReLogin)
-            .heightIn(min = 48.dp)
+            .heightIn(min = 56.dp)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = "दोबारा लॉगिन करें",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = colors.onSurface
-        )
-        Text(
-            text = "आपकी एंट्री फ़ोन में सुरक्षित हैं",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.onSurfaceVariant
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = "दोबारा लॉगिन करें",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface
+            )
+            Text(
+                text = "आपकी एंट्री फ़ोन में सुरक्षित हैं",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant
+            )
+        }
+        Button(
+            onClick = onReLogin,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.primary,
+                contentColor = colors.onPrimary
+            ),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = "लॉगिन करें",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 

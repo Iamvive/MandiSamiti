@@ -492,4 +492,24 @@ class RegisterViewModelTest {
         assertEquals("यह खाता बंद है — दुकान मालिक से संपर्क करें", s.generalErrorMessage)
         assertEquals(AuthStep.PHONE, s.step)
     }
+
+    @Test
+    fun initialPhoneNumberPrefillsPhoneNumber() = runTest {
+        val io = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        val repo = AuthRepository(
+            api = AuthApi(mandiHttpClient(MockEngine { respond("{}", HttpStatusCode.OK) }), "https://api.test"),
+            sessionStore = InMemorySessionStore(),
+            shopProfileRepository = OfflineFirstShopProfileRepository(db, io),
+            wiper = LocalDataWiper(db),
+            ioDispatcher = io,
+        )
+        val vm = RegisterViewModel(
+            authRepository = repo,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope,
+            initialPhoneNumber = "9876543210"
+        )
+        assertEquals("9876543210", vm.uiState.value.phoneNumber)
+    }
 }

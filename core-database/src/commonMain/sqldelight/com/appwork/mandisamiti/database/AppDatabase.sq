@@ -497,17 +497,9 @@ SELECT (
 ) AS pending_count;
 
 
--- User-facing count: distinct unsynced entries (a row and its revision count once); excludes the shop profile
+-- User-facing count: distinct unsynced user entries; excludes internal outbox rows (parties, revisions, auto-generated cash mirror rows)
 getPendingEntryCount:
 SELECT COUNT(*) FROM (
-    SELECT id FROM partyEntity WHERE sync_status = 0
-    UNION
-    SELECT id FROM dealEntity WHERE sync_status = 0
-    UNION
-    SELECT id FROM cashTransactionEntity WHERE sync_status = 0
-    UNION
-    SELECT entry_id FROM entryRevisionEntity WHERE sync_status = 0
-    UNION
     SELECT id FROM buyEntryEntity WHERE sync_status = 0
     UNION
     SELECT id FROM sellEntryEntity WHERE sync_status = 0
@@ -517,6 +509,15 @@ SELECT COUNT(*) FROM (
     SELECT id FROM lendSettlementEntity WHERE sync_status = 0
     UNION
     SELECT id FROM expenseEntryEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM dealEntity WHERE sync_status = 0
+    UNION
+    SELECT id FROM cashTransactionEntity WHERE sync_status = 0
+        AND remarks NOT LIKE '%[LEND:%'
+        AND remarks NOT LIKE '%[SETTLE:%'
+        AND remarks NOT LIKE '%[EXPENSE:%'
+        AND remarks NOT LIKE 'उधार ऋण%'
+        AND remarks NOT LIKE 'उधार वापसी%'
 );
 
 -- Rows (deleted or not) that belong to any shop other than ?

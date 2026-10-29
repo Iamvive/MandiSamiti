@@ -73,9 +73,14 @@ class RegisterViewModel(
     private val authRepository: AuthRepository,
     private val ttsManager: SoundboxTtsManager,
     private val viewModelScope: CoroutineScope,
-    private val clock: Clock = Clock.System
+    private val clock: Clock = Clock.System,
+    initialPhoneNumber: String? = null
 ) {
-    private val _uiState = MutableStateFlow(RegisterUiState())
+    private val _uiState = MutableStateFlow(
+        RegisterUiState(
+            phoneNumber = initialPhoneNumber?.filter { it.isDigit() }?.take(10) ?: ""
+        )
+    )
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     private var lastClickTime = Long.MIN_VALUE

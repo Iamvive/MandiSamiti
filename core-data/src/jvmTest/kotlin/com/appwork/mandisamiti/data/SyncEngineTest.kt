@@ -458,4 +458,64 @@ class SyncEngineTest {
         // The buy entry itself, its CREATE revision row, and the auto-provisioned party row are all pending.
         assertEquals(3L, engine.getPendingCount())
     }
+
+    @Test
+    fun testPendingEntryCountReflectsUserEntriesOnly() = runTest {
+        val database = createTestDatabase()
+        val partyRepo = OfflineFirstPartyRepository(database)
+        val dealRepo = OfflineFirstDealRepository(database)
+        val cashRepo = OfflineFirstCashTransactionRepository(database)
+        val fakeClient = FakeSyncApiClient()
+        val syncEngine = SyncEngine(database = database, apiClient = fakeClient)
+
+        // 1. Initially 0 pending user entries
+        assertEquals(0L, syncEngine.getPendingEntryCount())
+
+        // 2. Saving a party does NOT count as a user entry
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L))
+        assertEquals(0L, syncEngine.getPendingEntryCount())
+
+        // 3. Saving a user transaction (deal) counts as 1 user entry
+        dealRepo.saveDeal(
+            Deal(
+                id = "deal-1", shopId = "shop-1", farmerId = "farmer-1", buyerId = null, commodityId = "comm-1", dealDate = 1000L,
+                bagsCount = 10, grossWeightGrams = 500000L, netWeightGrams = 500000L, ratePaisaPerUnit = 227550L,
+                grossAmountPaisa = 1137750L, netFarmerPayablePaisa = 1100000L, netBuyerReceivablePaisa = 1150000L,
+                createdAt = 1000L, updatedAt = 1000L
+            )
+        )
+        assertEquals(1L, syncEngine.getPendingEntryCount())
+
+        // 4. An internal auto-generated cash row (e.g. for a lend/settle) does not add a double count
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "tx-lend-internal",
+                shopId = "shop-1",
+                partyId = "farmer-1",
+                transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 200000L,
+                transactionDate = 1000L,
+                remarks = "उधार ऋण: [LEND:lend-1]",
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+        assertEquals(1L, syncEngine.getPendingEntryCount())
+
+        // 5. A manual cash deposit/withdrawal counts as 1 user entry
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "tx-manual",
+                shopId = "shop-1",
+                partyId = "farmer-1",
+                transactionType = TransactionType.JAMA_RECEIVED,
+                amountPaisa = 500000L,
+                transactionDate = 1000L,
+                remarks = "दुकान गल्ला जमा",
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+        assertEquals(2L, syncEngine.getPendingEntryCount())
+    }
 }
