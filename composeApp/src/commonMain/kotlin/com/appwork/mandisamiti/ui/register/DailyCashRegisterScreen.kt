@@ -47,6 +47,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -121,6 +122,7 @@ fun DailyCashRegisterScreen(
     var selectedPartyId by remember { mutableStateOf("") }
     var directAmountInput by remember { mutableStateOf("") }
     var directRemarksInput by remember { mutableStateOf("") }
+    var directPaymentMode by remember { mutableStateOf(PaymentMode.CASH) }
     var physicalCashInput by remember { mutableStateOf("") }
     var physicalCashReason by remember { mutableStateOf("") }
     var showOpeningBalanceDialog by remember { mutableStateOf(false) }
@@ -1385,6 +1387,25 @@ fun DailyCashRegisterScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Text(
+                        text = if (isEnglish) "Payment mode" else "भुगतान का माध्यम",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    listOf(
+                        listOf(PaymentMode.CASH, PaymentMode.RTGS, PaymentMode.NEFT),
+                        listOf(PaymentMode.CHEQUE, PaymentMode.UPI),
+                    ).forEach { modes ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            modes.forEach { mode ->
+                                FilterChip(
+                                    selected = directPaymentMode == mode,
+                                    onClick = { directPaymentMode = mode },
+                                    label = { Text(if (mode == PaymentMode.CASH && !isEnglish) "नकद" else mode.name) }
+                                )
+                            }
+                        }
+                    }
                     OutlinedTextField(
                         value = directRemarksInput,
                         onValueChange = { directRemarksInput = it },
@@ -1404,13 +1425,14 @@ fun DailyCashRegisterScreen(
                                 partyId = partyId,
                                 transactionType = showDirectCashDialog!!,
                                 amountRs = amount,
-                                paymentMode = PaymentMode.CASH,
+                                paymentMode = directPaymentMode,
                                 remarks = directRemarksInput.ifBlank { null }
                             )
                             showDirectCashDialog = null
                             directAmountInput = ""
                             directRemarksInput = ""
                             selectedPartyId = ""
+                            directPaymentMode = PaymentMode.CASH
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -1422,7 +1444,7 @@ fun DailyCashRegisterScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDirectCashDialog = null; selectedPartyId = "" }) {
+                TextButton(onClick = { showDirectCashDialog = null; selectedPartyId = ""; directPaymentMode = PaymentMode.CASH }) {
                     Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             }

@@ -1,0 +1,68 @@
+-- Read model inputs for the two-sided day page. Kept separate because AppDatabase.sq is Claude-owned.
+
+getBahiCashRowsForDay:
+SELECT * FROM cashTransactionEntity
+WHERE shop_id = :shopId AND transaction_date >= :startMillis AND transaction_date < :endMillis
+ORDER BY transaction_date ASC;
+
+getBahiBuyRowsForDay:
+SELECT * FROM buyEntryEntity
+WHERE shop_id = :shopId AND entry_date >= :startMillis AND entry_date < :endMillis
+ORDER BY entry_date ASC;
+
+getBahiSellRowsForDay:
+SELECT * FROM sellEntryEntity
+WHERE shop_id = :shopId AND entry_date >= :startMillis AND entry_date < :endMillis
+ORDER BY entry_date ASC;
+
+getBahiExpenseRowsForDay:
+SELECT * FROM expenseEntryEntity
+WHERE shop_id = :shopId AND entry_date >= :startMillis AND entry_date < :endMillis
+ORDER BY entry_date ASC;
+
+getBahiLendSettlementsForDay:
+SELECT lendSettlementEntity.* FROM lendSettlementEntity
+WHERE shop_id = :shopId AND settled_at >= :startMillis AND settled_at < :endMillis
+ORDER BY settled_at ASC;
+
+getUnlinkedFarmerAdvancesBefore:
+SELECT * FROM cashTransactionEntity
+WHERE shop_id = :shopId
+  AND party_id = :farmerId
+  AND transaction_type = 'UDHAR_GIVEN'
+  AND transaction_date < :purchaseMillis
+  AND is_deleted = 0
+  AND is_void = 0
+  AND (remarks IS NULL OR remarks NOT LIKE '%[BUY:%')
+ORDER BY transaction_date ASC;
+
+-- Remarks-free structural reference: [BUY:<buy-id>] is appended to the advance row.
+linkAdvanceToBuy:
+UPDATE cashTransactionEntity
+SET remarks = TRIM(COALESCE(remarks, '') || ' [BUY:' || :buyId || ']'),
+    updated_at = :updatedAt,
+    revision = revision + 1,
+    sync_status = 0
+WHERE id = :advanceId;
+
+getLinkedAdvancesForBuy:
+SELECT * FROM cashTransactionEntity
+WHERE remarks LIKE '%[BUY:' || :buyId || ']%'
+ORDER BY transaction_date ASC;
+
+getLatestDayCloseDifferenceBefore:
+SELECT * FROM expenseEntryEntity
+WHERE shop_id = :shopId
+  AND category = 'DAY_CLOSE_DIFF'
+  AND entry_date < :beforeMillis
+  AND is_deleted = 0
+  AND is_void = 0
+ORDER BY entry_date DESC
+LIMIT 1;
+
+getChangesAfterDayClose:
+SELECT * FROM entryRevisionEntity
+WHERE shop_id = :shopId
+  AND changed_at > :closedAt
+  AND changed_at < :endMillis
+ORDER BY changed_at ASC;

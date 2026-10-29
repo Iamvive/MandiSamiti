@@ -39,7 +39,7 @@ class LendTransactionUseCase(
     }
 
     /** Cap check, settlement, JAMA_RECEIVED cash row and lend status all happen inside one repo transaction. */
-    suspend fun repay(lendId: String, amountPaisa: Long, weightGrams: Long, bags: Long, note: String? = null, cashPartyId: String? = null): LendSettlement {
+    suspend fun repay(lendId: String, amountPaisa: Long, weightGrams: Long, bags: Long, note: String? = null, cashPartyId: String? = null, paymentMode: PaymentMode = PaymentMode.CASH): LendSettlement {
         val lend = repo.getLendEntryById(lendId) ?: throw IllegalArgumentException("Lend $lendId does not exist")
         require(!lend.isVoid) { "Lend $lendId is void" }
         require(amountPaisa > 0 || weightGrams > 0) { "Nothing to settle" }
@@ -52,7 +52,7 @@ class LendTransactionUseCase(
             CashTransaction(
                 id = newId(), shopId = lend.shopId, partyId = cashPartyId ?: lend.partyId,
                 transactionType = TransactionType.JAMA_RECEIVED, amountPaisa = amountPaisa,
-                paymentMode = PaymentMode.CASH, transactionDate = now,
+                paymentMode = paymentMode, transactionDate = now,
                 remarks = "$rem [SETTLE:${s.id}:$lendId]", createdAt = now, updatedAt = now,
             )
         } else null
