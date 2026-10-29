@@ -12,6 +12,10 @@ enum class TransactionType {
 enum class PaymentMode {
     CASH,
     UPI,
+    RTGS,
+    NEFT,
+    CHEQUE,
+    ONLINE, // Legacy generic online value; keep readable.
     BANK,
     BOOK_ENTRY // बही प्रविष्टि
 }

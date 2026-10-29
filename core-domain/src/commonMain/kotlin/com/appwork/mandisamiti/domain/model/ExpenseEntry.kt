@@ -2,8 +2,8 @@ package com.appwork.mandisamiti.domain.model
 
 import kotlinx.serialization.Serializable
 
-enum class ExpenseCategory { HAMMALI, KIRAYA, BIJLI, CHAI_PANI, MAJDOORI, OTHER }
-enum class ExpensePaymentMode { CASH, ONLINE, CHEQUE }
+enum class ExpenseCategory { HAMMALI, KIRAYA, BIJLI, CHAI_PANI, MAJDOORI, OTHER, DAY_CLOSE_DIFF }
+enum class ExpensePaymentMode { CASH, RTGS, NEFT, CHEQUE, UPI, ONLINE }
 
 @Serializable
 data class ExpenseEntry(

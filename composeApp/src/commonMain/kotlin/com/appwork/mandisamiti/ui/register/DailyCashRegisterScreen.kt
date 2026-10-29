@@ -47,6 +47,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -121,6 +122,7 @@ fun DailyCashRegisterScreen(
     var selectedPartyId by remember { mutableStateOf("") }
     var directAmountInput by remember { mutableStateOf("") }
     var directRemarksInput by remember { mutableStateOf("") }
+    var directPaymentMode by remember { mutableStateOf(PaymentMode.CASH) }
     var physicalCashInput by remember { mutableStateOf("") }
     var physicalCashReason by remember { mutableStateOf("") }
     var showOpeningBalanceDialog by remember { mutableStateOf(false) }
@@ -1197,6 +1199,70 @@ fun DailyCashRegisterScreen(
                         }
                     }
 
+                    uiState.bahiDayPage?.let { page ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(
+                                (if (isEnglish) "Left" else "जमा") to page.left,
+                                (if (isEnglish) "Right" else "नामे") to page.right,
+                            ).forEach { (heading, lines) ->
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MandiSurfaceElevated)
+                                        .padding(7.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(heading, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
+                                    lines.takeLast(5).forEach { line ->
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(
+                                                line.label,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                fontSize = 9.sp,
+                                                color = MandiTextSecondary,
+                                                textDecoration = if (line.isStruckThrough) TextDecoration.LineThrough else TextDecoration.None,
+                                            )
+                                            Text(
+                                                "₹${MandiMathEngine.paisaToRupeesString(line.amountPaisa)}",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MandiTextPrimary,
+                                                textDecoration = if (line.isStruckThrough) TextDecoration.LineThrough else TextDecoration.None,
+                                            )
+                                        }
+                                    }
+                                    val total = if (heading == (if (isEnglish) "Left" else "जमा")) page.leftTotalPaisa else page.rightTotalPaisa
+                                    Text("₹${MandiMathEngine.paisaToRupeesString(total)}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MandiNavy)
+                                }
+                            }
+                        }
+                        if (!page.isBalanced) {
+                            Text(
+                                text = (if (isEnglish) "Difference: " else "अंतर: ") + "₹${MandiMathEngine.paisaToRupeesString(kotlin.math.abs(page.differencePaisa))}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiRedPayable,
+                            )
+                            Text(if (isEnglish) "Likely causes" else "संभावित कारण", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
+                            val causes = page.likelyCauses.ifEmpty {
+                                listOf(
+                                    com.appwork.mandisamiti.domain.bahi.BahiLikelyCause("online", if (isEnglish) "Online entry missing its other side" else "ऑनलाइन प्रविष्टि का दूसरा पक्ष छूटा"),
+                                    com.appwork.mandisamiti.domain.bahi.BahiLikelyCause("amount", if (isEnglish) "Amount differs from the party's usual" else "राशि पार्टी के सामान्य हिसाब से अलग"),
+                                    com.appwork.mandisamiti.domain.bahi.BahiLikelyCause("late", if (isEnglish) "Entry saved after closing" else "दिन बंद होने के बाद प्रविष्टि"),
+                                )
+                            }
+                            causes.take(3).forEach { cause ->
+                                Text("• ${cause.label}", fontSize = 10.sp, color = MandiTextSecondary)
+                            }
+                        }
+                    }
+
                     // Physical Cash Verification Input
                     OutlinedTextField(
                         value = physicalCashInput,
@@ -1242,9 +1308,10 @@ fun DailyCashRegisterScreen(
                     ) {
                         Button(
                             onClick = {
-                                viewModel.setPhysicalCashCount(physicalCashInput.toLongOrNull(), physicalCashReason)
-                                viewModel.closeDayClosingSummary()
+                                val counted = physicalCashInput.toLongOrNull()
+                                if (counted != null) viewModel.closeDay(counted, physicalCashReason)
                             },
+                            enabled = physicalCashInput.toLongOrNull() != null && !uiState.isSaving,
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MandiGreenReceivable,
@@ -1252,7 +1319,7 @@ fun DailyCashRegisterScreen(
                             )
                         ) {
                             Text(
-                                text = if (isEnglish) "Save Count" else "गिनती दर्ज करें",
+                                text = if (isEnglish) "Close day" else "दिन बंद करें",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
@@ -1385,6 +1452,25 @@ fun DailyCashRegisterScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Text(
+                        text = if (isEnglish) "Payment mode" else "भुगतान का माध्यम",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    listOf(
+                        listOf(PaymentMode.CASH, PaymentMode.RTGS, PaymentMode.NEFT),
+                        listOf(PaymentMode.CHEQUE, PaymentMode.UPI),
+                    ).forEach { modes ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            modes.forEach { mode ->
+                                FilterChip(
+                                    selected = directPaymentMode == mode,
+                                    onClick = { directPaymentMode = mode },
+                                    label = { Text(if (mode == PaymentMode.CASH && !isEnglish) "नकद" else mode.name) }
+                                )
+                            }
+                        }
+                    }
                     OutlinedTextField(
                         value = directRemarksInput,
                         onValueChange = { directRemarksInput = it },
@@ -1404,13 +1490,14 @@ fun DailyCashRegisterScreen(
                                 partyId = partyId,
                                 transactionType = showDirectCashDialog!!,
                                 amountRs = amount,
-                                paymentMode = PaymentMode.CASH,
+                                paymentMode = directPaymentMode,
                                 remarks = directRemarksInput.ifBlank { null }
                             )
                             showDirectCashDialog = null
                             directAmountInput = ""
                             directRemarksInput = ""
                             selectedPartyId = ""
+                            directPaymentMode = PaymentMode.CASH
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -1422,7 +1509,7 @@ fun DailyCashRegisterScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDirectCashDialog = null; selectedPartyId = "" }) {
+                TextButton(onClick = { showDirectCashDialog = null; selectedPartyId = ""; directPaymentMode = PaymentMode.CASH }) {
                     Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             }

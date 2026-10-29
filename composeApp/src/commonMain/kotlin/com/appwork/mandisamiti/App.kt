@@ -232,6 +232,10 @@ fun App(
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
@@ -394,6 +398,10 @@ fun App(
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
@@ -564,10 +572,10 @@ fun App(
                     onNew = { currentScreen = Screen.LendEntry },
                     onPartyClick = { partyId -> currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList) },
                     getSettlements = { lendId -> lendRepo.getSettlements(lendId) },
-                    onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
+                    onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note, paymentMode ->
                         coroutineScope.launch {
                             try {
-                                lendUseCase.repay(lendId, amountPaisa, weightGrams, bagsCount, note)
+                                lendUseCase.repay(lendId, amountPaisa, weightGrams, bagsCount, note, paymentMode = paymentMode)
                             } catch (_: com.appwork.mandisamiti.domain.usecase.LendException) {
                                 return@launch
                             }

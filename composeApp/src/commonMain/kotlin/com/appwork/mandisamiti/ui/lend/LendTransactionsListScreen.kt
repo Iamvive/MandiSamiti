@@ -28,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +58,7 @@ import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.util.LendDateFormatter
@@ -69,7 +71,7 @@ fun LendTransactionsListScreen(
     onNew: () -> Unit = {},
     entries: List<LendEntry> = emptyList(),
     onPartyClick: ((String) -> Unit)? = null,
-    onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit = { _, _, _, _, _ -> },
+    onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String, paymentMode: PaymentMode) -> Unit = { _, _, _, _, _, _ -> },
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
     modifier: Modifier = Modifier
@@ -192,8 +194,8 @@ fun LendTransactionsListScreen(
                 lend = lend,
                 getSettlements = getSettlements,
                 onDismiss = { selectedLendForRepayment = null },
-                onConfirm = { amountPaisa, weightGrams, bagsCount, note ->
-                    onRepay(lend.id, amountPaisa, weightGrams, bagsCount, note)
+                onConfirm = { amountPaisa, weightGrams, bagsCount, note, paymentMode ->
+                    onRepay(lend.id, amountPaisa, weightGrams, bagsCount, note, paymentMode)
                     selectedLendForRepayment = null
                 }
             )
@@ -336,12 +338,13 @@ private fun RepaymentBottomSheet(
     lend: LendEntry,
     onDismiss: () -> Unit,
     getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
-    onConfirm: (amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit
+    onConfirm: (amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String, paymentMode: PaymentMode) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
     var weightText by remember { mutableStateOf("") }
     var bagsText by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    var paymentMode by remember { mutableStateOf(PaymentMode.CASH) }
     var settlements by remember(lend.id) { mutableStateOf<List<LendSettlement>?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val isMoney = lend.lendType == LendType.MONEY
@@ -409,6 +412,21 @@ private fun RepaymentBottomSheet(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                Text("भुगतान का माध्यम")
+                listOf(
+                    listOf(PaymentMode.CASH, PaymentMode.RTGS, PaymentMode.NEFT),
+                    listOf(PaymentMode.CHEQUE, PaymentMode.UPI),
+                ).forEach { modes ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        modes.forEach { mode ->
+                            FilterChip(
+                                selected = paymentMode == mode,
+                                onClick = { paymentMode = mode },
+                                label = { Text(if (mode == PaymentMode.CASH) "नकद" else mode.name) }
+                            )
+                        }
+                    }
+                }
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -455,7 +473,7 @@ private fun RepaymentBottomSheet(
                         val amountPaisa = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountText) else 0L
                         val weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightText) else 0L
                         val bags = if (!isMoney) bagsText.trim().toLongOrNull() ?: 0L else 0L
-                        onConfirm(amountPaisa, weightGrams, bags, note)
+                        onConfirm(amountPaisa, weightGrams, bags, note, paymentMode)
                     }
                 },
                 enabled = canConfirm,

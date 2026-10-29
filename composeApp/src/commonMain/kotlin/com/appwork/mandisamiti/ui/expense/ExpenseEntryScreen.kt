@@ -47,6 +47,7 @@ fun ExpenseCategory.labelHi(): String = when (this) {
     ExpenseCategory.CHAI_PANI -> "चाय-पानी"
     ExpenseCategory.MAJDOORI -> "मजदूरी"
     ExpenseCategory.OTHER -> "अन्य खर्च"
+    ExpenseCategory.DAY_CLOSE_DIFF -> "दिन-बंदी अंतर"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -134,22 +135,20 @@ fun ExpenseEntryScreen(
             )
 
             Text("भुगतान का माध्यम (Payment Mode)")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = paymentMode == ExpensePaymentMode.CASH,
-                    onClick = { paymentMode = ExpensePaymentMode.CASH },
-                    label = { Text("नकद (Cash)") }
-                )
-                FilterChip(
-                    selected = paymentMode == ExpensePaymentMode.ONLINE,
-                    onClick = { paymentMode = ExpensePaymentMode.ONLINE },
-                    label = { Text("ऑनलाइन / UPI") }
-                )
-                FilterChip(
-                    selected = paymentMode == ExpensePaymentMode.CHEQUE,
-                    onClick = { paymentMode = ExpensePaymentMode.CHEQUE },
-                    label = { Text("चेक (Cheque)") }
-                )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    ExpensePaymentMode.CASH to "नकद",
+                    ExpensePaymentMode.RTGS to "RTGS",
+                    ExpensePaymentMode.NEFT to "NEFT",
+                    ExpensePaymentMode.CHEQUE to "चेक",
+                    ExpensePaymentMode.UPI to "UPI",
+                ).forEach { (mode, label) ->
+                    FilterChip(
+                        selected = paymentMode == mode,
+                        onClick = { paymentMode = mode },
+                        label = { Text(label) }
+                    )
+                }
             }
 
             OutlinedTextField(
