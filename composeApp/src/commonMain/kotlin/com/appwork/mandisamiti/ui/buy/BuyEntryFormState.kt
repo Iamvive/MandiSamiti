@@ -9,6 +9,7 @@ import com.appwork.mandisamiti.domain.math.BuyMathResult
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.TradeSettings
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.domain.validation.ValidationResult
 import kotlinx.datetime.Clock
@@ -78,7 +79,9 @@ data class AggregatedBuyPreview(
     val netPayablePaisa: Long
 )
 
-class BuyEntryFormState {
+class BuyEntryFormState(
+    tradeSettings: TradeSettings? = null
+) {
     var farmerName by mutableStateOf("")
     var phone by mutableStateOf("")
     private var _village by mutableStateOf("")
@@ -90,10 +93,23 @@ class BuyEntryFormState {
 
     val lots = mutableStateListOf<BuyLotItemState>()
 
-    var commissionPercent by mutableStateOf("2")
-    var labourPerBag by mutableStateOf("5")
+    var commissionPercent by mutableStateOf(
+        tradeSettings?.let { MandiMathEngine.paisaToInputString(it.farmerCommissionBps) } ?: "2"
+    )
+    var labourPerBag by mutableStateOf(
+        tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "5"
+    )
+    var tareQuintals by mutableStateOf(
+        tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
+    )
     var advancePaid by mutableStateOf("") // Optional, default blank
     var showRateOutlierConfirmation by mutableStateOf(false)
+
+    fun applySettings(settings: TradeSettings) {
+        commissionPercent = MandiMathEngine.paisaToInputString(settings.farmerCommissionBps)
+        labourPerBag = MandiMathEngine.paisaToRupeesString(settings.defaultLabourPaisa)
+        tareQuintals = MandiMathEngine.gramsToQuintalsInputString(settings.defaultTareGrams)
+    }
 
     fun hasRateOutlier(): Boolean {
         return lots.any { lot ->
@@ -150,8 +166,19 @@ class BuyEntryFormState {
     fun aggregatePreview(): AggregatedBuyPreview {
         val lotResults = lots.map { it to it.calculateLot() }
         val totalBags = lotResults.sumOf { it.second.bags }
-        val totalWeight = lotResults.sumOf { it.second.totalWeightGrams }
-        val totalGross = lotResults.sumOf { it.second.grossPaisa }
+        val totalGrossWeight = lotResults.sumOf { it.second.totalWeightGrams }
+        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(tareQuintals.ifBlank { "0" })
+        val totalWeight = (totalGrossWeight - tareGrams).coerceAtLeast(0L)
+
+        val totalGross = if (totalGrossWeight <= 0L || tareGrams == 0L) {
+            lotResults.sumOf { it.second.grossPaisa }
+        } else {
+            lotResults.sumOf { pair ->
+                val lotWeight = pair.second.totalWeightGrams
+                val lotNetWeight = (lotWeight - (tareGrams * lotWeight / totalGrossWeight)).coerceAtLeast(0L)
+                MandiMathEngine.grossAmountPaisa(lotNetWeight, pair.second.ratePaisaPerQuintal)
+            }
+        }
 
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
         val commissionPaisa = MandiMathEngine.percentageOf(totalGross, commBps)
@@ -236,6 +263,7 @@ class BuyEntryFormState {
         val cleanVillage = MandiValidators.sanitizeVillage(village)
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
+            if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
             append("DATA: $lotsJson")
         }
 
@@ -273,13 +301,17 @@ class BuyEntryFormState {
     fun populateFrom(entry: BuyEntry) {
         farmerName = entry.farmerId
         phone = entry.vehicleNumber ?: ""
-        commissionPercent = if (entry.commissionBps > 0) MandiMathEngine.paisaToInputString(entry.commissionBps) else "2"
-        labourPerBag = if (entry.labourPerBagPaisa > 0) MandiMathEngine.paisaToInputString(entry.labourPerBagPaisa) else "5"
+        commissionPercent = if (entry.commissionBps > 0) MandiMathEngine.paisaToInputString(entry.commissionBps) else "0"
+        labourPerBag = if (entry.labourPerBagPaisa > 0) MandiMathEngine.paisaToRupeesString(entry.labourPerBagPaisa) else "0"
         advancePaid = if (entry.advancePaidPaisa > 0) MandiMathEngine.paisaToInputString(entry.advancePaidPaisa) else ""
 
-        // Try extracting village and lots from remarks
+        // Try extracting village, tare, and lots from remarks
         entry.remarks?.let { rem ->
             extractVillage(rem)?.let { village = it }
+            if (rem.contains("काट: ")) {
+                val tareQ = rem.substringAfter("काट: ").substringBefore("Q").trim()
+                if (tareQ.isNotBlank()) tareQuintals = tareQ
+            }
             if (rem.contains("DATA: ")) {
                 val jsonPart = rem.substringAfter("DATA: ").trim()
                 try {

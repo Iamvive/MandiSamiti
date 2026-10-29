@@ -151,7 +151,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = editLabourInput,
                         onValueChange = { editLabourInput = it },
-                        label = { Text(if (isEnglish) "Labour Charge (₹)" else "हम्माली / पल्लेदारी (₹)") },
+                        label = { Text(if (isEnglish) "Labour Charge (₹ per bag)" else "हम्माली / पल्लेदारी (₹ प्रति बोरी)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -323,12 +323,12 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isEnglish) "Labour Charge:" else "हम्माली / पल्लेदारी:",
+                            text = if (isEnglish) "Labour Charge (per bag):" else "हम्माली / पल्लेदारी (प्रति बोरी):",
                             fontSize = 14.sp,
                             color = MandiTextSecondary
                         )
                         Text(
-                            text = "₹${MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.defaultLabourPaisa)}",
+                            text = "₹${MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.defaultLabourPaisa)} / बोरी",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary

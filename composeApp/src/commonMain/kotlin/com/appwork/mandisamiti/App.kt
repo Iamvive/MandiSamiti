@@ -154,6 +154,7 @@ fun App(
         // Every shop-scoped screen needs a session; without one the only place to go is Register.
         val screen = if (activeSession == null) Screen.Register else currentScreen
         val shopId = activeSession?.shopId
+        val tradeSettings by tradeSettingsRepo.getTradeSettingsStream().collectAsState(initial = null)
         when (screen) {
             is Screen.Register -> {
                 // Leaving this branch drops the remembered VM, so after logout Register starts fresh at PHONE.
@@ -374,7 +375,6 @@ fun App(
 
             is Screen.DailyRegister -> {
                 MandiBackHandler { currentScreen = Screen.Home }
-                val tradeSettings by tradeSettingsRepo.getTradeSettingsStream().collectAsState(initial = null)
                 val registerViewModel = remember(shopId) {
                     DailyRegisterViewModel(
                         shopId = shopId!!,
@@ -403,6 +403,7 @@ fun App(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
+                    tradeSettings = tradeSettings,
                     activeLoanChecker = { farmerName ->
                         lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
                     },
@@ -454,6 +455,7 @@ fun App(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     sellRepository = sellRepo,
+                    tradeSettings = tradeSettings,
                     onSaved = { entry ->
                         coroutineScope.launch {
                             if (screen.existingId == null) {

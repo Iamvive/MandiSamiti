@@ -65,7 +65,8 @@ fun BuyEntryScreen(
     existingId: String? = null,
     onSaved: (BuyEntry) -> Unit,
     onBack: () -> Unit,
-    formState: BuyEntryFormState = remember { BuyEntryFormState() },
+    tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings? = null,
+    formState: BuyEntryFormState = remember(tradeSettings) { BuyEntryFormState(tradeSettings) },
     hasActiveLoan: Boolean = false,
     activeLoanChecker: ((String) -> Boolean)? = null,
     buyRepository: BuyRepository? = null,
@@ -380,15 +381,25 @@ fun BuyEntryScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = formState.advancePaid,
-                onValueChange = { formState.advancePaid = it },
-                label = { Text("अग्रिम / पेशगी (रु) (वैकल्पिक)") },
-                placeholder = { Text("0") },
-                supportingText = { Text("यदि किसान को पहले नकद पेशगी दी गई हो") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = formState.tareQuintals,
+                    onValueChange = { formState.tareQuintals = it },
+                    label = { Text("काट / बारदाना (कुंतल)") },
+                    placeholder = { Text("0") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = formState.advancePaid,
+                    onValueChange = { formState.advancePaid = it },
+                    label = { Text("अग्रिम / पेशगी (रु)") },
+                    placeholder = { Text("0") },
+                    supportingText = { Text("वैकल्पिक") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
             // Section 4: Live Parcha Preview Card
             Card(
@@ -415,6 +426,9 @@ fun BuyEntryScreen(
                     }
 
                     SummaryRow("कुल बोरी", "${preview.totalBags} बोरी")
+                    if (formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
+                        SummaryRow("काट / बारदाना", "- ${formState.tareQuintals} क्विंटल")
+                    }
                     SummaryRow("कुल वजन", "${MandiMathEngine.gramsToQuintals(preview.totalWeightGrams)} क्विंटल")
                     SummaryRow("कुल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(preview.totalGrossPaisa)}")
                     SummaryRow("कमीशन कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.commissionPaisa)}")

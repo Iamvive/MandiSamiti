@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
+import com.appwork.mandisamiti.domain.model.TradeSettings
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.domain.validation.ValidationResult
 import kotlinx.serialization.encodeToString
@@ -69,7 +70,9 @@ data class SellAggregateResult(
     val lots: List<SellCropLot>,
 )
 
-class SellEntryFormState {
+class SellEntryFormState(
+    tradeSettings: TradeSettings? = null
+) {
     var buyerName by mutableStateOf("")
     var phone by mutableStateOf("")
     var partyKind by mutableStateOf(SellPartyKind.CUSTOMER)
@@ -81,9 +84,22 @@ class SellEntryFormState {
     var invoiceDate by mutableStateOf("")
 
     // Deductions & charges
-    var commissionPercent by mutableStateOf("0")
-    var labourPerBag by mutableStateOf("5")
+    var commissionPercent by mutableStateOf(
+        tradeSettings?.let { MandiMathEngine.paisaToInputString(it.buyerCommissionBps) } ?: "0"
+    )
+    var labourPerBag by mutableStateOf(
+        tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "5"
+    )
+    var tareQuintals by mutableStateOf(
+        tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
+    )
     var tulakPerQuintal by mutableStateOf("1")
+
+    fun applySettings(settings: TradeSettings) {
+        commissionPercent = MandiMathEngine.paisaToInputString(settings.buyerCommissionBps)
+        labourPerBag = MandiMathEngine.paisaToRupeesString(settings.defaultLabourPaisa)
+        tareQuintals = MandiMathEngine.gramsToQuintalsInputString(settings.defaultTareGrams)
+    }
 
     val lots: SnapshotStateList<SellLotItemState> = mutableStateListOf(
         SellLotItemState(initialCropName = "गेहूं", initialWeightPerBagKg = "50")
@@ -118,8 +134,19 @@ class SellEntryFormState {
     fun aggregatePreview(): SellAggregateResult {
         val calculatedLots = lots.map { it.toCropLot() }
         val totalBags = calculatedLots.sumOf { it.bags }
-        val totalWeight = calculatedLots.sumOf { it.totalWeightGrams }
-        val gross = calculatedLots.sumOf { it.grossPaisa }
+        val totalGrossWeight = calculatedLots.sumOf { it.totalWeightGrams }
+        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(tareQuintals.ifBlank { "0" })
+        val totalWeight = (totalGrossWeight - tareGrams).coerceAtLeast(0L)
+
+        val gross = if (totalGrossWeight <= 0L || tareGrams == 0L) {
+            calculatedLots.sumOf { it.grossPaisa }
+        } else {
+            calculatedLots.sumOf { lot ->
+                val lotWeight = lot.totalWeightGrams
+                val lotNetWeight = (lotWeight - (tareGrams * lotWeight / totalGrossWeight)).coerceAtLeast(0L)
+                MandiMathEngine.grossAmountPaisa(lotNetWeight, lot.ratePaisaPerQuintal)
+            }
+        }
 
         val isBos = (billMode == BillMode.BILL_OF_SUPPLY && partyKind == SellPartyKind.MERCHANT)
 
@@ -254,7 +281,10 @@ class SellEntryFormState {
             } else {
                 null
             },
-            remarks = lotsJson,
+            remarks = buildString {
+                if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
+                append("DATA: $lotsJson")
+            },
             createdAt = now,
             updatedAt = now,
             revision = 1L
@@ -267,11 +297,24 @@ class SellEntryFormState {
         partyKind = entry.partyKind
         billMode = entry.billMode
         gstin = entry.gstin ?: ""
-        commissionPercent = if (entry.aratBps > 0) "${entry.aratBps / 100.0}" else "0"
+        commissionPercent = if (entry.aratBps > 0) MandiMathEngine.paisaToInputString(entry.aratBps) else "0"
+
+        val rem = entry.remarks
+        if (rem != null) {
+            if (rem.contains("काट: ")) {
+                val tareQ = rem.substringAfter("काट: ").substringBefore("Q").trim()
+                if (tareQ.isNotBlank()) tareQuintals = tareQ
+            }
+        }
 
         lots.clear()
         val savedLots = try {
-            entry.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
+            val jsonStr = if (rem != null && rem.contains("DATA: ")) {
+                rem.substringAfter("DATA: ").trim()
+            } else {
+                rem
+            }
+            jsonStr?.let { Json.decodeFromString<List<SellCropLot>>(it) }
         } catch (_: Exception) {
             null
         }

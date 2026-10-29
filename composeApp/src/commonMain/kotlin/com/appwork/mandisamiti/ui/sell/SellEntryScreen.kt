@@ -63,7 +63,8 @@ fun SellEntryScreen(
     existingId: String? = null,
     onSaved: (SellEntry) -> Unit,
     onBack: () -> Unit,
-    formState: SellEntryFormState = remember { SellEntryFormState() },
+    tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings? = null,
+    formState: SellEntryFormState = remember(tradeSettings) { SellEntryFormState(tradeSettings) },
     availableStockGrams: Long? = null,
     sellRepository: SellRepository? = null,
     modifier: Modifier = Modifier
@@ -396,6 +397,14 @@ fun SellEntryScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                        OutlinedTextField(
+                            value = formState.tareQuintals,
+                            onValueChange = { formState.tareQuintals = it },
+                            label = { Text("काट / बारदाना (कुंतल)") },
+                            placeholder = { Text("0") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     } else {
                         // BOS: Labour, Tulak, Mandi Tax (1.5%), Krishak Cess (0.5%)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -414,6 +423,14 @@ fun SellEntryScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                        OutlinedTextField(
+                            value = formState.tareQuintals,
+                            onValueChange = { formState.tareQuintals = it },
+                            label = { Text("काट / बारदाना (कुंतल)") },
+                            placeholder = { Text("0") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SuggestionChip(
@@ -475,6 +492,9 @@ fun SellEntryScreen(
                     }
 
                     SellSummaryRow("कुल बोरी", "${preview.totalBags} बोरी")
+                    if (formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
+                        SellSummaryRow("काट / बारदाना", "- ${formState.tareQuintals} क्विंटल")
+                    }
                     SellSummaryRow("कुल वजन", "${MandiMathEngine.gramsToQuintals(preview.totalWeightGrams)} क्विंटल")
                     SellSummaryRow("कुल सकल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(preview.grossPaisa)}")
 
