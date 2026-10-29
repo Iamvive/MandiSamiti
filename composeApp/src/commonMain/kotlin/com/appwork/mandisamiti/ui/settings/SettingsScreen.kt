@@ -453,7 +453,7 @@ fun SettingsScreen(
                                 color = MandiTextPrimary
                             )
                             Text(
-                                text = if (isEnglish) "SQLite encrypted database active" else "सुरक्षित एवं ऑफलाइन डेटाबेस सक्रिय",
+                                text = if (isEnglish) "Data stored securely on device" else "डेटा इस फ़ोन में सुरक्षित है",
                                 fontSize = 12.sp,
                                 color = MandiTextSecondary
                             )
