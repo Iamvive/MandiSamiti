@@ -79,13 +79,25 @@ object MandiValidators {
     }
 
     const val RATE_OUTLIER_THRESHOLD_PAISA: Long = 20_000_00L // ₹20,000 / quintal
+    const val MIN_RATE_SANITY_PAISA: Long = 500_00L // ₹500 / quintal
+    const val MAX_BAGS_SANITY_LIMIT: Long = 2_000L
+    const val MIN_WEIGHT_PER_BAG_KG: Double = 20.0
+    const val MAX_WEIGHT_PER_BAG_KG: Double = 120.0
 
     fun sanitizeVillage(input: String): String {
-        return input.replace(Regex("\\d+.*"), "").trim()
+        return input.replace(Regex("[0-9].*"), "").trim()
     }
 
     fun isRateOutlier(ratePaisa: Long): Boolean {
-        return ratePaisa > RATE_OUTLIER_THRESHOLD_PAISA
+        return ratePaisa < MIN_RATE_SANITY_PAISA || ratePaisa > RATE_OUTLIER_THRESHOLD_PAISA
+    }
+
+    fun isBagsOutlier(bags: Long): Boolean {
+        return bags > MAX_BAGS_SANITY_LIMIT
+    }
+
+    fun isWeightPerBagOutlier(weightKg: Double): Boolean {
+        return weightKg < MIN_WEIGHT_PER_BAG_KG || weightKg > MAX_WEIGHT_PER_BAG_KG
     }
 
     fun validateNonNegativeNumber(input: String, fieldName: String): ValidationResult {

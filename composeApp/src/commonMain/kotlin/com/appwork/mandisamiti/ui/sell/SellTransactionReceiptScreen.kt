@@ -205,7 +205,7 @@ fun SellTransactionReceiptScreen(
                         Spacer(Modifier.height(8.dp))
                         ReceiptLine(
                             "कुल देय राशि (Total Receivable)",
-                            "₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}",
+                            MandiMathEngine.formatRupees(entry.totalReceivablePaisa),
                             isBold = true
                         )
                     }
@@ -253,7 +253,7 @@ $lotsText
 कुल वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल
 कुल सकल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
 ${if (!isBos && entry.aratPaisa > 0) "कमीशन जोड़: +₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}\n" else ""}${if (isBos && entry.mandiShulkPaisa > 0) "मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}\n" else ""}${if (isBos && entry.tulakPaisa > 0) "तुलाई: +₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}\n" else ""}--------------------
-*कुल देय राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}*
+*कुल देय राशि: ${MandiMathEngine.formatRupees(entry.totalReceivablePaisa)}*
     """.trimIndent()
 }
 

@@ -131,6 +131,37 @@ class SellEntryFormState(
         }
     }
 
+    fun hasSanityWarning(): Boolean {
+        return lots.any { lot ->
+            val b = lot.bags.toLongOrNull() ?: 0L
+            val w = lot.weightPerBagKg.toDoubleOrNull() ?: 0.0
+            val ratePaisa = MandiMathEngine.parseRupeesToPaisa(lot.ratePerQuintal.ifBlank { "0" })
+            MandiValidators.isBagsOutlier(b) ||
+                (w > 0.0 && MandiValidators.isWeightPerBagOutlier(w)) ||
+                (ratePaisa > 0L && MandiValidators.isRateOutlier(ratePaisa))
+        }
+    }
+
+    fun sanityWarningMessage(): String? {
+        val warnings = mutableListOf<String>()
+        lots.forEachIndexed { idx, lot ->
+            val lotNum = if (lots.size > 1) "फसल #${idx + 1}: " else ""
+            val b = lot.bags.toLongOrNull() ?: 0L
+            if (MandiValidators.isBagsOutlier(b)) {
+                warnings.add("${lotNum}बोरी संख्या (${MandiMathEngine.formatIndianGrouping(b)}) 2,000 से अधिक है।")
+            }
+            val w = lot.weightPerBagKg.toDoubleOrNull() ?: 0.0
+            if (w > 0.0 && MandiValidators.isWeightPerBagOutlier(w)) {
+                warnings.add("${lotNum}वजन प्रति बोरी ($w किग्रा) सामान्य सीमा (20-120 किग्रा) से बाहर है।")
+            }
+            val ratePaisa = MandiMathEngine.parseRupeesToPaisa(lot.ratePerQuintal.ifBlank { "0" })
+            if (ratePaisa > 0L && MandiValidators.isRateOutlier(ratePaisa)) {
+                warnings.add("${lotNum}भाव (₹${MandiMathEngine.paisaToRupeesString(ratePaisa)}/क्विंटल) सामान्य सीमा (₹500 - ₹20,000) से बाहर है।")
+            }
+        }
+        return if (warnings.isEmpty()) null else warnings.joinToString("\n")
+    }
+
     fun aggregatePreview(): SellAggregateResult {
         val calculatedLots = lots.map { it.toCropLot() }
         val totalBags = calculatedLots.sumOf { it.bags }

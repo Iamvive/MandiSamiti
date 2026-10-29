@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,14 +47,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.domain.repository.SellRepository
+import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 
@@ -71,6 +76,8 @@ fun SellEntryScreen(
 ) {
     var existingEntry by remember { mutableStateOf<SellEntry?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showSanityConfirmation by remember { mutableStateOf(false) }
+    var pendingEntryToSave by remember { mutableStateOf<SellEntry?>(null) }
 
     val isDirty = formState.hasUnsavedChanges(existingEntry)
 
@@ -195,6 +202,7 @@ fun SellEntryScreen(
                         value = formState.buyerName,
                         onValueChange = { formState.buyerName = it },
                         label = { Text(if (isMerchant) "व्यापारी / फर्म का नाम *" else "ग्राहक का नाम *") },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         isError = !formState.buyerNameValidation.isValid && formState.buyerName.isNotEmpty(),
                         supportingText = formState.buyerNameValidation.errorOrNull?.let { { Text(it) } },
                         modifier = Modifier.fillMaxWidth()
@@ -204,7 +212,7 @@ fun SellEntryScreen(
                         value = formState.phone,
                         onValueChange = { if (it.length <= 10) formState.phone = it.filter { c -> c.isDigit() } },
                         label = { Text("मोबाइल नंबर (वैकल्पिक)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                         isError = !formState.phoneValidation.isValid && formState.phone.isNotEmpty(),
                         supportingText = formState.phoneValidation.errorOrNull?.let { { Text(it) } },
                         modifier = Modifier.fillMaxWidth()
@@ -217,7 +225,7 @@ fun SellEntryScreen(
                                 value = formState.gstin,
                                 onValueChange = { if (it.length <= 15) formState.gstin = it.uppercase() },
                                 label = { Text("GSTIN (15 अक्षर) *") },
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Next),
                                 isError = !formState.gstinValidation.isValid && formState.gstin.isNotEmpty(),
                                 supportingText = formState.gstinValidation.errorOrNull?.let { { Text(it) } },
                                 modifier = Modifier.weight(2f)
@@ -226,7 +234,7 @@ fun SellEntryScreen(
                                 value = formState.stateCode,
                                 onValueChange = { if (it.length <= 2) formState.stateCode = it.filter { c -> c.isDigit() } },
                                 label = { Text("राज्य कोड *") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 isError = !formState.stateCodeValidation.isValid && formState.stateCode.isNotEmpty(),
                                 supportingText = formState.stateCodeValidation.errorOrNull?.let { { Text(it) } },
                                 modifier = Modifier.weight(1f)
@@ -293,6 +301,7 @@ fun SellEntryScreen(
                             value = lot.cropName,
                             onValueChange = { lot.cropName = it },
                             label = { Text("जिंस / फसल वैरायटी") },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -301,7 +310,7 @@ fun SellEntryScreen(
                                 value = lot.bags,
                                 onValueChange = { lot.bags = it.filter { c -> c.isDigit() } },
                                 label = { Text("बोरी संख्या *") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 isError = !lot.bagsValidation.isValid && lot.bags.isNotEmpty(),
                                 supportingText = lot.bagsValidation.errorOrNull?.let { { Text(it) } },
                                 modifier = Modifier.weight(1f)
@@ -310,7 +319,7 @@ fun SellEntryScreen(
                                 value = lot.weightPerBagKg,
                                 onValueChange = { lot.weightPerBagKg = it },
                                 label = { Text("वजन/बोरी (किग्रा)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = !lot.weightValidation.isValid && lot.weightPerBagKg.isNotEmpty(),
                                 supportingText = lot.weightValidation.errorOrNull?.let { { Text(it) } },
                                 modifier = Modifier.weight(1f)
@@ -322,16 +331,24 @@ fun SellEntryScreen(
                                 value = lot.extraWeightKg,
                                 onValueChange = { lot.extraWeightKg = it },
                                 label = { Text("अतिरिक्त वजन (किग्रा)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = lot.ratePerQuintal,
                                 onValueChange = { lot.ratePerQuintal = it },
                                 label = { Text("भाव (रु/क्विंटल) *") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = !lot.rateValidation.isValid && lot.ratePerQuintal.isNotEmpty(),
-                                supportingText = lot.rateValidation.errorOrNull?.let { { Text(it) } },
+                                supportingText = {
+                                    val ratePaisa = MandiMathEngine.parseRupeesToPaisa(lot.ratePerQuintal.ifBlank { "0" })
+                                    val isOutlier = ratePaisa > 0L && MandiValidators.isRateOutlier(ratePaisa)
+                                    if (!lot.rateValidation.isValid && lot.ratePerQuintal.isNotEmpty()) {
+                                        Text(lot.rateValidation.errorOrNull ?: "", color = MaterialTheme.colorScheme.error)
+                                    } else if (isOutlier) {
+                                        Text("⚠️ असामान्य भाव (< ₹500 या > ₹20,000/क्विंटल)", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                                    }
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -386,14 +403,14 @@ fun SellEntryScreen(
                                 value = formState.commissionPercent,
                                 onValueChange = { formState.commissionPercent = it },
                                 label = { Text("कमीशन %") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = formState.labourPerBag,
                                 onValueChange = { formState.labourPerBag = it },
                                 label = { Text("मजदूरी (रु/बोरी)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -402,7 +419,7 @@ fun SellEntryScreen(
                             onValueChange = { formState.tareQuintals = it },
                             label = { Text("काट / बारदाना (कुंतल)") },
                             placeholder = { Text("0") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
@@ -412,14 +429,14 @@ fun SellEntryScreen(
                                 value = formState.labourPerBag,
                                 onValueChange = { formState.labourPerBag = it },
                                 label = { Text("हमाली / मजदूरी (रु/बोरी)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = formState.tulakPerQuintal,
                                 onValueChange = { formState.tulakPerQuintal = it },
                                 label = { Text("तुलाई (रु/क्विंटल)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -428,7 +445,7 @@ fun SellEntryScreen(
                             onValueChange = { formState.tareQuintals = it },
                             label = { Text("काट / बारदाना (कुंतल)") },
                             placeholder = { Text("0") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -491,12 +508,12 @@ fun SellEntryScreen(
                         }
                     }
 
-                    SellSummaryRow("कुल बोरी", "${preview.totalBags} बोरी")
+                    SellSummaryRow("कुल बोरी", "${MandiMathEngine.formatIndianGrouping(preview.totalBags)} बोरी")
                     if (formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
                         SellSummaryRow("काट / बारदाना", "- ${formState.tareQuintals} क्विंटल")
                     }
                     SellSummaryRow("कुल वजन", "${MandiMathEngine.gramsToQuintals(preview.totalWeightGrams)} क्विंटल")
-                    SellSummaryRow("कुल सकल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(preview.grossPaisa)}")
+                    SellSummaryRow("कुल सकल राशि (Gross)", MandiMathEngine.formatRupees(preview.grossPaisa))
 
                     if (!isBos) {
                         if (preview.commissionPaisa > 0) {
@@ -517,11 +534,19 @@ fun SellEntryScreen(
                     }
 
                     Spacer(Modifier.height(4.dp))
-                    SellSummaryRow(
-                        label = "कुल देय राशि (Total Receivable)",
-                        value = "₹${MandiMathEngine.paisaToRupeesString(preview.totalReceivablePaisa)}",
-                        isHighlight = true
-                    )
+                    if (formState.lots.any { it.ratePerQuintal.isBlank() || it.ratePerQuintal == "0" }) {
+                        SellSummaryRow(
+                            label = "कुल देय राशि (Total Receivable)",
+                            value = "भाव दर्ज करें",
+                            isHighlight = true
+                        )
+                    } else {
+                        SellSummaryRow(
+                            label = "कुल देय राशि (Total Receivable)",
+                            value = MandiMathEngine.formatRupees(preview.totalReceivablePaisa),
+                            isHighlight = true
+                        )
+                    }
                 }
             }
 
@@ -556,7 +581,15 @@ fun SellEntryScreen(
 
             // Save Action Button
             Button(
-                onClick = { onSaved(formState.toSellEntry(existingId, shopId)) },
+                onClick = {
+                    val entry = formState.toSellEntry(existingId, shopId)
+                    if (formState.hasSanityWarning()) {
+                        pendingEntryToSave = entry
+                        showSanityConfirmation = true
+                    } else {
+                        onSaved(entry)
+                    }
+                },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -567,6 +600,58 @@ fun SellEntryScreen(
                     "सुरक्षित करें (बिक्री सौदा पक्का)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (showSanityConfirmation && pendingEntryToSave != null) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showSanityConfirmation = false
+                        pendingEntryToSave = null
+                    },
+                    icon = {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = "असामान्य प्रविष्टि पुष्टि (Sanity Check)",
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = (formState.sanityWarningMessage() ?: "प्रविष्टि में असामान्य मान दर्ज हैं।") +
+                                "\n\nक्या विवरण सही है अथवा कोई अतिरिक्त अंक दर्ज हो गया है?",
+                            fontSize = 14.sp
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val entry = pendingEntryToSave!!
+                                showSanityConfirmation = false
+                                pendingEntryToSave = null
+                                onSaved(entry)
+                            }
+                        ) {
+                            Text("हाँ, विवरण सही है (सौदा सुरक्षित करें)")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showSanityConfirmation = false
+                                pendingEntryToSave = null
+                            }
+                        ) {
+                            Text("सुधारें (Edit)")
+                        }
+                    }
                 )
             }
 

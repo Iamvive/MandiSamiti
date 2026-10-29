@@ -156,7 +156,14 @@ object MandiMathEngine {
         return if (isNegative) "-$result" else result
     }
 
-    private fun formatIndianGrouping(number: Long): String {
+    fun formatRupees(paisa: Long): String {
+        val isNegative = paisa < 0
+        val absPaisa = if (isNegative) -paisa else paisa
+        val formatted = paisaToRupeesString(absPaisa)
+        return if (isNegative) "-₹$formatted" else "₹$formatted"
+    }
+
+    fun formatIndianGrouping(number: Long): String {
         val str = number.toString()
         if (str.length <= 3) return str
 

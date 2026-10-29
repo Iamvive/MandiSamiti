@@ -164,7 +164,7 @@ fun BuyTransactionReceiptScreen(
                         Spacer(Modifier.height(8.dp))
                         ReceiptLine(
                             "शुद्ध देय राशि",
-                            "₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}",
+                            MandiMathEngine.formatRupees(entry.netPayablePaisa),
                             isBold = true
                         )
                     }
@@ -227,7 +227,7 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }
     appendLine("--------------------")
-    appendLine("*शुद्ध देय राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}*")
+    appendLine("*शुद्ध देय राशि: ${MandiMathEngine.formatRupees(entry.netPayablePaisa)}*")
 }
 
 @Composable

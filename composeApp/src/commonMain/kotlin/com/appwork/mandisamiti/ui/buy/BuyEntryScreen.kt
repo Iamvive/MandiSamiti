@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -150,6 +151,7 @@ fun BuyEntryScreen(
                         value = formState.farmerName,
                         onValueChange = { formState.farmerName = it },
                         label = { Text("किसान नाम *") },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         isError = !nameVal.isValid && formState.farmerName.isNotEmpty(),
                         supportingText = {
                             if (!nameVal.isValid && formState.farmerName.isNotEmpty()) {
@@ -168,7 +170,7 @@ fun BuyEntryScreen(
                             value = formState.phone,
                             onValueChange = { formState.updatePhone(it) },
                             label = { Text("मोबाइल नंबर (वैकल्पिक)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                             isError = formState.phone.isNotEmpty() && !phoneVal.isValid,
                             supportingText = {
                                 if (formState.phone.isNotEmpty() && !phoneVal.isValid) {
@@ -182,6 +184,7 @@ fun BuyEntryScreen(
                             value = formState.village,
                             onValueChange = { formState.village = it },
                             label = { Text("गाँव (वैकल्पिक)") },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -265,6 +268,7 @@ fun BuyEntryScreen(
                             value = lot.cropName,
                             onValueChange = { lot.cropName = it },
                             label = { Text("जिंस / फसल वैरायटी") },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -273,7 +277,7 @@ fun BuyEntryScreen(
                                 value = lot.bags,
                                 onValueChange = { lot.bags = it.filter { ch -> ch.isDigit() } },
                                 label = { Text("बोरी संख्या *") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 isError = lot.bags.isNotEmpty() && lotVal.bagsError != null,
                                 supportingText = {
                                     if (lot.bags.isNotEmpty() && lotVal.bagsError != null) {
@@ -286,7 +290,7 @@ fun BuyEntryScreen(
                                 value = lot.weightPerBagKg,
                                 onValueChange = { lot.weightPerBagKg = it },
                                 label = { Text("वजन/बोरी (किग्रा)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = lot.weightPerBagKg.isNotEmpty() && lotVal.weightError != null,
                                 modifier = Modifier.weight(1f)
                             )
@@ -297,22 +301,22 @@ fun BuyEntryScreen(
                                 value = lot.extraWeightKg,
                                 onValueChange = { lot.extraWeightKg = it },
                                 label = { Text("अतिरिक्त वजन (किग्रा)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = lot.ratePerQuintal,
                                 onValueChange = { lot.ratePerQuintal = it },
                                 label = { Text("भाव (रु/क्विंटल) *") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null,
                                 supportingText = {
                                     val ratePaisa = MandiMathEngine.parseRupeesToPaisa(lot.ratePerQuintal.ifBlank { "0" })
-                                    val isOutlier = MandiValidators.isRateOutlier(ratePaisa)
+                                    val isOutlier = ratePaisa > 0L && MandiValidators.isRateOutlier(ratePaisa)
                                     if (lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null) {
                                         Text(lotVal.rateError, color = MaterialTheme.colorScheme.error)
                                     } else if (isOutlier) {
-                                        Text("⚠️ असामान्य भाव (> ₹20,000/क्विंटल)", color = MandiAmberDark, fontWeight = FontWeight.SemiBold)
+                                        Text("⚠️ असामान्य भाव (< ₹500 या > ₹20,000/क्विंटल)", color = MandiAmberDark, fontWeight = FontWeight.SemiBold)
                                     }
                                 },
                                 modifier = Modifier.weight(1f)
@@ -369,14 +373,14 @@ fun BuyEntryScreen(
                     value = formState.commissionPercent,
                     onValueChange = { formState.commissionPercent = it },
                     label = { Text("कमीशन %") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
                 OutlinedTextField(
                     value = formState.labourPerBag,
                     onValueChange = { formState.labourPerBag = it },
                     label = { Text("मजदूरी (रु/बोरी)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -387,7 +391,7 @@ fun BuyEntryScreen(
                     onValueChange = { formState.tareQuintals = it },
                     label = { Text("काट / बारदाना (कुंतल)") },
                     placeholder = { Text("0") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
                 OutlinedTextField(
@@ -396,7 +400,7 @@ fun BuyEntryScreen(
                     label = { Text("अग्रिम / पेशगी (रु)") },
                     placeholder = { Text("0") },
                     supportingText = { Text("वैकल्पिक") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -419,29 +423,37 @@ fun BuyEntryScreen(
                         val res = pair.second
                         if (res.grossPaisa > 0) {
                             SummaryRow(
-                                label = "फसल #${idx + 1} (${lot.cropName}) [${res.bags} बोरी]",
-                                value = "₹${MandiMathEngine.paisaToRupeesString(res.grossPaisa)}"
+                                label = "फसल #${idx + 1} (${lot.cropName}) [${MandiMathEngine.formatIndianGrouping(res.bags)} बोरी]",
+                                value = MandiMathEngine.formatRupees(res.grossPaisa)
                             )
                         }
                     }
 
-                    SummaryRow("कुल बोरी", "${preview.totalBags} बोरी")
+                    SummaryRow("कुल बोरी", "${MandiMathEngine.formatIndianGrouping(preview.totalBags)} बोरी")
                     if (formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
                         SummaryRow("काट / बारदाना", "- ${formState.tareQuintals} क्विंटल")
                     }
                     SummaryRow("कुल वजन", "${MandiMathEngine.gramsToQuintals(preview.totalWeightGrams)} क्विंटल")
-                    SummaryRow("कुल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(preview.totalGrossPaisa)}")
+                    SummaryRow("कुल राशि (Gross)", MandiMathEngine.formatRupees(preview.totalGrossPaisa))
                     SummaryRow("कमीशन कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.commissionPaisa)}")
                     SummaryRow("मजदूरी कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.labourPaisa)}")
                     if (preview.advancePaidPaisa > 0) {
                         SummaryRow("अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(preview.advancePaidPaisa)}")
                     }
                     Spacer(Modifier.height(4.dp))
-                    SummaryRow(
-                        "शुद्ध देय राशि (Net Payable)",
-                        "₹${MandiMathEngine.paisaToRupeesString(preview.netPayablePaisa)}",
-                        isHighlight = true
-                    )
+                    if (formState.lots.any { it.ratePerQuintal.isBlank() || it.ratePerQuintal == "0" }) {
+                        SummaryRow(
+                            "शुद्ध देय राशि (Net Payable)",
+                            "भाव दर्ज करें",
+                            isHighlight = true
+                        )
+                    } else {
+                        SummaryRow(
+                            "शुद्ध देय राशि (Net Payable)",
+                            MandiMathEngine.formatRupees(preview.netPayablePaisa),
+                            isHighlight = true
+                        )
+                    }
                 }
             }
 
@@ -479,7 +491,7 @@ fun BuyEntryScreen(
                         existingId = existingId,
                         existingEntry = existingEntry
                     )
-                    if (formState.hasRateOutlier()) {
+                    if (formState.hasSanityWarning()) {
                         pendingEntryToSave = entry
                         showRateOutlierConfirmation = true
                     } else {
@@ -508,13 +520,14 @@ fun BuyEntryScreen(
                     },
                     title = {
                         Text(
-                            text = "असामान्य भाव पुष्टि (Rate Outlier)",
+                            text = "असामान्य प्रविष्टि पुष्टि (Sanity Check)",
                             fontWeight = FontWeight.Bold
                         )
                     },
                     text = {
                         Text(
-                            text = "दर्ज किया गया भाव ₹20,000/क्विंटल से अधिक है। क्या भाव सही है अथवा कोई अतिरिक्त शून्य दर्ज हो गया है?",
+                            text = (formState.sanityWarningMessage() ?: "प्रविष्टि में असामान्य मान दर्ज हैं।") +
+                                "\n\nक्या विवरण सही है अथवा कोई अतिरिक्त अंक दर्ज हो गया है?",
                             fontSize = 14.sp
                         )
                     },
@@ -527,7 +540,7 @@ fun BuyEntryScreen(
                                 onSaved(entry)
                             }
                         ) {
-                            Text("हाँ, भाव सही है (सौदा सुरक्षित करें)")
+                            Text("हाँ, विवरण सही है (सौदा सुरक्षित करें)")
                         }
                     },
                     dismissButton = {
