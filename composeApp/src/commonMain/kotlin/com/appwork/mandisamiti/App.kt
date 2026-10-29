@@ -68,7 +68,7 @@ sealed interface Screen {
     data object FirstSync : Screen
     data object Home : Screen
     data class DealEntry(val existingDealId: String? = null) : Screen
-    data class PartyLedger(val partyId: String) : Screen
+    data class PartyLedger(val partyId: String, val returnScreen: Screen? = null) : Screen
     data class ReceiptPreview(val deal: Deal, val farmer: Party, val buyer: Party?) : Screen
     data object DailyRegister : Screen
 
@@ -97,7 +97,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.ExpenseEntry -> Screen.Home
     is Screen.StockSheet -> Screen.Home
     is Screen.DealEntry -> Screen.Home
-    is Screen.PartyLedger -> Screen.Home
+    is Screen.PartyLedger -> returnScreen ?: Screen.Home
     is Screen.ReceiptPreview -> Screen.Home
     is Screen.DailyRegister -> Screen.Home
     is Screen.Register, is Screen.FirstSync, is Screen.Home -> Screen.Home
@@ -243,7 +243,7 @@ fun App(
                         currentScreen = Screen.BuyEntry(null)
                     },
                     onNavigateToPartyKhata = { party ->
-                        currentScreen = Screen.PartyLedger(party.id)
+                        currentScreen = Screen.PartyLedger(party.id, returnScreen = Screen.Home)
                     },
                     onNavigateToDayClosing = {
                         currentScreen = Screen.DailyRegister
@@ -324,7 +324,7 @@ fun App(
             }
 
             is Screen.PartyLedger -> {
-                MandiBackHandler { currentScreen = Screen.Home }
+                MandiBackHandler { currentScreen = screen.backTarget() }
                 val ledgerViewModel = remember(shopId, screen.partyId) {
                     PartyLedgerViewModel(
                         shopId = shopId!!,
@@ -343,7 +343,7 @@ fun App(
                 }
                 PartyLedgerScreen(
                     viewModel = ledgerViewModel,
-                    onNavigateBack = { currentScreen = Screen.Home },
+                    onNavigateBack = { currentScreen = screen.backTarget() },
                     onShareWhatsAppReceipt = { dealId ->
                         coroutineScope.launch {
                             val deal = dealRepo.getDealById(dealId)
@@ -357,8 +357,8 @@ fun App(
                         }
                     },
                     onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) },
-                    onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId)) },
-                    onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId)) }
+                    onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
+                    onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) }
                 )
             }
 
@@ -541,6 +541,7 @@ fun App(
                 LendTransactionsListScreen(
                     entries = lends,
                     onNew = { currentScreen = Screen.LendEntry },
+                    onPartyClick = { partyId -> currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList) },
                     getSettlements = { lendId -> lendRepo.getSettlements(lendId) },
                     onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
                         coroutineScope.launch {

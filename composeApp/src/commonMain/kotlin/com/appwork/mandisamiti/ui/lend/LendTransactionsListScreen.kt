@@ -67,6 +67,7 @@ fun LendTransactionsListScreen(
     onBack: () -> Unit,
     onNew: () -> Unit = {},
     entries: List<LendEntry> = emptyList(),
+    onPartyClick: ((String) -> Unit)? = null,
     onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit = { _, _, _, _, _ -> },
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
@@ -141,6 +142,7 @@ fun LendTransactionsListScreen(
                     items(activeEntries, key = { it.id }) { entry ->
                         LendCard(
                             entry = entry,
+                            onCardClick = { onPartyClick?.invoke(entry.partyId) },
                             onRepayClick = { selectedLendForRepayment = entry },
                             onLongClick = { voidTarget = entry }
                         )
@@ -173,6 +175,7 @@ fun LendTransactionsListScreen(
                             items(settledEntries, key = { it.id }) { entry ->
                                 LendCard(
                                     entry = entry,
+                                    onCardClick = { onPartyClick?.invoke(entry.partyId) },
                                     onRepayClick = null,
                                     onLongClick = { voidTarget = entry }
                                 )
@@ -213,6 +216,7 @@ fun LendTransactionsListScreen(
 @Composable
 private fun LendCard(
     entry: LendEntry,
+    onCardClick: () -> Unit = {},
     onRepayClick: (() -> Unit)?,
     onLongClick: () -> Unit = {}
 ) {
@@ -225,7 +229,7 @@ private fun LendCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
-                onClick = {},
+                onClick = onCardClick,
                 onLongClick = onLongClick
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
