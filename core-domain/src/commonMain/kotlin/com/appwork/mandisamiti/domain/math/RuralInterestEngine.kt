@@ -1,5 +1,10 @@
 package com.appwork.mandisamiti.domain.math
 
+import kotlin.math.roundToLong
+
+/** How one repayment divides: interest is cleared first, whatever is left reduces principal. */
+data class RepaymentSplit(val interestPaisa: Long, val principalPaisa: Long)
+
 data class InterestCalculation(
     val principalPaisa: Long,
     val monthlyRatePercent: Double,
@@ -34,8 +39,9 @@ object RuralInterestEngine {
         }
 
         val months = elapsedDays / DAYS_IN_MONTH
-        val interestDouble = principalPaisa * (monthlyRatePercent / 100.0) * months
-        val accruedInterestPaisa = interestDouble.toLong()
+        // Money stays in Long: the rate is taken in hundredths of a percent (1.5% -> 150) and the division floors.
+        val rateHundredths = (monthlyRatePercent * 100.0).roundToLong()
+        val accruedInterestPaisa = principalPaisa * rateHundredths * elapsedDays / (10_000L * DAYS_IN_MONTH.toLong())
         val totalPayablePaisa = principalPaisa + accruedInterestPaisa
 
         return InterestCalculation(
@@ -46,6 +52,12 @@ object RuralInterestEngine {
             accruedInterestPaisa = accruedInterestPaisa,
             totalPayablePaisa = totalPayablePaisa
         )
+    }
+
+    /** D4.4: a part repayment pays interest first, then principal. [interestDuePaisa] is the agreed amount. */
+    fun splitRepayment(paymentPaisa: Long, interestDuePaisa: Long): RepaymentSplit {
+        val interest = minOf(paymentPaisa.coerceAtLeast(0L), interestDuePaisa.coerceAtLeast(0L))
+        return RepaymentSplit(interest, paymentPaisa.coerceAtLeast(0L) - interest)
     }
 
     /**

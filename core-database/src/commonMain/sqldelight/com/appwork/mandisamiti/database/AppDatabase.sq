@@ -257,6 +257,7 @@ CREATE TABLE lendSettlementEntity (
     void_reason TEXT,
     principal_paisa INTEGER NOT NULL DEFAULT 0,
     interest_paisa INTEGER NOT NULL DEFAULT 0,
+    calculated_interest_paisa INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(lend_id) REFERENCES lendEntryEntity(id)
 );
 CREATE INDEX idx_settle_lend ON lendSettlementEntity(lend_id);
@@ -668,8 +669,15 @@ SELECT * FROM lendSettlementEntity WHERE shop_id = ? AND is_void = 0 ORDER BY se
 insertLendSettlement:
 INSERT OR REPLACE INTO lendSettlementEntity(
     id, shop_id, lend_id, settled_at, amount_paisa, weight_grams, bags_count,
-    created_at, updated_at, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    created_at, updated_at, sync_status, revision, is_void, void_reason,
+    principal_paisa, interest_paisa, calculated_interest_paisa
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Voids touch only the void columns, so the principal/interest split can never be dropped by a re-insert.
+voidLendSettlement:
+UPDATE lendSettlementEntity
+SET is_void = 1, void_reason = :voidReason, revision = :revision, updated_at = :updatedAt, sync_status = 0
+WHERE id = :id;
 
 getExpensesByShop:
 SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
@@ -724,8 +732,9 @@ DELETE FROM lendSettlementEntity WHERE id = ? AND sync_status = 1;
 insertLendSettlementIfAbsent:
 INSERT OR IGNORE INTO lendSettlementEntity(
     id, shop_id, lend_id, settled_at, amount_paisa, weight_grams, bags_count,
-    created_at, updated_at, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    created_at, updated_at, sync_status, revision, is_void, void_reason,
+    principal_paisa, interest_paisa, calculated_interest_paisa
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteSyncedExpenseEntry:
 DELETE FROM expenseEntryEntity WHERE id = ? AND sync_status = 1;

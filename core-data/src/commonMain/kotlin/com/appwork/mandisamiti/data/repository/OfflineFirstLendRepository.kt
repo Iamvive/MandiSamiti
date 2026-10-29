@@ -70,7 +70,8 @@ class OfflineFirstLendRepository(
         }
     }
 
-    override suspend fun settle(settlement: LendSettlement, cashEntries: List<CashTransaction>) = withContext(ioDispatcher) {
+    override suspend fun settle(rawSettlement: LendSettlement, cashEntries: List<CashTransaction>) = withContext(ioDispatcher) {
+        val settlement = rawSettlement.withSplit()
         val now = clock.now().toEpochMilliseconds()
         database.transaction {
             val lend = queries.getLendEntryById(settlement.lendId).executeAsOneOrNull()?.toDomain()
@@ -79,8 +80,9 @@ class OfflineFirstLendRepository(
 
             val live = queries.getLendSettlementsByLend(lend.id).executeAsList().map { it.toDomain() }.filter { !it.isVoid }
             if (lend.lendType == LendType.MONEY) {
-                val outstanding = (lend.amountPaisa - live.sumOf { it.amountPaisa }).coerceAtLeast(0L)
-                if (settlement.amountPaisa > outstanding) throw LendException.OverRepayment(settlement.amountPaisa, outstanding)
+                // Only principal reduces the loan; interest is paid on top of it.
+                val outstanding = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
+                if (settlement.principalPaisa > outstanding) throw LendException.OverRepayment(settlement.principalPaisa, outstanding)
             } else {
                 val outstanding = (lend.weightGrams - live.sumOf { it.weightGrams }).coerceAtLeast(0L)
                 if (settlement.weightGrams > outstanding) throw LendException.OverRepaymentWeight(settlement.weightGrams, outstanding)
@@ -103,7 +105,7 @@ class OfflineFirstLendRepository(
 
             val settlements = queries.getLendSettlementsByLend(lend.id).executeAsList().map { it.toDomain() }
                 .filter { !it.isVoid }
-            val repaidAmount = settlements.sumOf { it.amountPaisa }
+            val repaidAmount = settlements.sumOf { it.principalPaisa }
             val repaidGrams = settlements.sumOf { it.weightGrams }
             val isSettled = when (lend.lendType) {
                 LendType.MONEY -> repaidAmount >= lend.amountPaisa
@@ -165,7 +167,7 @@ class OfflineFirstLendRepository(
                 updatedAt = now,
                 syncStatus = 0
             )
-            insertSettlement(voidedSettlement)
+            queries.voidLendSettlement(reason.name, voidedSettlement.revision, now, s.id)
             queries.insertRevision(
                 id = IdGenerator.newId(),
                 shop_id = voidedSettlement.shopId,
@@ -270,7 +272,17 @@ class OfflineFirstLendRepository(
             revision = s.revision,
             is_void = if (s.isVoid) 1L else 0L,
             void_reason = s.voidReason,
+            principal_paisa = s.principalPaisa,
+            interest_paisa = s.interestPaisa,
+            calculated_interest_paisa = s.calculatedInterestPaisa,
         )
+    }
+
+    /** Legacy callers pass only [LendSettlement.amountPaisa]; that is all principal. */
+    private fun LendSettlement.withSplit(): LendSettlement {
+        if (principalPaisa == 0L && interestPaisa == 0L) return copy(principalPaisa = amountPaisa)
+        require(principalPaisa + interestPaisa == amountPaisa) { "principal + interest must equal the settlement amount" }
+        return this
     }
 
     private fun LendEntryEntity.toDomain(): LendEntry = LendEntry(
@@ -308,5 +320,8 @@ class OfflineFirstLendRepository(
         isVoid = is_void == 1L,
         voidReason = void_reason,
         syncStatus = sync_status,
+        principalPaisa = principal_paisa,
+        interestPaisa = interest_paisa,
+        calculatedInterestPaisa = calculated_interest_paisa,
     )
 }

@@ -70,7 +70,7 @@ class LendTransactionUseCase(
         require(lend.lendType == LendType.MONEY) { "Only money loans take a cash deposit" }
         require(totalPaisa > 0) { "Nothing to settle" }
 
-        val outstanding = (lend.amountPaisa - repo.getSettlements(lendId).sumOf { it.amountPaisa }).coerceAtLeast(0L)
+        val outstanding = (lend.amountPaisa - repo.getSettlements(lendId).filter { !it.isVoid }.sumOf { it.principalPaisa }).coerceAtLeast(0L)
         val split = splitDeposit(totalPaisa, outstanding)
         if (split.generalPaisa == 0L) {
             repay(lendId, split.loanPaisa, 0L, 0L, note, cashPartyId)
