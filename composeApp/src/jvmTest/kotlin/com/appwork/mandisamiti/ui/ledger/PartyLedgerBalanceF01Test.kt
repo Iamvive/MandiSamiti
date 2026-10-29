@@ -329,5 +329,64 @@ class PartyLedgerBalanceF01Test {
         assertEquals(true, cashRepo.getTransactionsByPartyStream(partyId).first().all { it.isVoid })
         assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
     }
-}
 
+    private val now get() = fixedNow.toEpochMilliseconds()
+
+    private fun cash(id: String, partyId: String, type: TransactionType, paisa: Long, remarks: String) = CashTransaction(
+        id = id, shopId = "shop-test", partyId = partyId, transactionType = type, amountPaisa = paisa,
+        paymentMode = PaymentMode.CASH, transactionDate = now, remarks = remarks, createdAt = now, updatedAt = now,
+    )
+
+    @Test
+    fun r4_voidingLoanCashRowVoidsLendSettlementsAndRepayCashRows() = runTest {
+        val db = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = io)
+        val lendRepo = OfflineFirstLendRepository(db, ioDispatcher = io, clock = testClock)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = io, clock = testClock)
+        val shopId = "shop-test"; val partyId = "party-r4"
+        partyRepo.saveParty(Party(id = partyId, shopId = shopId, name = "Farmer R4", village = "V", partyType = PartyType.FARMER, createdAt = now, updatedAt = now))
+        lendRepo.saveLendEntry(LendEntry(id = "lend-r4", shopId = shopId, partyId = partyId, lendType = LendType.MONEY, entryDate = now, amountPaisa = 500_000L, createdAt = now, updatedAt = now))
+        cashRepo.recordTransaction(cash("tx-lend-r4", partyId, TransactionType.UDHAR_GIVEN, 500_000L, "उधार ऋण [LEND:lend-r4]"))
+        lendRepo.settle(
+            LendSettlement(id = "settle-r4", shopId = shopId, lendId = "lend-r4", settledAt = now, amountPaisa = 200_000L, createdAt = now, updatedAt = now),
+            cash("tx-repay-r4", partyId, TransactionType.JAMA_RECEIVED, 200_000L, "उधार वापसी जमा [SETTLE:settle-r4:lend-r4]"),
+        )
+        assertEquals(300_000L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+
+        cashRepo.voidTransaction("tx-lend-r4", VoidReason.WRONG_ENTRY)
+
+        assertEquals(true, lendRepo.getLendEntryById("lend-r4")?.isVoid)
+        assertEquals(0, lendRepo.getSettlements("lend-r4").size)
+        val cashRows = cashRepo.getTransactionsByPartyStream(partyId).first()
+        assertEquals(2, cashRows.size)
+        assertEquals(true, cashRows.all { it.isVoid })
+        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(0L, cashRows.filter { !it.isVoid }.sumOf { it.amountPaisa }) // cash drawer
+    }
+
+    @Test
+    fun r3_voidingRepayCashRowWritesRevisionsForSettlementAndLend() = runTest {
+        val db = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = io)
+        val lendRepo = OfflineFirstLendRepository(db, ioDispatcher = io, clock = testClock)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = io, clock = testClock)
+        val shopId = "shop-test"; val partyId = "party-r3"
+        partyRepo.saveParty(Party(id = partyId, shopId = shopId, name = "Farmer R3", village = "V", partyType = PartyType.FARMER, createdAt = now, updatedAt = now))
+        lendRepo.saveLendEntry(LendEntry(id = "lend-r3", shopId = shopId, partyId = partyId, lendType = LendType.MONEY, entryDate = now, amountPaisa = 500_000L, createdAt = now, updatedAt = now))
+        lendRepo.settle(
+            LendSettlement(id = "settle-r3", shopId = shopId, lendId = "lend-r3", settledAt = now, amountPaisa = 500_000L, createdAt = now, updatedAt = now),
+            cash("tx-repay-r3", partyId, TransactionType.JAMA_RECEIVED, 500_000L, "उधार वापसी जमा [SETTLE:settle-r3:lend-r3]"),
+        )
+        val q = db.appDatabaseQueries
+        val settleRevsBefore = q.getRevisionsForEntry("settle-r3").executeAsList().size
+        val lendRevsBefore = q.getRevisionsForEntry("lend-r3").executeAsList().size
+
+        cashRepo.voidTransaction("tx-repay-r3", VoidReason.WRONG_ENTRY)
+
+        assertEquals(settleRevsBefore + 1, q.getRevisionsForEntry("settle-r3").executeAsList().size)
+        assertEquals(lendRevsBefore + 1, q.getRevisionsForEntry("lend-r3").executeAsList().size)
+        assertEquals(LendStatus.OPEN, lendRepo.getLendEntryById("lend-r3")?.status)
+    }
+}
