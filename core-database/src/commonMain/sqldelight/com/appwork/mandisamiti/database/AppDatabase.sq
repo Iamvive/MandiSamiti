@@ -362,8 +362,8 @@ SELECT
     p.village AS party_village,
     p.party_type AS party_type,
     (
-        -- 1. Cash Advances given to party (+) (excluding those tagged as lend advances to avoid double counting)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR (remarks NOT LIKE 'उधार ऋण%' AND remarks NOT LIKE '%[LEND:%' AND remarks NOT LIKE 'LEND%'))), 0)
+        -- 1. Cash Advances given to party (+) (excluding those tagged as lend advances or shop expenses)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR (remarks NOT LIKE 'उधार ऋण%' AND remarks NOT LIKE '%[LEND:%' AND remarks NOT LIKE 'LEND%' AND remarks NOT LIKE '%[EXPENSE:%'))), 0)
         +
         -- 2. Interest added to party (+)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)

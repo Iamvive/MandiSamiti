@@ -313,4 +313,91 @@ class ExpenseFlowTest {
         val cashTx2 = db.appDatabaseQueries.getCashTransactionById("cash-exp-2").executeAsOneOrNull()
         assertTrue(cashTx2?.is_void == 1L)
     }
+
+    @Test
+    fun tcExp06_expensePayeeDoesNotAffectPartyBalanceOrLedger() = runTest {
+        val db = createTestDatabase()
+        val expenseRepo = OfflineFirstExpenseRepository(
+            database = db,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            clock = testClock
+        )
+        val cashRepo = OfflineFirstCashTransactionRepository(
+            database = db,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            clock = testClock
+        )
+
+        val partyId = "party-ramesh"
+        val now = fixedNow.toEpochMilliseconds()
+        db.appDatabaseQueries.insertParty(
+            id = partyId,
+            shop_id = "shop-test",
+            name = "Ramesh Patel",
+            phone = "9876543210",
+            village = "Khedi",
+            party_type = "FARMER",
+            monthly_interest_rate = 2.0,
+            photo_uri = null,
+            created_at = now,
+            updated_at = now,
+            is_deleted = 0L,
+            sync_status = 0L
+        )
+
+        // Initial balance should be 0
+        val initialBalance = db.appDatabaseQueries.getPartyBalance(partyId).executeAsOneOrNull()
+        assertEquals(0L, initialBalance?.balance_paisa ?: 0L)
+
+        // Record an expense paid to Ramesh (free text payee)
+        val expense = ExpenseEntry(
+            id = "exp-ramesh-1",
+            shopId = "shop-test",
+            entryDate = now,
+            category = ExpenseCategory.HAMMALI,
+            amountPaisa = 30_000L, // ₹300
+            paidTo = "Ramesh Patel",
+            paymentMode = ExpensePaymentMode.CASH,
+            remarks = "उतराई",
+            createdAt = now,
+            updatedAt = now,
+        )
+        expenseRepo.saveExpense(expense)
+
+        // Follow App.kt logic: partyId is EXPENSE_<CAT> and remarks contain [EXPENSE:id]
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "cash-exp-r1",
+                shopId = "shop-test",
+                partyId = "EXPENSE_${expense.category.name}",
+                transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = expense.amountPaisa,
+                paymentMode = PaymentMode.CASH,
+                transactionDate = expense.entryDate,
+                remarks = "खर्च: ${expense.category.labelHi()} (${expense.paidTo}) [EXPENSE:${expense.id}]",
+                createdAt = expense.createdAt,
+                updatedAt = expense.updatedAt,
+            )
+        )
+
+        // Also test defensive safeguard: even if cash transaction had partyId = partyId with [EXPENSE:id]
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "cash-exp-r2",
+                shopId = "shop-test",
+                partyId = partyId,
+                transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = 50_000L, // ₹500
+                paymentMode = PaymentMode.CASH,
+                transactionDate = expense.entryDate,
+                remarks = "खर्च: मजदूरी (${expense.paidTo}) [EXPENSE:exp-dummy]",
+                createdAt = expense.createdAt,
+                updatedAt = expense.updatedAt,
+            )
+        )
+
+        // Party balance must remain strictly 0 (neither EXPENSE_HAMMALI nor [EXPENSE:...] affects party balance)
+        val afterExpenseBalance = db.appDatabaseQueries.getPartyBalance(partyId).executeAsOneOrNull()
+        assertEquals(0L, afterExpenseBalance?.balance_paisa ?: 0L)
+    }
 }

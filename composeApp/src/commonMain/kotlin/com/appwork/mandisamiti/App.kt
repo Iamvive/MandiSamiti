@@ -605,13 +605,16 @@ fun App(
                         coroutineScope.launch {
                             expenseRepo.saveExpense(entry)
                             if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
+                                val payee = entry.paidTo?.trim()
+                                val payeeNote = if (payee.isNullOrBlank()) "" else " ($payee)"
                                 val expRemarks = entry.remarks?.trim()
-                                val baseRem = if (expRemarks.isNullOrBlank()) "खर्च: ${entry.category.labelHi()}" else "खर्च: ${entry.category.labelHi()} $expRemarks"
+                                val detailRem = if (expRemarks.isNullOrBlank()) "" else " - $expRemarks"
+                                val baseRem = "खर्च: ${entry.category.labelHi()}$payeeNote$detailRem"
                                 cashRepo.recordTransaction(
                                     com.appwork.mandisamiti.domain.model.CashTransaction(
                                         id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
                                         shopId = shopId ?: "",
-                                        partyId = entry.paidTo?.ifBlank { null } ?: entry.category.name,
+                                        partyId = "EXPENSE_${entry.category.name}",
                                         transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
                                         amountPaisa = entry.amountPaisa,
                                         paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
