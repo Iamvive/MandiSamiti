@@ -232,6 +232,10 @@ fun App(
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
@@ -394,6 +398,10 @@ fun App(
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
                         ttsManager = ttsManager,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )

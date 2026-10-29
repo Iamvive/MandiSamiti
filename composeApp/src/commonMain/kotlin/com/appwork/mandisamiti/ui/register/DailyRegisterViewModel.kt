@@ -1,15 +1,30 @@
 package com.appwork.mandisamiti.ui.register
 
 import com.appwork.mandisamiti.domain.cash.CashDrawer
+import com.appwork.mandisamiti.domain.bahi.BahiDayEntry
+import com.appwork.mandisamiti.domain.bahi.BahiDayPage
+import com.appwork.mandisamiti.domain.bahi.BahiDayPageBuilder
+import com.appwork.mandisamiti.domain.bahi.BahiEntryKind
+import com.appwork.mandisamiti.domain.bahi.BahiPaymentMode
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.ExpenseEntry
+import com.appwork.mandisamiti.domain.model.LendSettlement
+import com.appwork.mandisamiti.domain.model.ExpenseCategory
+import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.repository.CashTransactionRepository
+import com.appwork.mandisamiti.domain.repository.BuyRepository
+import com.appwork.mandisamiti.domain.repository.ExpenseRepository
+import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
+import com.appwork.mandisamiti.domain.repository.SellRepository
 import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -40,6 +56,27 @@ data class TransactionWithParty(
     val village: String?
 )
 
+private data class DayInputs(
+    val parties: List<Party>,
+    val transactions: List<CashTransaction>,
+    val date: LocalDate,
+    val buys: List<BuyEntry>,
+    val sells: List<SellEntry>,
+    val settlements: List<LendSettlement>,
+    val expenses: List<ExpenseEntry>,
+)
+
+private fun PaymentMode.toBahiMode(): BahiPaymentMode = name.toBahiMode()
+
+private fun String.toBahiMode(): BahiPaymentMode = when (this) {
+    "CASH" -> BahiPaymentMode.CASH
+    "RTGS" -> BahiPaymentMode.RTGS
+    "NEFT" -> BahiPaymentMode.NEFT
+    "CHEQUE" -> BahiPaymentMode.CHEQUE
+    "UPI" -> BahiPaymentMode.UPI
+    else -> BahiPaymentMode.ONLINE
+}
+
 data class DailyRegisterUiState(
     val shopProfile: ShopProfile? = null,
     val isSoundEnabled: Boolean = true,
@@ -53,6 +90,7 @@ data class DailyRegisterUiState(
     val inHandCashDrawerPaisa: Long = 0L,
     val physicalCountPaisa: Long? = null,
     val physicalCountReason: String? = null,
+    val bahiDayPage: BahiDayPage? = null,
     val todayTransactions: List<TransactionWithParty> = emptyList(),
     val availableParties: List<Party> = emptyList(),
     val isAddEntryDialogOpen: Boolean = false,
@@ -105,6 +143,10 @@ class DailyRegisterViewModel(
     private val partyRepository: PartyRepository,
     private val shopProfileRepository: ShopProfileRepository,
     private val ttsManager: SoundboxTtsManager,
+    private val buyRepository: BuyRepository? = null,
+    private val sellRepository: SellRepository? = null,
+    private val lendRepository: LendRepository? = null,
+    private val expenseRepository: ExpenseRepository? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val clock: Clock = Clock.System,
     private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
@@ -142,14 +184,24 @@ class DailyRegisterViewModel(
             .launchIn(viewModelScope)
 
         // Combined so a party list that loads after the cash list still renames the rows.
-        combine(
+        val baseFlow = combine(
             partyRepository.getPartiesStream(shopId),
             cashRepository.getTransactionsByShopStream(shopId),
             _selectedDate
         ) { parties, allTx, date ->
             Triple(parties, allTx, date)
         }
-            .onEach { (parties, allTx, date) ->
+        combine(
+            baseFlow,
+            buyRepository?.getBuyEntriesStream(shopId) ?: flowOf(emptyList()),
+            sellRepository?.getSellEntriesStream(shopId) ?: flowOf(emptyList()),
+            lendRepository?.getSettlementsStream(shopId) ?: flowOf(emptyList()),
+            expenseRepository?.getExpensesStream(shopId) ?: flowOf(emptyList()),
+        ) { base, buys, sells, settlements, expenses ->
+            DayInputs(base.first, base.second, base.third, buys, sells, settlements, expenses)
+        }
+            .onEach { inputs ->
+                val (parties, allTx, date) = inputs
                 val window = CashDrawer.dayWindow(date, timeZone)
                 val summary = CashDrawer.summarize(allTx, window)
                 val partyMap = parties.associateBy { it.id }
@@ -168,21 +220,60 @@ class DailyRegisterViewModel(
                 val currentToday = todayDate
                 val isCurrentToday = (date == currentToday)
                 val isPast = (date < currentToday)
+                val bahiEntries = buildList {
+                    allTx.filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
+                        .filterNot { it.remarks?.contains("[EXPENSE:") == true || it.remarks?.contains("[SETTLE:") == true }
+                        .forEach { tx ->
+                            add(BahiDayEntry(
+                                id = tx.id,
+                                kind = if (tx.transactionType == TransactionType.JAMA_RECEIVED) BahiEntryKind.BUYER_PAYMENT else BahiEntryKind.ADVANCE_PAID,
+                                label = tx.remarks ?: partyMap[tx.partyId]?.name ?: "Cash entry",
+                                amountPaisa = tx.amountPaisa,
+                                paymentMode = tx.paymentMode.toBahiMode(),
+                                occurredAt = tx.transactionDate,
+                                isVoid = tx.isVoid || tx.isDeleted,
+                            ))
+                        }
+                    inputs.buys.filter { it.entryDate in window.startMs until window.endMs }.forEach { buy ->
+                        add(BahiDayEntry("${buy.id}:grain", BahiEntryKind.GRAIN_LEDGER, "Grain purchased", buy.grossPaisa, occurredAt = buy.entryDate, isVoid = buy.isVoid))
+                        add(BahiDayEntry("${buy.id}:net", BahiEntryKind.FARMER_RECEIPT_NET, "Farmer receipt net", buy.netPayablePaisa, occurredAt = buy.entryDate, isVoid = buy.isVoid))
+                        if (buy.advancePaidPaisa > 0L) add(BahiDayEntry("${buy.id}:advance", BahiEntryKind.ADVANCE_PAID, "Advance adjusted", buy.advancePaidPaisa, occurredAt = buy.entryDate, isVoid = buy.isVoid, isSameDayAdvance = true))
+                    }
+                    inputs.sells.filter { it.entryDate in window.startMs until window.endMs && it.receivedPaisa > 0L }.forEach { sell ->
+                        add(BahiDayEntry(sell.id, BahiEntryKind.BUYER_PAYMENT, "Buyer payment", sell.receivedPaisa, occurredAt = sell.entryDate, isVoid = sell.isVoid))
+                    }
+                    inputs.settlements.filter { it.settledAt in window.startMs until window.endMs && it.amountPaisa > 0L }.forEach { settlement ->
+                        // TODO(feat/bahi-claude): map principal_paisa and interest_paisa to separate Left lines.
+                        add(BahiDayEntry(settlement.id, BahiEntryKind.LOAN_PRINCIPAL_REPAID, "Loan principal repaid", settlement.amountPaisa, occurredAt = settlement.settledAt, isVoid = settlement.isVoid))
+                    }
+                    inputs.expenses.filter { it.entryDate in window.startMs until window.endMs }.forEach { expense ->
+                        add(BahiDayEntry(expense.id, BahiEntryKind.EXPENSE, expense.remarks ?: expense.category.name, expense.amountPaisa, expense.paymentMode.name.toBahiMode(), expense.entryDate, expense.isVoid))
+                    }
+                }
+                val page = BahiDayPageBuilder.build(
+                    dateEpochDay = date.year * 10_000L + date.monthNumber * 100L + date.dayOfMonth,
+                    openingPaisa = summary.openingPaisa.coerceAtLeast(0L),
+                    closingPaisa = (physicalCountPaisaOr(summary.closingPaisa)).coerceAtLeast(0L),
+                    entries = bahiEntries,
+                )
                 _uiState.value = _uiState.value.copy(
                     selectedDate = date,
                     selectedInstant = date.atStartOfDayIn(timeZone),
                     isToday = isCurrentToday,
-                    isReadOnly = isPast,
+                    isReadOnly = false,
                     availableParties = parties,
                     openingCashPaisa = summary.openingPaisa,
                     todayCashInPaisa = summary.cashInPaisa,
                     todayCashOutPaisa = summary.cashOutPaisa,
                     inHandCashDrawerPaisa = summary.closingPaisa,
+                    bahiDayPage = page,
                     todayTransactions = todays.sortedByDescending { it.transaction.transactionDate }
                 )
             }
             .launchIn(viewModelScope)
     }
+
+    private fun physicalCountPaisaOr(fallback: Long) = _uiState.value.physicalCountPaisa ?: fallback
 
     fun selectDate(date: LocalDate) {
         val currentToday = todayDate
@@ -248,6 +339,48 @@ class DailyRegisterViewModel(
         _uiState.value = _uiState.value.copy(
             physicalCountPaisa = countPaisa
         )
+    }
+
+    fun closeDay(countedRs: Long, reason: String? = null) {
+        val expenses = expenseRepository ?: return
+        val expected = _uiState.value.inHandCashDrawerPaisa
+        val counted = countedRs * 100L
+        val shortage = (expected - counted).coerceAtLeast(0L)
+        setPhysicalCashCount(countedRs, reason)
+        if (shortage == 0L) {
+            closeDayClosingSummary()
+            return
+        }
+        val now = clock.now().toEpochMilliseconds()
+        val entryId = IdGenerator.newId()
+        val entryDate = _uiState.value.selectedInstant.toEpochMilliseconds() + 12 * 60 * 60 * 1000L
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            expenses.saveExpense(
+                ExpenseEntry(
+                    id = entryId,
+                    shopId = shopId,
+                    entryDate = entryDate,
+                    category = ExpenseCategory.DAY_CLOSE_DIFF,
+                    amountPaisa = shortage,
+                    paymentMode = ExpensePaymentMode.CASH,
+                    remarks = "Day-close difference / दिन-बंदी अंतर",
+                    createdAt = now,
+                    updatedAt = now,
+                )
+            )
+            cashRepository.recordTransaction(
+                CashTransaction(
+                    id = IdGenerator.newId(), shopId = shopId, partyId = "EXPENSE_DAY_CLOSE_DIFF",
+                    transactionType = TransactionType.UDHAR_GIVEN, amountPaisa = shortage,
+                    paymentMode = PaymentMode.CASH, transactionDate = entryDate,
+                    remarks = "Day-close difference / दिन-बंदी अंतर [EXPENSE:$entryId]",
+                    createdAt = now, updatedAt = now,
+                )
+            )
+            onLocalWrite()
+            _uiState.value = _uiState.value.copy(isSaving = false, isDayClosingSummaryOpen = false)
+        }
     }
 
     fun reconcilePhysicalCash(countedRs: Long): CashReconciliation {
