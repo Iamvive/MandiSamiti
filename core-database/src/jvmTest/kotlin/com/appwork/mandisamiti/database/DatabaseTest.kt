@@ -237,7 +237,7 @@ class DatabaseTest {
         }, 0).value
         assertEquals(1_000_000L - 9_636_353L, preBalance)
 
-        AppDatabase.Schema.migrate(driver, 1, 2)
+        AppDatabase.Schema.migrate(driver, 1, AppDatabase.Schema.version)
 
         val q = AppDatabase(driver).appDatabaseQueries
         val deal = q.getDealById("deal-1").executeAsOne()

@@ -59,6 +59,7 @@ import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
+import com.appwork.mandisamiti.domain.util.LendDateFormatter
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -280,6 +281,23 @@ private fun LendCard(
 
             if (!entry.notes.isNullOrBlank()) {
                 Text(text = "नोट: ${entry.notes}", style = MaterialTheme.typography.bodySmall)
+            }
+
+            val dueDateText = LendDateFormatter.formatDueDate(
+                returnEpochMillis = entry.expectedReturnDate,
+                currentEpochMillis = System.currentTimeMillis()
+            )
+            if (!dueDateText.isNullOrBlank()) {
+                Text(
+                    text = dueDateText,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isOverdue && entry.status != LendStatus.SETTLED) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
+                )
             }
 
             if (onRepayClick != null && entry.status != LendStatus.SETTLED) {

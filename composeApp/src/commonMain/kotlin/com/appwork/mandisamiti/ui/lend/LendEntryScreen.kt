@@ -13,14 +13,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -38,6 +44,7 @@ import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.repository.LendRepository
+import com.appwork.mandisamiti.domain.util.LendDateFormatter
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
@@ -60,7 +67,9 @@ fun LendEntryScreen(
     var commodityName by remember { mutableStateOf("") }
     var bagsCount by remember { mutableStateOf("") }
     var weightKg by remember { mutableStateOf("") }
-    var expectedReturnDate by remember { mutableStateOf("") }
+    var selectedDaysChip by remember { mutableStateOf<Int?>(null) }
+    var expectedReturnMillis by remember { mutableStateOf<Long?>(null) }
+    var showCustomDatePicker by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf("") }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
@@ -73,7 +82,7 @@ fun LendEntryScreen(
         commodityName.isNotBlank() ||
         bagsCount.isNotBlank() ||
         weightKg.isNotBlank() ||
-        expectedReturnDate.isNotBlank() ||
+        expectedReturnMillis != null ||
         notes.isNotBlank()
 
     MandiBackHandler(enabled = true) {
@@ -179,12 +188,58 @@ fun LendEntryScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = expectedReturnDate,
-                onValueChange = { expectedReturnDate = it },
-                label = { Text("अपेक्षित वापसी तारीख (उदा. 30 दिन या 15/11/2026)") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Return Date Chips & Date Picker
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "अपेक्षित वापसी तारीख (Return Due Date)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val quickOptions = listOf(15 to "15 दिन", 30 to "30 दिन", 60 to "60 दिन")
+                    quickOptions.forEach { (days, label) ->
+                        FilterChip(
+                            selected = selectedDaysChip == days,
+                            onClick = {
+                                val now = Clock.System.now().toEpochMilliseconds()
+                                if (selectedDaysChip == days) {
+                                    selectedDaysChip = null
+                                    expectedReturnMillis = null
+                                } else {
+                                    selectedDaysChip = days
+                                    expectedReturnMillis = now + days * 24 * 3600 * 1000L
+                                }
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                    FilterChip(
+                        selected = selectedDaysChip == -1,
+                        onClick = {
+                            showCustomDatePicker = true
+                        },
+                        label = { Text(if (selectedDaysChip == -1 && expectedReturnMillis != null) "कस्टम चुना" else "कस्टम तारीख") }
+                    )
+                }
+
+                if (expectedReturnMillis != null) {
+                    val formatted = LendDateFormatter.formatDueDate(
+                        returnEpochMillis = expectedReturnMillis,
+                        currentEpochMillis = Clock.System.now().toEpochMilliseconds()
+                    )
+                    if (!formatted.isNullOrBlank()) {
+                        Text(
+                            text = formatted,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
 
             OutlinedTextField(
                 value = notes,
@@ -197,11 +252,6 @@ fun LendEntryScreen(
                 onClick = {
                     if (canSave) {
                         val now = Clock.System.now().toEpochMilliseconds()
-                        val returnDays = expectedReturnDate.trim().toLongOrNull()
-                        val returnMillis = if (returnDays != null && returnDays > 0) {
-                            now + returnDays * 24 * 3600 * 1000L
-                        } else null
-
                         val entryAmount = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountRupees) else 0L
                         val entry = LendEntry(
                             id = IdGenerator.newId(),
@@ -213,7 +263,7 @@ fun LendEntryScreen(
                             commodityId = if (!isMoney) commodityName.trim() else null,
                             bagsCount = if (!isMoney) bagsCount.trim().toLongOrNull() ?: 0L else 0L,
                             weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightKg) else 0L,
-                            expectedReturnDate = returnMillis,
+                            expectedReturnDate = expectedReturnMillis,
                             notes = notes.trim().ifEmpty { null },
                             status = LendStatus.OPEN,
                             createdAt = now,
@@ -262,6 +312,31 @@ fun LendEntryScreen(
                         pendingEntryToSave = null
                     }
                 )
+            }
+
+            if (showCustomDatePicker) {
+                val datePickerState = rememberDatePickerState(
+                    initialSelectedDateMillis = expectedReturnMillis ?: Clock.System.now().toEpochMilliseconds()
+                )
+                DatePickerDialog(
+                    onDismissRequest = { showCustomDatePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            expectedReturnMillis = datePickerState.selectedDateMillis
+                            selectedDaysChip = -1
+                            showCustomDatePicker = false
+                        }) {
+                            Text("तारीख चुनें")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showCustomDatePicker = false }) {
+                            Text("रद्द करें")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
             }
 
             if (showDiscardDialog) {

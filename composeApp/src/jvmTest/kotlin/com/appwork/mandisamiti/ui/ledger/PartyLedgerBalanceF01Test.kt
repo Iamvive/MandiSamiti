@@ -167,10 +167,10 @@ class PartyLedgerBalanceF01Test {
         // Shop owes farmer 12,200 (Buy)
         // Farmer owes shop 5,000 (Lend)
         // Farmer repaid 7,000 (Repay)
-        // Expense was 300 to X as cash advance
-        // Net: -12,200 + 5,000 - 7,000 + 300 = -13,900 (-1,390,000 paisa = ₹13,900 देना है)
+        // F14: Expense is a shop expense and does NOT link to party X's balance
+        // Net: -12,200 + 5,000 - 7,000 = -14,200 (-1,420,000 paisa = ₹14,200 देना है)
         val initialBalance = partyRepo.getPartyBalanceStream(partyId).first()
-        assertEquals(-1_390_000L, initialBalance?.balancePaisa)
+        assertEquals(-1_420_000L, initialBalance?.balancePaisa)
 
         // Now void every entry for X
         buyRepo.voidBuyEntry(buyId, VoidReason.WRONG_ENTRY)

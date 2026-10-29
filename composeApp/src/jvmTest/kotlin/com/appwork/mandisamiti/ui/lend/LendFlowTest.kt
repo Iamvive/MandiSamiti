@@ -259,4 +259,52 @@ class LendFlowTest {
         val settledLend = repo.getLendEntryById("lend-kpi-1")
         assertEquals(LendStatus.SETTLED, settledLend?.status)
     }
+
+    @Test
+    fun tcLend06_expectedReturnDate_storedAsDateAndFormattedForCard() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstLendRepository(
+            database = db,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            clock = testClock
+        )
+
+        val nowMillis = fixedNow.toEpochMilliseconds()
+        val due30DaysMillis = nowMillis + 30L * 24 * 3600 * 1000L
+
+        val lend = LendEntry(
+            id = "lend-due-1",
+            shopId = "shop-test",
+            partyId = "RadheyShyam",
+            lendType = LendType.MONEY,
+            entryDate = nowMillis,
+            amountPaisa = 500_000L,
+            expectedReturnDate = due30DaysMillis,
+            notes = "बीज एवं खाद हेतु",
+            status = LendStatus.OPEN,
+            createdAt = nowMillis,
+            updatedAt = nowMillis,
+        )
+        repo.saveLendEntry(lend)
+
+        val retrieved = repo.getLendEntryById("lend-due-1")
+        assertEquals(due30DaysMillis, retrieved?.expectedReturnDate)
+
+        // Verify formatted due date for card
+        val formatted = com.appwork.mandisamiti.domain.util.LendDateFormatter.formatDueDate(
+            returnEpochMillis = retrieved?.expectedReturnDate,
+            currentEpochMillis = nowMillis,
+            timeZone = kotlinx.datetime.TimeZone.UTC
+        )
+        assertEquals("वापसी: 27 Nov (30 दिन बाकी)", formatted)
+
+        // Verify overdue formatted string
+        val overdueMillis = nowMillis - 2L * 24 * 3600 * 1000L
+        val overdueFormatted = com.appwork.mandisamiti.domain.util.LendDateFormatter.formatDueDate(
+            returnEpochMillis = overdueMillis,
+            currentEpochMillis = nowMillis,
+            timeZone = kotlinx.datetime.TimeZone.UTC
+        )
+        assertEquals("वापसी: 26 Oct (2 दिन अतिदेय)", overdueFormatted)
+    }
 }
