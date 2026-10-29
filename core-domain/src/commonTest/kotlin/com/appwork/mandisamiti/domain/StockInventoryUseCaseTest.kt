@@ -28,4 +28,25 @@ class StockInventoryUseCaseTest {
         val repo = FakeStock(StockTotals(mapOf("paddy" to 100_000L), mapOf("paddy" to 300_000L)))
         assertEquals(-200_000L, StockInventoryUseCase(repo).lines("shop").single().onHandGrams)
     }
+
+    @Test
+    fun stockSplitByVariety_aggregatesUnderCommodityWithSubRows() = runTest {
+        val bought = mapOf("गेहूं" to 7_200_000L)
+        val sold = mapOf("गेहूं लोकवान" to 500_000L, "गेहूं शरबती" to 1_000_000L)
+        val repo = FakeStock(StockTotals(bought, sold))
+        val lines = StockInventoryUseCase(repo).lines("shop")
+
+        assertEquals(1, lines.size)
+        val gehu = lines.single()
+        assertEquals("गेहूं", gehu.commodityId)
+        assertEquals(7_200_000L, gehu.boughtGrams)
+        assertEquals(1_500_000L, gehu.soldGrams)
+        assertEquals(5_700_000L, gehu.onHandGrams)
+
+        assertEquals(3, gehu.varieties.size)
+        val byVariety = gehu.varieties.associateBy { it.varietyName }
+        assertEquals(7_200_000L, byVariety.getValue("सामान्य").onHandGrams)
+        assertEquals(-500_000L, byVariety.getValue("लोकवान").onHandGrams)
+        assertEquals(-1_000_000L, byVariety.getValue("शरबती").onHandGrams)
+    }
 }

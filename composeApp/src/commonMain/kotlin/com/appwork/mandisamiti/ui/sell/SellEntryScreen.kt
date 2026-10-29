@@ -71,6 +71,7 @@ fun SellEntryScreen(
     tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings? = null,
     formState: SellEntryFormState = remember(tradeSettings) { SellEntryFormState(tradeSettings) },
     availableStockGrams: Long? = null,
+    stockLines: List<com.appwork.mandisamiti.domain.model.StockLine> = emptyList(),
     sellRepository: SellRepository? = null,
     modifier: Modifier = Modifier
 ) {
@@ -102,7 +103,31 @@ fun SellEntryScreen(
     val preview = formState.aggregatePreview()
     val isBos = (formState.billMode == BillMode.BILL_OF_SUPPLY && formState.partyKind == SellPartyKind.MERCHANT)
     val isMerchant = formState.partyKind == SellPartyKind.MERCHANT
-    val isOverselling = availableStockGrams != null && preview.totalWeightGrams > availableStockGrams
+
+    val oversoldLots = remember(preview, stockLines) {
+        val warnings = mutableListOf<String>()
+        if (stockLines.isNotEmpty()) {
+            val weightsByBaseCommodity = mutableMapOf<String, Long>()
+            preview.lots.forEach { lot ->
+                val base = com.appwork.mandisamiti.domain.model.CommodityParser.parseBaseCommodity(lot.cropName)
+                if (lot.totalWeightGrams > 0L) {
+                    weightsByBaseCommodity[base] = (weightsByBaseCommodity[base] ?: 0L) + lot.totalWeightGrams
+                }
+            }
+
+            weightsByBaseCommodity.forEach { (baseCrop, enteredGrams) ->
+                val matchingStock = stockLines.find { it.commodityId.equals(baseCrop, ignoreCase = true) }
+                val availableGrams = matchingStock?.onHandGrams ?: 0L
+                if (enteredGrams > availableGrams) {
+                    val enteredQtl = MandiMathEngine.gramsToQuintals(enteredGrams)
+                    val availQtl = MandiMathEngine.gramsToQuintals(availableGrams.coerceAtLeast(0L))
+                    warnings.add("चेतावनी: $baseCrop की बिक्री (${enteredQtl} qtl) गोदाम स्टॉक (${availQtl} qtl) से अधिक है")
+                }
+            }
+        }
+        warnings
+    }
+    val isOverselling = oversoldLots.isNotEmpty() || (availableStockGrams != null && preview.totalWeightGrams > availableStockGrams)
     val canSave = formState.canSave()
     val validationReason = formState.validationReason()
 
@@ -471,15 +496,20 @@ fun SellEntryScreen(
 
             // Overselling Warning
             if (isOverselling) {
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text("चेतावनी: बिक्री वजन गोदाम में उपलब्ध स्टॉक से अधिक है") },
-                    icon = { Icon(Icons.Default.Warning, contentDescription = null) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        labelColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val messages = if (oversoldLots.isNotEmpty()) oversoldLots else listOf("चेतावनी: बिक्री वजन गोदाम में उपलब्ध स्टॉक से अधिक है")
+                    messages.forEach { msg ->
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(msg) },
+                            icon = { Icon(Icons.Default.Warning, contentDescription = null) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                labelColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        )
+                    }
+                }
             }
 
             // Calculation & Live Math Card

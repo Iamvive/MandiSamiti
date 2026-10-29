@@ -117,6 +117,37 @@ fun StockLineCard(line: StockLine) {
                     color = if (isNegative) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             }
+
+            if (line.varieties.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "वैरायटी विवरण (Varieties):",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                line.varieties.forEach { v ->
+                    val vNegative = v.onHandGrams < 0
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp, top = 2.dp, bottom = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "• ${v.varietyName}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "खरीद ${MandiMathEngine.gramsToQuintals(v.boughtGrams)} | बिक्री ${MandiMathEngine.gramsToQuintals(v.soldGrams)} | शेष ${MandiMathEngine.gramsToQuintals(v.onHandGrams)} qtl",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (vNegative) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
         }
     }
 }

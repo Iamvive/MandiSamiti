@@ -456,11 +456,18 @@ fun App(
                 )
             }
             is Screen.SellEntry -> {
+                var stockLines by remember(shopId) { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
+                LaunchedEffect(shopId) {
+                    if (shopId != null) {
+                        stockLines = stockUseCase.lines(shopId)
+                    }
+                }
                 SellEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     sellRepository = sellRepo,
                     tradeSettings = tradeSettings,
+                    stockLines = stockLines,
                     onSaved = { entry ->
                         coroutineScope.launch {
                             if (screen.existingId == null) {
