@@ -88,6 +88,7 @@ class OfflineFirstCashTransactionRepository(
                             is_void = 1L,
                             void_reason = reason.name
                         )
+                        cascadeRevision(sEntity.shop_id, sEntity.id, "LEND_SETTLEMENT", sEntity.revision + 1L, "VOID", reason, now)
                     }
                     if (lendId != null) {
                         val lendEntity = queries.getLendEntryById(lendId).executeAsOneOrNull()
@@ -129,59 +130,26 @@ class OfflineFirstCashTransactionRepository(
                                 is_void = lendEntity.is_void,
                                 void_reason = lendEntity.void_reason
                             )
+                            cascadeRevision(lendEntity.shop_id, lendEntity.id, "LEND", lendEntity.revision + 1L, "EDIT", null, now)
                         }
                     }
                 }
             } else if (remarks.contains("[LEND:")) {
                 val lendId = remarks.substringAfter("[LEND:").substringBefore("]")
-                val lendEntity = queries.getLendEntryById(lendId).executeAsOneOrNull()
-                if (lendEntity != null && lendEntity.is_void == 0L) {
-                    queries.insertLendEntry(
-                        id = lendEntity.id,
-                        shop_id = lendEntity.shop_id,
-                        party_id = lendEntity.party_id,
-                        lend_type = lendEntity.lend_type,
-                        entry_date = lendEntity.entry_date,
-                        amount_paisa = lendEntity.amount_paisa,
-                        commodity_id = lendEntity.commodity_id,
-                        bags_count = lendEntity.bags_count,
-                        weight_grams = lendEntity.weight_grams,
-                        expected_return_date = lendEntity.expected_return_date,
-                        notes = lendEntity.notes,
-                        status = lendEntity.status,
-                        created_at = lendEntity.created_at,
-                        updated_at = now,
-                        is_deleted = lendEntity.is_deleted,
-                        sync_status = 0L,
-                        revision = lendEntity.revision + 1L,
-                        is_void = 1L,
-                        void_reason = reason.name
-                    )
-                }
+                // Shared cascade: voids the lend, its settlements and their [SETTLE:] cash rows, with revisions.
+                OfflineFirstLendRepository(database, ioDispatcher, clock).voidLendInTransaction(lendId, reason, now)
             } else if (remarks.contains("[EXPENSE:")) {
                 val expId = remarks.substringAfter("[EXPENSE:").substringBefore("]")
-                val expEntity = queries.getExpenseById(expId).executeAsOneOrNull()
-                if (expEntity != null && expEntity.is_void == 0L) {
-                    queries.insertExpenseEntry(
-                        id = expEntity.id,
-                        shop_id = expEntity.shop_id,
-                        entry_date = expEntity.entry_date,
-                        category = expEntity.category,
-                        amount_paisa = expEntity.amount_paisa,
-                        paid_to = expEntity.paid_to,
-                        payment_mode = expEntity.payment_mode,
-                        remarks = expEntity.remarks,
-                        created_at = expEntity.created_at,
-                        updated_at = now,
-                        is_deleted = expEntity.is_deleted,
-                        sync_status = 0L,
-                        revision = expEntity.revision + 1L,
-                        is_void = 1L,
-                        void_reason = reason.name
-                    )
-                }
+                OfflineFirstExpenseRepository(database, ioDispatcher, clock).voidExpenseInTransaction(expId, reason, now)
             }
         }
+    }
+
+    private fun cascadeRevision(shopId: String, entryId: String, kind: String, revision: Long, change: String, reason: VoidReason?, at: Long) {
+        queries.insertRevision(
+            id = IdGenerator.newId(), shop_id = shopId, entry_id = entryId, entry_kind = kind,
+            revision = revision, change_kind = change, snapshot_json = "", void_reason = reason?.name, changed_at = at,
+        )
     }
 
     /** Rows written before schema v2 have no audit trail; record them as-is as their CREATE revision. */

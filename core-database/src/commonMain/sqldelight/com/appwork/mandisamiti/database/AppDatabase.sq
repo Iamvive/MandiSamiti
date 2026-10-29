@@ -513,11 +513,13 @@ SELECT COUNT(*) FROM (
     SELECT id FROM dealEntity WHERE sync_status = 0
     UNION
     SELECT id FROM cashTransactionEntity WHERE sync_status = 0
-        AND remarks NOT LIKE '%[LEND:%'
-        AND remarks NOT LIKE '%[SETTLE:%'
-        AND remarks NOT LIKE '%[EXPENSE:%'
-        AND remarks NOT LIKE 'उधार ऋण%'
-        AND remarks NOT LIKE 'उधार वापसी%'
+        AND (remarks IS NULL OR (
+            remarks NOT LIKE '%[LEND:%'
+            AND remarks NOT LIKE '%[SETTLE:%'
+            AND remarks NOT LIKE '%[EXPENSE:%'
+            AND remarks NOT LIKE 'उधार ऋण%'
+            AND remarks NOT LIKE 'उधार वापसी%'
+        ))
 );
 
 -- Rows (deleted or not) that belong to any shop other than ?
@@ -649,7 +651,7 @@ INSERT OR REPLACE INTO lendSettlementEntity(
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getExpensesByShop:
-SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 ORDER BY entry_date DESC;
+SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
 
 getCashTransactionsByTag:
 SELECT * FROM cashTransactionEntity WHERE is_deleted = 0 AND is_void = 0 AND remarks LIKE ('%' || :tag || '%');

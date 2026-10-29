@@ -518,4 +518,19 @@ class SyncEngineTest {
         )
         assertEquals(2L, syncEngine.getPendingEntryCount())
     }
+
+    @Test
+    fun testPendingEntryCountIncludesCashRowWithNullRemarks() = runTest {
+        val database = createTestDatabase()
+        val cashRepo = OfflineFirstCashTransactionRepository(database)
+        val syncEngine = SyncEngine(database = database, apiClient = FakeSyncApiClient())
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "tx-null-remarks", shopId = "shop-1", partyId = "farmer-1",
+                transactionType = TransactionType.JAMA_RECEIVED, amountPaisa = 100_000L,
+                transactionDate = 1000L, remarks = null, createdAt = 1000L, updatedAt = 1000L
+            )
+        )
+        assertEquals(1L, syncEngine.getPendingEntryCount())
+    }
 }

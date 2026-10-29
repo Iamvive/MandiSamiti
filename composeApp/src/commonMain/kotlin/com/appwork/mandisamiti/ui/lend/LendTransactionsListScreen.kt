@@ -443,7 +443,7 @@ private fun RepaymentBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            val canConfirm = if (isMoney) {
+            val canConfirm = settlements != null && if (isMoney) {
                 enteredPaisa in 1L..outstandingPaisa
             } else {
                 enteredGrams in 1L..outstandingGrams

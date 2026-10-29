@@ -9,7 +9,11 @@ interface LendRepository {
     suspend fun getLendEntryById(id: String): LendEntry?
     suspend fun getSettlements(lendId: String): List<LendSettlement>
     suspend fun saveLendEntry(entry: LendEntry)
-    /** Records a repayment and moves the lend to PARTIAL or SETTLED in one transaction. */
-    suspend fun settle(settlement: LendSettlement)
+    /**
+     * Records a repayment and moves the lend to PARTIAL or SETTLED in one transaction.
+     * Rejects repayments above the outstanding balance with [com.appwork.mandisamiti.domain.usecase.LendException]
+     * and writes nothing. [cashEntries] are written in the same transaction.
+     */
+    suspend fun settle(settlement: LendSettlement, cashEntries: List<CashTransaction> = emptyList())
     suspend fun voidLendEntry(id: String, reason: VoidReason)
 }

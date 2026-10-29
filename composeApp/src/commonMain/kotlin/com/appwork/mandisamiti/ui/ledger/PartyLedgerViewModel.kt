@@ -3,6 +3,8 @@ package com.appwork.mandisamiti.ui.ledger
 import com.appwork.mandisamiti.data.sync.NoOpSyncScheduler
 import com.appwork.mandisamiti.data.sync.SyncScheduler
 import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.usecase.LendException
+import com.appwork.mandisamiti.domain.usecase.LendTransactionUseCase
 import com.appwork.mandisamiti.domain.math.InterestCalculation
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
@@ -211,41 +213,29 @@ class PartyLedgerViewModel(
     ) {
         viewModelScope.launch {
             val amountPaisa = amountRs * 100L
-            val now = Clock.System.now().toEpochMilliseconds()
-            val settleId = IdGenerator.newId()
-
-            lendRepository?.settle(
-                LendSettlement(
-                    id = settleId,
-                    shopId = shopId,
-                    lendId = lendId,
-                    settledAt = now,
-                    amountPaisa = amountPaisa,
-                    weightGrams = 0L,
-                    bagsCount = 0L,
-                    createdAt = now,
-                    updatedAt = now
-                )
-            )
-
-            val noteText = note?.trim() ?: ""
-            val rem = if (noteText.isBlank()) "उधार वापसी जमा" else "उधार वापसी जमा: $noteText"
-            cashRepository.recordTransaction(
-                CashTransaction(
-                    id = IdGenerator.newId(),
-                    shopId = shopId,
-                    partyId = partyId,
-                    transactionType = TransactionType.JAMA_RECEIVED,
-                    amountPaisa = amountPaisa,
-                    paymentMode = PaymentMode.CASH,
-                    transactionDate = now,
-                    remarks = "$rem [SETTLE:$settleId:$lendId]",
-                    createdAt = now,
-                    updatedAt = now
-                )
-            )
+            val repo = lendRepository ?: return@launch
+            val useCase = LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
+            try {
+                useCase.repay(lendId, amountPaisa, 0L, 0L, note, cashPartyId = partyId)
+            } catch (e: LendException.OverRepayment) {
+                _events.emit(PartyLedgerEvent.Error("राशि बकाया से ज्यादा है (बकाया ₹${MandiMathEngine.formatIndianGrouping(e.outstandingPaisa / 100)})"))
+                return@launch
+            }
             syncScheduler.scheduleOneTimeSync()
             _events.emit(PartyLedgerEvent.TransactionRecorded("उधार खाते में ₹${MandiMathEngine.formatIndianGrouping(amountRs)} जमा दर्ज किया गया"))
+        }
+    }
+
+    /** Deposit larger than the loan: outstanding goes to the loan, the rest is a general jama, one transaction. */
+    fun applyDepositSplitAcrossLoan(lendId: String, amountRs: Long, note: String? = null) {
+        viewModelScope.launch {
+            val repo = lendRepository ?: return@launch
+            val useCase = LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
+            val split = useCase.repayWithOverflow(lendId, amountRs * 100L, note, cashPartyId = partyId)
+            syncScheduler.scheduleOneTimeSync()
+            _events.emit(PartyLedgerEvent.TransactionRecorded(
+                "₹${MandiMathEngine.paisaToRupeesString(split.loanPaisa)} उधार में, ₹${MandiMathEngine.paisaToRupeesString(split.generalPaisa)} सामान्य जमा दर्ज किया गया"
+            ))
         }
     }
 

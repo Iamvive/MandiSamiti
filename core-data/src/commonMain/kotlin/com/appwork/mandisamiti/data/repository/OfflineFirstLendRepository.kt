@@ -6,12 +6,14 @@ import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.LendEntryEntity
 import com.appwork.mandisamiti.database.LendSettlementEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.LendRepository
+import com.appwork.mandisamiti.domain.usecase.LendException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -68,15 +70,25 @@ class OfflineFirstLendRepository(
         }
     }
 
-    override suspend fun settle(settlement: LendSettlement) = withContext(ioDispatcher) {
+    override suspend fun settle(settlement: LendSettlement, cashEntries: List<CashTransaction>) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
         database.transaction {
             val lend = queries.getLendEntryById(settlement.lendId).executeAsOneOrNull()?.toDomain()
                 ?: throw IllegalArgumentException("Lend ${settlement.lendId} does not exist")
             require(!lend.isVoid) { "Lend ${settlement.lendId} is void" }
 
+            val live = queries.getLendSettlementsByLend(lend.id).executeAsList().map { it.toDomain() }.filter { !it.isVoid }
+            if (lend.lendType == LendType.MONEY) {
+                val outstanding = (lend.amountPaisa - live.sumOf { it.amountPaisa }).coerceAtLeast(0L)
+                if (settlement.amountPaisa > outstanding) throw LendException.OverRepayment(settlement.amountPaisa, outstanding)
+            } else {
+                val outstanding = (lend.weightGrams - live.sumOf { it.weightGrams }).coerceAtLeast(0L)
+                if (settlement.weightGrams > outstanding) throw LendException.OverRepaymentWeight(settlement.weightGrams, outstanding)
+            }
+
             val created = settlement.copy(revision = 1, syncStatus = 0)
             insertSettlement(created)
+            cashEntries.forEach { insertCashEntry(it.copy(revision = 1, syncStatus = 0), now) }
             queries.insertRevision(
                 id = IdGenerator.newId(),
                 shop_id = created.shopId,
@@ -108,80 +120,100 @@ class OfflineFirstLendRepository(
         }
     }
 
+    private fun insertCashEntry(tx: CashTransaction, now: Long) {
+        queries.insertCashTransaction(
+            id = tx.id, shop_id = tx.shopId, party_id = tx.partyId, deal_id = tx.dealId,
+            transaction_type = tx.transactionType.name, amount_paisa = tx.amountPaisa,
+            payment_mode = tx.paymentMode.name, transaction_date = tx.transactionDate,
+            voice_note_uri = tx.voiceNoteUri, remarks = tx.remarks, created_at = tx.createdAt,
+            updated_at = tx.updatedAt, is_deleted = 0L, sync_status = tx.syncStatus.toLong(),
+            revision = tx.revision.toLong(), is_void = 0L, void_reason = null,
+        )
+        queries.insertRevision(
+            id = IdGenerator.newId(), shop_id = tx.shopId, entry_id = tx.id, entry_kind = "CASH",
+            revision = tx.revision.toLong(), change_kind = "CREATE",
+            snapshot_json = json.encodeToString(CashTransaction.serializer(), tx),
+            void_reason = null, changed_at = now,
+        )
+    }
+
     override suspend fun voidLendEntry(id: String, reason: VoidReason) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
-        database.transaction {
-            val current = queries.getLendEntryById(id).executeAsOneOrNull()?.toDomain()
-                ?: throw IllegalArgumentException("Lend $id does not exist")
-            if (current.isVoid) return@transaction
-            val voided = current.copy(
-                isVoid = true, voidReason = reason.name, revision = current.revision + 1,
-                updatedAt = now, syncStatus = 0,
+        database.transaction { voidLendInTransaction(id, reason, now) }
+    }
+
+    /** Voids the lend, its settlements and every linked cash row. Must run inside the caller's DB transaction. */
+    internal fun voidLendInTransaction(id: String, reason: VoidReason, now: Long) {
+        val current = queries.getLendEntryById(id).executeAsOneOrNull()?.toDomain()
+            ?: throw IllegalArgumentException("Lend $id does not exist")
+        if (current.isVoid) return
+        val voided = current.copy(
+            isVoid = true, voidReason = reason.name, revision = current.revision + 1,
+            updatedAt = now, syncStatus = 0,
+        )
+        insertOrReplace(voided)
+        recordLendRevision(voided, "VOID", now)
+
+        // Cascade void all settlements for this lend
+        val settlements = queries.getAllLendSettlementsByLend(id).executeAsList()
+        settlements.filter { it.is_void == 0L }.forEach { sEntity ->
+            val s = sEntity.toDomain()
+            val voidedSettlement = s.copy(
+                isVoid = true,
+                voidReason = reason.name,
+                revision = s.revision + 1,
+                updatedAt = now,
+                syncStatus = 0
             )
-            insertOrReplace(voided)
-            recordLendRevision(voided, "VOID", now)
+            insertSettlement(voidedSettlement)
+            queries.insertRevision(
+                id = IdGenerator.newId(),
+                shop_id = voidedSettlement.shopId,
+                entry_id = voidedSettlement.id,
+                entry_kind = "LEND_SETTLEMENT",
+                revision = voidedSettlement.revision,
+                change_kind = "VOID",
+                snapshot_json = json.encodeToString(LendSettlement.serializer(), voidedSettlement),
+                void_reason = voidedSettlement.voidReason,
+                changed_at = now,
+            )
+        }
 
-            // Cascade void all settlements for this lend
-            val settlements = queries.getAllLendSettlementsByLend(id).executeAsList()
-            settlements.filter { it.is_void == 0L }.forEach { sEntity ->
-                val s = sEntity.toDomain()
-                val voidedSettlement = s.copy(
-                    isVoid = true,
-                    voidReason = reason.name,
-                    revision = s.revision + 1,
-                    updatedAt = now,
-                    syncStatus = 0
-                )
-                insertSettlement(voidedSettlement)
-                queries.insertRevision(
-                    id = IdGenerator.newId(),
-                    shop_id = voidedSettlement.shopId,
-                    entry_id = voidedSettlement.id,
-                    entry_kind = "LEND_SETTLEMENT",
-                    revision = voidedSettlement.revision,
-                    change_kind = "VOID",
-                    snapshot_json = json.encodeToString(LendSettlement.serializer(), voidedSettlement),
-                    void_reason = voidedSettlement.voidReason,
-                    changed_at = now,
-                )
-            }
-
-            // Cascade void linked cash transactions
-            val lendTagMatches = queries.getCashTransactionsByTag("[LEND:$id]").executeAsList()
-            val settleTagMatches = queries.getCashTransactionsByTag(":$id]").executeAsList()
-            val allLinked = (lendTagMatches + settleTagMatches).distinctBy { it.id }
-            allLinked.filter { it.is_void == 0L }.forEach { txEntity ->
-                queries.insertCashTransaction(
-                    id = txEntity.id,
-                    shop_id = txEntity.shop_id,
-                    party_id = txEntity.party_id,
-                    deal_id = txEntity.deal_id,
-                    transaction_type = txEntity.transaction_type,
-                    amount_paisa = txEntity.amount_paisa,
-                    payment_mode = txEntity.payment_mode,
-                    transaction_date = txEntity.transaction_date,
-                    voice_note_uri = txEntity.voice_note_uri,
-                    remarks = txEntity.remarks,
-                    created_at = txEntity.created_at,
-                    updated_at = now,
-                    is_deleted = txEntity.is_deleted,
-                    sync_status = 0L,
-                    revision = txEntity.revision + 1L,
-                    is_void = 1L,
-                    void_reason = reason.name
-                )
-                queries.insertRevision(
-                    id = IdGenerator.newId(),
-                    shop_id = txEntity.shop_id,
-                    entry_id = txEntity.id,
-                    entry_kind = "CASH",
-                    revision = txEntity.revision + 1L,
-                    change_kind = "VOID",
-                    snapshot_json = "",
-                    void_reason = reason.name,
-                    changed_at = now
-                )
-            }
+        // Cascade void linked cash transactions
+        val lendTagMatches = queries.getCashTransactionsByTag("[LEND:$id]").executeAsList()
+        val settleTagMatches = queries.getCashTransactionsByTag(":$id]").executeAsList()
+        val allLinked = (lendTagMatches + settleTagMatches).distinctBy { it.id }
+        allLinked.filter { it.is_void == 0L }.forEach { txEntity ->
+            queries.insertCashTransaction(
+                id = txEntity.id,
+                shop_id = txEntity.shop_id,
+                party_id = txEntity.party_id,
+                deal_id = txEntity.deal_id,
+                transaction_type = txEntity.transaction_type,
+                amount_paisa = txEntity.amount_paisa,
+                payment_mode = txEntity.payment_mode,
+                transaction_date = txEntity.transaction_date,
+                voice_note_uri = txEntity.voice_note_uri,
+                remarks = txEntity.remarks,
+                created_at = txEntity.created_at,
+                updated_at = now,
+                is_deleted = txEntity.is_deleted,
+                sync_status = 0L,
+                revision = txEntity.revision + 1L,
+                is_void = 1L,
+                void_reason = reason.name
+            )
+            queries.insertRevision(
+                id = IdGenerator.newId(),
+                shop_id = txEntity.shop_id,
+                entry_id = txEntity.id,
+                entry_kind = "CASH",
+                revision = txEntity.revision + 1L,
+                change_kind = "VOID",
+                snapshot_json = "",
+                void_reason = reason.name,
+                changed_at = now
+            )
         }
     }
 
