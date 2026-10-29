@@ -52,4 +52,36 @@ class DashboardKpisTest {
         assertEquals(50_000, k.totalExpensePaisa)
         assertEquals(250_000, k.profitLossPaisa)
     }
+
+    @Test
+    fun totalOutstandingKpi_subtractsNonVoidSettlements_andIgnoresVoidLends() {
+        val lend1 = LendEntry(
+            id = "l1", shopId = "s1", partyId = "p1", lendType = LendType.MONEY,
+            entryDate = 1000L, amountPaisa = 1_000_000L, createdAt = 1000L, updatedAt = 1000L
+        )
+        val lend2Void = LendEntry(
+            id = "l2", shopId = "s1", partyId = "p2", lendType = LendType.MONEY,
+            entryDate = 1000L, amountPaisa = 500_000L, createdAt = 1000L, updatedAt = 1000L,
+            isVoid = true
+        )
+        val s1 = com.appwork.mandisamiti.domain.model.LendSettlement(
+            id = "s1", shopId = "s1", lendId = "l1", settledAt = 1000L,
+            amountPaisa = 400_000L, createdAt = 1000L, updatedAt = 1000L
+        )
+        val s2Void = com.appwork.mandisamiti.domain.model.LendSettlement(
+            id = "s2", shopId = "s1", lendId = "l1", settledAt = 1000L,
+            amountPaisa = 200_000L, createdAt = 1000L, updatedAt = 1000L,
+            isVoid = true
+        )
+
+        val k = computeKpis(
+            buys = emptyList(),
+            sells = emptyList(),
+            lends = listOf(lend1, lend2Void),
+            expenses = emptyList(),
+            settlements = listOf(s1, s2Void)
+        )
+        // 1,000,000 (l1) - 400,000 (s1) = 600,000 paisa
+        assertEquals(600_000L, k.totalLendPaisa)
+    }
 }

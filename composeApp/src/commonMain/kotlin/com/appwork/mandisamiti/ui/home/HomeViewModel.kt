@@ -134,10 +134,11 @@ class HomeViewModel(
         val buysFlow = buyRepository?.getBuyEntriesStream(shopId) ?: flowOf(emptyList())
         val sellsFlow = sellRepository?.getSellEntriesStream(shopId) ?: flowOf(emptyList())
         val lendsFlow = lendRepository?.getLendEntriesStream(shopId) ?: flowOf(emptyList())
+        val settlementsFlow = lendRepository?.getSettlementsStream(shopId) ?: flowOf(emptyList())
         val expensesFlow = expenseRepository?.getExpensesStream(shopId) ?: flowOf(emptyList())
 
-        combine(buysFlow, sellsFlow, lendsFlow, expensesFlow) { buys, sells, lends, expenses ->
-            val computedKpis = computeKpis(buys, sells, lends, expenses)
+        combine(buysFlow, sellsFlow, lendsFlow, expensesFlow, settlementsFlow) { buys, sells, lends, expenses, settlements ->
+            val computedKpis = computeKpis(buys, sells, lends, expenses, settlements)
             val lines = stockUseCase?.lines(shopId) ?: emptyList()
             Triple(computedKpis, lines, lends)
         }.onEach { (kpis, lines, lends) ->
