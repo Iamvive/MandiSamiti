@@ -22,11 +22,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.id.IdGenerator
@@ -34,8 +36,12 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
+import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
+import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,6 +50,8 @@ fun LendEntryScreen(
     shopId: String = "",
     onSaved: (LendEntry) -> Unit,
     onBack: () -> Unit,
+    parties: List<Party> = emptyList(),
+    lendRepository: LendRepository? = null,
     modifier: Modifier = Modifier
 ) {
     var lendType by remember { mutableStateOf(LendType.MONEY) }
@@ -55,6 +63,10 @@ fun LendEntryScreen(
     var expectedReturnDate by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showDuplicateDialog by remember { mutableStateOf(false) }
+    var pendingEntryToSave by remember { mutableStateOf<LendEntry?>(null) }
+
+    val recentLends by (lendRepository?.getLendEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
 
     val isDirty = partyPhoneOrName.isNotBlank() ||
         amountRupees.isNotBlank() ||
@@ -121,10 +133,15 @@ fun LendEntryScreen(
                 )
             }
 
-            OutlinedTextField(
+            PartyAutocompleteField(
                 value = partyPhoneOrName,
                 onValueChange = { partyPhoneOrName = it },
-                label = { Text("किसान / व्यक्ति का नाम या फोन *") },
+                label = "किसान / व्यक्ति का नाम या फोन *",
+                parties = parties,
+                onPartySelected = { selected ->
+                    partyPhoneOrName = selected.name
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -133,7 +150,7 @@ fun LendEntryScreen(
                     value = amountRupees,
                     onValueChange = { amountRupees = it },
                     label = { Text("उधार राशि (रु) *") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
@@ -141,6 +158,7 @@ fun LendEntryScreen(
                     value = commodityName,
                     onValueChange = { commodityName = it },
                     label = { Text("जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -148,14 +166,14 @@ fun LendEntryScreen(
                         value = bagsCount,
                         onValueChange = { bagsCount = it },
                         label = { Text("बोरी संख्या") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = weightKg,
                         onValueChange = { weightKg = it },
                         label = { Text("कुल वजन (किग्रा) *") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -184,13 +202,14 @@ fun LendEntryScreen(
                             now + returnDays * 24 * 3600 * 1000L
                         } else null
 
+                        val entryAmount = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountRupees) else 0L
                         val entry = LendEntry(
                             id = IdGenerator.newId(),
                             shopId = shopId,
                             partyId = partyPhoneOrName.trim(),
                             lendType = lendType,
                             entryDate = now,
-                            amountPaisa = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountRupees) else 0L,
+                            amountPaisa = entryAmount,
                             commodityId = if (!isMoney) commodityName.trim() else null,
                             bagsCount = if (!isMoney) bagsCount.trim().toLongOrNull() ?: 0L else 0L,
                             weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightKg) else 0L,
@@ -200,13 +219,49 @@ fun LendEntryScreen(
                             createdAt = now,
                             updatedAt = now,
                         )
-                        onSaved(entry)
+
+                        val isDuplicate = recentLends.any { prev ->
+                            !prev.isVoid &&
+                            prev.partyId.trim().equals(entry.partyId.trim(), ignoreCase = true) &&
+                            prev.lendType == entry.lendType &&
+                            (if (isMoney) prev.amountPaisa == entry.amountPaisa else (prev.commodityId == entry.commodityId && prev.weightGrams == entry.weightGrams)) &&
+                            kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
+                        }
+
+                        if (isDuplicate) {
+                            pendingEntryToSave = entry
+                            showDuplicateDialog = true
+                        } else {
+                            onSaved(entry)
+                        }
                     }
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Text("उधार सुरक्षित करें")
+            }
+
+            if (showDuplicateDialog && pendingEntryToSave != null) {
+                val pending = pendingEntryToSave!!
+                val detailStr = if (pending.lendType == LendType.MONEY) {
+                    "${pending.partyId} • ₹${MandiMathEngine.formatIndianGrouping(pending.amountPaisa / 100)}"
+                } else {
+                    "${pending.partyId} • ${pending.commodityId} (${pending.bagsCount} बोरी)"
+                }
+                DuplicateEntryDialog(
+                    message = "यह एंट्री पहले से है, फिर भी सुरक्षित करें?",
+                    details = detailStr,
+                    onConfirm = {
+                        showDuplicateDialog = false
+                        onSaved(pending)
+                        pendingEntryToSave = null
+                    },
+                    onDismiss = {
+                        showDuplicateDialog = false
+                        pendingEntryToSave = null
+                    }
+                )
             }
 
             if (showDiscardDialog) {

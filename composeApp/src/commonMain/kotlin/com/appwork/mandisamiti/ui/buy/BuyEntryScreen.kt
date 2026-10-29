@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,11 +54,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.repository.BuyRepository
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
+import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
+import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,12 +77,16 @@ fun BuyEntryScreen(
     hasActiveLoan: Boolean = false,
     activeLoanChecker: ((String) -> Boolean)? = null,
     buyRepository: BuyRepository? = null,
+    parties: List<Party> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var existingEntry by remember { mutableStateOf<BuyEntry?>(null) }
     var showRateOutlierConfirmation by remember { mutableStateOf(false) }
+    var showDuplicateDialog by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var pendingEntryToSave by remember { mutableStateOf<BuyEntry?>(null) }
+
+    val recentBuys by (buyRepository?.getBuyEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
 
     val isDirty = formState.hasUnsavedChanges(existingEntry)
 
@@ -147,10 +157,17 @@ fun BuyEntryScreen(
                     )
 
                     val nameVal = formState.validateFarmerName()
-                    OutlinedTextField(
+                    PartyAutocompleteField(
                         value = formState.farmerName,
                         onValueChange = { formState.farmerName = it },
-                        label = { Text("किसान नाम *") },
+                        label = "किसान नाम *",
+                        parties = parties,
+                        partyType = PartyType.FARMER,
+                        onPartySelected = { selected ->
+                            formState.farmerName = selected.name
+                            selected.phone?.let { formState.updatePhone(it) }
+                            formState.village = selected.village ?: ""
+                        },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         isError = !nameVal.isValid && formState.farmerName.isNotEmpty(),
                         supportingText = {
@@ -491,7 +508,20 @@ fun BuyEntryScreen(
                         existingId = existingId,
                         existingEntry = existingEntry
                     )
-                    if (formState.hasSanityWarning()) {
+                    val now = Clock.System.now().toEpochMilliseconds()
+                    val isDuplicate = existingId == null && recentBuys.any { prev ->
+                        !prev.isVoid &&
+                        prev.farmerId.trim().equals(entry.farmerId.trim(), ignoreCase = true) &&
+                        prev.netPayablePaisa == entry.netPayablePaisa &&
+                        prev.bagsCount == entry.bagsCount &&
+                        prev.commodityId.trim().equals(entry.commodityId.trim(), ignoreCase = true) &&
+                        kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
+                    }
+
+                    if (isDuplicate) {
+                        pendingEntryToSave = entry
+                        showDuplicateDialog = true
+                    } else if (formState.hasSanityWarning()) {
                         pendingEntryToSave = entry
                         showRateOutlierConfirmation = true
                     } else {
@@ -502,6 +532,27 @@ fun BuyEntryScreen(
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 Text("सुरक्षित करें (सौदा पक्का)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+
+            if (showDuplicateDialog && pendingEntryToSave != null) {
+                val pending = pendingEntryToSave!!
+                DuplicateEntryDialog(
+                    message = "यह एंट्री पहले से है, फिर भी सुरक्षित करें?",
+                    details = "${pending.farmerId} • ₹${MandiMathEngine.formatIndianGrouping(pending.netPayablePaisa / 100)} • ${pending.bagsCount} बोरी (${pending.commodityId})",
+                    onConfirm = {
+                        showDuplicateDialog = false
+                        if (formState.hasSanityWarning()) {
+                            showRateOutlierConfirmation = true
+                        } else {
+                            onSaved(pending)
+                            pendingEntryToSave = null
+                        }
+                    },
+                    onDismiss = {
+                        showDuplicateDialog = false
+                        pendingEntryToSave = null
+                    }
+                )
             }
 
             if (showRateOutlierConfirmation && pendingEntryToSave != null) {

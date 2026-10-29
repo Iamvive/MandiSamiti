@@ -404,11 +404,13 @@ fun App(
 
             is Screen.BuyEntry -> {
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 BuyEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
                     tradeSettings = tradeSettings,
+                    parties = parties,
                     activeLoanChecker = { farmerName ->
                         lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
                     },
@@ -457,6 +459,7 @@ fun App(
             }
             is Screen.SellEntry -> {
                 var stockLines by remember(shopId) { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 LaunchedEffect(shopId) {
                     if (shopId != null) {
                         stockLines = stockUseCase.lines(shopId)
@@ -468,6 +471,7 @@ fun App(
                     sellRepository = sellRepo,
                     tradeSettings = tradeSettings,
                     stockLines = stockLines,
+                    parties = parties,
                     onSaved = { entry ->
                         coroutineScope.launch {
                             if (screen.existingId == null) {
@@ -512,8 +516,11 @@ fun App(
                 )
             }
             is Screen.LendEntry -> {
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 LendEntryScreen(
                     shopId = shopId ?: "",
+                    parties = parties,
+                    lendRepository = lendRepo,
                     onSaved = { entry ->
                         coroutineScope.launch {
                             lendRepo.saveLendEntry(entry)
