@@ -145,6 +145,62 @@ class PartyLedgerViewModelTest {
     }
 
     @Test
+    fun voidingABuyEntryClearsItFromBalanceButKeepsItListedWithStrikethrough() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val buyRepo = com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database, ioDispatcher = ioDispatcher)
+
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        buyRepo.saveBuyEntry(
+            com.appwork.mandisamiti.domain.model.BuyEntry(
+                id = "buy-1",
+                shopId = "shop-1",
+                farmerId = "farmer-1",
+                commodityId = "गेहूं",
+                entryDate = 1000L,
+                bagsCount = 10,
+                weightPerBagGrams = 50_000L,
+                extraWeightGrams = 0L,
+                totalWeightGrams = 500_000L,
+                ratePaisaPerQuintal = 250000L,
+                commissionBps = 0L,
+                labourPerBagPaisa = 0L,
+                advancePaidPaisa = 0L,
+                grossPaisa = 1250000L,
+                commissionPaisa = 0L,
+                labourPaisa = 0L,
+                netPayablePaisa = 1250000L,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1", partyId = "farmer-1", partyRepository = partyRepo, cashRepository = cashRepo,
+            dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            buyRepository = buyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() && it.balancePaisa == -1250000L }.ledgerItems.single()
+        assertTrue(item is LedgerItem.BuyItem)
+        assertEquals(false, (item as LedgerItem.BuyItem).buy.isVoid)
+
+        viewModel.voidEntry(item, VoidReason.WRONG_ENTRY)
+
+        val after = viewModel.uiState.first { state ->
+            state.balancePaisa == 0L && (state.ledgerItems.singleOrNull() as? LedgerItem.BuyItem)?.buy?.isVoid == true
+        }
+        val listed = after.ledgerItems.single() as LedgerItem.BuyItem
+        assertTrue(listed.buy.isVoid)
+        assertEquals("WRONG_ENTRY", listed.buy.voidReason)
+    }
+
+    @Test
     fun testPartyLedgerIncludesBuySellAndLendEntries() = runTest {
         val database = createTestDatabase()
         val ioDispatcher = StandardTestDispatcher(testScheduler)

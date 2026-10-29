@@ -1060,7 +1060,7 @@ private fun FintechBuyCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${buy.voidReason ?: ""}",
+                    text = "रद्द · ${formatVoidReason(buy.voidReason)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1160,7 +1160,7 @@ private fun FintechSellCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${sell.voidReason ?: ""}",
+                    text = "रद्द · ${formatVoidReason(sell.voidReason)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1257,7 +1257,7 @@ private fun FintechLendCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${lend.voidReason ?: ""}",
+                    text = "रद्द · ${formatVoidReason(lend.voidReason)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1265,6 +1265,11 @@ private fun FintechLendCard(
             }
         }
     }
+}
+
+private fun formatVoidReason(reasonStr: String?): String {
+    if (reasonStr.isNullOrBlank()) return ""
+    return VoidReason.entries.find { it.name == reasonStr }?.labelHi ?: reasonStr
 }
 
 private fun formatEpochDate(epochMs: Long): String {

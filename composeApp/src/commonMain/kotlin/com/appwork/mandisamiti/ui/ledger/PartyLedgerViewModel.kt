@@ -147,9 +147,9 @@ class PartyLedgerViewModel(
         val settlementsFlow = lendRepository?.getSettlementsStream(shopId) ?: flowOf(emptyList())
 
         val tradeItemsFlow = combine(buysFlow, sellsFlow, lendsFlow, settlementsFlow) { buysList, sellsList, lendsList, settlementsList ->
-            val partyLends = lendsList.filter { !it.isVoid && (it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true))) }
+            val partyLends = lendsList.filter { it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true)) }
 
-            val openLends = partyLends.filter { it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED }.mapNotNull { lend ->
+            val openLends = partyLends.filter { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED }.mapNotNull { lend ->
                 val nonVoidSettlements = settlementsList.filter { it.lendId == lend.id && !it.isVoid }
                 val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
                 val outstandingPaisa = (lend.amountPaisa - repaidPaisa).coerceAtLeast(0L)
@@ -184,18 +184,18 @@ class PartyLedgerViewModel(
             cashList.forEach { allItems.add(LedgerItem.CashItem(it)) }
 
             // 2. Buy entries (farmer purchases)
-            buysList.filter { !it.isVoid && (it.farmerId == partyId || (partyName != null && it.farmerId.equals(partyName, ignoreCase = true))) }
+            buysList.filter { it.farmerId == partyId || (partyName != null && it.farmerId.equals(partyName, ignoreCase = true)) }
                 .forEach { allItems.add(LedgerItem.BuyItem(it)) }
 
             // 3. Sell entries (buyer sales)
-            sellsList.filter { !it.isVoid && (it.buyerId == partyId || (partyName != null && it.buyerId.equals(partyName, ignoreCase = true))) }
+            sellsList.filter { it.buyerId == partyId || (partyName != null && it.buyerId.equals(partyName, ignoreCase = true)) }
                 .forEach { allItems.add(LedgerItem.SellItem(it)) }
 
             // 4. Lend entries (advances / loans)
             partyLends.forEach { allItems.add(LedgerItem.LendItem(it)) }
 
             // 5. Legacy deals
-            dealsList.filter { !it.isVoid && (it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true)))) }
+            dealsList.filter { it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true))) }
                 .forEach { allItems.add(LedgerItem.DealItem(it)) }
 
             allItems.sortedByDescending { it.timestamp } to openLends
