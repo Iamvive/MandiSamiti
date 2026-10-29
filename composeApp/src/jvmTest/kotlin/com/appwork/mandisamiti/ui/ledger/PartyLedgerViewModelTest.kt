@@ -201,4 +201,60 @@ class PartyLedgerViewModelTest {
         assertEquals("buy-1", item.buy.id)
         assertEquals(2531200L, item.buy.netPayablePaisa)
     }
+
+    @Test
+    fun testApplyCashEntryToLoanSettlesLendAndUpdatesLedger() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val farmer = Party(id = "farmer-1", shopId = "shop-1", name = "Kailash", village = "Nagla", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        partyRepo.saveParty(farmer)
+
+        val lend = com.appwork.mandisamiti.domain.model.LendEntry(
+            id = "lend-1",
+            shopId = "shop-1",
+            partyId = "farmer-1",
+            lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+            entryDate = 1000L,
+            amountPaisa = 500_000L,
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        lendRepo.saveLendEntry(lend)
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1",
+            partyId = "farmer-1",
+            partyRepository = partyRepo,
+            cashRepository = cashRepo,
+            dealRepository = dealRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val stateWithLoan = viewModel.uiState.first { it.openLoans.isNotEmpty() }
+        assertEquals(1, stateWithLoan.openLoans.size)
+        assertEquals("lend-1", stateWithLoan.openLoans.first().lend.id)
+        assertEquals(500_000L, stateWithLoan.openLoans.first().outstandingPaisa)
+
+        viewModel.applyCashEntryToLoan(lendId = "lend-1", amountRs = 5000L, note = "पूर्ण भुगतान")
+
+        val stateAfterSettle = viewModel.uiState.first { it.openLoans.isEmpty() }
+        assertTrue(stateAfterSettle.openLoans.isEmpty())
+
+        val updatedLend = lendRepo.getLendEntryById("lend-1")
+        assertNotNull(updatedLend)
+        assertEquals(com.appwork.mandisamiti.domain.model.LendStatus.SETTLED, updatedLend.status)
+
+        val settlements = lendRepo.getSettlements("lend-1")
+        assertEquals(1, settlements.size)
+        assertEquals(500_000L, settlements.first().amountPaisa)
+    }
 }

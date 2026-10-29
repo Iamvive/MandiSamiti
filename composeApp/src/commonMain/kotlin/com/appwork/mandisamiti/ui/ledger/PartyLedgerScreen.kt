@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -109,6 +110,11 @@ fun PartyLedgerScreen(
     var showCashEntryType by remember { mutableStateOf<TransactionType?>(null) }
     var cashAmountInput by remember { mutableStateOf("") }
     var cashRemarksInput by remember { mutableStateOf("") }
+
+    var showApplyToLoanDialog by remember { mutableStateOf(false) }
+    var pendingCashAmount by remember { mutableStateOf(0L) }
+    var pendingCashRemarks by remember { mutableStateOf("") }
+    var selectedLoanIdForRepay by remember { mutableStateOf<String?>(null) }
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
 
@@ -415,15 +421,25 @@ fun PartyLedgerScreen(
                     onClick = {
                         val amount = cashAmountInput.toLongOrNull() ?: 0L
                         if (amount > 0L) {
-                            viewModel.recordCashEntry(
-                                transactionType = txnType,
-                                amountRs = amount,
-                                paymentMode = PaymentMode.CASH,
-                                remarks = cashRemarksInput.ifBlank { null }
-                            )
-                            showCashEntryType = null
-                            cashAmountInput = ""
-                            cashRemarksInput = ""
+                            if (isDeposit && uiState.openLoans.isNotEmpty()) {
+                                pendingCashAmount = amount
+                                pendingCashRemarks = cashRemarksInput
+                                selectedLoanIdForRepay = uiState.openLoans.first().lend.id
+                                showApplyToLoanDialog = true
+                                showCashEntryType = null
+                                cashAmountInput = ""
+                                cashRemarksInput = ""
+                            } else {
+                                viewModel.recordCashEntry(
+                                    transactionType = txnType,
+                                    amountRs = amount,
+                                    paymentMode = PaymentMode.CASH,
+                                    remarks = cashRemarksInput.ifBlank { null }
+                                )
+                                showCashEntryType = null
+                                cashAmountInput = ""
+                                cashRemarksInput = ""
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -436,6 +452,144 @@ fun PartyLedgerScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showCashEntryType = null }) {
+                    Text("रद्द करें", color = MandiTextSecondary)
+                }
+            }
+        )
+    }
+
+    if (showApplyToLoanDialog) {
+        val totalOutstandingPaisa = uiState.openLoans.sumOf { it.outstandingPaisa }
+        val totalOutstandingRs = totalOutstandingPaisa / 100L
+        val selectedLoan = uiState.openLoans.find { it.lend.id == selectedLoanIdForRepay } ?: uiState.openLoans.firstOrNull()
+        val selectedLoanOutstandingRs = (selectedLoan?.outstandingPaisa ?: 0L) / 100L
+        val canApplyToLoan = selectedLoan != null && (pendingCashAmount * 100L <= selectedLoan.outstandingPaisa)
+
+        AlertDialog(
+            onDismissRequest = { showApplyToLoanDialog = false },
+            title = {
+                Text(
+                    text = "उधार ऋण में काटें?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "इस खातेदार का कुल उधार बकाया ₹${MandiMathEngine.formatIndianGrouping(totalOutstandingRs)} है। दर्ज राशि: ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}",
+                        fontSize = 14.sp,
+                        color = MandiTextSecondary
+                    )
+
+                    if (uiState.openLoans.size > 1) {
+                        Text(
+                            text = "ऋण चुनें जिसमें काटना है:",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextPrimary
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            uiState.openLoans.forEach { loanInfo ->
+                                val isSelected = loanInfo.lend.id == selectedLoanIdForRepay
+                                val loanOutstandingRs = loanInfo.outstandingPaisa / 100L
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) MandiGreenLight else MandiSurface)
+                                        .border(1.dp, if (isSelected) MandiGreenBorder else MandiBorder, RoundedCornerShape(8.dp))
+                                        .clickable { selectedLoanIdForRepay = loanInfo.lend.id }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "ऋण: ₹${MandiMathEngine.formatIndianGrouping(loanInfo.lend.amountPaisa / 100L)}",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MandiTextPrimary
+                                        )
+                                        Text(
+                                            text = "बकाया: ₹${MandiMathEngine.formatIndianGrouping(loanOutstandingRs)}",
+                                            fontSize = 12.sp,
+                                            color = MandiGreenReceivable
+                                        )
+                                    }
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { selectedLoanIdForRepay = loanInfo.lend.id }
+                                    )
+                                }
+                            }
+                        }
+                    } else if (selectedLoan != null) {
+                        Text(
+                            text = "बकाया ऋण: ₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiGreenReceivable
+                        )
+                    }
+
+                    if (selectedLoan != null && pendingCashAmount * 100L > selectedLoan.outstandingPaisa) {
+                        Text(
+                            text = "ध्यान दें: दर्ज राशि (₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}) इस ऋण के बकाया (₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}) से अधिक है। यदि पूरा ऋण चुकता करना है तो बकाया राशि जितनी ही काटें, या सामान्य जमा करें।",
+                            fontSize = 12.sp,
+                            color = MandiRedPayable
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (selectedLoan != null && canApplyToLoan) {
+                                viewModel.applyCashEntryToLoan(
+                                    lendId = selectedLoan.lend.id,
+                                    amountRs = pendingCashAmount,
+                                    note = pendingCashRemarks.ifBlank { null }
+                                )
+                                showApplyToLoanDialog = false
+                            }
+                        },
+                        enabled = canApplyToLoan,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiBtnSuccessBg,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("उधार में काटें", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.recordCashEntry(
+                                transactionType = TransactionType.JAMA_RECEIVED,
+                                amountRs = pendingCashAmount,
+                                paymentMode = PaymentMode.CASH,
+                                remarks = pendingCashRemarks.ifBlank { null }
+                            )
+                            showApplyToLoanDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("सामान्य जमा करें", color = MandiTextPrimary, fontWeight = FontWeight.Medium)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showApplyToLoanDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("रद्द करें", color = MandiTextSecondary)
                 }
             }

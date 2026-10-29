@@ -10,6 +10,7 @@ import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.LendEntry
+import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.SellEntry
@@ -67,11 +68,17 @@ sealed interface LedgerItem {
     ) : LedgerItem
 }
 
+data class OpenLoanInfo(
+    val lend: LendEntry,
+    val outstandingPaisa: Long
+)
+
 data class PartyLedgerUiState(
     val party: Party? = null,
     val isSoundEnabled: Boolean = true,
     val balancePaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
+    val openLoans: List<OpenLoanInfo> = emptyList(),
     val isCashDialogOpen: Boolean = false,
     val isInterestDialogOpen: Boolean = false,
     val calculatedInterest: InterestCalculation? = null,
@@ -137,14 +144,40 @@ class PartyLedgerViewModel(
         val buysFlow = buyRepository?.getBuyEntriesStream(shopId) ?: flowOf(emptyList())
         val sellsFlow = sellRepository?.getSellEntriesStream(shopId) ?: flowOf(emptyList())
         val lendsFlow = lendRepository?.getLendEntriesStream(shopId) ?: flowOf(emptyList())
+        val settlementsFlow = lendRepository?.getSettlementsStream(shopId) ?: flowOf(emptyList())
+
+        val tradeItemsFlow = combine(buysFlow, sellsFlow, lendsFlow, settlementsFlow) { buysList, sellsList, lendsList, settlementsList ->
+            val partyLends = lendsList.filter { !it.isVoid && (it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true))) }
+
+            val openLends = partyLends.filter { it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED }.mapNotNull { lend ->
+                val nonVoidSettlements = settlementsList.filter { it.lendId == lend.id && !it.isVoid }
+                val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
+                val outstandingPaisa = (lend.amountPaisa - repaidPaisa).coerceAtLeast(0L)
+                val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
+                val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
+
+                val isOpen = if (lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY) {
+                    outstandingPaisa > 0L
+                } else {
+                    outstandingGrams > 0L
+                }
+
+                if (isOpen) {
+                    OpenLoanInfo(lend = lend, outstandingPaisa = outstandingPaisa)
+                } else {
+                    null
+                }
+            }
+
+            Triple(buysList, sellsList, partyLends) to openLends
+        }
 
         combine(
             cashRepository.getTransactionsByPartyStream(partyId),
             dealRepository.getDealsByShopStream(shopId),
-            buysFlow,
-            sellsFlow,
-            lendsFlow
-        ) { cashList, dealsList, buysList, sellsList, lendsList ->
+            tradeItemsFlow
+        ) { cashList, dealsList, (trades, openLends) ->
+            val (buysList, sellsList, partyLends) = trades
             val allItems = mutableListOf<LedgerItem>()
 
             // 1. Cash transactions
@@ -159,17 +192,61 @@ class PartyLedgerViewModel(
                 .forEach { allItems.add(LedgerItem.SellItem(it)) }
 
             // 4. Lend entries (advances / loans)
-            lendsList.filter { !it.isVoid && (it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true))) }
-                .forEach { allItems.add(LedgerItem.LendItem(it)) }
+            partyLends.forEach { allItems.add(LedgerItem.LendItem(it)) }
 
             // 5. Legacy deals
             dealsList.filter { !it.isVoid && (it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true)))) }
                 .forEach { allItems.add(LedgerItem.DealItem(it)) }
 
-            allItems.sortedByDescending { it.timestamp }
-        }.onEach { sortedItems ->
-            _uiState.value = _uiState.value.copy(ledgerItems = sortedItems)
+            allItems.sortedByDescending { it.timestamp } to openLends
+        }.onEach { (sortedItems, openLends) ->
+            _uiState.value = _uiState.value.copy(ledgerItems = sortedItems, openLoans = openLends)
         }.launchIn(viewModelScope)
+    }
+
+    fun applyCashEntryToLoan(
+        lendId: String,
+        amountRs: Long,
+        note: String? = null
+    ) {
+        viewModelScope.launch {
+            val amountPaisa = amountRs * 100L
+            val now = Clock.System.now().toEpochMilliseconds()
+            val settleId = IdGenerator.newId()
+
+            lendRepository?.settle(
+                LendSettlement(
+                    id = settleId,
+                    shopId = shopId,
+                    lendId = lendId,
+                    settledAt = now,
+                    amountPaisa = amountPaisa,
+                    weightGrams = 0L,
+                    bagsCount = 0L,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+
+            val noteText = note?.trim() ?: ""
+            val rem = if (noteText.isBlank()) "उधार वापसी जमा" else "उधार वापसी जमा: $noteText"
+            cashRepository.recordTransaction(
+                CashTransaction(
+                    id = IdGenerator.newId(),
+                    shopId = shopId,
+                    partyId = partyId,
+                    transactionType = TransactionType.JAMA_RECEIVED,
+                    amountPaisa = amountPaisa,
+                    paymentMode = PaymentMode.CASH,
+                    transactionDate = now,
+                    remarks = "$rem [SETTLE:$settleId:$lendId]",
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+            syncScheduler.scheduleOneTimeSync()
+            _events.emit(PartyLedgerEvent.TransactionRecorded("उधार खाते में ₹${MandiMathEngine.formatIndianGrouping(amountRs)} जमा दर्ज किया गया"))
+        }
     }
 
     fun openCashDialog() {
