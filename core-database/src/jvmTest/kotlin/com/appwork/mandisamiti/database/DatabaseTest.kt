@@ -161,10 +161,11 @@ class DatabaseTest {
     }
 
     @Test
-    fun schemaIsVersion3AndBalanceIgnoresVoids() {
+    fun schemaVersionMatchesMigrationsAndBalanceIgnoresVoids() {
         val db = AppDatabase(DriverFactory().createDriver())
         val q = db.appDatabaseQueries
-        assertEquals(4L, AppDatabase.Schema.version)
+        // SQLDelight version = migrations (1.sqm..4.sqm) + 1
+        assertEquals(5L, AppDatabase.Schema.version)
 
         q.insertParty("farmer-1", "shop-1", "रामवीर", null, null, "FARMER", null, null, 1L, 1L, 0L, 0L)
         q.insertCashTransaction(
