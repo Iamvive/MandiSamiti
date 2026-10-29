@@ -62,6 +62,7 @@ import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.domain.repository.SellRepository
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
@@ -437,6 +438,10 @@ fun SellEntryScreen(
                         fontWeight = FontWeight.Bold
                     )
 
+                    val defaultComm = tradeSettings?.let { MandiMathEngine.paisaToInputString(it.buyerCommissionBps) } ?: "0"
+                    val defaultLabour = tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "150"
+                    val defaultTare = tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
+
                     if (!isBos) {
                         // Normal Slip: Commission % and Labour
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -444,6 +449,9 @@ fun SellEntryScreen(
                                 value = formState.commissionPercent,
                                 onValueChange = { formState.commissionPercent = it },
                                 label = { Text("कमीशन %") },
+                                supportingText = if (formState.commissionPercent != defaultComm) {
+                                    { Text("डिफ़ॉल्ट से बदला गया ($defaultComm%)", color = MandiAmberDark, fontSize = 11.sp) }
+                                } else null,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
@@ -451,6 +459,9 @@ fun SellEntryScreen(
                                 value = formState.labourPerBag,
                                 onValueChange = { formState.labourPerBag = it },
                                 label = { Text("मजदूरी (रु/बोरी)") },
+                                supportingText = if (formState.labourPerBag != defaultLabour) {
+                                    { Text("डिफ़ॉल्ट से बदला गया (₹$defaultLabour)", color = MandiAmberDark, fontSize = 11.sp) }
+                                } else null,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
@@ -460,6 +471,9 @@ fun SellEntryScreen(
                             onValueChange = { formState.tareQuintals = it },
                             label = { Text("काट / बारदाना (कुंतल)") },
                             placeholder = { Text("0") },
+                            supportingText = if (formState.tareQuintals != defaultTare) {
+                                { Text("डिफ़ॉल्ट से बदला गया (${defaultTare.ifBlank { "0" }} qtl)", color = MandiAmberDark, fontSize = 11.sp) }
+                            } else null,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -470,6 +484,9 @@ fun SellEntryScreen(
                                 value = formState.labourPerBag,
                                 onValueChange = { formState.labourPerBag = it },
                                 label = { Text("हमाली / मजदूरी (रु/बोरी)") },
+                                supportingText = if (formState.labourPerBag != defaultLabour) {
+                                    { Text("डिफ़ॉल्ट से बदला गया (₹$defaultLabour)", color = MandiAmberDark, fontSize = 11.sp) }
+                                } else null,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
@@ -477,6 +494,9 @@ fun SellEntryScreen(
                                 value = formState.tulakPerQuintal,
                                 onValueChange = { formState.tulakPerQuintal = it },
                                 label = { Text("तुलाई (रु/क्विंटल)") },
+                                supportingText = if (formState.tulakPerQuintal != "1") {
+                                    { Text("डिफ़ॉल्ट से बदला गया (₹1)", color = MandiAmberDark, fontSize = 11.sp) }
+                                } else null,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
@@ -486,6 +506,9 @@ fun SellEntryScreen(
                             onValueChange = { formState.tareQuintals = it },
                             label = { Text("काट / बारदाना (कुंतल)") },
                             placeholder = { Text("0") },
+                            supportingText = if (formState.tareQuintals != defaultTare) {
+                                { Text("डिफ़ॉल्ट से बदला गया (${defaultTare.ifBlank { "0" }} qtl)", color = MandiAmberDark, fontSize = 11.sp) }
+                            } else null,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth()
                         )

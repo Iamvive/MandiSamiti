@@ -208,6 +208,15 @@ fun DashboardScreen(
             }
         }
 
+        // 4b. Daily Godown Stock Card (D6)
+        item {
+            GodownStockSummaryCard(
+                stockLines = uiState.stockLines,
+                onViewAllClick = onNavigateToStockSheet,
+                isEnglish = isEnglish
+            )
+        }
+
         // 4. Recent Active Accounts Header
         item {
             Row(
