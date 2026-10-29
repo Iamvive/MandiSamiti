@@ -333,7 +333,18 @@ fun BuyEntryScreen(
                                     if (lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null) {
                                         Text(lotVal.rateError, color = MaterialTheme.colorScheme.error)
                                     } else if (isOutlier) {
-                                        Text("⚠️ असामान्य भाव (< ₹500 या > ₹20,000/क्विंटल)", color = MandiAmberDark, fontWeight = FontWeight.SemiBold)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Warning,
+                                                contentDescription = null,
+                                                tint = MandiAmberDark,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Text("असामान्य भाव (< ₹500 या > ₹20,000/क्विंटल)", color = MandiAmberDark, fontWeight = FontWeight.SemiBold)
+                                        }
                                     }
                                 },
                                 modifier = Modifier.weight(1f)
@@ -385,11 +396,18 @@ fun BuyEntryScreen(
                 fontWeight = FontWeight.Bold
             )
 
+            val defaultComm = tradeSettings?.let { MandiMathEngine.paisaToInputString(it.farmerCommissionBps) } ?: "1.5"
+            val defaultLabour = tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "150"
+            val defaultTare = tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = formState.commissionPercent,
                     onValueChange = { formState.commissionPercent = it },
                     label = { Text("कमीशन %") },
+                    supportingText = if (formState.commissionPercent != defaultComm) {
+                        { Text("डिफ़ॉल्ट से बदला गया ($defaultComm%)", color = MandiAmberDark, fontSize = 11.sp) }
+                    } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
@@ -397,6 +415,9 @@ fun BuyEntryScreen(
                     value = formState.labourPerBag,
                     onValueChange = { formState.labourPerBag = it },
                     label = { Text("मजदूरी (रु/बोरी)") },
+                    supportingText = if (formState.labourPerBag != defaultLabour) {
+                        { Text("डिफ़ॉल्ट से बदला गया (₹$defaultLabour)", color = MandiAmberDark, fontSize = 11.sp) }
+                    } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
@@ -408,6 +429,9 @@ fun BuyEntryScreen(
                     onValueChange = { formState.tareQuintals = it },
                     label = { Text("काट / बारदाना (कुंतल)") },
                     placeholder = { Text("0") },
+                    supportingText = if (formState.tareQuintals != defaultTare) {
+                        { Text("डिफ़ॉल्ट से बदला गया (${defaultTare.ifBlank { "0" }} qtl)", color = MandiAmberDark, fontSize = 11.sp) }
+                    } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
