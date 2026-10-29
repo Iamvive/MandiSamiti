@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
+import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.VoidReason
@@ -67,6 +69,7 @@ fun LendTransactionsListScreen(
     entries: List<LendEntry> = emptyList(),
     onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit = { _, _, _, _, _ -> },
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
+    getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedLendForRepayment by remember { mutableStateOf<LendEntry?>(null) }
@@ -183,6 +186,7 @@ fun LendTransactionsListScreen(
         selectedLendForRepayment?.let { lend ->
             RepaymentBottomSheet(
                 lend = lend,
+                getSettlements = getSettlements,
                 onDismiss = { selectedLendForRepayment = null },
                 onConfirm = { amountPaisa, weightGrams, bagsCount, note ->
                     onRepay(lend.id, amountPaisa, weightGrams, bagsCount, note)
@@ -309,14 +313,34 @@ private fun StatusChip(status: LendStatus) {
 private fun RepaymentBottomSheet(
     lend: LendEntry,
     onDismiss: () -> Unit,
+    getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
     onConfirm: (amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
     var weightText by remember { mutableStateOf("") }
     var bagsText by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    var settlements by remember(lend.id) { mutableStateOf<List<LendSettlement>?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val isMoney = lend.lendType == LendType.MONEY
+
+    LaunchedEffect(lend.id) {
+        if (getSettlements != null) {
+            settlements = getSettlements(lend.id)
+        }
+    }
+
+    val nonVoidSettlements = settlements?.filter { !it.isVoid } ?: emptyList()
+    val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
+    val outstandingPaisa = (lend.amountPaisa - repaidPaisa).coerceAtLeast(0L)
+    val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
+    val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
+
+    val enteredPaisa = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountText) else 0L
+    val isOverAmount = isMoney && settlements != null && enteredPaisa > outstandingPaisa
+
+    val enteredGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightText) else 0L
+    val isOverWeight = !isMoney && settlements != null && enteredGrams > outstandingGrams
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -332,13 +356,37 @@ private fun RepaymentBottomSheet(
             Text("व्यक्ति: ${lend.partyId} • ${if (isMoney) "नकद उधार" else "जिंस उधार (${lend.commodityId ?: "अनाज"})"}")
 
             if (isMoney) {
+                Text(
+                    text = "बकाया: ₹${MandiMathEngine.paisaToRupeesString(outstandingPaisa)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            } else {
+                Text(
+                    text = "बकाया: ${MandiMathEngine.gramsToQuintals(outstandingGrams)} qtl",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            if (isMoney) {
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
                     label = { Text("वापसी राशि (रु) *") },
+                    isError = isOverAmount,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (isOverAmount) {
+                    Text(
+                        text = "वापसी राशि बकाया (₹${MandiMathEngine.paisaToRupeesString(outstandingPaisa)}) से अधिक नहीं हो सकती",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -352,8 +400,16 @@ private fun RepaymentBottomSheet(
                         value = weightText,
                         onValueChange = { weightText = it },
                         label = { Text("वापसी वजन (किग्रा) *") },
+                        isError = isOverWeight,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
+                    )
+                }
+                if (isOverWeight) {
+                    Text(
+                        text = "वापसी वजन बकाया से अधिक नहीं हो सकता",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -366,9 +422,9 @@ private fun RepaymentBottomSheet(
             )
 
             val canConfirm = if (isMoney) {
-                MandiMathEngine.parseRupeesToPaisa(amountText) > 0L
+                enteredPaisa in 1L..outstandingPaisa
             } else {
-                MandiMathEngine.parseKgToGrams(weightText) > 0L
+                enteredGrams in 1L..outstandingGrams
             }
 
             Button(

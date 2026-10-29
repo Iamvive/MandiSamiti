@@ -534,6 +534,7 @@ fun App(
                 LendTransactionsListScreen(
                     entries = lends,
                     onNew = { currentScreen = Screen.LendEntry },
+                    getSettlements = { lendId -> lendRepo.getSettlements(lendId) },
                     onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
                         coroutineScope.launch {
                             val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()

@@ -9,6 +9,14 @@ data class LendForm(
     val expectedReturnDate: Long? = null, val notes: String? = null,
 )
 
+sealed class LendException(message: String) : IllegalArgumentException(message) {
+    data class OverRepayment(val requestedPaisa: Long, val outstandingPaisa: Long) :
+        LendException("Repayment of $requestedPaisa paisa exceeds outstanding $outstandingPaisa paisa")
+
+    data class OverRepaymentWeight(val requestedGrams: Long, val outstandingGrams: Long) :
+        LendException("Repayment of $requestedGrams g exceeds outstanding $outstandingGrams g")
+}
+
 class LendTransactionUseCase(
     private val repo: LendRepository,
     private val newId: () -> String,
@@ -34,6 +42,20 @@ class LendTransactionUseCase(
         val lend = repo.getLendEntryById(lendId) ?: throw IllegalArgumentException("Lend $lendId does not exist")
         require(!lend.isVoid) { "Lend $lendId is void" }
         require(amountPaisa > 0 || weightGrams > 0) { "Nothing to settle" }
+
+        val nonVoidSettlements = repo.getSettlements(lendId).filter { !it.isVoid }
+        val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
+        val outstandingPaisa = (lend.amountPaisa - repaidPaisa).coerceAtLeast(0L)
+        val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
+        val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
+
+        if (lend.lendType == LendType.MONEY && amountPaisa > outstandingPaisa) {
+            throw LendException.OverRepayment(amountPaisa, outstandingPaisa)
+        }
+        if (lend.lendType == LendType.GRAIN && weightGrams > outstandingGrams) {
+            throw LendException.OverRepaymentWeight(weightGrams, outstandingGrams)
+        }
+
         val now = nowMillis()
         val s = LendSettlement(newId(), lend.shopId, lendId, now, amountPaisa, weightGrams, bags, now, now)
         repo.settle(s)
