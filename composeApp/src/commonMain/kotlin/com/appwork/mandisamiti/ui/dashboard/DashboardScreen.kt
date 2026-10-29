@@ -39,9 +39,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +63,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
+import com.appwork.mandisamiti.ui.home.OutlierEntryInfo
 import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiAmberLight
@@ -92,6 +97,8 @@ fun DashboardScreen(
     onNavigateToStockSheet: () -> Unit = {},
     onNavigateToPartyKhata: (Party) -> Unit = {},
     onNavigateToAllKhata: () -> Unit = {},
+    onNavigateToBuyReceipt: (String) -> Unit = {},
+    onNavigateToSellReceipt: (String) -> Unit = {},
     onNavigateToNewEntry: () -> Unit = onNavigateToBuy,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
@@ -137,6 +144,21 @@ fun DashboardScreen(
         if (uiState.pendingSyncCount > 0) {
             item {
                 SyncPendingLine(count = uiState.pendingSyncCount, isEnglish = isEnglish)
+            }
+        }
+
+        // Outlier Entry Warning Card (F07)
+        if (uiState.outlierEntry != null) {
+            val outlier = uiState.outlierEntry
+            item {
+                OutlierWarningCard(
+                    outlier = outlier,
+                    onClick = {
+                        if (outlier.isBuy) onNavigateToBuyReceipt(outlier.entryId)
+                        else onNavigateToSellReceipt(outlier.entryId)
+                    },
+                    isEnglish = isEnglish
+                )
             }
         }
 
@@ -537,6 +559,68 @@ fun DashboardSkeleton(modifier: Modifier = Modifier) {
                         .height(64.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(shimmerColor)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun OutlierWarningCard(
+    outlier: OutlierEntryInfo,
+    onClick: () -> Unit,
+    isEnglish: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(28.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isEnglish) "Outlier Entry Detected" else "असामान्य भाव प्रविष्टि (Outlier Entry)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "${outlier.partyName}, ${outlier.description}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+            TextButton(
+                onClick = onClick,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(
+                    text = if (isEnglish) "Review" else "जाँचें",
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

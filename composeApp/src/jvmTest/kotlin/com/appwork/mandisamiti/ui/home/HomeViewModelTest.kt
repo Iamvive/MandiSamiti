@@ -393,4 +393,68 @@ class HomeViewModelTest {
         assertEquals(1, stateWithUnlinked.unlinkedLendCount)
         assertEquals(1_500_000L, stateWithUnlinked.totalMarketReceivablePaisa)
     }
+
+    @Test
+    fun testOutlierEntryDetectedAndHeadlined() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val buyRepo = com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "shop-outlier"
+        shopRepo.saveShopProfile(
+            ShopProfile(
+                id = shopId,
+                shopName = "परीक्षण मंडी",
+                ownerName = "व्यापारी",
+                mandiName = "मंडी",
+                phoneNumber = "9800000000",
+                pinHash = "1234",
+                isSoundEnabled = true,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            buyRepository = buyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        // Save an entry with an extreme rate outlier (₹60,00,000/qtl = 600_000_000 paisa)
+        val outlierBuy = com.appwork.mandisamiti.domain.model.BuyEntry(
+            id = "buy-outlier-1",
+            shopId = shopId,
+            farmerId = "RadheyShyam",
+            commodityId = "WHEAT",
+            entryDate = 1000L,
+            bagsCount = 40,
+            weightPerBagGrams = 50_000L,
+            extraWeightGrams = 0L,
+            totalWeightGrams = 2000000L, // 20.0 quintals
+            ratePaisaPerQuintal = 600_000_000L, // ₹60 Lakh / qtl
+            commissionBps = 0L,
+            labourPerBagPaisa = 0L,
+            advancePaidPaisa = 0L,
+            grossPaisa = 120_000_000_000L,
+            commissionPaisa = 0L,
+            labourPaisa = 0L,
+            netPayablePaisa = 120_000_000_000L,
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+
+        buyRepo.saveBuyEntry(outlierBuy)
+
+        val state = viewModel.uiState.first { it.outlierEntry != null }
+        assertNotNull(state.outlierEntry)
+        assertEquals("buy-outlier-1", state.outlierEntry?.entryId)
+        assertEquals("RadheyShyam", state.outlierEntry?.partyName)
+        assertEquals(true, state.outlierEntry?.isBuy)
+        assertEquals("20.0 qtl @ ₹60 लाख/qtl", state.outlierEntry?.description)
+    }
 }

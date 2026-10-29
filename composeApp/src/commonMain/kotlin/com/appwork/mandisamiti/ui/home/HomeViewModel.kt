@@ -44,6 +44,13 @@ data class PartyWithBalance(
     val balancePaisa: Long
 )
 
+data class OutlierEntryInfo(
+    val entryId: String,
+    val partyName: String,
+    val description: String,
+    val isBuy: Boolean = true
+)
+
 data class HomeUiState(
     val shopProfile: ShopProfile? = null,
     val tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings = com.appwork.mandisamiti.domain.model.TradeSettings(),
@@ -60,6 +67,7 @@ data class HomeUiState(
     val currentTab: NavigationTab = NavigationTab.DASHBOARD,
     val pendingSyncCount: Int = 0,
     val isEnglish: Boolean = false,
+    val outlierEntry: OutlierEntryInfo? = null,
     val isLoading: Boolean = true
 ) {
     val isSoundEnabled: Boolean get() = shopProfile?.isSoundEnabled ?: true
@@ -140,8 +148,46 @@ class HomeViewModel(
         combine(buysFlow, sellsFlow, lendsFlow, expensesFlow, settlementsFlow) { buys, sells, lends, expenses, settlements ->
             val computedKpis = computeKpis(buys, sells, lends, expenses, settlements)
             val lines = stockUseCase?.lines(shopId) ?: emptyList()
-            Triple(computedKpis, lines, lends)
-        }.onEach { (kpis, lines, lends) ->
+
+            val outlierBuy = buys.firstOrNull { buy ->
+                !buy.isVoid && buy.ratePaisaPerQuintal > com.appwork.mandisamiti.domain.validation.MandiValidators.RATE_OUTLIER_THRESHOLD_PAISA
+            }
+            val outlierSell = if (outlierBuy == null) {
+                sells.firstOrNull { sell ->
+                    !sell.isVoid && sell.ratePaisaPerQuintal > com.appwork.mandisamiti.domain.validation.MandiValidators.RATE_OUTLIER_THRESHOLD_PAISA
+                }
+            } else null
+
+            val outlierInfo = when {
+                outlierBuy != null -> {
+                    val farmerName = _uiState.value.allParties.find { it.party.id == outlierBuy.farmerId }?.party?.name ?: outlierBuy.farmerId
+                    val rateRupees = outlierBuy.ratePaisaPerQuintal / 100
+                    val rateStr = if (rateRupees >= 1_00_000) "₹${rateRupees / 1_00_000} लाख/qtl" else "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.formatIndianGrouping(rateRupees)}/qtl"
+                    val qtlStr = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(outlierBuy.totalWeightGrams)
+                    OutlierEntryInfo(
+                        entryId = outlierBuy.id,
+                        partyName = farmerName,
+                        description = "$qtlStr qtl @ $rateStr",
+                        isBuy = true
+                    )
+                }
+                outlierSell != null -> {
+                    val buyerName = _uiState.value.allParties.find { it.party.id == outlierSell.buyerId }?.party?.name ?: outlierSell.buyerId
+                    val rateRupees = outlierSell.ratePaisaPerQuintal / 100
+                    val rateStr = if (rateRupees >= 1_00_000) "₹${rateRupees / 1_00_000} लाख/qtl" else "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.formatIndianGrouping(rateRupees)}/qtl"
+                    val qtlStr = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(outlierSell.totalWeightGrams)
+                    OutlierEntryInfo(
+                        entryId = outlierSell.id,
+                        partyName = buyerName,
+                        description = "$qtlStr qtl @ $rateStr",
+                        isBuy = false
+                    )
+                }
+                else -> null
+            }
+
+            DashboardPayload(computedKpis, lines, lends, outlierInfo)
+        }.onEach { (kpis, lines, lends, outlierInfo) ->
             val partyIds = _uiState.value.allParties.map { it.party.id }.toSet()
             val unlinkedMoneyLends = lends.filter {
                 !it.isVoid &&
@@ -160,6 +206,7 @@ class HomeViewModel(
             _uiState.value = _uiState.value.copy(
                 kpis = kpis,
                 stockLines = lines,
+                outlierEntry = outlierInfo,
                 unlinkedLendAmountPaisa = unlinkedAmount,
                 unlinkedLendCount = unlinkedCount,
                 totalMarketReceivablePaisa = partyRec + unlinkedAmount
@@ -317,3 +364,10 @@ class HomeViewModel(
         }
     }
 }
+
+private data class DashboardPayload(
+    val kpis: DashboardKpis,
+    val lines: List<StockLine>,
+    val lends: List<com.appwork.mandisamiti.domain.model.LendEntry>,
+    val outlier: OutlierEntryInfo?
+)

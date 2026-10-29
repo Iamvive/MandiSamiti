@@ -101,13 +101,6 @@ fun RevampKpiGrid(
                 modifier = Modifier.weight(1f)
             )
         }
-        if (kpis.totalBuyPaisa > 100 * kpis.totalSellPaisa && kpis.totalSellPaisa > 0) {
-            Text(
-                text = if (isEnglish) "• Purchases exceed 100x recorded sales" else "• कुल खरीद दर्ज बिक्री से 100 गुना अधिक है",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 

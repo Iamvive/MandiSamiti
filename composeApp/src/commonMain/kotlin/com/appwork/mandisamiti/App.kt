@@ -256,6 +256,8 @@ fun App(
                     onNavigateToSellList = { currentScreen = Screen.SellList },
                     onNavigateToLendList = { currentScreen = Screen.LendList },
                     onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
+                    onNavigateToBuyReceipt = { id -> currentScreen = Screen.BuyReceipt(id, Screen.Home) },
+                    onNavigateToSellReceipt = { id -> currentScreen = Screen.SellReceipt(id, Screen.Home) },
                     onSignOut = {
                         // Ignore a second tap while a sign-out is already running.
                         if (!signOutInFlight) {

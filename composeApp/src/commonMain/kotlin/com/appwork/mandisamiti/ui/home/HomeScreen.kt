@@ -69,6 +69,8 @@ fun HomeScreen(
     onNavigateToSellList: () -> Unit = {},
     onNavigateToLendList: () -> Unit = {},
     onNavigateToStockSheet: () -> Unit = {},
+    onNavigateToBuyReceipt: (String) -> Unit = {},
+    onNavigateToSellReceipt: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -143,6 +145,8 @@ fun HomeScreen(
                             onNavigateToStockSheet = onNavigateToStockSheet,
                             onNavigateToPartyKhata = onNavigateToPartyKhata,
                             onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
+                            onNavigateToBuyReceipt = onNavigateToBuyReceipt,
+                            onNavigateToSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewEntry = onNavigateToNewEntry,
                             isEnglish = uiState.isEnglish
                         )
