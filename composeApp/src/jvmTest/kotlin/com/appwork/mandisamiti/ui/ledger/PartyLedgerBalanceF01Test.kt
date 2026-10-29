@@ -350,7 +350,7 @@ class PartyLedgerBalanceF01Test {
         cashRepo.recordTransaction(cash("tx-lend-r4", partyId, TransactionType.UDHAR_GIVEN, 500_000L, "उधार ऋण [LEND:lend-r4]"))
         lendRepo.settle(
             LendSettlement(id = "settle-r4", shopId = shopId, lendId = "lend-r4", settledAt = now, amountPaisa = 200_000L, createdAt = now, updatedAt = now),
-            cash("tx-repay-r4", partyId, TransactionType.JAMA_RECEIVED, 200_000L, "उधार वापसी जमा [SETTLE:settle-r4:lend-r4]"),
+            listOf(cash("tx-repay-r4", partyId, TransactionType.JAMA_RECEIVED, 200_000L, "उधार वापसी जमा [SETTLE:settle-r4:lend-r4]")),
         )
         assertEquals(300_000L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
 
@@ -377,7 +377,7 @@ class PartyLedgerBalanceF01Test {
         lendRepo.saveLendEntry(LendEntry(id = "lend-r3", shopId = shopId, partyId = partyId, lendType = LendType.MONEY, entryDate = now, amountPaisa = 500_000L, createdAt = now, updatedAt = now))
         lendRepo.settle(
             LendSettlement(id = "settle-r3", shopId = shopId, lendId = "lend-r3", settledAt = now, amountPaisa = 500_000L, createdAt = now, updatedAt = now),
-            cash("tx-repay-r3", partyId, TransactionType.JAMA_RECEIVED, 500_000L, "उधार वापसी जमा [SETTLE:settle-r3:lend-r3]"),
+            listOf(cash("tx-repay-r3", partyId, TransactionType.JAMA_RECEIVED, 500_000L, "उधार वापसी जमा [SETTLE:settle-r3:lend-r3]")),
         )
         val q = db.appDatabaseQueries
         val settleRevsBefore = q.getRevisionsForEntry("settle-r3").executeAsList().size

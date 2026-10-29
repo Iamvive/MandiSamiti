@@ -118,6 +118,14 @@ fun PartyLedgerScreen(
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
 
+    // Leaving the apply-to-loan dialog without a choice must not lose the deposit: reopen the entry form as typed.
+    val backToCashDialog = {
+        showApplyToLoanDialog = false
+        showCashEntryType = TransactionType.JAMA_RECEIVED
+        cashAmountInput = pendingCashAmount.toString()
+        cashRemarksInput = pendingCashRemarks
+    }
+
     var interestRateInput by remember { mutableStateOf("1.5") }
     var interestDaysInput by remember { mutableStateOf("30") }
 
@@ -466,7 +474,7 @@ fun PartyLedgerScreen(
         val canApplyToLoan = selectedLoan != null && (pendingCashAmount * 100L <= selectedLoan.outstandingPaisa)
 
         AlertDialog(
-            onDismissRequest = { showApplyToLoanDialog = false },
+            onDismissRequest = backToCashDialog,
             title = {
                 Text(
                     text = "उधार ऋण में काटें?",
@@ -569,6 +577,31 @@ fun PartyLedgerScreen(
                         Text("उधार में काटें", color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
+                    if (selectedLoan != null && !canApplyToLoan) {
+                        val loanRs = selectedLoanOutstandingRs
+                        Button(
+                            onClick = {
+                                viewModel.applyDepositSplitAcrossLoan(
+                                    lendId = selectedLoan.lend.id,
+                                    amountRs = pendingCashAmount,
+                                    note = pendingCashRemarks.ifBlank { null }
+                                )
+                                showApplyToLoanDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiBtnSuccessBg,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                "₹${MandiMathEngine.formatIndianGrouping(loanRs)} उधार में, ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount - loanRs)} सामान्य जमा",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     OutlinedButton(
                         onClick = {
                             viewModel.recordCashEntry(
@@ -587,10 +620,10 @@ fun PartyLedgerScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showApplyToLoanDialog = false },
+                    onClick = backToCashDialog,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("रद्द करें", color = MandiTextSecondary)
+                    Text("वापस जाएँ", color = MandiTextSecondary)
                 }
             }
         )

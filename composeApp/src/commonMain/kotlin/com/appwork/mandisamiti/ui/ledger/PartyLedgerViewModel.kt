@@ -226,6 +226,19 @@ class PartyLedgerViewModel(
         }
     }
 
+    /** Deposit larger than the loan: outstanding goes to the loan, the rest is a general jama, one transaction. */
+    fun applyDepositSplitAcrossLoan(lendId: String, amountRs: Long, note: String? = null) {
+        viewModelScope.launch {
+            val repo = lendRepository ?: return@launch
+            val useCase = LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
+            val split = useCase.repayWithOverflow(lendId, amountRs * 100L, note, cashPartyId = partyId)
+            syncScheduler.scheduleOneTimeSync()
+            _events.emit(PartyLedgerEvent.TransactionRecorded(
+                "₹${MandiMathEngine.paisaToRupeesString(split.loanPaisa)} उधार में, ₹${MandiMathEngine.paisaToRupeesString(split.generalPaisa)} सामान्य जमा दर्ज किया गया"
+            ))
+        }
+    }
+
     fun openCashDialog() {
         _uiState.value = _uiState.value.copy(isCashDialogOpen = true)
     }

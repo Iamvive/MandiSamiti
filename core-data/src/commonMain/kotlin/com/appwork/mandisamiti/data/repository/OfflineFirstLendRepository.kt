@@ -70,7 +70,7 @@ class OfflineFirstLendRepository(
         }
     }
 
-    override suspend fun settle(settlement: LendSettlement, cashEntry: CashTransaction?) = withContext(ioDispatcher) {
+    override suspend fun settle(settlement: LendSettlement, cashEntries: List<CashTransaction>) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
         database.transaction {
             val lend = queries.getLendEntryById(settlement.lendId).executeAsOneOrNull()?.toDomain()
@@ -88,7 +88,7 @@ class OfflineFirstLendRepository(
 
             val created = settlement.copy(revision = 1, syncStatus = 0)
             insertSettlement(created)
-            if (cashEntry != null) insertCashEntry(cashEntry.copy(revision = 1, syncStatus = 0), now)
+            cashEntries.forEach { insertCashEntry(it.copy(revision = 1, syncStatus = 0), now) }
             queries.insertRevision(
                 id = IdGenerator.newId(),
                 shop_id = created.shopId,

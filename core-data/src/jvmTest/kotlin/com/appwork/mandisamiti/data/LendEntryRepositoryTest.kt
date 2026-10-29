@@ -73,7 +73,7 @@ class LendEntryRepositoryTest {
             remarks = "x [SETTLE:settle-1:l1]", createdAt = 2_000L, updatedAt = 2_000L,
         )
         assertFailsWith<LendException.OverRepayment> {
-            repo.settle(LendSettlement(id = "settle-1", shopId = "shop", lendId = "l1", settledAt = 2_000L, amountPaisa = 700_000L, createdAt = 2_000L, updatedAt = 2_000L), cash)
+            repo.settle(LendSettlement(id = "settle-1", shopId = "shop", lendId = "l1", settledAt = 2_000L, amountPaisa = 700_000L, createdAt = 2_000L, updatedAt = 2_000L), listOf(cash))
         }
         assertEquals(0, repo.getSettlements("l1").size)
         assertNull(db.appDatabaseQueries.getCashTransactionById("c1").executeAsOneOrNull())
@@ -90,11 +90,11 @@ class LendEntryRepositoryTest {
             amountPaisa = paisa, paymentMode = PaymentMode.CASH, transactionDate = 2_000L, createdAt = 2_000L, updatedAt = 2_000L,
         )
         fun settle(id: String, paisa: Long) = LendSettlement(id = id, shopId = "shop", lendId = "l1", settledAt = 2_000L, amountPaisa = paisa, createdAt = 2_000L, updatedAt = 2_000L)
-        repo.settle(settle("s1", 200_000L), cash("c1", 200_000L))
-        repo.settle(settle("s2", 300_000L), cash("c2", 300_000L))
+        repo.settle(settle("s1", 200_000L), listOf(cash("c1", 200_000L)))
+        repo.settle(settle("s2", 300_000L), listOf(cash("c2", 300_000L)))
         assertEquals(LendStatus.SETTLED, repo.getLendEntryById("l1")!!.status)
         assertNotNull(db.appDatabaseQueries.getCashTransactionById("c2").executeAsOneOrNull())
-        assertFailsWith<LendException.OverRepayment> { repo.settle(settle("s3", 100L), cash("c3", 100L)) }
+        assertFailsWith<LendException.OverRepayment> { repo.settle(settle("s3", 100L), listOf(cash("c3", 100L))) }
         assertNull(db.appDatabaseQueries.getCashTransactionById("c3").executeAsOneOrNull())
     }
 
