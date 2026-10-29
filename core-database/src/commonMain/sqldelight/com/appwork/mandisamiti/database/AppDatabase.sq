@@ -651,7 +651,7 @@ INSERT OR REPLACE INTO lendSettlementEntity(
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getExpensesByShop:
-SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 ORDER BY entry_date DESC;
+SELECT * FROM expenseEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
 
 getCashTransactionsByTag:
 SELECT * FROM cashTransactionEntity WHERE is_deleted = 0 AND is_void = 0 AND remarks LIKE ('%' || :tag || '%');

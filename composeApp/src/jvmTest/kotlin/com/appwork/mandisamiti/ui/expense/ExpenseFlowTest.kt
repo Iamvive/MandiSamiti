@@ -308,6 +308,10 @@ class ExpenseFlowTest {
             expenses = updatedExpenses
         )
         assertEquals(150_000L, updatedKpis.totalExpensePaisa)
+        // R5: the voided row stays in the list (struck through in the UI), only the total drops it
+        val voidedRow = updatedExpenses.single { it.id == "exp-2" }
+        assertTrue(voidedRow.isVoid)
+        assertEquals(initialExpenses.size, updatedExpenses.size)
 
         // Verify linked cash transaction is also voided
         val cashTx2 = db.appDatabaseQueries.getCashTransactionById("cash-exp-2").executeAsOneOrNull()
