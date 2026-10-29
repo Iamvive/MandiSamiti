@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -69,36 +72,36 @@ fun RevampKpiGrid(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KpiCard(
                 label = DashboardStrings.kpiPurchases(isEnglish),
                 amountPaisa = kpis.totalBuyPaisa,
                 onClick = onBuyClick,
                 isEnglish = isEnglish,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
             KpiCard(
                 label = DashboardStrings.kpiSales(isEnglish),
                 amountPaisa = kpis.totalSellPaisa,
                 onClick = onSellClick,
                 isEnglish = isEnglish,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KpiCard(
                 label = DashboardStrings.kpiOutstanding(isEnglish),
                 amountPaisa = kpis.totalLendPaisa,
                 onClick = onLendClick,
                 isEnglish = isEnglish,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
             KpiCard(
                 label = DashboardStrings.kpiExpenses(isEnglish),
                 amountPaisa = kpis.totalExpensePaisa,
                 onClick = onExpenseClick,
                 isEnglish = isEnglish,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
         }
     }
