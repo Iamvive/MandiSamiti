@@ -1260,9 +1260,10 @@ private fun FintechLendCard(
                 )
             }
 
-            if (!lend.notes.isNullOrBlank()) {
+            val lendNote = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(lend.notes)
+            if (lendNote != null) {
                 Text(
-                    text = lend.notes ?: "",
+                    text = lendNote,
                     fontSize = 13.sp,
                     color = MandiTextSecondary
                 )
