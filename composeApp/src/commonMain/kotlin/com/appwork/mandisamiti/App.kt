@@ -121,6 +121,13 @@ fun App(
     val buyRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository(database) }
     val sellRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(database) }
     val lendRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database) }
+    val lendUseCase = remember {
+        com.appwork.mandisamiti.domain.usecase.LendTransactionUseCase(
+            lendRepo,
+            { com.appwork.mandisamiti.domain.id.IdGenerator.newId() },
+            { kotlinx.datetime.Clock.System.now().toEpochMilliseconds() },
+        )
+    }
     val expenseRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database) }
     val stockUseCase = remember { com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo) }
     val wiper = remember { LocalDataWiper(database) }
@@ -559,39 +566,10 @@ fun App(
                     getSettlements = { lendId -> lendRepo.getSettlements(lendId) },
                     onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note ->
                         coroutineScope.launch {
-                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                            val settleId = com.appwork.mandisamiti.domain.id.IdGenerator.newId()
-                            lendRepo.settle(
-                                com.appwork.mandisamiti.domain.model.LendSettlement(
-                                    id = settleId,
-                                    shopId = shopId ?: "",
-                                    lendId = lendId,
-                                    settledAt = now,
-                                    amountPaisa = amountPaisa,
-                                    weightGrams = weightGrams,
-                                    bagsCount = bagsCount,
-                                    createdAt = now,
-                                    updatedAt = now,
-                                )
-                            )
-                            if (amountPaisa > 0L) {
-                                val settledLend = lends.find { it.id == lendId }
-                                val noteText = note.trim()
-                                val rem = if (noteText.isBlank()) "उधार वापसी जमा" else "उधार वापसी जमा: $noteText"
-                                cashRepo.recordTransaction(
-                                    com.appwork.mandisamiti.domain.model.CashTransaction(
-                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                        shopId = shopId ?: "",
-                                        partyId = settledLend?.partyId ?: "किसान",
-                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
-                                        amountPaisa = amountPaisa,
-                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                        transactionDate = now,
-                                        remarks = "$rem [SETTLE:$settleId:$lendId]",
-                                        createdAt = now,
-                                        updatedAt = now,
-                                    )
-                                )
+                            try {
+                                lendUseCase.repay(lendId, amountPaisa, weightGrams, bagsCount, note)
+                            } catch (_: com.appwork.mandisamiti.domain.usecase.LendException) {
+                                return@launch
                             }
                             syncScheduler.scheduleOneTimeSync()
                         }

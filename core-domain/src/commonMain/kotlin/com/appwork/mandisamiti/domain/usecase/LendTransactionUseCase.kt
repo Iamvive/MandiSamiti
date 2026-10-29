@@ -38,27 +38,25 @@ class LendTransactionUseCase(
         return entry
     }
 
-    suspend fun repay(lendId: String, amountPaisa: Long, weightGrams: Long, bags: Long): LendSettlement {
+    /** Cap check, settlement, JAMA_RECEIVED cash row and lend status all happen inside one repo transaction. */
+    suspend fun repay(lendId: String, amountPaisa: Long, weightGrams: Long, bags: Long, note: String? = null, cashPartyId: String? = null): LendSettlement {
         val lend = repo.getLendEntryById(lendId) ?: throw IllegalArgumentException("Lend $lendId does not exist")
         require(!lend.isVoid) { "Lend $lendId is void" }
         require(amountPaisa > 0 || weightGrams > 0) { "Nothing to settle" }
 
-        val nonVoidSettlements = repo.getSettlements(lendId).filter { !it.isVoid }
-        val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
-        val outstandingPaisa = (lend.amountPaisa - repaidPaisa).coerceAtLeast(0L)
-        val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
-        val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
-
-        if (lend.lendType == LendType.MONEY && amountPaisa > outstandingPaisa) {
-            throw LendException.OverRepayment(amountPaisa, outstandingPaisa)
-        }
-        if (lend.lendType == LendType.GRAIN && weightGrams > outstandingGrams) {
-            throw LendException.OverRepaymentWeight(weightGrams, outstandingGrams)
-        }
-
         val now = nowMillis()
         val s = LendSettlement(newId(), lend.shopId, lendId, now, amountPaisa, weightGrams, bags, now, now)
-        repo.settle(s)
+        val cash = if (amountPaisa > 0L) {
+            val noteText = note?.trim().orEmpty()
+            val rem = if (noteText.isBlank()) "उधार वापसी जमा" else "उधार वापसी जमा: $noteText"
+            CashTransaction(
+                id = newId(), shopId = lend.shopId, partyId = cashPartyId ?: lend.partyId,
+                transactionType = TransactionType.JAMA_RECEIVED, amountPaisa = amountPaisa,
+                paymentMode = PaymentMode.CASH, transactionDate = now,
+                remarks = "$rem [SETTLE:${s.id}:$lendId]", createdAt = now, updatedAt = now,
+            )
+        } else null
+        repo.settle(s, cash)
         return s
     }
 }

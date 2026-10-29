@@ -17,6 +17,7 @@ class LendTransactionUseCaseTest {
     private class FakeLendRepository : LendRepository {
         val lends = mutableMapOf<String, LendEntry>()
         val settlements = mutableListOf<LendSettlement>()
+        val cash = mutableListOf<CashTransaction>()
 
         override fun getLendEntriesStream(shopId: String): Flow<List<LendEntry>> = flowOf(lends.values.toList())
         override fun getSettlementsStream(shopId: String): Flow<List<LendSettlement>> = flowOf(settlements)
@@ -28,7 +29,11 @@ class LendTransactionUseCaseTest {
             lends[entry.id] = entry
         }
 
-        override suspend fun settle(settlement: LendSettlement) {
+        override suspend fun settle(settlement: LendSettlement, cashEntry: CashTransaction?) {
+            val live = settlements.filter { it.lendId == settlement.lendId && !it.isVoid }.sumOf { it.amountPaisa }
+            val outstanding = ((lends[settlement.lendId]?.amountPaisa ?: 0L) - live).coerceAtLeast(0L)
+            if (settlement.amountPaisa > outstanding) throw LendException.OverRepayment(settlement.amountPaisa, outstanding)
+            cashEntry?.let { cash.add(it) }
             settlements.add(settlement)
             val lend = lends[settlement.lendId] ?: return
             val totalRepaid = settlements.filter { it.lendId == lend.id && !it.isVoid }.sumOf { it.amountPaisa }

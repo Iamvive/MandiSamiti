@@ -103,7 +103,7 @@ class PartyLedgerBalanceF01Test {
             )
         )
 
-        // 3. Repay: ₹7,000 (700,000 paisa)
+        // 3. Repay: ₹5,000, full repayment (over-repayment is now rejected, see LendEntryRepositoryTest)
         val settlementId = "settle-1"
         lendRepo.settle(
             LendSettlement(
@@ -111,7 +111,7 @@ class PartyLedgerBalanceF01Test {
                 shopId = shopId,
                 lendId = lendId,
                 settledAt = fixedNow.toEpochMilliseconds(),
-                amountPaisa = 700_000L,
+                amountPaisa = 500_000L,
                 createdAt = fixedNow.toEpochMilliseconds(),
                 updatedAt = fixedNow.toEpochMilliseconds()
             )
@@ -124,7 +124,7 @@ class PartyLedgerBalanceF01Test {
                 shopId = shopId,
                 partyId = partyId,
                 transactionType = TransactionType.JAMA_RECEIVED,
-                amountPaisa = 700_000L,
+                amountPaisa = 500_000L,
                 paymentMode = PaymentMode.CASH,
                 transactionDate = fixedNow.toEpochMilliseconds(),
                 remarks = "उधार वापसी जमा [SETTLE:$settlementId:$lendId]",
@@ -166,11 +166,11 @@ class PartyLedgerBalanceF01Test {
         // Verify balance before voiding:
         // Shop owes farmer 12,200 (Buy)
         // Farmer owes shop 5,000 (Lend)
-        // Farmer repaid 7,000 (Repay)
+        // Farmer repaid 5,000 (Repay)
         // F14: Expense is a shop expense and does NOT link to party X's balance
-        // Net: -12,200 + 5,000 - 7,000 = -14,200 (-1,420,000 paisa = ₹14,200 देना है)
+        // Net: -12,200 + 5,000 - 5,000 = -12,200 (F14: expense payee no longer posts to the party account)
         val initialBalance = partyRepo.getPartyBalanceStream(partyId).first()
-        assertEquals(-1_420_000L, initialBalance?.balancePaisa)
+        assertEquals(-1_220_000L, initialBalance?.balancePaisa)
 
         // Now void every entry for X
         buyRepo.voidBuyEntry(buyId, VoidReason.WRONG_ENTRY)

@@ -6,12 +6,14 @@ import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.LendEntryEntity
 import com.appwork.mandisamiti.database.LendSettlementEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.LendRepository
+import com.appwork.mandisamiti.domain.usecase.LendException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -68,15 +70,25 @@ class OfflineFirstLendRepository(
         }
     }
 
-    override suspend fun settle(settlement: LendSettlement) = withContext(ioDispatcher) {
+    override suspend fun settle(settlement: LendSettlement, cashEntry: CashTransaction?) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
         database.transaction {
             val lend = queries.getLendEntryById(settlement.lendId).executeAsOneOrNull()?.toDomain()
                 ?: throw IllegalArgumentException("Lend ${settlement.lendId} does not exist")
             require(!lend.isVoid) { "Lend ${settlement.lendId} is void" }
 
+            val live = queries.getLendSettlementsByLend(lend.id).executeAsList().map { it.toDomain() }.filter { !it.isVoid }
+            if (lend.lendType == LendType.MONEY) {
+                val outstanding = (lend.amountPaisa - live.sumOf { it.amountPaisa }).coerceAtLeast(0L)
+                if (settlement.amountPaisa > outstanding) throw LendException.OverRepayment(settlement.amountPaisa, outstanding)
+            } else {
+                val outstanding = (lend.weightGrams - live.sumOf { it.weightGrams }).coerceAtLeast(0L)
+                if (settlement.weightGrams > outstanding) throw LendException.OverRepaymentWeight(settlement.weightGrams, outstanding)
+            }
+
             val created = settlement.copy(revision = 1, syncStatus = 0)
             insertSettlement(created)
+            if (cashEntry != null) insertCashEntry(cashEntry.copy(revision = 1, syncStatus = 0), now)
             queries.insertRevision(
                 id = IdGenerator.newId(),
                 shop_id = created.shopId,
@@ -106,6 +118,23 @@ class OfflineFirstLendRepository(
             insertOrReplace(updatedLend)
             recordLendRevision(updatedLend, "EDIT", now)
         }
+    }
+
+    private fun insertCashEntry(tx: CashTransaction, now: Long) {
+        queries.insertCashTransaction(
+            id = tx.id, shop_id = tx.shopId, party_id = tx.partyId, deal_id = tx.dealId,
+            transaction_type = tx.transactionType.name, amount_paisa = tx.amountPaisa,
+            payment_mode = tx.paymentMode.name, transaction_date = tx.transactionDate,
+            voice_note_uri = tx.voiceNoteUri, remarks = tx.remarks, created_at = tx.createdAt,
+            updated_at = tx.updatedAt, is_deleted = 0L, sync_status = tx.syncStatus.toLong(),
+            revision = tx.revision.toLong(), is_void = 0L, void_reason = null,
+        )
+        queries.insertRevision(
+            id = IdGenerator.newId(), shop_id = tx.shopId, entry_id = tx.id, entry_kind = "CASH",
+            revision = tx.revision.toLong(), change_kind = "CREATE",
+            snapshot_json = json.encodeToString(CashTransaction.serializer(), tx),
+            void_reason = null, changed_at = now,
+        )
     }
 
     override suspend fun voidLendEntry(id: String, reason: VoidReason) = withContext(ioDispatcher) {
