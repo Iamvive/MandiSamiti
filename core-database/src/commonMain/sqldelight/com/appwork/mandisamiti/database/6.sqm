@@ -1,0 +1,7 @@
+-- Pilot baseline: D7 party phone identity and D8 receipt numbers.
+-- Additive only so an installed pre-pilot database keeps every row.
+ALTER TABLE buyEntryEntity ADD COLUMN slip_no INTEGER DEFAULT NULL;
+ALTER TABLE sellEntryEntity ADD COLUMN slip_no INTEGER DEFAULT NULL;
+ALTER TABLE lendEntryEntity ADD COLUMN slip_no INTEGER DEFAULT NULL;
+
+CREATE UNIQUE INDEX idx_party_shop_phone ON partyEntity(shop_id, phone);
