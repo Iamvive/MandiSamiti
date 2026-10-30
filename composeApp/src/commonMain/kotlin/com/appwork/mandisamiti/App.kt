@@ -61,6 +61,9 @@ import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncViewModel
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
+import com.appwork.mandisamiti.ui.settings.StartupLanguage
+import com.appwork.mandisamiti.ui.settings.startupLanguage
+import androidx.compose.foundation.layout.fillMaxSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -163,7 +166,10 @@ fun App(
         val screen = if (activeSession == null) Screen.Register() else currentScreen
         val shopId = activeSession?.shopId
         val tradeSettings by tradeSettingsRepo.getTradeSettingsStream().collectAsState(initial = null)
-        when (screen) {
+        // Settings are seeded synchronously but the first composition still sees null: wait instead of flashing Hindi.
+        if (startupLanguage(tradeSettings) is StartupLanguage.Loading) {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize())
+        } else when (screen) {
             is Screen.Register -> {
                 val shopProfile by shopRepo.getShopProfileStream().collectAsState(initial = null)
                 val prefillPhone = if (screen.isReLogin) shopProfile?.phoneNumber else null
