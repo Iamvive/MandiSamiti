@@ -8,8 +8,8 @@ The login code (static OTP) is in the private env file on the VPS. Ask Claude to
 - [ ] Phone has internet (SIM data or shop Wi-Fi)
 
 ## Install
-- [ ] `adb install -r exports/mandisamiti-pilot-debug.apk`
-- [ ] Open the app, log in with the shop phone number and the private code, set MPIN
+- [ ] `adb install -r exports/mandisamiti-pilot-debug.apk` (if upgrading over a pre-pilot build, run `adb shell pm clear com.appwork.mandisamiti` to prevent SQLite duplicate column error)
+- [ ] Open the app, log in with the shop phone number and the private 6-digit code, set MPIN
 
 ## Smoke test (use names containing TEST)
 - [ ] Create party "TEST Party"
