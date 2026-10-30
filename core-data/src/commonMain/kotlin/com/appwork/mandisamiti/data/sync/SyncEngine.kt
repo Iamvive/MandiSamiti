@@ -196,7 +196,10 @@ class SyncEngine(
                 id = it.id, lend_id = it.lend_id, settled_at = it.settled_at, amount_paisa = it.amount_paisa,
                 weight_grams = it.weight_grams, bags_count = it.bags_count, is_void = it.is_void.toInt(),
                 void_reason = it.void_reason, revision = it.revision.toInt(),
-                created_at = it.created_at, updated_at = it.updated_at
+                created_at = it.created_at, updated_at = it.updated_at,
+                principal_paisa = it.principal_paisa,
+                interest_paisa = it.interest_paisa,
+                calculated_interest_paisa = it.calculated_interest_paisa
             )
         }
 
@@ -492,10 +495,6 @@ class SyncEngine(
                 }
 
                 res.lend_settlements.forEach { s ->
-                    // The server contract has no principal/interest split yet (open item). Keep the local split when the
-                    // amount is unchanged; otherwise treat the whole amount as principal, as legacy rows are.
-                    val local = queries.getLendSettlementById(s.id).executeAsOneOrNull()
-                        ?.takeIf { it.amount_paisa == s.amount_paisa }
                     queries.deleteSyncedLendSettlement(s.id)
                     queries.insertLendSettlementIfAbsent(
                         id = s.id,
@@ -511,9 +510,9 @@ class SyncEngine(
                         revision = s.revision.toLong(),
                         is_void = s.is_void.toLong(),
                         void_reason = s.void_reason,
-                        principal_paisa = local?.principal_paisa ?: s.amount_paisa,
-                        interest_paisa = local?.interest_paisa ?: 0L,
-                        calculated_interest_paisa = local?.calculated_interest_paisa ?: 0L,
+                        principal_paisa = if (s.principal_paisa != 0L || s.interest_paisa != 0L) s.principal_paisa else s.amount_paisa,
+                        interest_paisa = s.interest_paisa,
+                        calculated_interest_paisa = s.calculated_interest_paisa,
                     )
                 }
 

@@ -24,6 +24,7 @@ class BuyEntryBase(BaseModel):
 
     vehicle_number: Optional[str] = None
     slip_number: Optional[str] = None
+    slip_no: Optional[int] = None
     remarks: Optional[str] = None
 
     is_void: int = 0
@@ -71,6 +72,7 @@ class SellEntryBase(BaseModel):
 
     vehicle_number: Optional[str] = None
     invoice_number: Optional[str] = None
+    slip_no: Optional[int] = None
     remarks: Optional[str] = None
 
     is_void: int = 0
@@ -104,6 +106,7 @@ class LendEntryBase(BaseModel):
     bags_count: int = 0
     weight_grams: int = 0
     expected_return_date: Optional[int] = None
+    slip_no: Optional[int] = None
     notes: Optional[str] = None
     status: str = "OPEN"
 
@@ -133,6 +136,9 @@ class LendSettlementBase(BaseModel):
     lend_id: str
     settled_at: Optional[int] = None
     amount_paisa: int = 0
+    principal_paisa: int = 0
+    interest_paisa: int = 0
+    calculated_interest_paisa: int = 0
     weight_grams: int = 0
     bags_count: int = 0
 

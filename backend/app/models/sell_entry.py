@@ -30,6 +30,7 @@ class SellEntry(Base):
 
     vehicle_number = Column(String, nullable=True)
     invoice_number = Column(String, nullable=True)
+    slip_no = Column(BigInteger, nullable=True)
     remarks = Column(String, nullable=True)
 
     is_void = Column(Integer, default=0)

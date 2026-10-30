@@ -311,6 +311,7 @@ async def sync_push(
                     existing_buy.paid_paisa = b_in.paid_paisa
                     existing_buy.vehicle_number = b_in.vehicle_number
                     existing_buy.slip_number = b_in.slip_number
+                    existing_buy.slip_no = b_in.slip_no
                     existing_buy.remarks = b_in.remarks
                     existing_buy.is_void = b_in.is_void
                     existing_buy.void_reason = b_in.void_reason
@@ -344,6 +345,7 @@ async def sync_push(
                 paid_paisa=b_in.paid_paisa,
                 vehicle_number=b_in.vehicle_number,
                 slip_number=b_in.slip_number,
+                slip_no=b_in.slip_no,
                 remarks=b_in.remarks,
                 is_void=b_in.is_void,
                 void_reason=b_in.void_reason,
@@ -387,6 +389,7 @@ async def sync_push(
                     existing_sell.balance_due_paisa = s_in.balance_due_paisa
                     existing_sell.vehicle_number = s_in.vehicle_number
                     existing_sell.invoice_number = s_in.invoice_number
+                    existing_sell.slip_no = s_in.slip_no
                     existing_sell.remarks = s_in.remarks
                     existing_sell.is_void = s_in.is_void
                     existing_sell.void_reason = s_in.void_reason
@@ -422,6 +425,7 @@ async def sync_push(
                 balance_due_paisa=s_in.balance_due_paisa,
                 vehicle_number=s_in.vehicle_number,
                 invoice_number=s_in.invoice_number,
+                slip_no=s_in.slip_no,
                 remarks=s_in.remarks,
                 is_void=s_in.is_void,
                 void_reason=s_in.void_reason,
@@ -453,6 +457,7 @@ async def sync_push(
                     existing_lend.bags_count = l_in.bags_count
                     existing_lend.weight_grams = l_in.weight_grams
                     existing_lend.expected_return_date = l_in.expected_return_date
+                    existing_lend.slip_no = l_in.slip_no
                     existing_lend.notes = l_in.notes
                     existing_lend.status = l_in.status
                     existing_lend.is_void = l_in.is_void
@@ -477,6 +482,7 @@ async def sync_push(
                 bags_count=l_in.bags_count,
                 weight_grams=l_in.weight_grams,
                 expected_return_date=l_in.expected_return_date,
+                slip_no=l_in.slip_no,
                 notes=l_in.notes,
                 status=l_in.status,
                 is_void=l_in.is_void,
@@ -504,6 +510,9 @@ async def sync_push(
                     existing_ls.lend_id = ls_in.lend_id
                     existing_ls.settled_at = ls_in.settled_at or existing_ls.settled_at
                     existing_ls.amount_paisa = ls_in.amount_paisa
+                    existing_ls.principal_paisa = ls_in.principal_paisa
+                    existing_ls.interest_paisa = ls_in.interest_paisa
+                    existing_ls.calculated_interest_paisa = ls_in.calculated_interest_paisa
                     existing_ls.weight_grams = ls_in.weight_grams
                     existing_ls.bags_count = ls_in.bags_count
                     existing_ls.is_void = ls_in.is_void
@@ -522,6 +531,9 @@ async def sync_push(
                 lend_id=ls_in.lend_id,
                 settled_at=ls_in.settled_at or now_ms,
                 amount_paisa=ls_in.amount_paisa,
+                principal_paisa=ls_in.principal_paisa,
+                interest_paisa=ls_in.interest_paisa,
+                calculated_interest_paisa=ls_in.calculated_interest_paisa,
                 weight_grams=ls_in.weight_grams,
                 bags_count=ls_in.bags_count,
                 is_void=ls_in.is_void,
