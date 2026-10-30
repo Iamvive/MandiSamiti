@@ -44,6 +44,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.PaymentStatus
 import com.appwork.mandisamiti.domain.model.VoidReason
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
 
@@ -69,6 +70,7 @@ fun BuyTransactionsListScreen(
                 searchQuery,
                 entry.farmerId,
                 village,
+                entry.slipNo?.toString(),
                 entry.slipNumber,
                 entry.vehicleNumber,
                 entry.commodityId
@@ -158,7 +160,6 @@ private fun BuyEntryCard(
 ) {
     val farmerName = entry.farmerId.ifBlank { "किसान" }
     val village = extractVillage(entry.remarks)
-    val slipNumber = entry.slipNumber
 
     Card(
         modifier = Modifier
@@ -187,7 +188,7 @@ private fun BuyEntryCard(
                     )
                     val subtitleParts = buildList {
                         if (!village.isNullOrBlank()) add("गाँव: $village")
-                        if (!slipNumber.isNullOrBlank()) add("पर्चा #$slipNumber")
+                        add("पर्चा #${slipLabel(entry.slipNo, entry.id)}")
                     }
                     if (subtitleParts.isNotEmpty()) {
                         Text(

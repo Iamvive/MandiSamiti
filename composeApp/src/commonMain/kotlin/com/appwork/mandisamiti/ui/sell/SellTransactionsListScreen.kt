@@ -66,7 +66,7 @@ fun SellTransactionsListScreen(
         .filter { !filterOnlyDue || it.balanceDuePaisa > 0 }
         .filter {
             if (searchQuery.isBlank()) return@filter true
-            BilingualSearchEngine.matchesAny(searchQuery, it.buyerId, it.invoiceNumber)
+            BilingualSearchEngine.matchesAny(searchQuery, it.buyerId, it.slipNo?.toString(), it.invoiceNumber)
         }
         .sortedByDescending { it.entryDate }
 

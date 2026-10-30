@@ -85,7 +85,7 @@ fun LendTransactionsListScreen(
     val filtered = entries.filter {
         if (it.isVoid) return@filter false
         if (searchQuery.isBlank()) return@filter true
-        BilingualSearchEngine.matchesAny(searchQuery, it.partyId, it.commodityId)
+        BilingualSearchEngine.matchesAny(searchQuery, it.partyId, it.commodityId, it.slipNo?.toString())
     }
     val activeEntries = filtered.filter { it.status != LendStatus.SETTLED }
     val settledEntries = filtered.filter { it.status == LendStatus.SETTLED }
