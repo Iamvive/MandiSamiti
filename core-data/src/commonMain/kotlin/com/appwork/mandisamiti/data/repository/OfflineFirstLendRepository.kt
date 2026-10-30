@@ -47,7 +47,10 @@ class OfflineFirstLendRepository(
 
     override suspend fun saveLendEntry(entry: LendEntry) = withContext(ioDispatcher) {
         database.transaction {
-            val created = entry.copy(revision = 1, syncStatus = 0)
+            val slipNo = queries.getLendEntryById(entry.id).executeAsOneOrNull()?.slip_no
+                ?: entry.slipNo
+                ?: queries.nextLendSlipNo(entry.shopId).executeAsOne()
+            val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordLendRevision(created, "CREATE", created.updatedAt)
 
@@ -245,6 +248,7 @@ class OfflineFirstLendRepository(
             bags_count = entry.bagsCount,
             weight_grams = entry.weightGrams,
             expected_return_date = entry.expectedReturnDate,
+            slip_no = entry.slipNo,
             notes = entry.notes,
             status = entry.status.name,
             created_at = entry.createdAt,
@@ -296,6 +300,7 @@ class OfflineFirstLendRepository(
         bagsCount = bags_count,
         weightGrams = weight_grams,
         expectedReturnDate = expected_return_date,
+        slipNo = slip_no,
         notes = notes,
         status = LendStatus.valueOf(status),
         createdAt = created_at,

@@ -34,7 +34,10 @@ class OfflineFirstBuyRepository(
 
     override suspend fun saveBuyEntry(entry: BuyEntry) = withContext(ioDispatcher) {
         database.transaction {
-            val created = entry.copy(revision = 1, syncStatus = 0)
+            val slipNo = queries.getBuyEntryById(entry.id).executeAsOneOrNull()?.slip_no
+                ?: entry.slipNo
+                ?: queries.nextFarmerSlipNo(entry.shopId, entry.farmerId).executeAsOne()
+            val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordRevision(created, "CREATE", created.updatedAt)
 
@@ -70,6 +73,7 @@ class OfflineFirstBuyRepository(
                 ?: throw IllegalArgumentException("Buy entry ${entry.id} does not exist")
             require(!current.isVoid) { "Buy entry ${entry.id} is void and cannot be edited" }
             val edited = entry.copy(
+                slipNo = current.slipNo,
                 entryDate = current.entryDate,
                 createdAt = current.createdAt,
                 updatedAt = now,
@@ -134,6 +138,7 @@ class OfflineFirstBuyRepository(
             paid_paisa = entry.paidPaisa,
             vehicle_number = entry.vehicleNumber,
             slip_number = entry.slipNumber,
+            slip_no = entry.slipNo,
             remarks = entry.remarks,
             created_at = entry.createdAt,
             updated_at = entry.updatedAt,
@@ -166,6 +171,7 @@ class OfflineFirstBuyRepository(
         paidPaisa = paid_paisa,
         vehicleNumber = vehicle_number,
         slipNumber = slip_number,
+        slipNo = slip_no,
         remarks = remarks,
         createdAt = created_at,
         updatedAt = updated_at,

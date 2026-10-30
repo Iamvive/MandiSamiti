@@ -38,7 +38,7 @@ class ServerApplyQueriesTest {
     fun markPartySyncedAtSkipsRowEditedAfterPush() {
         val q = createTestDatabase().appDatabaseQueries
         party(q, "p", "v1", 0L)                                                     // pushed at updated_at = 1
-        q.insertParty("p", "shop-1", "v2", null, null, "FARMER", null, null, 1L, 5L, 0L, 0L)  // edited meanwhile
+        q.updateParty("v2", null, null, "FARMER", null, null, 5L, 0L, 0L, "p")  // edited meanwhile
         q.markPartySyncedAt("p", 1L)
         assertEquals(0L, q.getPartyById("p").executeAsOne().sync_status)
     }

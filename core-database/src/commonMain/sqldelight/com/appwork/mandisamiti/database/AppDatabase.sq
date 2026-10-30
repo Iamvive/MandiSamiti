@@ -33,6 +33,7 @@ CREATE TABLE partyEntity (
 
 CREATE INDEX idx_party_shop ON partyEntity(shop_id, is_deleted);
 CREATE INDEX idx_party_name ON partyEntity(name);
+CREATE UNIQUE INDEX idx_party_shop_phone ON partyEntity(shop_id, phone);
 
 -- Commodity Master
 CREATE TABLE commodityEntity (
@@ -164,6 +165,7 @@ CREATE TABLE buyEntryEntity (
     paid_paisa INTEGER NOT NULL DEFAULT 0,
     vehicle_number TEXT,
     slip_number TEXT,
+    slip_no INTEGER,
     remarks TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -202,6 +204,7 @@ CREATE TABLE sellEntryEntity (
     balance_due_paisa INTEGER NOT NULL,
     vehicle_number TEXT,
     invoice_number TEXT,
+    slip_no INTEGER,
     remarks TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -228,6 +231,7 @@ CREATE TABLE lendEntryEntity (
     bags_count INTEGER NOT NULL DEFAULT 0,
     weight_grams INTEGER NOT NULL DEFAULT 0,
     expected_return_date INTEGER,
+    slip_no INTEGER,
     notes TEXT,
     status TEXT NOT NULL DEFAULT 'OPEN', -- 'OPEN' | 'PARTIAL' | 'SETTLED'
     created_at INTEGER NOT NULL,
@@ -319,8 +323,24 @@ getPartyById:
 SELECT * FROM partyEntity WHERE id = ? AND is_deleted = 0;
 
 insertParty:
-INSERT OR REPLACE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateParty:
+UPDATE partyEntity SET
+    name = ?,
+    phone = ?,
+    village = ?,
+    party_type = ?,
+    monthly_interest_rate = ?,
+    photo_uri = ?,
+    updated_at = ?,
+    is_deleted = ?,
+    sync_status = ?
+WHERE id = ?;
+
+getPartyByPhone:
+SELECT * FROM partyEntity WHERE shop_id = ? AND phone = ? AND is_deleted = 0 LIMIT 1;
 
 softDeleteParty:
 UPDATE partyEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
@@ -624,9 +644,12 @@ insertBuyEntry:
 INSERT OR REPLACE INTO buyEntryEntity(
     id, shop_id, farmer_id, commodity_id, entry_date, bags_count, weight_per_bag_grams, extra_weight_grams,
     total_weight_grams, rate_paisa_per_quintal, commission_bps, labour_per_bag_paisa, advance_paid_paisa,
-    gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, remarks,
+    gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, slip_no, remarks,
     created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+nextFarmerSlipNo:
+SELECT COALESCE(MAX(slip_no), 0) + 1 FROM buyEntryEntity WHERE shop_id = ? AND farmer_id = ?;
 
 getSellEntriesByShop:
 SELECT * FROM sellEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
@@ -638,9 +661,12 @@ insertSellEntry:
 INSERT OR REPLACE INTO sellEntryEntity(
     id, shop_id, buyer_id, commodity_id, entry_date, bill_mode, party_kind, gstin, bags_count, weight_per_bag_grams,
     total_weight_grams, rate_paisa_per_quintal, arat_bps, tulak_paisa, gross_paisa, arat_paisa, mandi_shulk_paisa,
-    total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, remarks,
+    total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, slip_no, remarks,
     created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+nextSellSlipNo:
+SELECT COALESCE(MAX(slip_no), 0) + 1 FROM sellEntryEntity WHERE shop_id = ?;
 
 getLendEntriesByShop:
 SELECT * FROM lendEntryEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY entry_date DESC;
@@ -651,8 +677,11 @@ SELECT * FROM lendEntryEntity WHERE id = ?;
 insertLendEntry:
 INSERT OR REPLACE INTO lendEntryEntity(
     id, shop_id, party_id, lend_type, entry_date, amount_paisa, commodity_id, bags_count, weight_grams,
-    expected_return_date, notes, status, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    expected_return_date, slip_no, notes, status, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+nextLendSlipNo:
+SELECT COALESCE(MAX(slip_no), 0) + 1 FROM lendEntryEntity WHERE shop_id = ?;
 
 getLendSettlementsByLend:
 SELECT * FROM lendSettlementEntity WHERE lend_id = ? AND is_void = 0 ORDER BY settled_at ASC;
@@ -702,9 +731,9 @@ insertBuyEntryIfAbsent:
 INSERT OR IGNORE INTO buyEntryEntity(
     id, shop_id, farmer_id, commodity_id, entry_date, bags_count, weight_per_bag_grams, extra_weight_grams,
     total_weight_grams, rate_paisa_per_quintal, commission_bps, labour_per_bag_paisa, advance_paid_paisa,
-    gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, remarks,
+    gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, slip_no, remarks,
     created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteSyncedSellEntry:
 DELETE FROM sellEntryEntity WHERE id = ? AND sync_status = 1;
@@ -713,9 +742,9 @@ insertSellEntryIfAbsent:
 INSERT OR IGNORE INTO sellEntryEntity(
     id, shop_id, buyer_id, commodity_id, entry_date, bill_mode, party_kind, gstin, bags_count, weight_per_bag_grams,
     total_weight_grams, rate_paisa_per_quintal, arat_bps, tulak_paisa, gross_paisa, arat_paisa, mandi_shulk_paisa,
-    total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, remarks,
+    total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, slip_no, remarks,
     created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteSyncedLendEntry:
 DELETE FROM lendEntryEntity WHERE id = ? AND sync_status = 1;
@@ -723,8 +752,8 @@ DELETE FROM lendEntryEntity WHERE id = ? AND sync_status = 1;
 insertLendEntryIfAbsent:
 INSERT OR IGNORE INTO lendEntryEntity(
     id, shop_id, party_id, lend_type, entry_date, amount_paisa, commodity_id, bags_count, weight_grams,
-    expected_return_date, notes, status, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    expected_return_date, slip_no, notes, status, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteSyncedLendSettlement:
 DELETE FROM lendSettlementEntity WHERE id = ? AND sync_status = 1;

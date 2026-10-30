@@ -8,6 +8,8 @@ import com.appwork.mandisamiti.database.PartyEntity
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyBalance
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.DuplicatePhoneException
+import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.domain.repository.PartyRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -50,21 +52,34 @@ class OfflineFirstPartyRepository(
         queries.getPartyById(partyId).executeAsOneOrNull()?.toDomain()
     }
 
+    override suspend fun getPartyByPhone(shopId: String, phone: String): Party? = withContext(ioDispatcher) {
+        normalizePhone(phone)?.let { queries.getPartyByPhone(shopId, it).executeAsOneOrNull()?.toDomain() }
+    }
+
     override suspend fun saveParty(party: Party) = withContext(ioDispatcher) {
-        queries.insertParty(
-            id = party.id,
-            shop_id = party.shopId,
-            name = party.name,
-            phone = party.phone,
-            village = party.village,
-            party_type = party.partyType.name,
-            monthly_interest_rate = party.monthlyInterestRate,
-            photo_uri = party.photoUri,
-            created_at = party.createdAt,
-            updated_at = party.updatedAt,
-            is_deleted = if (party.isDeleted) 1L else 0L,
-            sync_status = party.syncStatus.toLong()
-        )
+        val phone = normalizePhone(party.phone)
+        database.transaction {
+            val duplicate = phone?.let { queries.getPartyByPhone(party.shopId, it).executeAsOneOrNull()?.toDomain() }
+            if (duplicate != null && duplicate.id != party.id) throw DuplicatePhoneException(duplicate)
+
+            if (queries.getPartyById(party.id).executeAsOneOrNull() == null) {
+                queries.insertParty(
+                    id = party.id, shop_id = party.shopId, name = party.name, phone = phone,
+                    village = party.village, party_type = party.partyType.name,
+                    monthly_interest_rate = party.monthlyInterestRate, photo_uri = party.photoUri,
+                    created_at = party.createdAt, updated_at = party.updatedAt,
+                    is_deleted = if (party.isDeleted) 1L else 0L, sync_status = party.syncStatus.toLong()
+                )
+            } else {
+                queries.updateParty(
+                    name = party.name, phone = phone, village = party.village,
+                    party_type = party.partyType.name, monthly_interest_rate = party.monthlyInterestRate,
+                    photo_uri = party.photoUri, updated_at = party.updatedAt,
+                    is_deleted = if (party.isDeleted) 1L else 0L, sync_status = party.syncStatus.toLong(),
+                    id = party.id,
+                )
+            }
+        }
     }
 
     override suspend fun deleteParty(partyId: String) = withContext(ioDispatcher) {
