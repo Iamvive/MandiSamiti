@@ -16,6 +16,7 @@ class LendEntry(Base):
     bags_count = Column(BigInteger, default=0)
     weight_grams = Column(BigInteger, default=0)
     expected_return_date = Column(BigInteger, nullable=True)
+    slip_no = Column(BigInteger, nullable=True)
     notes = Column(String, nullable=True)
     status = Column(String(20), default="OPEN")  # OPEN | PARTIAL | SETTLED
 
@@ -37,6 +38,9 @@ class LendSettlement(Base):
     lend_id = Column(String, ForeignKey("lend_entries.id"), nullable=False, index=True)
     settled_at = Column(BigInteger, default=lambda: int(time.time() * 1000), index=True)
     amount_paisa = Column(BigInteger, default=0)
+    principal_paisa = Column(BigInteger, nullable=False, default=0, server_default="0")
+    interest_paisa = Column(BigInteger, nullable=False, default=0, server_default="0")
+    calculated_interest_paisa = Column(BigInteger, nullable=False, default=0, server_default="0")
     weight_grams = Column(BigInteger, default=0)
     bags_count = Column(BigInteger, default=0)
 

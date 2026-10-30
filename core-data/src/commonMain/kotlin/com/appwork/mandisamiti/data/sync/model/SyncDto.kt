@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.data.sync.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -167,7 +168,13 @@ data class LendSettlementSyncDto(
     val void_reason: String? = null,
     val revision: Int = 1,
     val created_at: Long = 0L,
-    val updated_at: Long = 0L
+    val updated_at: Long = 0L,
+    @SerialName("principal_paisa")
+    val principal_paisa: Long = 0L,
+    @SerialName("interest_paisa")
+    val interest_paisa: Long = 0L,
+    @SerialName("calculated_interest_paisa")
+    val calculated_interest_paisa: Long = 0L
 )
 
 @Serializable
