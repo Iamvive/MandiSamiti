@@ -90,6 +90,8 @@ class SyncEngine(
                 village = it.village,
                 monthly_interest_rate = it.monthly_interest_rate,
                 photo_uri = it.photo_uri,
+                gstin = it.gstin,
+                mandi_license = it.mandi_license,
                 is_deleted = it.is_deleted.toInt(),
                 created_at = it.created_at,
                 updated_at = it.updated_at
@@ -328,6 +330,8 @@ class SyncEngine(
                             party_type = p.role,
                             monthly_interest_rate = p.monthly_interest_rate,
                             photo_uri = p.photo_uri,
+                            gstin = p.gstin,
+                            mandi_license = p.mandi_license,
                             created_at = p.created_at.takeIf { it > 0 } ?: res.server_sync_time,
                             updated_at = p.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
                             is_deleted = p.is_deleted.toLong(),

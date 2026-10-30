@@ -49,6 +49,8 @@ class DatabaseTest {
             party_type = "FARMER",
             monthly_interest_rate = 1.5,
             photo_uri = null,
+            gstin = null,
+            mandi_license = null,
             created_at = 1710928000000L,
             updated_at = 1710928000000L,
             is_deleted = 0L,
@@ -64,6 +66,8 @@ class DatabaseTest {
             party_type = "BUYER",
             monthly_interest_rate = null,
             photo_uri = null,
+            gstin = null,
+            mandi_license = null,
             created_at = 1710928000000L,
             updated_at = 1710928000000L,
             is_deleted = 0L,
@@ -168,7 +172,7 @@ class DatabaseTest {
         // SQLDelight version = migrations + 1; 1.sqm..5.sqm exist, so a lower bound survives the next migration.
         assertTrue(AppDatabase.Schema.version >= 6L)
 
-        q.insertParty("farmer-1", "shop-1", "रामवीर", null, null, "FARMER", null, null, 1L, 1L, 0L, 0L)
+        q.insertParty("farmer-1", "shop-1", "रामवीर", null, null, "FARMER", null, null, null, null, 1L, 1L, 0L, 0L)
         q.insertCashTransaction(
             id = "tx-1", shop_id = "shop-1", party_id = "farmer-1", deal_id = null,
             transaction_type = "UDHAR_GIVEN", amount_paisa = 500_000L, payment_mode = "CASH",

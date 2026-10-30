@@ -74,6 +74,10 @@ async def sync_push(
                     existing.village = p_in.village
                     existing.monthly_interest_rate = p_in.monthly_interest_rate
                     existing.photo_uri = p_in.photo_uri
+                    if "gstin" in p_in.model_fields_set:
+                        existing.gstin = p_in.gstin
+                    if "mandi_license" in p_in.model_fields_set:
+                        existing.mandi_license = p_in.mandi_license
                     existing.is_deleted = p_in.is_deleted
                     existing.sync_version += 1
                     existing.updated_at = incoming_at
@@ -94,6 +98,8 @@ async def sync_push(
                 village=p_in.village,
                 monthly_interest_rate=p_in.monthly_interest_rate,
                 photo_uri=p_in.photo_uri,
+                gstin=p_in.gstin,
+                mandi_license=p_in.mandi_license,
                 is_deleted=p_in.is_deleted,
                 sync_version=1,
                 created_at=incoming_at,

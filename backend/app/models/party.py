@@ -15,6 +15,8 @@ class Party(Base):
     village = Column(String, nullable=True)
     monthly_interest_rate = Column(Float, nullable=True, default=1.5)
     photo_uri = Column(String, nullable=True)
+    gstin = Column(String(15), nullable=True)
+    mandi_license = Column(String(100), nullable=True)
     is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)
     server_seq = Column(BigInteger, nullable=False, default=0, server_default="0", index=True)

@@ -65,7 +65,7 @@ class KtorMandiSyncApiClientTest {
         val api = client(captured = reqs) {
             json(
                 HttpStatusCode.OK,
-                """{"last_sync_timestamp":100,"after_seq":100,"next_seq":250,"has_more":false,"parties":[{"id":"p1","name":"सुरेश","role":"FARMER"}],"deals":[],"transactions":[],"revisions":[],"server_sync_time":250}"""
+                """{"last_sync_timestamp":100,"after_seq":100,"next_seq":250,"has_more":false,"parties":[{"id":"p1","name":"सुरेश","role":"BUYER","gstin":"29ABCDE1234F1Z5","mandi_license":"LIC-001"}],"deals":[],"transactions":[],"revisions":[],"server_sync_time":250}"""
             )
         }
 
@@ -74,6 +74,8 @@ class KtorMandiSyncApiClientTest {
         val dto = res.getOrThrow()
         assertEquals(1, dto.parties.size)
         assertEquals("सुरेश", dto.parties[0].name)
+        assertEquals("29ABCDE1234F1Z5", dto.parties[0].gstin)
+        assertEquals("LIC-001", dto.parties[0].mandi_license)
         assertEquals(250L, dto.next_seq)
         assertEquals(false, dto.has_more)
 

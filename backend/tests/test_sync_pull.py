@@ -58,3 +58,20 @@ async def test_pull_never_returns_rows_above_committed_last_seq(db):
     await db.commit()
     page = await sync_pull(after_seq=0, limit=500, current_user=USER, db=db)
     assert [p.id for p in page.parties] == ["p0"] and page.next_seq == 1 and page.has_more is False
+
+@pytest.mark.asyncio
+async def test_pull_returns_party_tax_fields(db):
+    await sync_push(
+        SyncPushRequest(parties=[PartyCreate(
+            id="p-tax", name="Buyer", role="BUYER",
+            gstin="29ABCDE1234F1Z5", mandi_license="LIC-001",
+        )]),
+        USER,
+        db,
+    )
+
+    page = await sync_pull(after_seq=0, limit=500, current_user=USER, db=db)
+
+    party = next(p for p in page.parties if p.id == "p-tax")
+    assert party.gstin == "29ABCDE1234F1Z5"
+    assert party.mandi_license == "LIC-001"

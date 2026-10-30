@@ -12,6 +12,8 @@ data class PartySyncDto(
     val village: String? = null,
     val monthly_interest_rate: Double? = 1.5,
     val photo_uri: String? = null,
+    val gstin: String? = null,
+    val mandi_license: String? = null,
     val is_deleted: Int = 0,
     val created_at: Long = 0L,
     val updated_at: Long = 0L

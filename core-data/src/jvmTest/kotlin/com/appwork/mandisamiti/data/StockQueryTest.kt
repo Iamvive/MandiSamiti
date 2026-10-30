@@ -70,11 +70,11 @@ class StockQueryTest {
     private fun seedPartiesAndCommodity(db: com.appwork.mandisamiti.database.AppDatabase) {
         db.appDatabaseQueries.insertParty(
             "farmer", "shop", "Farmer", null, null, "FARMER", null, null,
-            1L, 1L, 0L, 0L,
+            null, null, 1L, 1L, 0L, 0L,
         )
         db.appDatabaseQueries.insertParty(
             "buyer", "shop", "Buyer", null, null, "BUYER", null, null,
-            1L, 1L, 0L, 0L,
+            null, null, 1L, 1L, 0L, 0L,
         )
         db.appDatabaseQueries.insertCommodity(
             "wheat", "shop", "गेहूं", "Wheat", "QUINTAL", 1L,
