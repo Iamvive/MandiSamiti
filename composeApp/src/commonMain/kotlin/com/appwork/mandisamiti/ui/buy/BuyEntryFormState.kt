@@ -95,10 +95,10 @@ class BuyEntryFormState(
     val lots = mutableStateListOf<BuyLotItemState>()
 
     var commissionPercent by mutableStateOf(
-        tradeSettings?.let { MandiMathEngine.paisaToInputString(it.farmerCommissionBps) } ?: "2"
+        tradeSettings?.let { MandiMathEngine.paisaToInputString(it.farmerCommissionBps) } ?: "0.7"
     )
     var labourPerBag by mutableStateOf(
-        tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "5"
+        tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
     var tareQuintals by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
@@ -208,18 +208,26 @@ class BuyEntryFormState(
             lotResults.sumOf { pair ->
                 val lotWeight = pair.second.totalWeightGrams
                 val lotNetWeight = (lotWeight - (tareGrams * lotWeight / totalGrossWeight)).coerceAtLeast(0L)
-                MandiMathEngine.grossAmountPaisa(lotNetWeight, pair.second.ratePaisaPerQuintal)
+                val exactPaisa = (lotNetWeight * pair.second.ratePaisaPerQuintal) / MandiMathEngine.GRAMS_PER_QUINTAL
+                (exactPaisa / 100L) * 100L
             }
         }
 
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
-        val commissionPaisa = MandiMathEngine.percentageOf(totalGross, commBps)
-
         val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
-        val labourPaisa = totalBags * labourPaisaPerBag
-
         val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
-        val netPayable = totalGross - commissionPaisa - labourPaisa - advancePaisa
+
+        // Sheet Rule 2: Extra loose weight > 5kg adds 1 billed bag for labour
+        val totalExtraGrams = lotResults.sumOf { it.second.extraWeightGrams }
+        val billedBags = totalBags + if (totalExtraGrams > 5000L) 1L else 0L
+        val labourPaisa = billedBags * labourPaisaPerBag
+
+        // Sheet Rule 3 & 4: Final rounded to nearest Rs 10, commission absorbs rounding
+        val commRaw = MandiMathEngine.percentageOf(totalGross, commBps)
+        val unroundedFinal = totalGross - labourPaisa - commRaw
+        val roundedFinal = ((unroundedFinal + 500L) / 1000L) * 1000L
+        val commissionPaisa = totalGross - labourPaisa - roundedFinal
+        val netPayable = roundedFinal - advancePaisa
 
         return AggregatedBuyPreview(
             lotsCalculations = lotResults,

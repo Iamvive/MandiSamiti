@@ -45,13 +45,16 @@ class SellEntryFormStateTest {
         assertEquals(1_300_000, preview.grossPaisa)
         // Commission 2% = Rs 260 (26,000 paisa)
         assertEquals(26_000, preview.commissionPaisa)
-        // Labour 10 * Rs 5 = Rs 50 (5,000 paisa)
-        assertEquals(5_000, preview.labourPaisa)
+        // Per sheet parity: Cash Memo has no separate labour; tulak absorbs whole-rupee cut
+        // 5.0 Qtl * Rs 1 nominal = Rs 5. Total unrounded = 13,000 + 260 + 5 = 13,265
+        assertEquals(0, preview.labourPaisa)
         // No Mandi tax or Cess on normal
         assertEquals(0, preview.mandiShulkPaisa)
         assertEquals(0, preview.krishakCessPaisa)
-        // Total receivable = 13,000 + 260 + 50 = Rs 13,310 (1,331,000 paisa)
-        assertEquals(1_331_000, preview.totalReceivablePaisa)
+        // Tulak absorbs difference: 13,265 - 13,000 - 260 = 5 Rs = 500 paisa
+        assertEquals(500, preview.tulakPaisa)
+        // Total receivable = Rs 13,265 (1,326,500 paisa)
+        assertEquals(1_326_500, preview.totalReceivablePaisa)
 
         assertTrue(state.canSave())
         assertNull(state.validationReason())
@@ -83,12 +86,14 @@ class SellEntryFormStateTest {
         assertEquals(4_000_000, preview.grossPaisa) // Rs 40,000
         // Commission 1.5% of 40,000 = Rs 600 (60,000 paisa)
         assertEquals(60_000, preview.commissionPaisa)
-        // Labour 30 * 4 = Rs 120 (12,000 paisa)
-        assertEquals(12_000, preview.labourPaisa)
+        // Per sheet parity: Cash Memo has no separate labour; tulak absorbs rounding
+        assertEquals(0, preview.labourPaisa)
         // No Mandi tax on normal
         assertEquals(0, preview.mandiShulkPaisa)
-        // Total = 40,000 + 600 + 120 = Rs 40,720 (4,072,000 paisa)
-        assertEquals(4_072_000, preview.totalReceivablePaisa)
+        // 30 bags x 50kg = 15.0 Qtl * Rs 1 nominal = Rs 15 (1,500 paisa)
+        assertEquals(1_500, preview.tulakPaisa)
+        // Total = 40,000 + 600 + 15 = Rs 40,615 (4,061,500 paisa)
+        assertEquals(4_061_500, preview.totalReceivablePaisa)
 
         assertTrue(state.canSave())
     }
@@ -123,14 +128,15 @@ class SellEntryFormStateTest {
         assertEquals(2_600_000, preview.grossPaisa)
         // Mandi Shulk 1.5% of 26,000 = Rs 390 (39,000 paisa)
         assertEquals(39_000, preview.mandiShulkPaisa)
-        // Krishak Kalyan Cess 0.5% of 26,000 = Rs 130 (13,000 paisa)
-        assertEquals(13_000, preview.krishakCessPaisa)
-        // Labour Rs 5/bag = 20 * 5 = Rs 100 (10,000 paisa)
-        assertEquals(10_000, preview.labourPaisa)
+        // Krishak Kalyan Cess 0% on BOS
+        assertEquals(0, preview.krishakCessPaisa)
+        // No labour on BOS per sheet parity
+        assertEquals(0, preview.labourPaisa)
         // Tulak default Rs 1/qtl = 10 * 1 = Rs 10 (1,000 paisa)
         assertEquals(1_000, preview.tulakPaisa)
-        // Total = 26,000 + 390 + 130 + 100 + 10 = Rs 26,630 (2,663,000 paisa)
-        assertEquals(2_663_000, preview.totalReceivablePaisa)
+        // Commission (arat) 1.5% default: 26,000 * 1.5% = 390 (39,000 paisa)
+        // Total = 26,000 + 390 (arat) + 390 (shulk) + 10 (tulak) = Rs 26,790 (2,679,000 paisa)
+        assertEquals(2_679_000, preview.totalReceivablePaisa)
     }
 
     @Test

@@ -44,14 +44,14 @@ class TradeSettingsFormDefaultsF05Test {
         // Gross = 4.65 Qtl * 2500 Rs = 11,625 Rs = 1,162,500 paisa
         assertEquals(1_162_500L, preview.totalGrossPaisa)
 
-        // Commission = 1.5% on 1,162,500 = 17,438 paisa (₹174.38)
-        assertEquals(17_438L, preview.commissionPaisa)
+        // Commission = 1.5% on 1,162,500 = 17,437.5 -> rounded to nearest 10 = final 1,135,000 paisa, commission absorbs = 17,500 paisa (₹175.00)
+        assertEquals(17_500L, preview.commissionPaisa)
 
         // Labour = 10 bags * ₹10 = ₹100 = 10,000 paisa
         assertEquals(10_000L, preview.labourPaisa)
 
-        // Net Payable = 1,162,500 - 17,438 - 10,000 = 1,135,062 paisa
-        assertEquals(1_135_062L, preview.netPayablePaisa)
+        // Net Payable = 1,162,500 - 17,500 - 10,000 = 1,135,000 paisa
+        assertEquals(1_135_000L, preview.netPayablePaisa)
     }
 
     @Test

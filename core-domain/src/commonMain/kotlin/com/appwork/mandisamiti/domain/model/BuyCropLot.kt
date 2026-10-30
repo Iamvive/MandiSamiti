@@ -25,7 +25,8 @@ data class BuyCropLot(
             id: String = IdGenerator.newId()
         ): BuyCropLot {
             val totalWeight = (bags * weightPerBagGrams) + extraWeightGrams
-            val gross = MandiMathEngine.grossAmountPaisa(totalWeight, ratePaisaPerQuintal)
+            val exactGross = MandiMathEngine.grossAmountPaisa(totalWeight, ratePaisaPerQuintal)
+            val gross = (exactGross / 100L) * 100L // cut down to whole rupee per sheet rule 1
             return BuyCropLot(
                 id = id,
                 cropName = cropName.ifBlank { "गेहूं" },
