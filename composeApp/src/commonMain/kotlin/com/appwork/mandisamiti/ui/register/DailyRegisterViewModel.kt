@@ -243,8 +243,11 @@ class DailyRegisterViewModel(
                         add(BahiDayEntry(sell.id, BahiEntryKind.BUYER_PAYMENT, "Buyer payment", sell.receivedPaisa, occurredAt = sell.entryDate, isVoid = sell.isVoid))
                     }
                     inputs.settlements.filter { it.settledAt in window.startMs until window.endMs && it.amountPaisa > 0L }.forEach { settlement ->
-                        // TODO(feat/bahi-claude): map principal_paisa and interest_paisa to separate Left lines.
-                        add(BahiDayEntry(settlement.id, BahiEntryKind.LOAN_PRINCIPAL_REPAID, "Loan principal repaid", settlement.amountPaisa, occurredAt = settlement.settledAt, isVoid = settlement.isVoid))
+                        // Legacy rows carry only amountPaisa and count fully as principal.
+                        val split = settlement.principalPaisa != 0L || settlement.interestPaisa != 0L
+                        val principal = if (split) settlement.principalPaisa else settlement.amountPaisa
+                        if (principal > 0L) add(BahiDayEntry(settlement.id, BahiEntryKind.LOAN_PRINCIPAL_REPAID, "Loan principal repaid", principal, occurredAt = settlement.settledAt, isVoid = settlement.isVoid))
+                        if (settlement.interestPaisa > 0L) add(BahiDayEntry("${settlement.id}:interest", BahiEntryKind.LOAN_INTEREST, "Loan interest received", settlement.interestPaisa, occurredAt = settlement.settledAt, isVoid = settlement.isVoid))
                     }
                     inputs.expenses.filter { it.entryDate in window.startMs until window.endMs }.forEach { expense ->
                         add(BahiDayEntry(expense.id, BahiEntryKind.EXPENSE, expense.remarks ?: expense.category.name, expense.amountPaisa, expense.paymentMode.name.toBahiMode(), expense.entryDate, expense.isVoid))

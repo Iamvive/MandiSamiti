@@ -434,8 +434,8 @@ SELECT
         -- 9. Lend Entries (MONEY) where party owes shop (+)
         COALESCE((SELECT SUM(amount_paisa) FROM lendEntryEntity WHERE party_id = p.id AND lend_type = 'MONEY' AND is_deleted = 0 AND is_void = 0), 0)
         -
-        -- 10. Lend Settlements (-)
-        COALESCE((SELECT SUM(s.amount_paisa) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0 AND l.is_void = 0 AND l.is_deleted = 0), 0)
+        -- 10. Lend Settlements (-): principal only; interest never reduces what the party owes. Legacy rows (no split) count in full.
+        COALESCE((SELECT SUM(CASE WHEN s.principal_paisa != 0 OR s.interest_paisa != 0 THEN s.principal_paisa ELSE s.amount_paisa END) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0 AND l.is_void = 0 AND l.is_deleted = 0), 0)
     ) AS balance_paisa
 FROM partyEntity p
 WHERE p.id = ? AND p.is_deleted = 0;
