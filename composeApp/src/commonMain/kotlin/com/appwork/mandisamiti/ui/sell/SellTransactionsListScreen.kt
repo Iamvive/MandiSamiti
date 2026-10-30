@@ -54,6 +54,7 @@ fun SellTransactionsListScreen(
     onNew: () -> Unit,
     onBack: () -> Unit,
     entries: List<SellEntry> = emptyList(),
+    partyNamesById: Map<String, String> = emptyMap(),
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -66,7 +67,12 @@ fun SellTransactionsListScreen(
         .filter { !filterOnlyDue || it.balanceDuePaisa > 0 }
         .filter {
             if (searchQuery.isBlank()) return@filter true
-            BilingualSearchEngine.matchesAny(searchQuery, it.buyerId, it.slipNo?.toString(), it.invoiceNumber)
+            BilingualSearchEngine.matchesAny(
+                searchQuery,
+                partyNamesById[it.buyerId] ?: it.buyerId,
+                it.slipNo?.toString(),
+                it.invoiceNumber,
+            )
         }
         .sortedByDescending { it.entryDate }
 
@@ -126,6 +132,7 @@ fun SellTransactionsListScreen(
                     items(filteredEntries, key = { it.id }) { entry ->
                         SellEntryCard(
                             entry = entry,
+                            buyerName = partyNamesById[entry.buyerId] ?: entry.buyerId,
                             onClick = { onOpen(entry.id) },
                             onLongClick = { voidTarget = entry }
                         )
@@ -152,6 +159,7 @@ fun SellTransactionsListScreen(
 @Composable
 private fun SellEntryCard(
     entry: SellEntry,
+    buyerName: String,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
 ) {
@@ -176,7 +184,7 @@ private fun SellEntryCard(
             ) {
                 Column {
                     Text(
-                        text = entry.buyerId.ifBlank { "खरीदार" },
+                        text = buyerName.ifBlank { "खरीदार" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

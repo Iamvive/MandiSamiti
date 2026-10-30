@@ -74,6 +74,7 @@ class SellEntryFormState(
     tradeSettings: TradeSettings? = null
 ) {
     var buyerName by mutableStateOf("")
+    var selectedBuyerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
     var partyKind by mutableStateOf(SellPartyKind.CUSTOMER)
     var billMode by mutableStateOf(BillMode.NORMAL)
@@ -288,7 +289,7 @@ class SellEntryFormState(
         return SellEntry(
             id = existingId ?: "sell-${IdGenerator.newId()}",
             shopId = shopId,
-            buyerId = buyerName.trim(),
+            buyerId = selectedBuyerId ?: buyerName.trim(),
             commodityId = if (preview.lots.size > 1) "विविध जिंस" else (firstLot?.cropName ?: "गेहूं"),
             entryDate = now,
             billMode = billMode,
@@ -323,6 +324,7 @@ class SellEntryFormState(
     }
 
     fun populateFrom(entry: SellEntry) {
+        selectedBuyerId = entry.buyerId
         buyerName = entry.buyerId
         phone = entry.vehicleNumber ?: ""
         partyKind = entry.partyKind

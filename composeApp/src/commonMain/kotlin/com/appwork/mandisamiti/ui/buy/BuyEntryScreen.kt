@@ -108,6 +108,14 @@ fun BuyEntryScreen(
         }
     }
 
+    LaunchedEffect(existingEntry, parties) {
+        val entry = existingEntry ?: return@LaunchedEffect
+        val party = parties.firstOrNull { it.id == entry.farmerId } ?: return@LaunchedEffect
+        if (formState.farmerName == entry.farmerId) formState.farmerName = party.name
+        if (formState.phone.isBlank()) party.phone?.let(formState::updatePhone)
+        if (formState.village.isBlank()) formState.village = party.village.orEmpty()
+    }
+
     val preview = formState.aggregatePreview()
     val canSave = formState.canSave()
     val validationReason = formState.validationReason()
@@ -159,11 +167,15 @@ fun BuyEntryScreen(
                     val nameVal = formState.validateFarmerName()
                     PartyAutocompleteField(
                         value = formState.farmerName,
-                        onValueChange = { formState.farmerName = it },
+                        onValueChange = {
+                            formState.farmerName = it
+                            formState.selectedFarmerId = null
+                        },
                         label = "किसान नाम *",
                         parties = parties,
                         partyType = PartyType.FARMER,
                         onPartySelected = { selected ->
+                            formState.selectedFarmerId = selected.id
                             formState.farmerName = selected.name
                             selected.phone?.let { formState.updatePhone(it) }
                             formState.village = selected.village ?: ""
@@ -206,7 +218,8 @@ fun BuyEntryScreen(
                         )
                     }
 
-                    val showActiveLoan = hasActiveLoan || (activeLoanChecker != null && formState.farmerName.isNotBlank() && activeLoanChecker(formState.farmerName.trim()))
+                    val activeLoanKey = formState.selectedFarmerId ?: formState.farmerName.trim()
+                    val showActiveLoan = hasActiveLoan || (activeLoanChecker != null && activeLoanKey.isNotBlank() && activeLoanChecker(activeLoanKey))
                     if (showActiveLoan) {
                         SuggestionChip(
                             onClick = {},

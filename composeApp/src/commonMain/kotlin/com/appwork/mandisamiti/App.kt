@@ -447,8 +447,10 @@ fun App(
             is Screen.BuyList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 val buys by buyRepo.getBuyEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 BuyTransactionsListScreen(
                     entries = buys,
+                    partyNamesById = parties.associate { it.id to it.name },
                     onOpen = { id -> currentScreen = Screen.BuyReceipt(id) },
                     onNew = { currentScreen = Screen.BuyEntry(null) },
                     onBack = { currentScreen = screen.backTarget() },
@@ -512,8 +514,10 @@ fun App(
             is Screen.SellList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 val sells by sellRepo.getSellEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 SellTransactionsListScreen(
                     entries = sells,
+                    partyNamesById = parties.associate { it.id to it.name },
                     onOpen = { id -> currentScreen = Screen.SellReceipt(id) },
                     onNew = { currentScreen = Screen.SellEntry(null) },
                     onBack = { currentScreen = screen.backTarget() },
@@ -582,8 +586,10 @@ fun App(
             is Screen.LendList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 LendTransactionsListScreen(
                     entries = lends,
+                    partyNamesById = parties.associate { it.id to it.name },
                     onNew = { currentScreen = Screen.LendEntry },
                     onPartyClick = { partyId -> currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList) },
                     getSettlements = { lendId -> lendRepo.getSettlements(lendId) },

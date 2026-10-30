@@ -78,6 +78,7 @@ fun KhataLedgerTabScreen(
     onFilterSelected: (PartyFilter) -> Unit,
     onPartyClick: (Party) -> Unit,
     onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType) -> Party,
+    onUpdatePartyPhone: suspend (party: Party, phone: String) -> Party,
     onNavigateToStockSheet: () -> Unit = {},
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
@@ -88,6 +89,9 @@ fun KhataLedgerTabScreen(
     var partyPhoneInput by remember { mutableStateOf("") }
     var selectedPartyType by remember { mutableStateOf(PartyType.FARMER) }
     var duplicateParty by remember { mutableStateOf<Party?>(null) }
+    var phoneEditParty by remember { mutableStateOf<Party?>(null) }
+    var phoneEditInput by remember { mutableStateOf("") }
+    var phoneEditDuplicate by remember { mutableStateOf<Party?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -259,6 +263,11 @@ fun KhataLedgerTabScreen(
                     party = partyWithBalance.party,
                     balancePaisa = partyWithBalance.balancePaisa,
                     isEnglish = isEnglish,
+                    onPhoneNeededClick = {
+                        phoneEditParty = partyWithBalance.party
+                        phoneEditInput = ""
+                        phoneEditDuplicate = null
+                    },
                     onClick = { onPartyClick(partyWithBalance.party) }
                 )
             }
@@ -429,6 +438,62 @@ fun KhataLedgerTabScreen(
                     )
                 }
             }
+        )
+    }
+
+    phoneEditParty?.let { party ->
+        AlertDialog(
+            onDismissRequest = { phoneEditParty = null },
+            title = { Text(if (isEnglish) "Add phone number" else "फ़ोन नंबर जोड़ें") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(party.name, fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(
+                        value = phoneEditInput,
+                        onValueChange = {
+                            phoneEditInput = sanitizePartyPhone(it)
+                            phoneEditDuplicate = null
+                        },
+                        label = { Text(if (isEnglish) "Mobile Number" else "मोबाइल नंबर") },
+                        isError = phoneEditInput.isNotEmpty() && !isValidPartyPhone(phoneEditInput),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                    )
+                    phoneEditDuplicate?.let { existing ->
+                        Text(
+                            text = if (isEnglish) {
+                                "This number already belongs to ${existing.name}"
+                            } else {
+                                "यह नंबर पहले से ${existing.name} के नाम पर है"
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = isValidPartyPhone(phoneEditInput),
+                    onClick = {
+                        coroutineScope.launch {
+                            try {
+                                onUpdatePartyPhone(party, phoneEditInput)
+                                phoneEditParty = null
+                                phoneEditInput = ""
+                            } catch (duplicate: DuplicatePhoneException) {
+                                phoneEditDuplicate = duplicate.existing
+                            }
+                        }
+                    },
+                ) {
+                    Text(if (isEnglish) "Save" else "सहेजें")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { phoneEditParty = null }) {
+                    Text(if (isEnglish) "Cancel" else "रद्द करें")
+                }
+            },
         )
     }
 }

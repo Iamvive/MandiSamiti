@@ -111,6 +111,13 @@ fun SellEntryScreen(
         }
     }
 
+    LaunchedEffect(existingEntry, parties) {
+        val entry = existingEntry ?: return@LaunchedEffect
+        val party = parties.firstOrNull { it.id == entry.buyerId } ?: return@LaunchedEffect
+        if (formState.buyerName == entry.buyerId) formState.buyerName = party.name
+        if (formState.phone.isBlank()) formState.phone = party.phone.orEmpty()
+    }
+
     val preview = formState.aggregatePreview()
     val isBos = (formState.billMode == BillMode.BILL_OF_SUPPLY && formState.partyKind == SellPartyKind.MERCHANT)
     val isMerchant = formState.partyKind == SellPartyKind.MERCHANT
@@ -236,11 +243,15 @@ fun SellEntryScreen(
 
                     PartyAutocompleteField(
                         value = formState.buyerName,
-                        onValueChange = { formState.buyerName = it },
+                        onValueChange = {
+                            formState.buyerName = it
+                            formState.selectedBuyerId = null
+                        },
                         label = if (isMerchant) "व्यापारी / फर्म का नाम *" else "ग्राहक का नाम *",
                         parties = parties,
                         partyType = PartyType.BUYER,
                         onPartySelected = { selected ->
+                            formState.selectedBuyerId = selected.id
                             formState.buyerName = selected.name
                             selected.phone?.let { formState.phone = it }
                         },

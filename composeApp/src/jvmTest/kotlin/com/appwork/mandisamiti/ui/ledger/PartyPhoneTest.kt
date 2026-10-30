@@ -9,7 +9,7 @@ class PartyPhoneTest {
     @Test
     fun inputKeepsDigitsOnlyAndAtMostTen() {
         assertEquals("9876543210", sanitizePartyPhone("98765-43210"))
-        assertEquals("9876543210", sanitizePartyPhone("987654321012345"))
+        assertEquals("9876543210", sanitizePartyPhone("+91 98765-43210"))
         assertEquals("", sanitizePartyPhone("abc"))
     }
 

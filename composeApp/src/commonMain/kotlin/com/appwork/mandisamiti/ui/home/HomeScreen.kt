@@ -171,6 +171,7 @@ fun HomeScreen(
                             onFilterSelected = { viewModel.onFilterSelected(it) },
                             onPartyClick = onNavigateToPartyKhata,
                             onCreateParty = viewModel::createParty,
+                            onUpdatePartyPhone = viewModel::updatePartyPhone,
                             onNavigateToStockSheet = onNavigateToStockSheet,
                             isEnglish = uiState.isEnglish
                         )

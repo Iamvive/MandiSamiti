@@ -339,6 +339,19 @@ class HomeViewModel(
         return newParty
     }
 
+    suspend fun updatePartyPhone(party: Party, phoneNumber: String): Party {
+        val cleanPhone = normalizePhone(phoneNumber)
+        require(cleanPhone != null) { "10-digit mobile number required" }
+        val updated = party.copy(
+            phone = cleanPhone,
+            updatedAt = Clock.System.now().toEpochMilliseconds(),
+            syncStatus = 0,
+        )
+        partyRepository.saveParty(updated)
+        onLocalWrite()
+        return updated
+    }
+
     private fun filterList(
         list: List<PartyWithBalance>,
         query: String,

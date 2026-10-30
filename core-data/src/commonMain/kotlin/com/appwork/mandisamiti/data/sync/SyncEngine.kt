@@ -308,25 +308,29 @@ class SyncEngine(
                 res.buy_entries.size + res.sell_entries.size + res.lend_entries.size +
                 res.lend_settlements.size + res.expenses.size + res.revisions.size
 
-            val applied = database.transactionWithResult {
+            val appliedResult = runCatching { database.transactionWithResult {
                 // Logged out / switched shop while this page was in flight: write nothing, not even the cursor.
                 if (!queries.shopProfileExists(shopId).executeAsOne()) rollback(false)
                 res.parties.forEach { p ->
                     queries.deleteSyncedParty(p.id)
-                    queries.insertPartyIfAbsent(
-                        id = p.id,
-                        shop_id = shopId,
-                        name = p.name,
-                        phone = normalizePhone(p.phone),
-                        village = p.village,
-                        party_type = p.role,
-                        monthly_interest_rate = p.monthly_interest_rate,
-                        photo_uri = p.photo_uri,
-                        created_at = p.created_at.takeIf { it > 0 } ?: res.server_sync_time,
-                        updated_at = p.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
-                        is_deleted = p.is_deleted.toLong(),
-                        sync_status = 1L
-                    )
+                    // Preserve a pending local edit with the same id. Every other collision must fail the page so
+                    // the transaction rolls back and the server cursor is not advanced past a lost party.
+                    if (queries.getPartyByIdAny(p.id).executeAsOneOrNull()?.sync_status != 0L) {
+                        queries.insertPartyFromServer(
+                            id = p.id,
+                            shop_id = shopId,
+                            name = p.name,
+                            phone = normalizePhone(p.phone),
+                            village = p.village,
+                            party_type = p.role,
+                            monthly_interest_rate = p.monthly_interest_rate,
+                            photo_uri = p.photo_uri,
+                            created_at = p.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            updated_at = p.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            is_deleted = p.is_deleted.toLong(),
+                            sync_status = 1L
+                        )
+                    }
                 }
 
                 res.deals.forEach { d ->
@@ -553,7 +557,11 @@ class SyncEngine(
                     queries.setSyncMetadataLong(lastServerSeqKey(shopId), res.next_seq)
                 }
                 true
+            } }
+            if (appliedResult.isFailure) {
+                return@withContext Result.failure(appliedResult.exceptionOrNull()!!)
             }
+            val applied = appliedResult.getOrThrow()
             if (!applied) {
                 return@withContext Result.failure(IllegalStateException("Shop $shopId is no longer on this phone"))
             }

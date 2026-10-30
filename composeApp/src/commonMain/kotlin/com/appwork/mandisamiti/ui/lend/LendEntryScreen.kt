@@ -63,6 +63,7 @@ fun LendEntryScreen(
 ) {
     var lendType by remember { mutableStateOf(LendType.MONEY) }
     var partyPhoneOrName by remember { mutableStateOf("") }
+    var selectedPartyId by remember { mutableStateOf<String?>(null) }
     var amountRupees by remember { mutableStateOf("") }
     var commodityName by remember { mutableStateOf("") }
     var bagsCount by remember { mutableStateOf("") }
@@ -144,10 +145,14 @@ fun LendEntryScreen(
 
             PartyAutocompleteField(
                 value = partyPhoneOrName,
-                onValueChange = { partyPhoneOrName = it },
+                onValueChange = {
+                    partyPhoneOrName = it
+                    selectedPartyId = null
+                },
                 label = "किसान / व्यक्ति का नाम या फोन *",
                 parties = parties,
                 onPartySelected = { selected ->
+                    selectedPartyId = selected.id
                     partyPhoneOrName = selected.name
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -256,7 +261,7 @@ fun LendEntryScreen(
                         val entry = LendEntry(
                             id = IdGenerator.newId(),
                             shopId = shopId,
-                            partyId = partyPhoneOrName.trim(),
+                            partyId = selectedPartyId ?: partyPhoneOrName.trim(),
                             lendType = lendType,
                             entryDate = now,
                             amountPaisa = entryAmount,

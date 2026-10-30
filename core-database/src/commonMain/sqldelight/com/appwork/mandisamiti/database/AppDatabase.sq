@@ -322,6 +322,9 @@ SELECT * FROM partyEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY name ASC
 getPartyById:
 SELECT * FROM partyEntity WHERE id = ? AND is_deleted = 0;
 
+getPartyByIdAny:
+SELECT * FROM partyEntity WHERE id = ?;
+
 insertParty:
 INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -463,6 +466,10 @@ DELETE FROM partyEntity WHERE id = ? AND sync_status = 1;
 
 insertPartyIfAbsent:
 INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertPartyFromServer:
+INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 backfillPartiesFromBuyEntries:

@@ -200,6 +200,28 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun phoneLessPartyCanBeRepaired() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher),
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope,
+        )
+        val phoneLess = Party(
+            id = "auto-party", shopId = "srv-shop", name = "Auto Party", phone = null,
+            partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L,
+        )
+        partyRepo.saveParty(phoneLess)
+
+        viewModel.updatePartyPhone(phoneLess, "+91 98765-43210")
+
+        assertEquals("9876543210", partyRepo.getPartyById("auto-party")?.phone)
+    }
+
+    @Test
     fun testLanguageSettingPersistence() = runTest {
         val database = createTestDatabase()
         val ioDispatcher = StandardTestDispatcher(testScheduler)

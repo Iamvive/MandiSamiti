@@ -55,6 +55,7 @@ fun BuyTransactionsListScreen(
     onNew: () -> Unit,
     onBack: () -> Unit,
     entries: List<BuyEntry> = emptyList(),
+    partyNamesById: Map<String, String> = emptyMap(),
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -68,7 +69,7 @@ fun BuyTransactionsListScreen(
             val village = extractVillage(entry.remarks)
             BilingualSearchEngine.matchesAny(
                 searchQuery,
-                entry.farmerId,
+                partyNamesById[entry.farmerId] ?: entry.farmerId,
                 village,
                 entry.slipNo?.toString(),
                 entry.slipNumber,
@@ -129,6 +130,7 @@ fun BuyTransactionsListScreen(
                     items(filteredEntries, key = { it.id }) { entry ->
                         BuyEntryCard(
                             entry = entry,
+                            farmerName = partyNamesById[entry.farmerId] ?: entry.farmerId,
                             onClick = { onOpen(entry.id) },
                             onLongClick = { voidTarget = entry }
                         )
@@ -155,10 +157,11 @@ fun BuyTransactionsListScreen(
 @Composable
 private fun BuyEntryCard(
     entry: BuyEntry,
+    farmerName: String,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
 ) {
-    val farmerName = entry.farmerId.ifBlank { "किसान" }
+    val displayFarmerName = farmerName.ifBlank { "किसान" }
     val village = extractVillage(entry.remarks)
 
     Card(
@@ -182,7 +185,7 @@ private fun BuyEntryCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = farmerName,
+                        text = displayFarmerName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

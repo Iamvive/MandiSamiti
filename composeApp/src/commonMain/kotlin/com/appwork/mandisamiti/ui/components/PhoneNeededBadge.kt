@@ -2,6 +2,7 @@ package com.appwork.mandisamiti.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -23,13 +24,18 @@ import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 
 @Composable
-fun PhoneNeededBadge(isEnglish: Boolean, modifier: Modifier = Modifier) {
+fun PhoneNeededBadge(
+    isEnglish: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
     val shape = RoundedCornerShape(6.dp)
     Row(
         modifier = modifier
             .clip(shape)
             .background(MandiAmberLight)
             .border(1.dp, MandiAmberBorder, shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 7.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
