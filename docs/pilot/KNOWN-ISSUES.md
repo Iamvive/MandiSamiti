@@ -10,6 +10,9 @@
 - Re-login banner can appear if the session expires; log in again, data is kept.
 - Old repayments without a principal/interest split count in full against the balance.
 
+- Buy and sell math now follows the shop sheets (gross cut to the rupee, billed-bag labour, final rounded to Rs 10, Cash Memo charges arat and tulak). Advance comes off after rounding and ties at Rs 5 round up: both are assumptions, the sheets do not show them.
+- Not in this build: buyer GSTIN and licence fields, and the party import from the sheets. Add buyers by hand until they land.
+
 ## Security gaps accepted for the pilot
 - No phone allow-list on login: anyone with the static code and a phone number can log in. Keep the code private.
 - Static OTP code length: client UI (`RegisterViewModel.kt`) and backend Pydantic schema (`VerifyOtpRequest`) enforce exactly 6 digits. Staging env code must be 6 digits, not 8.
