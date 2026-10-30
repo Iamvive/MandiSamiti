@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
@@ -78,9 +79,9 @@ fun PartyCard(
     }
 
     val chipText = when {
-        isReceivable -> "लेना है"
-        isPayable -> "देना है"
-        else -> "हिसाब चुकता"
+        isReceivable -> if (isEnglish) "To receive" else "लेना है"
+        isPayable -> if (isEnglish) "To pay" else "देना है"
+        else -> if (isEnglish) "Settled" else "हिसाब चुकता"
     }
 
     val chipTextColor = when {
@@ -95,7 +96,11 @@ fun PartyCard(
         else -> MandiBorder
     }
 
-    val roleLabel = if (party.partyType == PartyType.FARMER) "किसान" else "व्यापारी"
+    val roleLabel = if (party.partyType == PartyType.FARMER) {
+        if (isEnglish) "Farmer" else "किसान"
+    } else {
+        if (isEnglish) "Trader" else "व्यापारी"
+    }
     val avatarInitial = party.name.firstOrNull()?.toString() ?: "प"
     val village = party.village
 
@@ -155,19 +160,22 @@ fun PartyCard(
                 }
 
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
+                    Text(
+                        text = party.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = party.name,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary
-                        )
-                        SyncStatusPill(isSynced = party.syncStatus == 1, isEnglish = false)
+                        SyncStatusPill(isSynced = party.syncStatus == 1, isEnglish = isEnglish)
                         // Role Pill
                         Box(
                             modifier = Modifier
@@ -180,7 +188,9 @@ fun PartyCard(
                                 text = roleLabel,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = MandiTextSecondary
+                                color = MandiTextSecondary,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -230,7 +240,9 @@ fun PartyCard(
                         text = chipText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = chipTextColor
+                        color = chipTextColor,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }

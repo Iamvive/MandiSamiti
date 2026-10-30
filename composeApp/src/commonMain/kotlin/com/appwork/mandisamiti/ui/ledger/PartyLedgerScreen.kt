@@ -213,7 +213,7 @@ fun PartyLedgerScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "खाता शुद्ध शेष (Balance)",
+                            text = if (isEnglish) "Net Balance" else "खाता शुद्ध शेष",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = MandiTextSecondary
@@ -232,9 +232,9 @@ fun PartyLedgerScreen(
 
                     // Semantic Status Chip
                     val statusText = when {
-                        isReceivable -> "लेना है"
-                        isPayable -> "देना है"
-                        else -> "हिसाब चुकता"
+                        isReceivable -> if (isEnglish) "To receive" else "लेना है"
+                        isPayable -> if (isEnglish) "To pay" else "देना है"
+                        else -> if (isEnglish) "Settled" else "हिसाब चुकता"
                     }
                     val statusColor = when {
                         isReceivable -> MandiGreenText
@@ -274,7 +274,7 @@ fun PartyLedgerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -287,24 +287,23 @@ fun PartyLedgerScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 color = MandiTextSecondary
                             )
-                            TextButton(
-                                onClick = {
-                                    editNameInput = party?.name ?: ""
-                                    editVillageInput = party?.village ?: ""
-                                    editPhoneInput = party?.phone ?: ""
-                                    editGstinInput = party?.gstin ?: ""
-                                    editMandiLicenseInput = party?.mandiLicense ?: ""
-                                    showEditPartyDialog = true
-                                },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = if (isEnglish) "Edit" else "बदलें",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MandiPrimaryAction
-                                )
-                            }
+                            Text(
+                                text = if (isEnglish) "Edit" else "बदलें",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiPrimaryAction,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        editNameInput = party?.name ?: ""
+                                        editVillageInput = party?.village ?: ""
+                                        editPhoneInput = party?.phone ?: ""
+                                        editGstinInput = party?.gstin ?: ""
+                                        editMandiLicenseInput = party?.mandiLicense ?: ""
+                                        showEditPartyDialog = true
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -345,11 +344,11 @@ fun PartyLedgerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp),
+                    .padding(start = 14.dp, end = 14.dp, top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FintechActionButton(
-                    label = "जमा मिला",
+                    label = if (isEnglish) "Received" else "जमा मिला",
                     icon = Icons.Default.ArrowDownward,
                     color = MandiGreenReceivable,
                     backgroundColor = MandiGreenLight,
@@ -359,7 +358,7 @@ fun PartyLedgerScreen(
                     modifier = Modifier.weight(1f)
                 )
                 FintechActionButton(
-                    label = "भुगतान दिया",
+                    label = if (isEnglish) "Paid" else "भुगतान दिया",
                     icon = Icons.Default.ArrowUpward,
                     color = MandiRedPayable,
                     backgroundColor = MandiRedLight,
@@ -369,7 +368,7 @@ fun PartyLedgerScreen(
                     modifier = Modifier.weight(1f)
                 )
                 FintechActionButton(
-                    label = "ब्याज हिसाब",
+                    label = if (isEnglish) "Interest" else "ब्याज हिसाब",
                     icon = Icons.Default.Calculate,
                     color = MandiTextPrimary,
                     backgroundColor = MandiSurfaceElevated,
@@ -401,13 +400,13 @@ fun PartyLedgerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "लेन-देन विवरण (${uiState.ledgerItems.size})",
+                    text = (if (isEnglish) "Transactions" else "लेन-देन विवरण") + " (${uiState.ledgerItems.size})",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MandiTextPrimary
                 )
                 Text(
-                    text = "तारीख अनुसार",
+                    text = if (isEnglish) "By date" else "तारीख अनुसार",
                     fontSize = 12.sp,
                     color = MandiTextMuted
                 )
@@ -468,7 +467,7 @@ fun PartyLedgerScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "इस खाते में कोई लेन-देन नहीं है",
+                                text = if (isEnglish) "No transactions in this account" else "इस खाते में कोई लेन-देन नहीं है",
                                 color = MandiTextMuted,
                                 fontSize = 14.sp
                             )
