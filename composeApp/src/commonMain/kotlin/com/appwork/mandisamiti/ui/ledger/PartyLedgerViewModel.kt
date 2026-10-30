@@ -373,6 +373,19 @@ class PartyLedgerViewModel(
         }
     }
 
+    fun editLend(item: LedgerItem.LendItem, amountPaisa: Long, notes: String?) {
+        viewModelScope.launch {
+            val msg = try {
+                lendRepository?.editLendEntry(item.lend.id, amountPaisa, notes)
+                syncScheduler.scheduleOneTimeSync()
+                "प्रविष्टि सुधारी गई"
+            } catch (e: IllegalArgumentException) {
+                "वापसी हो चुकी है, रकम नहीं बदल सकते"
+            }
+            _events.emit(PartyLedgerEvent.TransactionRecorded(msg))
+        }
+    }
+
     fun voidEntry(item: LedgerItem, reason: VoidReason) {
         viewModelScope.launch {
             when (item) {

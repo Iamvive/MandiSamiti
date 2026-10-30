@@ -46,6 +46,7 @@ class LendTransactionUseCaseTest {
             lends[lend.id] = lend.copy(status = newStatus)
         }
 
+        override suspend fun editLendEntry(id: String, amountPaisa: Long, notes: String?) {}
         override suspend fun voidLendEntry(id: String, reason: VoidReason) {
             lends[id]?.let { lends[id] = it.copy(isVoid = true) }
         }

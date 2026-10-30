@@ -135,3 +135,63 @@ class LendRepositoryTest {
         assertEquals(LendStatus.OPEN, lendRepo.getLendEntryById("l9")!!.status)
     }
 }
+
+class LendEditTest {
+    private val clock = object : Clock { override fun now() = Instant.fromEpochMilliseconds(5_000L) }
+
+    private fun lend(id: String = "l1", type: LendType = LendType.MONEY, amount: Long = 100_000L) = LendEntry(
+        id = id, shopId = "shop", partyId = "party", lendType = type, entryDate = 1_000L,
+        amountPaisa = if (type == LendType.MONEY) amount else 0L,
+        weightGrams = if (type == LendType.GRAIN) 50_000L else 0L,
+        createdAt = 1_000L, updatedAt = 1_000L,
+    )
+
+    private fun linkedCash(lendId: String, amount: Long) = CashTransaction(
+        id = "c-$lendId", shopId = "shop", partyId = "party", transactionType = TransactionType.UDHAR_GIVEN,
+        amountPaisa = amount, transactionDate = 1_000L, remarks = "उधार ऋण [LEND:$lendId]",
+        createdAt = 1_000L, updatedAt = 1_000L,
+    )
+
+    @Test
+    fun editUpdatesLendAndLinkedCashRow() = runTest {
+        val db = createTestDatabase()
+        val lends = OfflineFirstLendRepository(db, clock = clock)
+        val cash = OfflineFirstCashTransactionRepository(db, clock = clock)
+        lends.saveLendEntry(lend())
+        cash.recordTransaction(linkedCash("l1", 100_000L))
+
+        lends.editLendEntry("l1", 150_000L, "खाद")
+
+        val l = lends.getLendEntryById("l1")!!
+        assertEquals(150_000L, l.amountPaisa)
+        assertEquals("खाद", l.notes)
+        assertEquals(2L, l.revision)
+        val c = db.appDatabaseQueries.getCashTransactionById("c-l1").executeAsOne()
+        assertEquals(150_000L, c.amount_paisa)
+        assertEquals("उधार ऋण: खाद [LEND:l1]", c.remarks)
+        assertEquals(2L, c.revision)
+        assertEquals(0L, c.sync_status)
+    }
+
+    @Test
+    fun amountLockedOnceRepaid() = runTest {
+        val db = createTestDatabase()
+        val lends = OfflineFirstLendRepository(db, clock = clock)
+        lends.saveLendEntry(lend())
+        lends.settle(LendSettlement(id = "s1", shopId = "shop", lendId = "l1", settledAt = 2_000L, amountPaisa = 10_000L, createdAt = 2_000L, updatedAt = 2_000L))
+        kotlin.test.assertFailsWith<IllegalArgumentException> { lends.editLendEntry("l1", 150_000L, null) }
+        lends.editLendEntry("l1", 100_000L, "note only")
+        assertEquals("note only", lends.getLendEntryById("l1")!!.notes)
+    }
+
+    @Test
+    fun grainLendOnlyEditsNotes() = runTest {
+        val db = createTestDatabase()
+        val lends = OfflineFirstLendRepository(db, clock = clock)
+        lends.saveLendEntry(lend("g1", LendType.GRAIN))
+        lends.editLendEntry("g1", 999L, "gehun")
+        val g = lends.getLendEntryById("g1")!!
+        assertEquals(0L, g.amountPaisa)
+        assertEquals("gehun", g.notes)
+    }
+}

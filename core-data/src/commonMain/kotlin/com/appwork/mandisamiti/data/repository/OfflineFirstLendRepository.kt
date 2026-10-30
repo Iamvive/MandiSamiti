@@ -144,6 +144,50 @@ class OfflineFirstLendRepository(
         )
     }
 
+    override suspend fun editLendEntry(id: String, amountPaisa: Long, notes: String?) = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val current = queries.getLendEntryById(id).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Lend $id does not exist")
+            require(!current.isVoid) { "Voided lend cannot be edited" }
+            val isMoney = current.lendType == LendType.MONEY
+            val newAmount = if (isMoney) amountPaisa else current.amountPaisa
+            if (newAmount != current.amountPaisa) {
+                require(newAmount > 0) { "Amount must be positive" }
+                val hasRepayments = queries.getLendSettlementsByLend(id).executeAsList().any { it.is_void == 0L }
+                require(!hasRepayments) { "Lend with repayments cannot change amount" }
+            }
+            val cleanNotes = notes?.trim()?.ifEmpty { null }
+            val edited = current.copy(
+                amountPaisa = newAmount, notes = cleanNotes,
+                revision = current.revision + 1, updatedAt = now, syncStatus = 0
+            )
+            insertOrReplace(edited)
+            recordLendRevision(edited, "EDIT", now)
+
+            if (isMoney) {
+                val rem = if (cleanNotes == null) "उधार ऋण" else "उधार ऋण: $cleanNotes"
+                queries.getCashTransactionsByTag("[LEND:$id]").executeAsList()
+                    .filter { it.is_void == 0L }
+                    .forEach { tx ->
+                        queries.insertCashTransaction(
+                            id = tx.id, shop_id = tx.shop_id, party_id = tx.party_id, deal_id = tx.deal_id,
+                            transaction_type = tx.transaction_type, amount_paisa = newAmount,
+                            payment_mode = tx.payment_mode, transaction_date = tx.transaction_date,
+                            voice_note_uri = tx.voice_note_uri, remarks = "$rem [LEND:$id]",
+                            created_at = tx.created_at, updated_at = now, is_deleted = tx.is_deleted,
+                            sync_status = 0L, revision = tx.revision + 1L, is_void = 0L, void_reason = null,
+                        )
+                        queries.insertRevision(
+                            id = IdGenerator.newId(), shop_id = tx.shop_id, entry_id = tx.id, entry_kind = "CASH",
+                            revision = tx.revision + 1L, change_kind = "EDIT", snapshot_json = "",
+                            void_reason = null, changed_at = now,
+                        )
+                    }
+            }
+        }
+    }
+
     override suspend fun voidLendEntry(id: String, reason: VoidReason) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
         database.transaction { voidLendInTransaction(id, reason, now) }

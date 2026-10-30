@@ -15,5 +15,10 @@ interface LendRepository {
      * and writes nothing. [cashEntries] are written in the same transaction.
      */
     suspend fun settle(settlement: LendSettlement, cashEntries: List<CashTransaction> = emptyList())
+    /**
+     * Edits the amount and note of a lend and its linked [LEND:id] cash row in one transaction.
+     * The amount can only change on a MONEY lend with no active repayments; otherwise it must stay the same.
+     */
+    suspend fun editLendEntry(id: String, amountPaisa: Long, notes: String?)
     suspend fun voidLendEntry(id: String, reason: VoidReason)
 }

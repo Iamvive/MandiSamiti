@@ -127,6 +127,7 @@ fun PartyLedgerScreen(
     var repayDialogLoanId by remember { mutableStateOf<String?>(null) }
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
+    var lendEditTarget by remember { mutableStateOf<LedgerItem.LendItem?>(null) }
     var cashEditTarget by remember { mutableStateOf<LedgerItem.CashItem?>(null) }
     var cashEditAmount by remember { mutableStateOf("") }
     var cashEditRemarks by remember { mutableStateOf("") }
@@ -609,6 +610,17 @@ fun PartyLedgerScreen(
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                         ) { Text(if (isEnglish) "Edit amount / note" else "रकम / नोट बदलें", fontSize = 16.sp) }
                     }
+                    if (target is LedgerItem.LendItem) {
+                        Button(
+                            onClick = {
+                                cashEditAmount = (target.lend.amountPaisa / 100L).toString()
+                                cashEditRemarks = target.lend.notes.orEmpty()
+                                lendEditTarget = target
+                                voidTarget = null
+                            },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) { Text(if (isEnglish) "Edit amount / note" else "रकम / नोट बदलें", fontSize = 16.sp) }
+                    }
                     val filteredReasons = if (target is LedgerItem.CashItem) {
                         VoidReason.entries.filter { it.appliesToCash }
                     } else {
@@ -625,6 +637,50 @@ fun PartyLedgerScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { voidTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(if (isEnglish) "Back" else "वापस", color = MandiTextSecondary)
+                }
+            }
+        )
+    }
+
+    lendEditTarget?.let { target ->
+        val isMoney = target.lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY
+        val newAmount = cashEditAmount.toLongOrNull() ?: 0L
+        AlertDialog(
+            onDismissRequest = { lendEditTarget = null },
+            title = { Text(if (isEnglish) "Edit loan" else "उधार सुधारें", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (isMoney) {
+                        OutlinedTextField(
+                            value = cashEditAmount,
+                            onValueChange = { cashEditAmount = it.filter(Char::isDigit) },
+                            label = { Text(if (isEnglish) "Amount (Rs)" else "रकम (Rs)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    OutlinedTextField(
+                        value = cashEditRemarks,
+                        onValueChange = { cashEditRemarks = it },
+                        label = { Text(if (isEnglish) "Note" else "नोट") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !isMoney || newAmount > 0,
+                    onClick = {
+                        viewModel.editLend(target, if (isMoney) newAmount * 100L else target.lend.amountPaisa, cashEditRemarks.trim().ifEmpty { null })
+                        lendEditTarget = null
+                    },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) { Text(if (isEnglish) "Save" else "सेव करें") }
+            },
+            dismissButton = {
+                TextButton(onClick = { lendEditTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(if (isEnglish) "Back" else "वापस", color = MandiTextSecondary)
                 }
             }
