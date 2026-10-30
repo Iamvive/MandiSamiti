@@ -82,6 +82,7 @@ fun KhataLedgerTabScreen(
     onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType, gstin: String?, mandiLicense: String?) -> Party,
     onUpdatePartyPhone: suspend (party: Party, phone: String) -> Party,
     onNavigateToStockSheet: () -> Unit = {},
+    onPhoneNeeded: (onAdd: () -> Unit) -> Unit = {},
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -268,9 +269,11 @@ fun KhataLedgerTabScreen(
                     balancePaisa = partyWithBalance.balancePaisa,
                     isEnglish = isEnglish,
                     onPhoneNeededClick = {
-                        phoneEditParty = partyWithBalance.party
-                        phoneEditInput = ""
-                        phoneEditDuplicate = null
+                        onPhoneNeeded {
+                            phoneEditParty = partyWithBalance.party
+                            phoneEditInput = ""
+                            phoneEditDuplicate = null
+                        }
                     },
                     onClick = { onPartyClick(partyWithBalance.party) }
                 )

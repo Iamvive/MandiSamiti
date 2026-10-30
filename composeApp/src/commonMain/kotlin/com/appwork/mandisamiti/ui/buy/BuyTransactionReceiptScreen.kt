@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -46,6 +47,7 @@ import kotlinx.serialization.json.Json
 fun BuyTransactionReceiptScreen(
     id: String,
     onBack: () -> Unit,
+    onEdit: ((String) -> Unit)? = null,
     entry: BuyEntry? = null,
     farmerName: String = "किसान",
     shopName: String = "",
@@ -70,6 +72,11 @@ fun BuyTransactionReceiptScreen(
                     }
                 },
                 actions = {
+                    if (entry != null && !entry.isVoid && onEdit != null) {
+                        IconButton(onClick = { onEdit(entry.id) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "सुधारें (Edit)")
+                        }
+                    }
                     if (entry != null && onShareWhatsApp != null) {
                         IconButton(onClick = { onShareWhatsApp(slipText) }) {
                             Icon(Icons.Default.Share, contentDescription = "व्हाट्सएप शेयर")

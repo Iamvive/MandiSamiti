@@ -3,6 +3,7 @@ package com.appwork.mandisamiti.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -21,6 +22,11 @@ enum class NavigationTab(
         titleHi = "खाता बही",
         titleEn = "Ledger",
         icon = Icons.Default.People
+    ),
+    GODOWN(
+        titleHi = "गोदाम",
+        titleEn = "Godown",
+        icon = Icons.Default.Inventory2
     ),
     GALLA(
         titleHi = "गल्ला रोकड़",

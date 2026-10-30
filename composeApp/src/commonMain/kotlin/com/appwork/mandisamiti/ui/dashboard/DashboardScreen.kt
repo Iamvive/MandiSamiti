@@ -104,6 +104,7 @@ fun DashboardScreen(
     onNavigateToBuyReceipt: (String) -> Unit = {},
     onNavigateToSellReceipt: (String) -> Unit = {},
     onNavigateToNewEntry: () -> Unit = onNavigateToBuy,
+    onPhoneNeeded: (onAdd: () -> Unit) -> Unit = {},
     needsLogin: Boolean = false,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
@@ -209,15 +210,6 @@ fun DashboardScreen(
             }
         }
 
-        // 4b. Daily Godown Stock Card (D6)
-        item {
-            GodownStockSummaryCard(
-                stockLines = uiState.stockLines,
-                onViewAllClick = onNavigateToStockSheet,
-                isEnglish = isEnglish
-            )
-        }
-
         // 4. Recent Active Accounts Header
         item {
             Row(
@@ -261,6 +253,7 @@ fun DashboardScreen(
                 party = partyWithBalance.party,
                 balancePaisa = partyWithBalance.balancePaisa,
                 isEnglish = isEnglish,
+                onPhoneNeededClick = { onPhoneNeeded { onNavigateToPartyKhata(partyWithBalance.party) } },
                 onClick = { onNavigateToPartyKhata(partyWithBalance.party) }
             )
         }

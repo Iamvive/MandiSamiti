@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,12 +16,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.PhoneDisabled
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,11 +34,14 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
+import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiNeutralBorder
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiNeutralText
@@ -54,6 +63,7 @@ fun PartyCard(
     onPhoneNeededClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val uriHandler = LocalUriHandler.current
     val cardShape = RoundedCornerShape(12.dp)
     val chipShape = RoundedCornerShape(6.dp)
 
@@ -163,36 +173,23 @@ fun PartyCard(
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = party.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiTextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        SyncStatusPill(isSynced = party.syncStatus == 1, isEnglish = isEnglish)
-                        // Role Pill
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MandiSurfaceElevated)
-                                .border(1.dp, MandiBorder, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = roleLabel,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MandiTextSecondary,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
+                        Text(
+                            text = party.name,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        PartyRoleIcon(partyType = party.partyType, contentDescription = roleLabel)
+                    }
+                    if (party.syncStatus != 1) {
+                        SyncStatusPill(isSynced = false, isEnglish = isEnglish)
                     }
 
                     if (!village.isNullOrBlank()) {
@@ -209,11 +206,10 @@ fun PartyCard(
                             color = MandiTextSecondary
                         )
                     }
-                    if (party.phone == null) {
-                        PhoneNeededBadge(isEnglish = isEnglish, onClick = onPhoneNeededClick)
-                    }
                 }
             }
+
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Right: Financial Amount & Status Badge
             Column(
@@ -228,25 +224,80 @@ fun PartyCard(
                     color = balanceTextColor
                 )
 
-                // Semantic Status Pill
-                Box(
-                    modifier = Modifier
-                        .clip(chipShape)
-                        .background(chipBg)
-                        .border(1.dp, chipBorder, chipShape)
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = chipText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = chipTextColor,
-                        maxLines = 1,
-                        softWrap = false
-                    )
+                    val hasPhone = !party.phone.isNullOrBlank()
+                    // Phone icon: tap to call when saved, tap to be prompted to add one when missing.
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                if (hasPhone) {
+                                    runCatching { uriHandler.openUri("tel:${party.phone}") }
+                                } else {
+                                    onPhoneNeededClick?.invoke()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (hasPhone) Icons.Outlined.Phone else Icons.Outlined.PhoneDisabled,
+                            contentDescription = when {
+                                hasPhone -> if (isEnglish) "Call" else "कॉल करें"
+                                else -> if (isEnglish) "No phone number" else "फ़ोन नंबर नहीं है"
+                            },
+                            tint = if (hasPhone) MandiNavy else MandiAmberDark,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Semantic Status Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(chipShape)
+                            .background(chipBg)
+                            .border(1.dp, chipBorder, chipShape)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = chipText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = chipTextColor,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PartyRoleIcon(
+    partyType: PartyType,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    val isFarmer = partyType == PartyType.FARMER
+    Box(
+        modifier = modifier
+            .size(22.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isFarmer) MandiAmberLight else MandiNeutralLight)
+            .border(1.dp, if (isFarmer) MandiAmberDark.copy(alpha = 0.35f) else MandiBorder, RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (isFarmer) Icons.Default.Agriculture else Icons.Default.Store,
+            contentDescription = contentDescription,
+            tint = if (isFarmer) MandiAmberDark else MandiNavy,
+            modifier = Modifier.size(13.dp)
+        )
     }
 }
 

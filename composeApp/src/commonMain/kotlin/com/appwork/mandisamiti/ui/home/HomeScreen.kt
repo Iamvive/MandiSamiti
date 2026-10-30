@@ -30,8 +30,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,6 +52,7 @@ import com.appwork.mandisamiti.ui.dashboard.DashboardScreen
 import com.appwork.mandisamiti.ui.ledger.KhataLedgerTabScreen
 import com.appwork.mandisamiti.ui.navigation.MandiBottomBar
 import com.appwork.mandisamiti.ui.navigation.NavigationTab
+import com.appwork.mandisamiti.ui.stock.StockRegisterScreen
 import com.appwork.mandisamiti.ui.register.DailyCashRegisterScreen
 import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
 import com.appwork.mandisamiti.ui.settings.SettingsScreen
@@ -80,6 +83,9 @@ fun HomeScreen(
     onNavigateToSellList: () -> Unit = {},
     onNavigateToLendList: () -> Unit = {},
     onNavigateToStockSheet: () -> Unit = {},
+    stockBuys: List<com.appwork.mandisamiti.domain.model.BuyEntry> = emptyList(),
+    stockSells: List<com.appwork.mandisamiti.domain.model.SellEntry> = emptyList(),
+    stockPartyNames: Map<String, String> = emptyMap(),
     onNavigateToBuyReceipt: (String) -> Unit = {},
     onNavigateToSellReceipt: (String) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -88,6 +94,19 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     var activeTutorial by remember { mutableStateOf<MandiTutorial?>(null) }
+
+    // Shown when the user taps the no-phone icon on a party card; "Add" runs the screen's own add-phone step.
+    val promptAddPhone: (() -> Unit) -> Unit = { onAdd ->
+        coroutineScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = if (uiState.isEnglish) "No phone number saved" else "फ़ोन नंबर नहीं है",
+                actionLabel = if (uiState.isEnglish) "Add" else "जोड़ें",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) onAdd()
+        }
+    }
 
     // When not on Dashboard, hardware/system back returns to Dashboard
     MandiBackHandler(enabled = uiState.currentTab != NavigationTab.DASHBOARD) {
@@ -107,6 +126,7 @@ fun HomeScreen(
                     activeTutorial = when (uiState.currentTab) {
                         NavigationTab.DASHBOARD -> MandiTutorial.DEAL_ENTRY
                         NavigationTab.KHATA -> MandiTutorial.KHATA_STATEMENT
+                        NavigationTab.GODOWN -> MandiTutorial.KHATA_STATEMENT
                         NavigationTab.GALLA -> MandiTutorial.GALLA_REGISTER
                         NavigationTab.SETTINGS -> MandiTutorial.SOUNDBOX_SETTINGS
                     }
@@ -159,6 +179,7 @@ fun HomeScreen(
                             onNavigateToBuyReceipt = onNavigateToBuyReceipt,
                             onNavigateToSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewEntry = onNavigateToNewEntry,
+                            onPhoneNeeded = promptAddPhone,
                             needsLogin = needsLogin,
                             isEnglish = uiState.isEnglish
                         )
@@ -172,8 +193,21 @@ fun HomeScreen(
                             onPartyClick = onNavigateToPartyKhata,
                             onCreateParty = viewModel::createParty,
                             onUpdatePartyPhone = viewModel::updatePartyPhone,
-                            onNavigateToStockSheet = onNavigateToStockSheet,
+                            onNavigateToStockSheet = { viewModel.selectTab(NavigationTab.GODOWN) },
+                            onPhoneNeeded = promptAddPhone,
                             isEnglish = uiState.isEnglish
+                        )
+                    }
+
+                    NavigationTab.GODOWN -> {
+                        StockRegisterScreen(
+                            stockLines = uiState.stockLines,
+                            isEnglish = uiState.isEnglish,
+                            buys = stockBuys,
+                            sells = stockSells,
+                            partyNames = stockPartyNames,
+                            onOpenBuy = onNavigateToBuyReceipt,
+                            onOpenSell = onNavigateToSellReceipt
                         )
                     }
 

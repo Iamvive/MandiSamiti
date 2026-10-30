@@ -33,18 +33,14 @@ actual class WhatsAppShareManager(private val context: Context) {
                 setPackage("com.whatsapp")
             }
 
-            val chooser = Intent.createChooser(shareIntent, "पर्ची व्हाट्सएप पर भेजें").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(chooser)
+            startChooser(shareIntent, "पर्ची व्हाट्सएप पर भेजें")
         } catch (e: Exception) {
             // Fallback to generic share sheet
             val genericIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, caption)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(Intent.createChooser(genericIntent, "शेयर करें"))
+            startChooser(genericIntent, "शेयर करें")
         }
     }
 
@@ -64,9 +60,14 @@ actual class WhatsAppShareManager(private val context: Context) {
             val genericIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, text)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(Intent.createChooser(genericIntent, "पर्ची शेयर करें"))
+            startChooser(genericIntent, "पर्ची शेयर करें")
         }
+    }
+
+    // createChooser() does not carry NEW_TASK over from the wrapped intent, and this class holds the
+    // application context, so the flag must be on the chooser itself or startActivity throws.
+    private fun startChooser(target: Intent, title: String) {
+        context.startActivity(Intent.createChooser(target, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

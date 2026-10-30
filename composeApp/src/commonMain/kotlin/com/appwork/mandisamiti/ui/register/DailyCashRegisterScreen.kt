@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -145,6 +147,7 @@ fun DailyCashRegisterScreen(
     val isTallied = uiState.reconciliationStatus == BahiReconciliationStatus.BALANCED
 
     Scaffold(
+        contentWindowInsets = if (!showBackButton) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
         topBar = {
             if (showBackButton) {
                 SoundboxTopBar(
@@ -175,7 +178,7 @@ fun DailyCashRegisterScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
+                            .then(if (showBackButton) Modifier.navigationBarsPadding() else Modifier)
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -239,7 +242,7 @@ fun DailyCashRegisterScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
+                            .then(if (showBackButton) Modifier.navigationBarsPadding() else Modifier)
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -1741,9 +1744,9 @@ private fun BahiTransactionItem(
             .clip(RoundedCornerShape(8.dp))
             .background(MandiNeutralLight)
             .alpha(if (isVoid) 0.5f else 1f)
-            .padding(8.dp)
+            .padding(horizontal = 10.dp, vertical = 10.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

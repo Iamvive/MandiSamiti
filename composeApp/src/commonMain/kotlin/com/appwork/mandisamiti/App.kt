@@ -248,7 +248,13 @@ fun App(
                     )
                 }
                 val needsLogin by produceState(false, shopId) { value = syncEngine.needsLogin() }
+                val stockBuys by buyRepo.getBuyEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val stockSells by sellRepo.getSellEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val stockParties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 HomeScreen(
+                    stockBuys = stockBuys,
+                    stockSells = stockSells,
+                    stockPartyNames = stockParties.associate { it.id to it.name },
                     viewModel = homeViewModel,
                     registerViewModel = registerViewModel,
                     shopId = shopId!!,
@@ -487,6 +493,7 @@ fun App(
                     mandiName = receiptShop?.mandiName.orEmpty(),
                     partyVillage = receiptParty?.village,
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onEdit = { currentScreen = Screen.BuyEntry(it) },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
@@ -555,6 +562,7 @@ fun App(
                     mandiName = receiptShop?.mandiName.orEmpty(),
                     partyVillage = receiptParty?.village,
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onEdit = { currentScreen = Screen.SellEntry(it) },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
