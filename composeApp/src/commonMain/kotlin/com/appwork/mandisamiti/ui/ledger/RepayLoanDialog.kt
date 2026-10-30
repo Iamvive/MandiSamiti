@@ -61,10 +61,11 @@ fun RepayLoanDialog(
     calculatedInterestPaisa: Long,
     monthlyRatePercent: Double,
     isEnglish: Boolean,
+    initialAmountRs: Long = 0L,
     onConfirm: (paymentPaisa: Long, interestPaisa: Long, calculatedInterestPaisa: Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var amountInput by remember { mutableStateOf("") }
+    var amountInput by remember { mutableStateOf(if (initialAmountRs > 0L) initialAmountRs.toString() else "") }
     var interestInput by remember { mutableStateOf((calculatedInterestPaisa / 100L).toString()) }
 
     val paymentPaisa = (amountInput.toLongOrNull() ?: 0L) * 100L

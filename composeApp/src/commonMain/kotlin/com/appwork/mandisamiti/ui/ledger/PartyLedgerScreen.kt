@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import kotlinx.datetime.Clock
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
@@ -118,6 +119,7 @@ fun PartyLedgerScreen(
     var pendingCashAmount by remember { mutableStateOf(0L) }
     var pendingCashRemarks by remember { mutableStateOf("") }
     var selectedLoanIdForRepay by remember { mutableStateOf<String?>(null) }
+    var repayDialogLoanId by remember { mutableStateOf<String?>(null) }
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
 
@@ -278,7 +280,17 @@ fun PartyLedgerScreen(
                     backgroundColor = MandiSurfaceElevated,
                     borderColor = MandiBorder,
                     textColor = MandiTextPrimary,
-                    onClick = { viewModel.openInterestDialog() },
+                    onClick = {
+                        val oldest = uiState.openLoans.minByOrNull { it.lend.entryDate }
+                        if (oldest != null) {
+                            val ms = Clock.System.now().toEpochMilliseconds() - oldest.lend.entryDate
+                            interestDaysInput = (ms / 86_400_000L).coerceAtLeast(1L).toString()
+                            interestRateInput = oldest.monthlyRatePercent.toString()
+                        } else {
+                            interestRateInput = (uiState.party?.monthlyInterestRate ?: uiState.defaultMonthlyRatePercent).toString()
+                        }
+                        viewModel.openInterestDialog()
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -568,11 +580,7 @@ fun PartyLedgerScreen(
                     Button(
                         onClick = {
                             if (selectedLoan != null && canApplyToLoan) {
-                                viewModel.applyCashEntryToLoan(
-                                    lendId = selectedLoan.lend.id,
-                                    amountRs = pendingCashAmount,
-                                    note = pendingCashRemarks.ifBlank { null }
-                                )
+                                repayDialogLoanId = selectedLoan.lend.id
                                 showApplyToLoanDialog = false
                             }
                         },
@@ -590,11 +598,7 @@ fun PartyLedgerScreen(
                         val loanRs = selectedLoanOutstandingRs
                         Button(
                             onClick = {
-                                viewModel.applyDepositSplitAcrossLoan(
-                                    lendId = selectedLoan.lend.id,
-                                    amountRs = pendingCashAmount,
-                                    note = pendingCashRemarks.ifBlank { null }
-                                )
+                                repayDialogLoanId = selectedLoan.lend.id
                                 showApplyToLoanDialog = false
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -636,6 +640,32 @@ fun PartyLedgerScreen(
                 }
             }
         )
+    }
+
+    repayDialogLoanId?.let { loanId ->
+        val loanInfo = uiState.openLoans.find { it.lend.id == loanId }
+        if (loanInfo == null) {
+            repayDialogLoanId = null
+        } else {
+            RepayLoanDialog(
+                outstandingPrincipalPaisa = loanInfo.outstandingPaisa,
+                calculatedInterestPaisa = loanInfo.interestDuePaisa,
+                monthlyRatePercent = loanInfo.monthlyRatePercent,
+                isEnglish = isEnglish,
+                initialAmountRs = pendingCashAmount,
+                onConfirm = { paymentPaisa, interestPaisa, calculatedPaisa ->
+                    viewModel.repayLoan(
+                        lendId = loanId,
+                        paymentPaisa = paymentPaisa,
+                        interestPaisa = interestPaisa,
+                        calculatedInterestPaisa = calculatedPaisa,
+                        note = pendingCashRemarks.ifBlank { null }
+                    )
+                    repayDialogLoanId = null
+                },
+                onDismiss = { repayDialogLoanId = null }
+            )
+        }
     }
 
     // Desi Interest Modal (Clean UI)

@@ -64,6 +64,9 @@ import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.util.LendDateFormatter
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
+import com.appwork.mandisamiti.ui.ledger.RepayLoanDialog
+import com.appwork.mandisamiti.domain.math.RuralInterestEngine
+import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +79,9 @@ fun LendTransactionsListScreen(
     onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String, paymentMode: PaymentMode) -> Unit = { _, _, _, _, _, _ -> },
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
+    onRepayMoney: ((lendId: String, paymentPaisa: Long, interestPaisa: Long, calculatedInterestPaisa: Long) -> Unit)? = null,
+    getMonthlyRatePercent: suspend (partyId: String) -> Double = { 1.5 },
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var selectedLendForRepayment by remember { mutableStateOf<LendEntry?>(null) }
@@ -198,7 +204,21 @@ fun LendTransactionsListScreen(
             }
         }
 
-        selectedLendForRepayment?.let { lend ->
+        selectedLendForRepayment?.takeIf { it.lendType == LendType.MONEY && onRepayMoney != null && getSettlements != null }?.let { lend ->
+            MoneyRepayHost(
+                lend = lend,
+                getSettlements = getSettlements!!,
+                getMonthlyRatePercent = getMonthlyRatePercent,
+                isEnglish = isEnglish,
+                onConfirm = { payment, interest, calculated ->
+                    onRepayMoney!!(lend.id, payment, interest, calculated)
+                    selectedLendForRepayment = null
+                },
+                onDismiss = { selectedLendForRepayment = null }
+            )
+        }
+
+        selectedLendForRepayment?.takeUnless { it.lendType == LendType.MONEY && onRepayMoney != null && getSettlements != null }?.let { lend ->
             RepaymentBottomSheet(
                 lend = lend,
                 getSettlements = getSettlements,
@@ -499,4 +519,35 @@ private fun RepaymentBottomSheet(
             Spacer(Modifier.height(16.dp))
         }
     }
+}
+
+/** Loads what a money loan has repaid so far, then shows the interest-aware repay dialog (D4). */
+@Composable
+private fun MoneyRepayHost(
+    lend: LendEntry,
+    getSettlements: suspend (String) -> List<LendSettlement>,
+    getMonthlyRatePercent: suspend (String) -> Double,
+    isEnglish: Boolean,
+    onConfirm: (paymentPaisa: Long, interestPaisa: Long, calculatedInterestPaisa: Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var settlements by remember(lend.id) { mutableStateOf<List<LendSettlement>?>(null) }
+    var rate by remember(lend.id) { mutableStateOf<Double?>(null) }
+    LaunchedEffect(lend.id) {
+        settlements = getSettlements(lend.id).filter { !it.isVoid }
+        rate = getMonthlyRatePercent(lend.partyId)
+    }
+    val live = settlements
+    val ratePercent = rate
+    if (live == null || ratePercent == null) return
+    RepayLoanDialog(
+        outstandingPrincipalPaisa = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L),
+        calculatedInterestPaisa = RuralInterestEngine.interestDue(
+            lend.amountPaisa, ratePercent, lend.entryDate, live, Clock.System.now().toEpochMilliseconds()
+        ),
+        monthlyRatePercent = ratePercent,
+        isEnglish = isEnglish,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    )
 }
