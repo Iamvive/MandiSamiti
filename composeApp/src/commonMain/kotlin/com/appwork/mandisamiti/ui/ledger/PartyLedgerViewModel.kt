@@ -14,6 +14,7 @@ import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.TransactionType
@@ -376,6 +377,32 @@ class PartyLedgerViewModel(
             val speech = "प्रविष्टि रद्द की गई: ${reason.labelHi}"
             ttsManager.speak(speech, _uiState.value.isSoundEnabled)
             _events.emit(PartyLedgerEvent.TransactionRecorded(speech))
+        }
+    }
+
+    fun updatePartyDetails(
+        name: String,
+        village: String?,
+        phone: String?,
+        gstin: String?,
+        mandiLicense: String?
+    ) {
+        val current = _uiState.value.party ?: return
+        val cleanPhone = phone?.filter { it.isDigit() }?.takeLast(10)?.ifBlank { null }
+        val now = Clock.System.now().toEpochMilliseconds()
+        val updated = current.copy(
+            name = name.trim().ifBlank { current.name },
+            village = village?.trim()?.ifBlank { null },
+            phone = cleanPhone ?: current.phone,
+            gstin = if (current.partyType == PartyType.BUYER) gstin?.trim()?.uppercase()?.ifBlank { null } else null,
+            mandiLicense = if (current.partyType == PartyType.BUYER) mandiLicense?.trim()?.ifBlank { null } else null,
+            updatedAt = now,
+            syncStatus = 0
+        )
+        viewModelScope.launch {
+            partyRepository.saveParty(updated)
+            syncScheduler.scheduleOneTimeSync()
+            _uiState.value = _uiState.value.copy(party = updated)
         }
     }
 }

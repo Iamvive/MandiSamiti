@@ -161,6 +161,67 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun createPartyBuyerSavesGstinAndMandiLicense() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val buyer = viewModel.createParty(
+            name = "अग्रवाल ट्रेडर्स",
+            village = "मथुरा",
+            phoneNumber = "9876543210",
+            partyType = PartyType.BUYER,
+            gstin = "09AAAAA0000A1Z5",
+            mandiLicense = "LIC-9876"
+        )
+
+        assertNotNull(buyer)
+        assertEquals("09AAAAA0000A1Z5", buyer.gstin)
+        assertEquals("LIC-9876", buyer.mandiLicense)
+
+        val inDb = partyRepo.getPartyById(buyer.id)
+        assertNotNull(inDb)
+        assertEquals("09AAAAA0000A1Z5", inDb.gstin)
+        assertEquals("LIC-9876", inDb.mandiLicense)
+    }
+
+    @Test
+    fun createPartyFarmerIgnoresGstinAndMandiLicense() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+
+        val viewModel = HomeViewModel(
+            shopId = "srv-shop",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val farmer = viewModel.createParty(
+            name = "राजेश",
+            village = "गोवर्धन",
+            phoneNumber = "9876543211",
+            partyType = PartyType.FARMER,
+            gstin = "09AAAAA0000A1Z5",
+            mandiLicense = "LIC-1234"
+        )
+
+        assertNotNull(farmer)
+        kotlin.test.assertNull(farmer.gstin)
+        kotlin.test.assertNull(farmer.mandiLicense)
+    }
+
+    @Test
     fun createPartyAsksForASync() = runTest {
         val database = createTestDatabase()
         val ioDispatcher = StandardTestDispatcher(testScheduler)

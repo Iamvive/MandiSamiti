@@ -192,6 +192,13 @@ fun PartyCard(
                             color = MandiTextSecondary
                         )
                     }
+                    if (!party.gstin.isNullOrBlank()) {
+                        Text(
+                            text = "GST: ${party.gstin}",
+                            fontSize = 11.sp,
+                            color = MandiTextSecondary
+                        )
+                    }
                     if (party.phone == null) {
                         PhoneNeededBadge(isEnglish = isEnglish, onClick = onPhoneNeededClick)
                     }

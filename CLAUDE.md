@@ -5,6 +5,7 @@
 - **Do not block on strict TDD:** Do not enforce upfront Test-Driven Development during active feature iterations.
 - **Test upon feature finalization:** Write unit and regression tests once the feature flow and design are final.
 - Transition to strict TDD will occur later as the product matures.
+- **Silent Testing & Voice Guardrail:** Never run voice tests, soundbox TTS playback, or trigger audio output during testing unless Vivek explicitly requests it. No AI should make sound. In production, sound and voice announcements must strictly be driven by user preference (settings/toggle).
 
 ## 2. Architectural Guardrails
 - **Integer Math:** All currency in `Long` paisa (1 INR = 100 paisa) and weights in `Long` grams (1 Qtl = 100,000 g). Zero float arithmetic.

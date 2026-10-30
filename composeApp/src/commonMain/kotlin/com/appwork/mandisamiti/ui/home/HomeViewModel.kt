@@ -317,7 +317,9 @@ class HomeViewModel(
         name: String,
         village: String?,
         phoneNumber: String?,
-        partyType: PartyType
+        partyType: PartyType,
+        gstin: String? = null,
+        mandiLicense: String? = null
     ): Party {
         val cleanName = name.trim()
         require(cleanName.isNotBlank()) { "Party name cannot be blank" }
@@ -331,6 +333,8 @@ class HomeViewModel(
             village = village?.trim()?.ifBlank { null },
             phone = cleanPhone,
             partyType = partyType,
+            gstin = if (partyType == PartyType.BUYER) gstin?.trim()?.uppercase()?.ifBlank { null } else null,
+            mandiLicense = if (partyType == PartyType.BUYER) mandiLicense?.trim()?.ifBlank { null } else null,
             createdAt = now,
             updatedAt = now
         )

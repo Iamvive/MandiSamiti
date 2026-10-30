@@ -24,8 +24,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import com.appwork.mandisamiti.domain.validation.MandiValidators
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,7 +79,7 @@ fun KhataLedgerTabScreen(
     onSearchQueryChanged: (String) -> Unit,
     onFilterSelected: (PartyFilter) -> Unit,
     onPartyClick: (Party) -> Unit,
-    onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType) -> Party,
+    onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType, gstin: String?, mandiLicense: String?) -> Party,
     onUpdatePartyPhone: suspend (party: Party, phone: String) -> Party,
     onNavigateToStockSheet: () -> Unit = {},
     isEnglish: Boolean = false,
@@ -87,6 +89,8 @@ fun KhataLedgerTabScreen(
     var partyNameInput by remember { mutableStateOf("") }
     var partyVillageInput by remember { mutableStateOf("") }
     var partyPhoneInput by remember { mutableStateOf("") }
+    var partyGstinInput by remember { mutableStateOf("") }
+    var partyMandiLicenseInput by remember { mutableStateOf("") }
     var selectedPartyType by remember { mutableStateOf(PartyType.FARMER) }
     var duplicateParty by remember { mutableStateOf<Party?>(null) }
     var phoneEditParty by remember { mutableStateOf<Party?>(null) }
@@ -364,6 +368,35 @@ fun KhataLedgerTabScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    if (selectedPartyType == PartyType.BUYER) {
+                        val gstinClean = partyGstinInput.trim().uppercase()
+                        val isGstinValid = gstinClean.isEmpty() || MandiValidators.validateGstin(gstinClean, false).isValid
+                        OutlinedTextField(
+                            value = partyGstinInput,
+                            onValueChange = {
+                                if (it.length <= 15) partyGstinInput = it.uppercase()
+                            },
+                            label = { Text(if (isEnglish) "GSTIN (Optional, 15 chars)" else "GSTIN (वैकल्पिक, 15 अक्षर)") },
+                            isError = !isGstinValid,
+                            supportingText = if (!isGstinValid) {
+                                { Text(if (isEnglish) "GSTIN must be 15 characters (e.g. 23AAAAA0000A1Z5)" else "GSTIN 15 अक्षरों का होना चाहिए (जैसे 23AAAAA0000A1Z5)") }
+                            } else null,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = partyMandiLicenseInput,
+                            onValueChange = {
+                                if (it.length <= 50) partyMandiLicenseInput = it
+                            },
+                            label = { Text(if (isEnglish) "Mandi Licence No. (Optional)" else "मंडी लाइसेंस नंबर (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     duplicateParty?.let { existing ->
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
@@ -387,22 +420,28 @@ fun KhataLedgerTabScreen(
                 }
             },
             confirmButton = {
+                val gstinClean = partyGstinInput.trim().uppercase()
+                val gstinValid = selectedPartyType != PartyType.BUYER || gstinClean.isEmpty() || MandiValidators.validateGstin(gstinClean, false).isValid
                 Button(
                     onClick = {
                         val trimmedName = partyNameInput.trim()
-                        if (trimmedName.isNotBlank() && isValidPartyPhone(partyPhoneInput)) {
+                        if (trimmedName.isNotBlank() && isValidPartyPhone(partyPhoneInput) && gstinValid) {
                             coroutineScope.launch {
                                 try {
                                     val created = onCreateParty(
                                         trimmedName,
                                         partyVillageInput.trim().ifBlank { null },
                                         partyPhoneInput,
-                                        selectedPartyType
+                                        selectedPartyType,
+                                        if (selectedPartyType == PartyType.BUYER) gstinClean.ifBlank { null } else null,
+                                        if (selectedPartyType == PartyType.BUYER) partyMandiLicenseInput.trim().ifBlank { null } else null
                                     )
                                     showAddPartyDialog = false
                                     partyNameInput = ""
                                     partyVillageInput = ""
                                     partyPhoneInput = ""
+                                    partyGstinInput = ""
+                                    partyMandiLicenseInput = ""
                                     onPartyClick(created)
                                 } catch (duplicate: DuplicatePhoneException) {
                                     duplicateParty = duplicate.existing
@@ -410,7 +449,7 @@ fun KhataLedgerTabScreen(
                             }
                         }
                     },
-                    enabled = partyNameInput.trim().isNotBlank() && isValidPartyPhone(partyPhoneInput),
+                    enabled = partyNameInput.trim().isNotBlank() && isValidPartyPhone(partyPhoneInput) && gstinValid,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MandiPrimaryAction,
                         contentColor = MandiPrimaryActionText
@@ -430,6 +469,8 @@ fun KhataLedgerTabScreen(
                         partyNameInput = ""
                         partyVillageInput = ""
                         partyPhoneInput = ""
+                        partyGstinInput = ""
+                        partyMandiLicenseInput = ""
                     }
                 ) {
                     Text(
