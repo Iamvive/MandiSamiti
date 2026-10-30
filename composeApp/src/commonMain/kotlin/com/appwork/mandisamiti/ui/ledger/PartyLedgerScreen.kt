@@ -37,6 +37,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -61,7 +62,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.validation.MandiValidators
 import kotlinx.datetime.Clock
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.PartyType
@@ -133,6 +138,13 @@ fun PartyLedgerScreen(
 
     var interestRateInput by remember { mutableStateOf("1.5") }
     var interestDaysInput by remember { mutableStateOf("30") }
+
+    var showEditPartyDialog by remember { mutableStateOf(false) }
+    var editNameInput by remember { mutableStateOf("") }
+    var editVillageInput by remember { mutableStateOf("") }
+    var editPhoneInput by remember { mutableStateOf("") }
+    var editGstinInput by remember { mutableStateOf("") }
+    var editMandiLicenseInput by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -242,6 +254,89 @@ fun PartyLedgerScreen(
                             fontWeight = FontWeight.Bold,
                             color = statusColor
                         )
+                    }
+                }
+            }
+
+            // Buyer Tax & Licence Details Card (hidden for farmers unless details exist)
+            if (party?.partyType == PartyType.BUYER || party?.gstin != null || party?.mandiLicense != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MandiSurface),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isEnglish) "Tax & Licence Details" else "कर एवं लाइसेंस विवरण",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiTextSecondary
+                            )
+                            TextButton(
+                                onClick = {
+                                    editNameInput = party?.name ?: ""
+                                    editVillageInput = party?.village ?: ""
+                                    editPhoneInput = party?.phone ?: ""
+                                    editGstinInput = party?.gstin ?: ""
+                                    editMandiLicenseInput = party?.mandiLicense ?: ""
+                                    showEditPartyDialog = true
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (isEnglish) "Edit" else "बदलें",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiPrimaryAction
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "GSTIN",
+                                    fontSize = 11.sp,
+                                    color = MandiTextMuted
+                                )
+                                Text(
+                                    text = party?.gstin ?: (if (isEnglish) "Not provided" else "दर्ज नहीं"),
+                                    fontSize = 13.sp,
+                                    fontWeight = if (party?.gstin != null) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (party?.gstin != null) MandiTextPrimary else MandiTextMuted
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isEnglish) "Mandi Licence" else "मंडी लाइसेंस",
+                                    fontSize = 11.sp,
+                                    color = MandiTextMuted
+                                )
+                                Text(
+                                    text = party?.mandiLicense ?: (if (isEnglish) "Not provided" else "दर्ज नहीं"),
+                                    fontSize = 13.sp,
+                                    fontWeight = if (party?.mandiLicense != null) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (party?.mandiLicense != null) MandiTextPrimary else MandiTextMuted
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -382,6 +477,104 @@ fun PartyLedgerScreen(
                 }
             }
         }
+    }
+
+    if (showEditPartyDialog && party != null) {
+        val isBuyer = party.partyType == PartyType.BUYER
+        val gstinClean = editGstinInput.trim().uppercase()
+        val gstinValid = !isBuyer || gstinClean.isEmpty() || MandiValidators.validateGstin(gstinClean, false).isValid
+        val phoneValid = isValidPartyPhone(editPhoneInput)
+
+        AlertDialog(
+            onDismissRequest = { showEditPartyDialog = false },
+            title = {
+                Text(
+                    text = if (isEnglish) "Edit Account Details" else "खाता विवरण बदलें",
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = editNameInput,
+                        onValueChange = { editNameInput = it },
+                        label = { Text(if (isEnglish) "Party Name *" else "नांव / नाम *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editVillageInput,
+                        onValueChange = { editVillageInput = it },
+                        label = { Text(if (isEnglish) "Village / Location" else "गांव / पता (वैकल्पिक)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editPhoneInput,
+                        onValueChange = { editPhoneInput = sanitizePartyPhone(it) },
+                        label = { Text(if (isEnglish) "Mobile Number *" else "मोबाइल नंबर *") },
+                        isError = !phoneValid,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (isBuyer) {
+                        OutlinedTextField(
+                            value = editGstinInput,
+                            onValueChange = { if (it.length <= 15) editGstinInput = it.uppercase() },
+                            label = { Text(if (isEnglish) "GSTIN (15 chars, Optional)" else "GSTIN (15 अक्षर, वैकल्पिक)") },
+                            isError = !gstinValid,
+                            supportingText = if (!gstinValid) {
+                                { Text(if (isEnglish) "15-character GSTIN required" else "GSTIN 15 अक्षरों का होना चाहिए") }
+                            } else null,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editMandiLicenseInput,
+                            onValueChange = { if (it.length <= 50) editMandiLicenseInput = it },
+                            label = { Text(if (isEnglish) "Mandi Licence No. (Optional)" else "मंडी लाइसेंस नंबर (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editNameInput.trim().isNotBlank() && phoneValid && gstinValid) {
+                            viewModel.updatePartyDetails(
+                                name = editNameInput,
+                                village = editVillageInput,
+                                phone = editPhoneInput,
+                                gstin = if (isBuyer) gstinClean.ifBlank { null } else null,
+                                mandiLicense = if (isBuyer) editMandiLicenseInput.trim().ifBlank { null } else null
+                            )
+                            showEditPartyDialog = false
+                        }
+                    },
+                    enabled = editNameInput.trim().isNotBlank() && phoneValid && gstinValid,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    )
+                ) {
+                    Text(
+                        text = if (isEnglish) "Save" else "सहेजें",
+                        fontWeight = FontWeight.Bold,
+                        color = MandiPrimaryActionText
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditPartyDialog = false }) {
+                    Text(if (isEnglish) "Cancel" else "रद्द करें", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
     }
 
     voidTarget?.let { target ->

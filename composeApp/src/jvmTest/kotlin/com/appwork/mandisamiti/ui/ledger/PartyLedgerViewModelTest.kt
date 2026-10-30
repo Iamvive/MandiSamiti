@@ -354,5 +354,60 @@ class PartyLedgerViewModelTest {
         val state = viewModel.uiState.first { it.openLoans.firstOrNull()?.outstandingPaisa == 900_000L }
         assertEquals(900_000L, state.openLoans.single().outstandingPaisa)
     }
+
+    @Test
+    fun updatePartyDetailsUpdatesBuyerTaxFields() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+
+        val buyer = Party(
+            id = "buyer-1",
+            shopId = "shop-1",
+            name = "गोयल ब्रदर्स",
+            village = "कोसी",
+            phone = "9876543210",
+            partyType = PartyType.BUYER,
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        partyRepo.saveParty(buyer)
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1",
+            partyId = "buyer-1",
+            partyRepository = partyRepo,
+            cashRepository = cashRepo,
+            dealRepository = dealRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+
+        viewModel.uiState.first { it.party != null }
+
+        viewModel.updatePartyDetails(
+            name = "गोयल ब्रदर्स प्रा. लि.",
+            village = "कोसी कलां",
+            phone = "9876543210",
+            gstin = "09BBBBB0000B1Z6",
+            mandiLicense = "LIC-555"
+        )
+
+        val updated = viewModel.uiState.first { it.party?.gstin == "09BBBBB0000B1Z6" }.party
+        assertNotNull(updated)
+        assertEquals("गोयल ब्रदर्स प्रा. लि.", updated.name)
+        assertEquals("कोसी कलां", updated.village)
+        assertEquals("09BBBBB0000B1Z6", updated.gstin)
+        assertEquals("LIC-555", updated.mandiLicense)
+
+        val fromRepo = partyRepo.getPartyById("buyer-1")
+        assertNotNull(fromRepo)
+        assertEquals("09BBBBB0000B1Z6", fromRepo.gstin)
+        assertEquals("LIC-555", fromRepo.mandiLicense)
+    }
 }
 

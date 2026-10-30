@@ -224,7 +224,17 @@ fun SellEntryScreen(
                         if (isMerchant) {
                             FilterChip(
                                 selected = formState.billMode == BillMode.BILL_OF_SUPPLY,
-                                onClick = { formState.setMode(BillMode.BILL_OF_SUPPLY) },
+                                onClick = {
+                                    formState.setMode(BillMode.BILL_OF_SUPPLY)
+                                    if (formState.gstin.isBlank() && formState.selectedBuyerId != null) {
+                                        parties.find { it.id == formState.selectedBuyerId }?.gstin?.let { gstinVal ->
+                                            formState.gstin = gstinVal
+                                            if (formState.stateCode.isBlank() && gstinVal.length >= 2) {
+                                                formState.stateCode = gstinVal.take(2)
+                                            }
+                                        }
+                                    }
+                                },
                                 label = { Text(if (isEnglish) "Bill of Supply" else "सप्लाई बिल (Bill of Supply)") }
                             )
                         } else {
@@ -277,6 +287,12 @@ fun SellEntryScreen(
                             formState.selectedBuyerId = selected.id
                             formState.buyerName = selected.name
                             selected.phone?.let { formState.phone = it }
+                            selected.gstin?.let { gstinVal ->
+                                formState.gstin = gstinVal
+                                if (formState.stateCode.isBlank() && gstinVal.length >= 2) {
+                                    formState.stateCode = gstinVal.take(2)
+                                }
+                            }
                         },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         isError = !formState.buyerNameValidation.isValid && formState.buyerName.isNotEmpty(),
