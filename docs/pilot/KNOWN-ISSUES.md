@@ -11,7 +11,7 @@
 - Old repayments without a principal/interest split count in full against the balance.
 
 - Buy and sell math now follows the shop sheets (gross cut to the rupee, billed-bag labour, final rounded to Rs 10, Cash Memo charges arat and tulak). Advance comes off after rounding and ties at Rs 5 round up: both are assumptions, the sheets do not show them.
-- Not in this build: buyer GSTIN and licence fields, and the party import from the sheets. Add buyers by hand until they land.
+- Buyer GSTIN and licence fields are in this build. The party import tool exists but has not run on real data; staging needs Alembic `0002_party_tax_fields` deployed first.
 
 ## Security gaps accepted for the pilot
 - No phone allow-list on login: anyone with the static code and a phone number can log in. Keep the code private.

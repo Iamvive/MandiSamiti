@@ -1,6 +1,6 @@
 # Pilot install checklist (shop, by cable)
 
-APK: `exports/mandisamiti-pilot-debug.apk` (Vivek-K repo root). Built from MandiSamiti `55ed30b` (shop-sheet math). Server: staging, `http://64.227.142.180:8060`.
+APK: `exports/mandisamiti-pilot-debug.apk` (Vivek-K repo root). Built from MandiSamiti `a62462d` (shop-sheet math, buyer GSTIN and licence fields). Server: staging, `http://64.227.142.180:8060`.
 The login code (static OTP) is in the private env file on the VPS. Ask Claude to show it in that message; it is not written here.
 
 ## Before you leave
@@ -21,6 +21,11 @@ The login code (static OTP) is in the private env file on the VPS. Ask Claude to
 - [ ] Light and dark mode both readable
 
 **If any total looks wrong, stop and screenshot the day page and the party page. Do not enter real data.**
+
+## Import party masters (after first login, with Claude or Codex)
+- [ ] Staging backup first (`backup_staging.sh`)
+- [ ] Dry run `backend/scripts/import_parties.py` on the CSVs in `~/mandisamiti-import/`; read the counts and review list
+- [ ] Fix the two bad GSTINs, then `--apply --shop-id <id>`; re-run once to confirm no duplicates
 
 ## Wipe test data
 - [ ] Delete the TEST party and its entries from the app. If the app cannot delete them: Settings > Apps > MandiSamiti > Storage > Clear data, then log in again.
