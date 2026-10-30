@@ -40,7 +40,7 @@ object CashDrawer {
             .filter { it.paymentMode == PaymentMode.CASH && !it.isVoid && !it.isDeleted }
             .forEach { tx ->
                 val signed = when (tx.transactionType) {
-                    TransactionType.JAMA_RECEIVED -> tx.amountPaisa
+                    TransactionType.JAMA_RECEIVED, TransactionType.INTEREST_RECEIVED -> tx.amountPaisa
                     TransactionType.UDHAR_GIVEN -> -tx.amountPaisa
                     TransactionType.INTEREST_ADDED, TransactionType.DISCOUNT_GIVEN -> 0L
                 }

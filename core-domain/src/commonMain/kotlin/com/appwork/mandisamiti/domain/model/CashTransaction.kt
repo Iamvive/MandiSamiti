@@ -6,6 +6,7 @@ enum class TransactionType {
     UDHAR_GIVEN,    // रुपये दिए / पेशगी (Cash Out)
     JAMA_RECEIVED,  // रुपये मिले / अदायगी (Cash In)
     INTEREST_ADDED, // ब्याज जोड़ा
+    INTEREST_RECEIVED, // ब्याज मिला (Cash In, income; never changes the party balance)
     DISCOUNT_GIVEN  // छूट / रियायत / समझौता (Waiver)
 }
 

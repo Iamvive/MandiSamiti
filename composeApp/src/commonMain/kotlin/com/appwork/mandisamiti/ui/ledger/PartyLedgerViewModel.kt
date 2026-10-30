@@ -302,6 +302,7 @@ class PartyLedgerViewModel(
                 TransactionType.UDHAR_GIVEN -> "उधार दिया गया"
                 TransactionType.JAMA_RECEIVED -> "जमा प्राप्त हुआ"
                 TransactionType.INTEREST_ADDED -> "ब्याज जोड़ा गया"
+                TransactionType.INTEREST_RECEIVED -> "ब्याज मिला"
                 TransactionType.DISCOUNT_GIVEN -> "छूट / समझौता दिया गया"
             }
             val formattedAmount = MandiMathEngine.paisaToRupeesString(amountPaisa)

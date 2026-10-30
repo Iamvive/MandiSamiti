@@ -135,7 +135,7 @@ fun DailyCashRegisterScreen(
     var showOverflowMenu by remember { mutableStateOf(false) }
 
     val jamaList = remember(uiState.todayTransactions) {
-        uiState.todayTransactions.filter { it.transaction.transactionType == TransactionType.JAMA_RECEIVED }
+        uiState.todayTransactions.filter { it.transaction.transactionType == TransactionType.JAMA_RECEIVED || it.transaction.transactionType == TransactionType.INTEREST_RECEIVED }
     }
     val nameList = remember(uiState.todayTransactions) {
         uiState.todayTransactions.filter { it.transaction.transactionType == TransactionType.UDHAR_GIVEN }

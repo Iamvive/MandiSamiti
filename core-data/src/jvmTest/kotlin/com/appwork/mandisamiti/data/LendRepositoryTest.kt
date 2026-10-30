@@ -1,6 +1,10 @@
 package com.appwork.mandisamiti.data
 
+import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository
+import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.database.createTestDatabase
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
@@ -101,5 +105,33 @@ class LendRepositoryTest {
         repo.settle(settlement("s3", "l2", weightGrams = 500_000L))
 
         assertEquals(LendStatus.SETTLED, repo.getLendEntryById("l2")!!.status)
+    }
+
+    @Test
+    fun voidingPrincipalRowAlsoVoidsInterestRowAndSettlement() = runTest {
+        val db = createTestDatabase()
+        seedPartyAndCommodity(db)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val lendRepo = OfflineFirstLendRepository(db, ioDispatcher = dispatcher, clock = clock)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = dispatcher, clock = clock)
+        fun cash(id: String, type: TransactionType, paisa: Long) = CashTransaction(
+            id = id, shopId = "shop", partyId = "party", transactionType = type, amountPaisa = paisa,
+            transactionDate = 2_000L, remarks = "x [SETTLE:s9:l9]", createdAt = 2_000L, updatedAt = 2_000L,
+        )
+
+        lendRepo.saveLendEntry(moneyLend(id = "l9", amountPaisa = 1_000_000L))
+        lendRepo.settle(
+            settlement("s9", "l9", amountPaisa = 120_000L).copy(principalPaisa = 100_000L, interestPaisa = 20_000L),
+            listOf(cash("c-principal", TransactionType.JAMA_RECEIVED, 100_000L), cash("c-interest", TransactionType.INTEREST_RECEIVED, 20_000L)),
+        )
+        assertEquals(LendStatus.PARTIAL, lendRepo.getLendEntryById("l9")!!.status)
+
+        cashRepo.voidTransaction("c-principal", VoidReason.WRONG_ENTRY)
+
+        val q = db.appDatabaseQueries
+        assertEquals(1L, q.getCashTransactionById("c-principal").executeAsOne().is_void)
+        assertEquals(1L, q.getCashTransactionById("c-interest").executeAsOne().is_void)
+        assertEquals(1L, q.getLendSettlementById("s9").executeAsOne().is_void)
+        assertEquals(LendStatus.OPEN, lendRepo.getLendEntryById("l9")!!.status)
     }
 }

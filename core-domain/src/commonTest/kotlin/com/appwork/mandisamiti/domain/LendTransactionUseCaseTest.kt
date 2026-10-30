@@ -31,14 +31,17 @@ class LendTransactionUseCaseTest {
             lends[entry.id] = entry
         }
 
+        /** Mirrors the real repo: only principal counts against the loan; 0/0 legacy rows are all principal. */
+        private fun LendSettlement.principal() = if (principalPaisa == 0L && interestPaisa == 0L) amountPaisa else principalPaisa
+
         override suspend fun settle(settlement: LendSettlement, cashEntries: List<CashTransaction>) {
-            val live = settlements.filter { it.lendId == settlement.lendId && !it.isVoid }.sumOf { it.amountPaisa }
+            val live = settlements.filter { it.lendId == settlement.lendId && !it.isVoid }.sumOf { it.principal() }
             val outstanding = ((lends[settlement.lendId]?.amountPaisa ?: 0L) - live).coerceAtLeast(0L)
-            if (settlement.amountPaisa > outstanding) throw LendException.OverRepayment(settlement.amountPaisa, outstanding)
+            if (settlement.principal() > outstanding) throw LendException.OverRepayment(settlement.principal(), outstanding)
             cash.addAll(cashEntries)
             settlements.add(settlement)
             val lend = lends[settlement.lendId] ?: return
-            val totalRepaid = settlements.filter { it.lendId == lend.id && !it.isVoid }.sumOf { it.amountPaisa }
+            val totalRepaid = settlements.filter { it.lendId == lend.id && !it.isVoid }.sumOf { it.principal() }
             val newStatus = if (totalRepaid >= lend.amountPaisa) LendStatus.SETTLED else LendStatus.PARTIAL
             lends[lend.id] = lend.copy(status = newStatus)
         }
@@ -104,5 +107,76 @@ class LendTransactionUseCaseTest {
         assertEquals(true, repo.cash[0].remarks!!.contains("[SETTLE:"))
         assertEquals(false, repo.cash[1].remarks!!.contains("[SETTLE:"))
         assertEquals(LendStatus.SETTLED, repo.lends[lend.id]!!.status)
+    }
+
+    private suspend fun loanOf(repo: FakeLendRepository, paisa: Long): Pair<LendTransactionUseCase, LendEntry> {
+        var n = 0
+        val useCase = LendTransactionUseCase(repo, newId = { "id-${++n}" }, nowMillis = { 1000L })
+        val entry = useCase.lend(LendForm("s1", "p1", LendType.MONEY, amountPaisa = paisa))
+        return useCase to entry
+    }
+
+    @Test
+    fun repayWithInterest_writesPrincipalRowThenInterestRow() = runTest {
+        val repo = FakeLendRepository()
+        val (useCase, entry) = loanOf(repo, 10_000_00L)
+        val split = useCase.repayWithInterest(entry.id, 1_200_00L, 200_00L, 200_00L)
+        assertEquals(DepositSplit(1_000_00L, 0L, 200_00L), split)
+        assertEquals(listOf(TransactionType.JAMA_RECEIVED, TransactionType.INTEREST_RECEIVED), repo.cash.map { it.transactionType })
+        assertEquals(listOf(1_000_00L, 200_00L), repo.cash.map { it.amountPaisa })
+        val s = repo.settlements.single()
+        assertEquals(1_000_00L, s.principalPaisa)
+        assertEquals(200_00L, s.interestPaisa)
+        assertEquals(1_200_00L, s.amountPaisa)
+        assertEquals(true, repo.cash.all { it.remarks!!.contains("[SETTLE:${s.id}:${entry.id}]") })
+    }
+
+    @Test
+    fun repayWithInterest_adjustedInterestKeepsCalculatedValue() = runTest {
+        val repo = FakeLendRepository()
+        val (useCase, entry) = loanOf(repo, 10_000_00L)
+        useCase.repayWithInterest(entry.id, 1_100_00L, 100_00L, 200_00L)
+        val s = repo.settlements.single()
+        assertEquals(200_00L, s.calculatedInterestPaisa)
+        assertEquals(100_00L, s.interestPaisa)
+        assertEquals(1_000_00L, s.principalPaisa)
+    }
+
+    @Test
+    fun repayWithInterest_smallPaymentIsAllInterestAndNoPrincipalRow() = runTest {
+        val repo = FakeLendRepository()
+        val (useCase, entry) = loanOf(repo, 10_000_00L)
+        useCase.repayWithInterest(entry.id, 150_00L, 200_00L, 200_00L)
+        assertEquals(listOf(TransactionType.INTEREST_RECEIVED), repo.cash.map { it.transactionType })
+        assertEquals(0L, repo.settlements.single().principalPaisa)
+        assertEquals(150_00L, repo.settlements.single().interestPaisa)
+        assertEquals(LendStatus.PARTIAL, repo.lends[entry.id]!!.status)
+    }
+
+    @Test
+    fun repayWithInterest_excessOverPrincipalBecomesGeneralJama() = runTest {
+        val repo = FakeLendRepository()
+        val (useCase, entry) = loanOf(repo, 1_000_00L)
+        val split = useCase.repayWithInterest(entry.id, 1_700_00L, 200_00L, 200_00L)
+        assertEquals(DepositSplit(1_000_00L, 500_00L, 200_00L), split)
+        assertEquals(listOf(1_000_00L, 200_00L, 500_00L), repo.cash.map { it.amountPaisa })
+        assertEquals(1_000_00L, repo.settlements.single().principalPaisa)
+        assertEquals(LendStatus.SETTLED, repo.lends[entry.id]!!.status)
+    }
+
+    @Test
+    fun repayWithInterest_nothingToApplyIsRejected() = runTest {
+        val repo = FakeLendRepository()
+        val (useCase, entry) = loanOf(repo, 1_000_00L)
+        useCase.repayWithInterest(entry.id, 1_000_00L, 0L, 0L)
+        assertFailsWith<IllegalArgumentException> { useCase.repayWithInterest(entry.id, 50_00L, 0L, 0L) }
+    }
+
+    @Test
+    fun repayWithOverflow_stillSplitsLoanAndGeneral() = runTest {
+        val repo = FakeLendRepository()
+        val (useCase, entry) = loanOf(repo, 1_000_00L)
+        assertEquals(DepositSplit(1_000_00L, 400_00L), useCase.repayWithOverflow(entry.id, 1_400_00L))
+        assertEquals(0L, repo.settlements.single().interestPaisa)
     }
 }
