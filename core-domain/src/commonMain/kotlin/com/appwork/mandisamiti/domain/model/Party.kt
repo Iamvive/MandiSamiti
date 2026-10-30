@@ -23,6 +23,9 @@ data class Party(
     val syncStatus: Int = 0
 )
 
+class DuplicatePhoneException(val existing: Party) :
+    IllegalArgumentException("Phone already belongs to ${existing.name}")
+
 data class PartyBalance(
     val party: Party,
     val balancePaisa: Long, // Positive = लेना है (Receivable), Negative = देना है (Payable)

@@ -60,7 +60,7 @@ class LendFlowTest {
         repo.saveLendEntry(entry)
 
         val retrieved = repo.getLendEntryById("lend-money-1")
-        assertEquals(entry, retrieved)
+        assertEquals(entry.copy(slipNo = 1L), retrieved)
         assertEquals(LendStatus.OPEN, retrieved?.status)
         assertEquals(500_000L, retrieved?.amountPaisa)
         assertEquals(LendType.MONEY, retrieved?.lendType)
@@ -103,7 +103,7 @@ class LendFlowTest {
         repo.saveLendEntry(entry)
 
         val retrieved = repo.getLendEntryById("lend-grain-1")
-        assertEquals(entry, retrieved)
+        assertEquals(entry.copy(slipNo = 1L), retrieved)
         assertEquals(LendType.GRAIN, retrieved?.lendType)
         assertEquals("गेहूं", retrieved?.commodityId)
         assertEquals(4L, retrieved?.bagsCount)

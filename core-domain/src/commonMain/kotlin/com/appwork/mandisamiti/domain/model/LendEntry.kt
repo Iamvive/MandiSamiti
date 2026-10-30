@@ -17,6 +17,7 @@ data class LendEntry(
     val bagsCount: Long = 0L,
     val weightGrams: Long = 0L,
     val expectedReturnDate: Long? = null,
+    val slipNo: Long? = null,
     val notes: String? = null,
     val status: LendStatus = LendStatus.OPEN,
     val createdAt: Long,

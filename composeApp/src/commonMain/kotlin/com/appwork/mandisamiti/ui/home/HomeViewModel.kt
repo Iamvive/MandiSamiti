@@ -1,10 +1,10 @@
 package com.appwork.mandisamiti.ui.home
 
-import com.appwork.mandisamiti.ui.ledger.isValidPartyPhone
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.StockLine
 import com.appwork.mandisamiti.domain.repository.BuyRepository
@@ -321,8 +321,8 @@ class HomeViewModel(
     ): Party {
         val cleanName = name.trim()
         require(cleanName.isNotBlank()) { "Party name cannot be blank" }
-        val cleanPhone = phoneNumber?.trim()?.ifBlank { null }
-        require(cleanPhone == null || isValidPartyPhone(cleanPhone)) { "Party phone must be a 10-digit mobile number" }
+        val cleanPhone = normalizePhone(phoneNumber)
+        require(cleanPhone != null) { "10-digit mobile number required" }
         val now = Clock.System.now().toEpochMilliseconds()
         val newParty = Party(
             id = IdGenerator.newId(),
@@ -339,14 +339,29 @@ class HomeViewModel(
         return newParty
     }
 
+    suspend fun updatePartyPhone(party: Party, phoneNumber: String): Party {
+        val cleanPhone = normalizePhone(phoneNumber)
+        require(cleanPhone != null) { "10-digit mobile number required" }
+        val updated = party.copy(
+            phone = cleanPhone,
+            updatedAt = Clock.System.now().toEpochMilliseconds(),
+            syncStatus = 0,
+        )
+        partyRepository.saveParty(updated)
+        onLocalWrite()
+        return updated
+    }
+
     private fun filterList(
         list: List<PartyWithBalance>,
         query: String,
         filter: PartyFilter
     ): List<PartyWithBalance> {
         val cleanQuery = query.trim()
+        val phoneQuery = cleanQuery.filter { it.isDigit() }
         return list.filter { item ->
             val matchesQuery = cleanQuery.isEmpty() ||
+                    (phoneQuery.length >= 4 && item.party.phone?.contains(phoneQuery) == true) ||
                     BilingualSearchEngine.matchesAny(
                         cleanQuery,
                         item.party.name,

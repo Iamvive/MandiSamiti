@@ -321,6 +321,26 @@ class SyncEngineTest {
     }
 
     @Test
+    fun duplicatePhoneFromServerRollsBackPageAndCursor() = runTest {
+        val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
+        seedShop(db, "shop-1")
+        fake.pullResponses += Result.success(
+            SyncPullResponseDto(
+                next_seq = 40,
+                parties = listOf(
+                    PartySyncDto(id = "a", name = "A", phone = "+91 98765-43210", role = "FARMER"),
+                    PartySyncDto(id = "b", name = "B", phone = "9876543210", role = "BUYER"),
+                ),
+            )
+        )
+
+        assertTrue(engine.pullRemoteChanges("shop-1").isFailure)
+        assertEquals(0L, engine.getLastServerSeq("shop-1"))
+        assertEquals(null, db.appDatabaseQueries.getPartyById("a").executeAsOneOrNull())
+        assertEquals(null, db.appDatabaseQueries.getPartyById("b").executeAsOneOrNull())
+    }
+
+    @Test
     fun pageArrivingAfterAWipeWritesNoRowsAndNoCursor() = runTest {
         val db = createTestDatabase(); val fake = FakeSyncApiClient(); val engine = SyncEngine(db, fake)
         seedShop(db, "shop-1")

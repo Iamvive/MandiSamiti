@@ -29,6 +29,7 @@ data class SellEntry(
     val balanceDuePaisa: Long,
     val vehicleNumber: String? = null,
     val invoiceNumber: String? = null,
+    val slipNo: Long? = null,
     val remarks: String? = null,
     val createdAt: Long,
     val updatedAt: Long,

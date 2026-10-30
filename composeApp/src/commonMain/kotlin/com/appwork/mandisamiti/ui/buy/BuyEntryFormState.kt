@@ -83,6 +83,7 @@ class BuyEntryFormState(
     tradeSettings: TradeSettings? = null
 ) {
     var farmerName by mutableStateOf("")
+    var selectedFarmerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
     private var _village by mutableStateOf("")
     var village: String
@@ -301,7 +302,7 @@ class BuyEntryFormState(
         return BuyEntry(
             id = existingId ?: existingEntry?.id ?: IdGenerator.newId(),
             shopId = shopId,
-            farmerId = farmerName.trim().ifBlank { "अज्ञात किसान" },
+            farmerId = selectedFarmerId ?: farmerName.trim().ifBlank { "अज्ञात किसान" },
             commodityId = lots.firstOrNull()?.cropName ?: "गेहूं",
             entryDate = existingEntry?.entryDate ?: now,
             bagsCount = agg.totalBags,
@@ -330,6 +331,7 @@ class BuyEntryFormState(
     }
 
     fun populateFrom(entry: BuyEntry) {
+        selectedFarmerId = entry.farmerId
         farmerName = entry.farmerId
         phone = entry.vehicleNumber ?: ""
         commissionPercent = if (entry.commissionBps > 0) MandiMathEngine.paisaToInputString(entry.commissionBps) else "0"

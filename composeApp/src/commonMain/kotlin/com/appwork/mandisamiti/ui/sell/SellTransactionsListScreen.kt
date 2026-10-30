@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.SellEntry
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
@@ -53,6 +54,7 @@ fun SellTransactionsListScreen(
     onNew: () -> Unit,
     onBack: () -> Unit,
     entries: List<SellEntry> = emptyList(),
+    partyNamesById: Map<String, String> = emptyMap(),
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -65,7 +67,12 @@ fun SellTransactionsListScreen(
         .filter { !filterOnlyDue || it.balanceDuePaisa > 0 }
         .filter {
             if (searchQuery.isBlank()) return@filter true
-            BilingualSearchEngine.matchesAny(searchQuery, it.buyerId, it.invoiceNumber)
+            BilingualSearchEngine.matchesAny(
+                searchQuery,
+                partyNamesById[it.buyerId] ?: it.buyerId,
+                it.slipNo?.toString(),
+                it.invoiceNumber,
+            )
         }
         .sortedByDescending { it.entryDate }
 
@@ -125,6 +132,7 @@ fun SellTransactionsListScreen(
                     items(filteredEntries, key = { it.id }) { entry ->
                         SellEntryCard(
                             entry = entry,
+                            buyerName = partyNamesById[entry.buyerId] ?: entry.buyerId,
                             onClick = { onOpen(entry.id) },
                             onLongClick = { voidTarget = entry }
                         )
@@ -151,6 +159,7 @@ fun SellTransactionsListScreen(
 @Composable
 private fun SellEntryCard(
     entry: SellEntry,
+    buyerName: String,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
 ) {
@@ -175,12 +184,12 @@ private fun SellEntryCard(
             ) {
                 Column {
                     Text(
-                        text = entry.buyerId.ifBlank { "खरीदार" },
+                        text = buyerName.ifBlank { "खरीदार" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "बिल #${entry.invoiceNumber ?: entry.id.takeLast(6)}",
+                        text = "बिल #${slipLabel(entry.slipNo, entry.id)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

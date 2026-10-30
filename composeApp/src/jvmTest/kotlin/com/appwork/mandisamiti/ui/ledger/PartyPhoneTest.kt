@@ -9,13 +9,13 @@ class PartyPhoneTest {
     @Test
     fun inputKeepsDigitsOnlyAndAtMostTen() {
         assertEquals("9876543210", sanitizePartyPhone("98765-43210"))
-        assertEquals("9876543210", sanitizePartyPhone("987654321012345"))
+        assertEquals("9876543210", sanitizePartyPhone("+91 98765-43210"))
         assertEquals("", sanitizePartyPhone("abc"))
     }
 
     @Test
-    fun emptyPhoneIsAllowedOtherwiseTenDigitsStartingSixToNine() {
-        assertTrue(isValidPartyPhone(""))
+    fun phoneIsRequiredAndMustBeTenDigitsStartingSixToNine() {
+        assertFalse(isValidPartyPhone(""))
         assertTrue(isValidPartyPhone("9876543210"))
         assertTrue(isValidPartyPhone("6000000000"))
         assertFalse(isValidPartyPhone("987654321"))

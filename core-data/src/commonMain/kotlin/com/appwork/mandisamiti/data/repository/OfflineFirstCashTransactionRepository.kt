@@ -106,6 +106,7 @@ class OfflineFirstCashTransactionRepository(
                                 bags_count = lendEntity.bags_count,
                                 weight_grams = lendEntity.weight_grams,
                                 expected_return_date = lendEntity.expected_return_date,
+                                slip_no = lendEntity.slip_no,
                                 notes = lendEntity.notes,
                                 status = newStatus,
                                 created_at = lendEntity.created_at,

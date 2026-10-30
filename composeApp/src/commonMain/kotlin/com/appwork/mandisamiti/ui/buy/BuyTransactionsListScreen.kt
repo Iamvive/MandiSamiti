@@ -44,6 +44,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.PaymentStatus
 import com.appwork.mandisamiti.domain.model.VoidReason
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
 
@@ -54,6 +55,7 @@ fun BuyTransactionsListScreen(
     onNew: () -> Unit,
     onBack: () -> Unit,
     entries: List<BuyEntry> = emptyList(),
+    partyNamesById: Map<String, String> = emptyMap(),
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -67,8 +69,9 @@ fun BuyTransactionsListScreen(
             val village = extractVillage(entry.remarks)
             BilingualSearchEngine.matchesAny(
                 searchQuery,
-                entry.farmerId,
+                partyNamesById[entry.farmerId] ?: entry.farmerId,
                 village,
+                entry.slipNo?.toString(),
                 entry.slipNumber,
                 entry.vehicleNumber,
                 entry.commodityId
@@ -127,6 +130,7 @@ fun BuyTransactionsListScreen(
                     items(filteredEntries, key = { it.id }) { entry ->
                         BuyEntryCard(
                             entry = entry,
+                            farmerName = partyNamesById[entry.farmerId] ?: entry.farmerId,
                             onClick = { onOpen(entry.id) },
                             onLongClick = { voidTarget = entry }
                         )
@@ -153,12 +157,12 @@ fun BuyTransactionsListScreen(
 @Composable
 private fun BuyEntryCard(
     entry: BuyEntry,
+    farmerName: String,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
 ) {
-    val farmerName = entry.farmerId.ifBlank { "किसान" }
+    val displayFarmerName = farmerName.ifBlank { "किसान" }
     val village = extractVillage(entry.remarks)
-    val slipNumber = entry.slipNumber
 
     Card(
         modifier = Modifier
@@ -181,13 +185,13 @@ private fun BuyEntryCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = farmerName,
+                        text = displayFarmerName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     val subtitleParts = buildList {
                         if (!village.isNullOrBlank()) add("गाँव: $village")
-                        if (!slipNumber.isNullOrBlank()) add("पर्चा #$slipNumber")
+                        add("पर्चा #${slipLabel(entry.slipNo, entry.id)}")
                     }
                     if (subtitleParts.isNotEmpty()) {
                         Text(

@@ -60,6 +60,7 @@ import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.VoidReason
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.util.LendDateFormatter
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
@@ -70,6 +71,7 @@ fun LendTransactionsListScreen(
     onBack: () -> Unit,
     onNew: () -> Unit = {},
     entries: List<LendEntry> = emptyList(),
+    partyNamesById: Map<String, String> = emptyMap(),
     onPartyClick: ((String) -> Unit)? = null,
     onRepay: (lendId: String, amountPaisa: Long, weightGrams: Long, bagsCount: Long, note: String, paymentMode: PaymentMode) -> Unit = { _, _, _, _, _, _ -> },
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
@@ -84,7 +86,12 @@ fun LendTransactionsListScreen(
     val filtered = entries.filter {
         if (it.isVoid) return@filter false
         if (searchQuery.isBlank()) return@filter true
-        BilingualSearchEngine.matchesAny(searchQuery, it.partyId, it.commodityId)
+        BilingualSearchEngine.matchesAny(
+            searchQuery,
+            partyNamesById[it.partyId] ?: it.partyId,
+            it.commodityId,
+            it.slipNo?.toString(),
+        )
     }
     val activeEntries = filtered.filter { it.status != LendStatus.SETTLED }
     val settledEntries = filtered.filter { it.status == LendStatus.SETTLED }
@@ -145,6 +152,7 @@ fun LendTransactionsListScreen(
                     items(activeEntries, key = { it.id }) { entry ->
                         LendCard(
                             entry = entry,
+                            partyName = partyNamesById[entry.partyId] ?: entry.partyId,
                             onCardClick = { onPartyClick?.invoke(entry.partyId) },
                             onRepayClick = { selectedLendForRepayment = entry },
                             onLongClick = { voidTarget = entry }
@@ -178,6 +186,7 @@ fun LendTransactionsListScreen(
                             items(settledEntries, key = { it.id }) { entry ->
                                 LendCard(
                                     entry = entry,
+                                    partyName = partyNamesById[entry.partyId] ?: entry.partyId,
                                     onCardClick = { onPartyClick?.invoke(entry.partyId) },
                                     onRepayClick = null,
                                     onLongClick = { voidTarget = entry }
@@ -219,6 +228,7 @@ fun LendTransactionsListScreen(
 @Composable
 private fun LendCard(
     entry: LendEntry,
+    partyName: String,
     onCardClick: () -> Unit = {},
     onRepayClick: (() -> Unit)?,
     onLongClick: () -> Unit = {}
@@ -247,7 +257,7 @@ private fun LendCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = entry.partyId,
+                    text = partyName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -267,6 +277,11 @@ private fun LendCard(
                 }
             }
 
+            Text(
+                text = "उधार #${slipLabel(entry.slipNo, entry.id)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (isMoney) {
                 Text(
                     text = "उधार राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.amountPaisa)}",

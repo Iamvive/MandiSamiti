@@ -92,6 +92,7 @@ class BuyEntryFormStateTest {
     fun toBuyEntryConstructsValidEntityAndPopulatesBack() {
         val f = BuyEntryFormState().apply {
             farmerName = "राधे श्याम"
+            selectedFarmerId = "party-123"
             phone = "9876543210"
             village = "खेड़ा"
             bags = "10"
@@ -104,7 +105,7 @@ class BuyEntryFormStateTest {
         }
         val entry = f.toBuyEntry(shopId = "shop-123")
         assertEquals("shop-123", entry.shopId)
-        assertEquals("राधे श्याम", entry.farmerId)
+        assertEquals("party-123", entry.farmerId)
         assertEquals("9876543210", entry.vehicleNumber)
         assertEquals(10L, entry.bagsCount)
         assertEquals(50_000L, entry.weightPerBagGrams)
@@ -121,7 +122,8 @@ class BuyEntryFormStateTest {
 
         val restoredForm = BuyEntryFormState()
         restoredForm.populateFrom(entry)
-        assertEquals("राधे श्याम", restoredForm.farmerName)
+        assertEquals("party-123", restoredForm.farmerName)
+        assertEquals("party-123", restoredForm.selectedFarmerId)
         assertEquals("9876543210", restoredForm.phone)
         assertEquals("10", restoredForm.bags)
         assertEquals("50.0", restoredForm.weightPerBagKg)

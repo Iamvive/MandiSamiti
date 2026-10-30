@@ -259,6 +259,7 @@ fun DashboardScreen(
             PartyCard(
                 party = partyWithBalance.party,
                 balancePaisa = partyWithBalance.balancePaisa,
+                isEnglish = isEnglish,
                 onClick = { onNavigateToPartyKhata(partyWithBalance.party) }
             )
         }

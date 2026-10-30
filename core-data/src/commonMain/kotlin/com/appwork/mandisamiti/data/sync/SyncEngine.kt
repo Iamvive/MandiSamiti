@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.data.sync
 
 import com.appwork.mandisamiti.data.sync.model.*
+import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.data.sync.remote.MandiSyncApiClient
 import com.appwork.mandisamiti.database.AppDatabase
 import kotlinx.coroutines.CoroutineDispatcher
@@ -158,7 +159,7 @@ class SyncEngine(
                 labour_per_bag_paisa = it.labour_per_bag_paisa, advance_paid_paisa = it.advance_paid_paisa,
                 gross_paisa = it.gross_paisa, commission_paisa = it.commission_paisa, labour_paisa = it.labour_paisa,
                 net_payable_paisa = it.net_payable_paisa, paid_paisa = it.paid_paisa,
-                vehicle_number = it.vehicle_number, slip_number = it.slip_number, remarks = it.remarks,
+                vehicle_number = it.vehicle_number, slip_number = it.slip_number, slip_no = it.slip_no, remarks = it.remarks,
                 is_void = it.is_void.toInt(), void_reason = it.void_reason, revision = it.revision.toInt(),
                 is_deleted = it.is_deleted.toInt(), created_at = it.created_at, updated_at = it.updated_at
             )
@@ -173,7 +174,7 @@ class SyncEngine(
                 gross_paisa = it.gross_paisa, arat_paisa = it.arat_paisa, mandi_shulk_paisa = it.mandi_shulk_paisa,
                 total_receivable_paisa = it.total_receivable_paisa, received_paisa = it.received_paisa,
                 balance_due_paisa = it.balance_due_paisa, vehicle_number = it.vehicle_number,
-                invoice_number = it.invoice_number, remarks = it.remarks, is_void = it.is_void.toInt(),
+                invoice_number = it.invoice_number, slip_no = it.slip_no, remarks = it.remarks, is_void = it.is_void.toInt(),
                 void_reason = it.void_reason, revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
                 created_at = it.created_at, updated_at = it.updated_at
             )
@@ -183,7 +184,7 @@ class SyncEngine(
             LendEntrySyncDto(
                 id = it.id, party_id = it.party_id, lend_type = it.lend_type, entry_date = it.entry_date,
                 amount_paisa = it.amount_paisa, commodity_id = it.commodity_id, bags_count = it.bags_count,
-                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, notes = it.notes,
+                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, slip_no = it.slip_no, notes = it.notes,
                 status = it.status, is_void = it.is_void.toInt(), void_reason = it.void_reason,
                 revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
                 created_at = it.created_at, updated_at = it.updated_at
@@ -307,25 +308,29 @@ class SyncEngine(
                 res.buy_entries.size + res.sell_entries.size + res.lend_entries.size +
                 res.lend_settlements.size + res.expenses.size + res.revisions.size
 
-            val applied = database.transactionWithResult {
+            val appliedResult = runCatching { database.transactionWithResult {
                 // Logged out / switched shop while this page was in flight: write nothing, not even the cursor.
                 if (!queries.shopProfileExists(shopId).executeAsOne()) rollback(false)
                 res.parties.forEach { p ->
                     queries.deleteSyncedParty(p.id)
-                    queries.insertPartyIfAbsent(
-                        id = p.id,
-                        shop_id = shopId,
-                        name = p.name,
-                        phone = p.phone,
-                        village = p.village,
-                        party_type = p.role,
-                        monthly_interest_rate = p.monthly_interest_rate,
-                        photo_uri = p.photo_uri,
-                        created_at = p.created_at.takeIf { it > 0 } ?: res.server_sync_time,
-                        updated_at = p.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
-                        is_deleted = p.is_deleted.toLong(),
-                        sync_status = 1L
-                    )
+                    // Preserve a pending local edit with the same id. Every other collision must fail the page so
+                    // the transaction rolls back and the server cursor is not advanced past a lost party.
+                    if (queries.getPartyByIdAny(p.id).executeAsOneOrNull()?.sync_status != 0L) {
+                        queries.insertPartyFromServer(
+                            id = p.id,
+                            shop_id = shopId,
+                            name = p.name,
+                            phone = normalizePhone(p.phone),
+                            village = p.village,
+                            party_type = p.role,
+                            monthly_interest_rate = p.monthly_interest_rate,
+                            photo_uri = p.photo_uri,
+                            created_at = p.created_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            updated_at = p.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
+                            is_deleted = p.is_deleted.toLong(),
+                            sync_status = 1L
+                        )
+                    }
                 }
 
                 res.deals.forEach { d ->
@@ -411,6 +416,7 @@ class SyncEngine(
                         paid_paisa = b.paid_paisa,
                         vehicle_number = b.vehicle_number,
                         slip_number = b.slip_number,
+                        slip_no = b.slip_no,
                         remarks = b.remarks,
                         created_at = b.created_at.takeIf { it > 0 } ?: res.server_sync_time,
                         updated_at = b.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
@@ -447,6 +453,7 @@ class SyncEngine(
                         balance_due_paisa = s.balance_due_paisa,
                         vehicle_number = s.vehicle_number,
                         invoice_number = s.invoice_number,
+                        slip_no = s.slip_no,
                         remarks = s.remarks,
                         created_at = s.created_at.takeIf { it > 0 } ?: res.server_sync_time,
                         updated_at = s.updated_at.takeIf { it > 0 } ?: res.server_sync_time,
@@ -471,6 +478,7 @@ class SyncEngine(
                         bags_count = l.bags_count,
                         weight_grams = l.weight_grams,
                         expected_return_date = l.expected_return_date,
+                        slip_no = l.slip_no,
                         notes = l.notes,
                         status = l.status,
                         created_at = l.created_at.takeIf { it > 0 } ?: res.server_sync_time,
@@ -549,7 +557,11 @@ class SyncEngine(
                     queries.setSyncMetadataLong(lastServerSeqKey(shopId), res.next_seq)
                 }
                 true
+            } }
+            if (appliedResult.isFailure) {
+                return@withContext Result.failure(appliedResult.exceptionOrNull()!!)
             }
+            val applied = appliedResult.getOrThrow()
             if (!applied) {
                 return@withContext Result.failure(IllegalStateException("Shop $shopId is no longer on this phone"))
             }

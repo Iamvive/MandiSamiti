@@ -36,7 +36,10 @@ class OfflineFirstSellRepository(
 
     override suspend fun saveSellEntry(entry: SellEntry) = withContext(ioDispatcher) {
         database.transaction {
-            val created = entry.copy(revision = 1, syncStatus = 0)
+            val slipNo = queries.getSellEntryById(entry.id).executeAsOneOrNull()?.slip_no
+                ?: entry.slipNo
+                ?: queries.nextSellSlipNo(entry.shopId).executeAsOne()
+            val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordRevision(created, "CREATE", created.updatedAt)
 
@@ -66,6 +69,7 @@ class OfflineFirstSellRepository(
                 ?: throw IllegalArgumentException("Sell entry ${entry.id} does not exist")
             require(!current.isVoid) { "Sell entry ${entry.id} is void and cannot be edited" }
             val edited = entry.copy(
+                slipNo = current.slipNo,
                 entryDate = current.entryDate,
                 createdAt = current.createdAt,
                 updatedAt = now,
@@ -132,6 +136,7 @@ class OfflineFirstSellRepository(
             balance_due_paisa = entry.balanceDuePaisa,
             vehicle_number = entry.vehicleNumber,
             invoice_number = entry.invoiceNumber,
+            slip_no = entry.slipNo,
             remarks = entry.remarks,
             created_at = entry.createdAt,
             updated_at = entry.updatedAt,
@@ -166,6 +171,7 @@ class OfflineFirstSellRepository(
         balanceDuePaisa = balance_due_paisa,
         vehicleNumber = vehicle_number,
         invoiceNumber = invoice_number,
+        slipNo = slip_no,
         remarks = remarks,
         createdAt = created_at,
         updatedAt = updated_at,

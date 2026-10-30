@@ -24,6 +24,7 @@ data class BuyEntry(
     val paidPaisa: Long = 0L,
     val vehicleNumber: String? = null,
     val slipNumber: String? = null,
+    val slipNo: Long? = null,
     val remarks: String? = null,
     val createdAt: Long,
     val updatedAt: Long,

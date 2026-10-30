@@ -49,6 +49,8 @@ fun PartyCard(
     party: Party,
     balancePaisa: Long,
     onClick: () -> Unit,
+    isEnglish: Boolean = false,
+    onPhoneNeededClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(12.dp)
@@ -189,6 +191,9 @@ fun PartyCard(
                             fontSize = 13.sp,
                             color = MandiTextSecondary
                         )
+                    }
+                    if (party.phone == null) {
+                        PhoneNeededBadge(isEnglish = isEnglish, onClick = onPhoneNeededClick)
                     }
                 }
             }
