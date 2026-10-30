@@ -25,3 +25,7 @@ venv/
 scratch/
 graphify-out/cache/
 graphify-out/.graphify_*
+
+# Real staging secrets live only on the VPS
+backend/.env.staging
+.env.staging
