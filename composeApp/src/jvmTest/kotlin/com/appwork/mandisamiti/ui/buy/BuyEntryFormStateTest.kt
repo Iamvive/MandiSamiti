@@ -13,7 +13,9 @@ class BuyEntryFormStateTest {
             bags = "10"; weightPerBagKg = "50"; extraWeightKg = "5"; ratePerQuintal = "2500"
             commissionPercent = "2"; labourPerBag = "5"; advancePaid = "1000"
         }
-        assertEquals(1_132_250, f.preview().netPayablePaisa)
+        // Net payable = roundToNearest10(1,262,500 - 5,000 - 25,250) - 100,000 = 1,232,250 - 100,000 = 1,132,000
+        // Commission absorbs rounding: 1,262,500 - 5,000 - 1,232,000 = 25,500 paisa
+        assertEquals(1_132_000, f.preview().netPayablePaisa)
     }
 
     @Test
@@ -116,9 +118,9 @@ class BuyEntryFormStateTest {
         assertEquals(500L, entry.labourPerBagPaisa)
         assertEquals(100_000L, entry.advancePaidPaisa)
         assertEquals(1_262_500L, entry.grossPaisa)
-        assertEquals(25_250L, entry.commissionPaisa)
+        assertEquals(25_500L, entry.commissionPaisa)
         assertEquals(5_000L, entry.labourPaisa)
-        assertEquals(1_132_250L, entry.netPayablePaisa)
+        assertEquals(1_132_000L, entry.netPayablePaisa)
 
         val restoredForm = BuyEntryFormState()
         restoredForm.populateFrom(entry)
