@@ -76,6 +76,19 @@ class OfflineFirstCashTransactionRepository(
                         queries.voidLendSettlement(reason.name, sEntity.revision + 1L, now, sEntity.id)
                         cascadeRevision(sEntity.shop_id, sEntity.id, "LEND_SETTLEMENT", sEntity.revision + 1L, "VOID", reason, now)
                     }
+                    // A repayment can write several rows (principal, interest, general jama): void them together.
+                    queries.getCashTransactionsByTag("[SETTLE:$settleId:").executeAsList()
+                        .filter { it.id != current.id }
+                        .forEach { sibling ->
+                            val s = sibling.toDomain()
+                            ensureBaselineRevision(s)
+                            val voidedSibling = s.copy(
+                                isVoid = true, voidReason = reason, revision = s.revision + 1,
+                                updatedAt = now, syncStatus = 0
+                            )
+                            insertOrReplace(voidedSibling)
+                            recordRevision(voidedSibling, "VOID", now)
+                        }
                     if (lendId != null) {
                         val lendEntity = queries.getLendEntryById(lendId).executeAsOneOrNull()
                         if (lendEntity != null && lendEntity.is_void == 0L) {

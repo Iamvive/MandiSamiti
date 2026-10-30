@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.ui.expense.ExpenseEntryScreen
 import com.appwork.mandisamiti.ui.expense.labelHi
 import com.appwork.mandisamiti.ui.stock.StockBreakdownSheet
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.first
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -603,6 +604,22 @@ fun App(
                             syncScheduler.scheduleOneTimeSync()
                         }
                     },
+                    onRepayMoney = { lendId, paymentPaisa, interestPaisa, calculatedPaisa ->
+                        coroutineScope.launch {
+                            try {
+                                lendUseCase.repayWithInterest(lendId, paymentPaisa, interestPaisa, calculatedPaisa)
+                            } catch (_: IllegalArgumentException) {
+                                return@launch
+                            }
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    },
+                    getMonthlyRatePercent = { partyId ->
+                        partyRepo.getPartyById(partyId)?.monthlyInterestRate
+                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate
+                            ?: 1.5
+                    },
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     onVoid = { id, reason ->
                         coroutineScope.launch {
                             lendRepo.voidLendEntry(id, reason)

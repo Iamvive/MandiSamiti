@@ -72,12 +72,15 @@ sealed interface LedgerItem {
 
 data class OpenLoanInfo(
     val lend: LendEntry,
-    val outstandingPaisa: Long
+    val outstandingPaisa: Long,
+    val interestDuePaisa: Long = 0L,
+    val monthlyRatePercent: Double = 0.0
 )
 
 data class PartyLedgerUiState(
     val party: Party? = null,
     val isSoundEnabled: Boolean = true,
+    val defaultMonthlyRatePercent: Double = 1.5,
     val balancePaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
     val openLoans: List<OpenLoanInfo> = emptyList(),
@@ -122,7 +125,7 @@ class PartyLedgerViewModel(
         shopProfileRepository.getShopProfileStream()
             .onEach { profile ->
                 if (profile != null) {
-                    _uiState.value = _uiState.value.copy(isSoundEnabled = profile.isSoundEnabled)
+                    _uiState.value = _uiState.value.copy(isSoundEnabled = profile.isSoundEnabled, defaultMonthlyRatePercent = profile.defaultMonthlyInterestRate)
                 }
             }
             .launchIn(viewModelScope)
@@ -154,7 +157,10 @@ class PartyLedgerViewModel(
             val openLends = partyLends.filter { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED }.mapNotNull { lend ->
                 val nonVoidSettlements = settlementsList.filter { it.lendId == lend.id && !it.isVoid }
                 val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
-                val outstandingPaisa = (lend.amountPaisa - repaidPaisa).coerceAtLeast(0L)
+                val isMoney = lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY
+                // Interest rows are part of amountPaisa but never reduce the loan; only principal does (D4.4).
+                val reducedPaisa = if (isMoney) nonVoidSettlements.sumOf { it.principalPaisa } else repaidPaisa
+                val outstandingPaisa = (lend.amountPaisa - reducedPaisa).coerceAtLeast(0L)
                 val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
                 val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
 
@@ -165,7 +171,11 @@ class PartyLedgerViewModel(
                 }
 
                 if (isOpen) {
-                    OpenLoanInfo(lend = lend, outstandingPaisa = outstandingPaisa)
+                    val rate = currentMonthlyRate()
+                    val interestDue = if (isMoney) {
+                        RuralInterestEngine.interestDue(lend.amountPaisa, rate, lend.entryDate, nonVoidSettlements, Clock.System.now().toEpochMilliseconds())
+                    } else 0L
+                    OpenLoanInfo(lend = lend, outstandingPaisa = outstandingPaisa, interestDuePaisa = interestDue, monthlyRatePercent = rate)
                 } else {
                     null
                 }
@@ -206,36 +216,44 @@ class PartyLedgerViewModel(
         }.launchIn(viewModelScope)
     }
 
-    fun applyCashEntryToLoan(
+    private fun currentMonthlyRate(): Double =
+        _uiState.value.party?.monthlyInterestRate ?: _uiState.value.defaultMonthlyRatePercent
+
+    fun applyCashEntryToLoan(lendId: String, amountRs: Long, note: String? = null) =
+        repayLoan(lendId, amountRs * 100L, interestPaisa = 0L, calculatedInterestPaisa = 0L, note = note)
+
+    /** Deposit larger than the loan: outstanding goes to the loan, the rest is a general jama, one transaction. */
+    fun applyDepositSplitAcrossLoan(lendId: String, amountRs: Long, note: String? = null) =
+        repayLoan(lendId, amountRs * 100L, interestPaisa = 0L, calculatedInterestPaisa = 0L, note = note)
+
+    /**
+     * D4.4/D4.5: [paymentPaisa] clears [interestPaisa] first (as adjusted by the trader; [calculatedInterestPaisa] is
+     * what the engine computed), then principal, and any excess is a general jama.
+     */
+    fun repayLoan(
         lendId: String,
-        amountRs: Long,
-        note: String? = null
+        paymentPaisa: Long,
+        interestPaisa: Long,
+        calculatedInterestPaisa: Long,
+        note: String? = null,
+        paymentMode: PaymentMode = PaymentMode.CASH
     ) {
         viewModelScope.launch {
-            val amountPaisa = amountRs * 100L
             val repo = lendRepository ?: return@launch
             val useCase = LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
-            try {
-                useCase.repay(lendId, amountPaisa, 0L, 0L, note, cashPartyId = partyId)
-            } catch (e: LendException.OverRepayment) {
-                _events.emit(PartyLedgerEvent.Error("राशि बकाया से ज्यादा है (बकाया ₹${MandiMathEngine.formatIndianGrouping(e.outstandingPaisa / 100)})"))
+            val split = try {
+                useCase.repayWithInterest(lendId, paymentPaisa, interestPaisa, calculatedInterestPaisa, note, cashPartyId = partyId, paymentMode = paymentMode)
+            } catch (e: IllegalArgumentException) {
+                _events.emit(PartyLedgerEvent.Error("राशि दर्ज नहीं हो सकी"))
                 return@launch
             }
             syncScheduler.scheduleOneTimeSync()
-            _events.emit(PartyLedgerEvent.TransactionRecorded("उधार खाते में ₹${MandiMathEngine.formatIndianGrouping(amountRs)} जमा दर्ज किया गया"))
-        }
-    }
-
-    /** Deposit larger than the loan: outstanding goes to the loan, the rest is a general jama, one transaction. */
-    fun applyDepositSplitAcrossLoan(lendId: String, amountRs: Long, note: String? = null) {
-        viewModelScope.launch {
-            val repo = lendRepository ?: return@launch
-            val useCase = LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
-            val split = useCase.repayWithOverflow(lendId, amountRs * 100L, note, cashPartyId = partyId)
-            syncScheduler.scheduleOneTimeSync()
-            _events.emit(PartyLedgerEvent.TransactionRecorded(
-                "₹${MandiMathEngine.paisaToRupeesString(split.loanPaisa)} उधार में, ₹${MandiMathEngine.paisaToRupeesString(split.generalPaisa)} सामान्य जमा दर्ज किया गया"
-            ))
+            val parts = buildList {
+                if (split.interestPaisa > 0) add("₹${MandiMathEngine.paisaToRupeesString(split.interestPaisa)} ब्याज")
+                if (split.loanPaisa > 0) add("₹${MandiMathEngine.paisaToRupeesString(split.loanPaisa)} उधार में")
+                if (split.generalPaisa > 0) add("₹${MandiMathEngine.paisaToRupeesString(split.generalPaisa)} सामान्य जमा")
+            }
+            _events.emit(PartyLedgerEvent.TransactionRecorded(parts.joinToString(", ") + " दर्ज किया गया"))
         }
     }
 
@@ -252,7 +270,7 @@ class PartyLedgerViewModel(
         if (principal > 0L) {
             val interest = RuralInterestEngine.calculateAccruedInterestByDays(
                 principalPaisa = principal,
-                monthlyRatePercent = _uiState.value.party?.monthlyInterestRate ?: 1.5,
+                monthlyRatePercent = currentMonthlyRate(),
                 elapsedDays = 30
             )
             _uiState.value = _uiState.value.copy(
@@ -302,6 +320,7 @@ class PartyLedgerViewModel(
                 TransactionType.UDHAR_GIVEN -> "उधार दिया गया"
                 TransactionType.JAMA_RECEIVED -> "जमा प्राप्त हुआ"
                 TransactionType.INTEREST_ADDED -> "ब्याज जोड़ा गया"
+                TransactionType.INTEREST_RECEIVED -> "ब्याज मिला"
                 TransactionType.DISCOUNT_GIVEN -> "छूट / समझौता दिया गया"
             }
             val formattedAmount = MandiMathEngine.paisaToRupeesString(amountPaisa)

@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.domain.math
 
+import com.appwork.mandisamiti.domain.model.LendSettlement
 import kotlin.math.roundToLong
 
 /** How one repayment divides: interest is cleared first, whatever is left reduces principal. */
@@ -58,6 +59,32 @@ object RuralInterestEngine {
     fun splitRepayment(paymentPaisa: Long, interestDuePaisa: Long): RepaymentSplit {
         val interest = minOf(paymentPaisa.coerceAtLeast(0L), interestDuePaisa.coerceAtLeast(0L))
         return RepaymentSplit(interest, paymentPaisa.coerceAtLeast(0L) - interest)
+    }
+
+    /**
+     * D4.3/D4.8: simple interest on the unpaid principal of each period, minus interest already received.
+     * Unpaid interest earns nothing (no compounding). Never negative.
+     */
+    fun interestDue(
+        principalPaisa: Long,
+        monthlyRatePercent: Double,
+        lentAtMs: Long,
+        settlements: List<LendSettlement>,
+        nowMs: Long
+    ): Long {
+        val live = settlements.filter { !it.isVoid }.sortedBy { it.settledAt }
+        var outstanding = principalPaisa
+        var from = lentAtMs
+        var accrued = 0L
+        for (s in live) {
+            accrued += calculateAccruedInterestBetweenEpochs(outstanding, monthlyRatePercent, from, s.settledAt).accruedInterestPaisa
+            // Legacy rows (0 principal, 0 interest) were all principal.
+            val repaid = if (s.principalPaisa == 0L && s.interestPaisa == 0L) s.amountPaisa else s.principalPaisa
+            outstanding = (outstanding - repaid).coerceAtLeast(0L)
+            from = s.settledAt
+        }
+        accrued += calculateAccruedInterestBetweenEpochs(outstanding, monthlyRatePercent, from, nowMs).accruedInterestPaisa
+        return (accrued - live.sumOf { it.interestPaisa }).coerceAtLeast(0L)
     }
 
     /**
