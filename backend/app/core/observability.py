@@ -1,7 +1,6 @@
 """Logs, error tracking and ops alerts. The only module that knows about Sentry or the ops Telegram chat.
 
 Every vendor is switched on by env (SENTRY_DSN, OPS_TELEGRAM_*); unset means off.
-Design: docs/superpowers/specs/2026-10-13-mandisamiti-observability-design.md
 """
 import asyncio
 import json
