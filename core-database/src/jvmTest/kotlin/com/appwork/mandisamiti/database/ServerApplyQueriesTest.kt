@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 
 class ServerApplyQueriesTest {
     private fun party(q: AppDatabaseQueries, id: String, name: String, sync: Long) =
-        q.insertParty(id, "shop-1", name, null, null, "FARMER", null, null, 1L, 1L, 0L, sync)
+        q.insertParty(id, "shop-1", name, null, null, "FARMER", null, null, null, null, 1L, 1L, 0L, sync)
 
     @Test
     fun serverRowReplacesSyncedRowButNotPendingRow() {
@@ -15,7 +15,7 @@ class ServerApplyQueriesTest {
 
         listOf("synced", "pending", "new").forEach { id ->
             q.deleteSyncedParty(id)
-            q.insertPartyIfAbsent(id, "shop-1", "server", null, null, "FARMER", null, null, 2L, 2L, 0L, 1L)
+            q.insertPartyIfAbsent(id, "shop-1", "server", null, null, "FARMER", null, null, null, null, 2L, 2L, 0L, 1L)
         }
 
         assertEquals("server", q.getPartyById("synced").executeAsOne().name)
@@ -38,7 +38,7 @@ class ServerApplyQueriesTest {
     fun markPartySyncedAtSkipsRowEditedAfterPush() {
         val q = createTestDatabase().appDatabaseQueries
         party(q, "p", "v1", 0L)                                                     // pushed at updated_at = 1
-        q.updateParty("v2", null, null, "FARMER", null, null, 5L, 0L, 0L, "p")  // edited meanwhile
+        q.updateParty("v2", null, null, "FARMER", null, null, null, null, 5L, 0L, 0L, "p")  // edited meanwhile
         q.markPartySyncedAt("p", 1L)
         assertEquals(0L, q.getPartyById("p").executeAsOne().sync_status)
     }

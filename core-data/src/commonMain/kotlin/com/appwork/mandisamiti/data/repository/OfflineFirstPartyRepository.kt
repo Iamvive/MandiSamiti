@@ -67,6 +67,7 @@ class OfflineFirstPartyRepository(
                     id = party.id, shop_id = party.shopId, name = party.name, phone = phone,
                     village = party.village, party_type = party.partyType.name,
                     monthly_interest_rate = party.monthlyInterestRate, photo_uri = party.photoUri,
+                    gstin = party.gstin, mandi_license = party.mandiLicense,
                     created_at = party.createdAt, updated_at = party.updatedAt,
                     is_deleted = if (party.isDeleted) 1L else 0L, sync_status = party.syncStatus.toLong()
                 )
@@ -74,7 +75,8 @@ class OfflineFirstPartyRepository(
                 queries.updateParty(
                     name = party.name, phone = phone, village = party.village,
                     party_type = party.partyType.name, monthly_interest_rate = party.monthlyInterestRate,
-                    photo_uri = party.photoUri, updated_at = party.updatedAt,
+                    photo_uri = party.photoUri, gstin = party.gstin, mandi_license = party.mandiLicense,
+                    updated_at = party.updatedAt,
                     is_deleted = if (party.isDeleted) 1L else 0L, sync_status = party.syncStatus.toLong(),
                     id = party.id,
                 )
@@ -100,7 +102,9 @@ class OfflineFirstPartyRepository(
             createdAt = created_at,
             updatedAt = updated_at,
             isDeleted = is_deleted == 1L,
-            syncStatus = sync_status.toInt()
+            syncStatus = sync_status.toInt(),
+            gstin = gstin,
+            mandiLicense = mandi_license
         )
     }
 }

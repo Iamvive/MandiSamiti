@@ -15,8 +15,8 @@ import kotlin.test.assertTrue
 class PilotSchemaMigrationTest {
 
     @Test
-    fun versionSixSnapshotUpgradesToFrozenPilotSchemaWithoutDataLoss() {
-        assertEquals(PILOT_BASELINE_VERSION, AppDatabase.Schema.version)
+    fun versionOneSnapshotUpgradesToCurrentSchemaWithoutDataLoss() {
+        assertEquals(CURRENT_SCHEMA_VERSION, AppDatabase.Schema.version)
 
         val snapshot = committedV1Snapshot()
         val database = Files.createTempFile("mandisamiti-v1-", ".db")
@@ -30,7 +30,7 @@ class PilotSchemaMigrationTest {
             val countsBefore = TABLES.associateWith { driver.scalarLong("SELECT COUNT(*) FROM $it") }
             val paisaBefore = PAISA_VALUES.associateWith { driver.scalarLong(it.sql) }
 
-            AppDatabase.Schema.migrate(driver, PRE_PILOT_VERSION, PILOT_BASELINE_VERSION)
+            AppDatabase.Schema.migrate(driver, PRE_PILOT_VERSION, CURRENT_SCHEMA_VERSION)
 
             assertEquals(countsBefore, TABLES.associateWith { driver.scalarLong("SELECT COUNT(*) FROM $it") })
             assertEquals(paisaBefore, PAISA_VALUES.associateWith { driver.scalarLong(it.sql) })
@@ -38,6 +38,45 @@ class PilotSchemaMigrationTest {
             assertEquals(0L, driver.scalarLong("SELECT COUNT(slip_no) FROM sellEntryEntity"))
             assertEquals(0L, driver.scalarLong("SELECT COUNT(slip_no) FROM lendEntryEntity"))
             assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_party_shop_phone'"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(gstin) FROM partyEntity"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(mandi_license) FROM partyEntity"))
+        } finally {
+            driver.close()
+            database.deleteIfExists()
+        }
+    }
+
+    @Test
+    fun versionSevenSnapshotAddsNullablePartyTaxFieldsWithoutDataLoss() {
+        val snapshot = committedSnapshot(7)
+        val database = Files.createTempFile("mandisamiti-v7-", ".db")
+        Files.copy(snapshot, database, StandardCopyOption.REPLACE_EXISTING)
+        val driver = JdbcSqliteDriver("jdbc:sqlite:${database.toAbsolutePath()}")
+
+        try {
+            driver.execute(
+                null,
+                """INSERT INTO shopProfileEntity
+                    (id, shop_name, owner_name, mandi_name, phone_number, pin_hash, created_at, updated_at)
+                    VALUES ('shop-tax', 'Shop', 'Owner', 'Mandi', '9000000000', 'hash', 1, 1)""".trimIndent(),
+                0
+            )
+            driver.execute(
+                null,
+                """INSERT INTO partyEntity
+                    (id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri,
+                     created_at, updated_at, is_deleted, sync_status)
+                    VALUES ('party-tax', 'shop-tax', 'Party', '9111111111', 'Village', 'BUYER', 1.5,
+                            'photo', 2, 3, 0, 1)""".trimIndent(),
+                0
+            )
+
+            AppDatabase.Schema.migrate(driver, 7, CURRENT_SCHEMA_VERSION)
+
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM partyEntity WHERE id = 'party-tax'"))
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM partyEntity WHERE name = 'Party' AND village = 'Village'"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(gstin) FROM partyEntity WHERE id = 'party-tax'"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(mandi_license) FROM partyEntity WHERE id = 'party-tax'"))
         } finally {
             driver.close()
             database.deleteIfExists()
@@ -45,9 +84,13 @@ class PilotSchemaMigrationTest {
     }
 
     private fun committedV1Snapshot(): Path {
-        val relative = Path.of("src/commonMain/sqldelight/databases/1.db")
+        return committedSnapshot(1)
+    }
+
+    private fun committedSnapshot(version: Int): Path {
+        val relative = Path.of("src/commonMain/sqldelight/databases/$version.db")
         val snapshot = listOf(relative, Path.of("core-database").resolve(relative)).firstOrNull(Files::isRegularFile)
-        assertNotNull(snapshot, "Committed SQLDelight snapshot 1.db is missing")
+        assertNotNull(snapshot, "Committed SQLDelight snapshot $version.db is missing")
         return snapshot
     }
 
@@ -121,7 +164,7 @@ class PilotSchemaMigrationTest {
 
     private companion object {
         const val PRE_PILOT_VERSION = 6L
-        const val PILOT_BASELINE_VERSION = 7L
+        const val CURRENT_SCHEMA_VERSION = 8L
 
         val TABLES = listOf(
             "shopProfileEntity",

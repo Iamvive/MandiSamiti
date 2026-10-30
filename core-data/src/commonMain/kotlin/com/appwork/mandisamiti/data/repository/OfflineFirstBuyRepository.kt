@@ -51,6 +51,8 @@ class OfflineFirstBuyRepository(
                     party_type = "FARMER",
                     monthly_interest_rate = null,
                     photo_uri = null,
+                    gstin = null,
+                    mandi_license = null,
                     created_at = created.createdAt,
                     updated_at = created.updatedAt,
                     is_deleted = 0L,

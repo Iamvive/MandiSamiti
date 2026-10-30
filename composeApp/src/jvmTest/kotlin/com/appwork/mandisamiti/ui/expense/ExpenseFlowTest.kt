@@ -343,6 +343,8 @@ class ExpenseFlowTest {
             party_type = "FARMER",
             monthly_interest_rate = 2.0,
             photo_uri = null,
+            gstin = null,
+            mandi_license = null,
             created_at = now,
             updated_at = now,
             is_deleted = 0L,

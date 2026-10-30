@@ -30,6 +30,7 @@ class BuyEntryRepositoryTest {
         db.appDatabaseQueries.insertParty(
             id = "farmer-1", shop_id = "shop", name = "रामवीर सिंह", village = null, phone = null,
             party_type = PartyType.FARMER.name, monthly_interest_rate = null, photo_uri = null,
+            gstin = null, mandi_license = null,
             created_at = 1_000L, updated_at = 1_000L, is_deleted = 0L, sync_status = 0L,
         )
     }

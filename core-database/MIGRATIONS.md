@@ -1,6 +1,6 @@
 # SQLDelight migrations
 
-The pilot baseline is schema version 7. `1.db` is the committed version-1 snapshot, and `1.sqm` through `6.sqm` upgrade it to the baseline without deleting data.
+The pilot baseline was schema version 7. Schema version 8 adds nullable party GSTIN and mandi licence columns through `7.sqm`. The committed snapshots allow direct upgrade tests from versions 1 and 7.
 
 For every schema change:
 

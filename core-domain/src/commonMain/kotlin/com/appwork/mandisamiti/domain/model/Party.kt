@@ -20,7 +20,9 @@ data class Party(
     val createdAt: Long,
     val updatedAt: Long,
     val isDeleted: Boolean = false,
-    val syncStatus: Int = 0
+    val syncStatus: Int = 0,
+    val gstin: String? = null,
+    val mandiLicense: String? = null
 )
 
 class DuplicatePhoneException(val existing: Party) :
