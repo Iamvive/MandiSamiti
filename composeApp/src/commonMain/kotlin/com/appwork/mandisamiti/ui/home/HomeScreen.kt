@@ -170,12 +170,7 @@ fun HomeScreen(
                             onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
                             onFilterSelected = { viewModel.onFilterSelected(it) },
                             onPartyClick = onNavigateToPartyKhata,
-                            onCreateParty = { name, village, phone, type ->
-                                coroutineScope.launch {
-                                    val newParty = viewModel.createParty(name, village, phone, type)
-                                    onNavigateToPartyKhata(newParty)
-                                }
-                            },
+                            onCreateParty = viewModel::createParty,
                             onNavigateToStockSheet = onNavigateToStockSheet,
                             isEnglish = uiState.isEnglish
                         )

@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.DuplicatePhoneException
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
@@ -67,6 +69,7 @@ import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
+import kotlinx.coroutines.launch
 
 @Composable
 fun KhataLedgerTabScreen(
@@ -74,7 +77,7 @@ fun KhataLedgerTabScreen(
     onSearchQueryChanged: (String) -> Unit,
     onFilterSelected: (PartyFilter) -> Unit,
     onPartyClick: (Party) -> Unit,
-    onCreateParty: (name: String, village: String?, phone: String?, type: PartyType) -> Unit,
+    onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType) -> Party,
     onNavigateToStockSheet: () -> Unit = {},
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
@@ -84,6 +87,8 @@ fun KhataLedgerTabScreen(
     var partyVillageInput by remember { mutableStateOf("") }
     var partyPhoneInput by remember { mutableStateOf("") }
     var selectedPartyType by remember { mutableStateOf(PartyType.FARMER) }
+    var duplicateParty by remember { mutableStateOf<Party?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         floatingActionButton = {
@@ -253,6 +258,7 @@ fun KhataLedgerTabScreen(
                 PartyCard(
                     party = partyWithBalance.party,
                     balancePaisa = partyWithBalance.balancePaisa,
+                    isEnglish = isEnglish,
                     onClick = { onPartyClick(partyWithBalance.party) }
                 )
             }
@@ -335,8 +341,11 @@ fun KhataLedgerTabScreen(
                     val phoneInvalid = !isValidPartyPhone(partyPhoneInput)
                     OutlinedTextField(
                         value = partyPhoneInput,
-                        onValueChange = { partyPhoneInput = sanitizePartyPhone(it) },
-                        label = { Text(if (isEnglish) "Mobile Number" else "मोबाइल नंबर (वैकल्पिक)") },
+                        onValueChange = {
+                            partyPhoneInput = sanitizePartyPhone(it)
+                            duplicateParty = null
+                        },
+                        label = { Text(if (isEnglish) "Mobile Number *" else "मोबाइल नंबर *") },
                         isError = phoneInvalid,
                         supportingText = if (phoneInvalid) {
                             { Text(if (isEnglish) "Enter a 10-digit mobile number" else "10 अंकों का मोबाइल नंबर डालें (6–9 से शुरू)") }
@@ -345,6 +354,27 @@ fun KhataLedgerTabScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    duplicateParty?.let { existing ->
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = if (isEnglish) {
+                                    "This number already belongs to ${existing.name}${existing.village?.let { ", $it" } ?: ""}"
+                                } else {
+                                    "यह नंबर पहले से ${existing.name}${existing.village?.let { ", $it" } ?: ""} के नाम पर है"
+                                },
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 13.sp,
+                            )
+                            TextButton(onClick = {
+                                showAddPartyDialog = false
+                                duplicateParty = null
+                                onPartyClick(existing)
+                            }) {
+                                Text(if (isEnglish) "Open account" else "खाता खोलें")
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -352,16 +382,23 @@ fun KhataLedgerTabScreen(
                     onClick = {
                         val trimmedName = partyNameInput.trim()
                         if (trimmedName.isNotBlank() && isValidPartyPhone(partyPhoneInput)) {
-                            onCreateParty(
-                                trimmedName,
-                                partyVillageInput.trim().ifBlank { null },
-                                partyPhoneInput.trim().ifBlank { null },
-                                selectedPartyType
-                            )
-                            showAddPartyDialog = false
-                            partyNameInput = ""
-                            partyVillageInput = ""
-                            partyPhoneInput = ""
+                            coroutineScope.launch {
+                                try {
+                                    val created = onCreateParty(
+                                        trimmedName,
+                                        partyVillageInput.trim().ifBlank { null },
+                                        partyPhoneInput,
+                                        selectedPartyType
+                                    )
+                                    showAddPartyDialog = false
+                                    partyNameInput = ""
+                                    partyVillageInput = ""
+                                    partyPhoneInput = ""
+                                    onPartyClick(created)
+                                } catch (duplicate: DuplicatePhoneException) {
+                                    duplicateParty = duplicate.existing
+                                }
+                            }
                         }
                     },
                     enabled = partyNameInput.trim().isNotBlank() && isValidPartyPhone(partyPhoneInput),

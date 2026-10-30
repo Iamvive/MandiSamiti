@@ -36,6 +36,8 @@ import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
+import com.appwork.mandisamiti.domain.model.receiptDateTime
+import com.appwork.mandisamiti.domain.model.slipLabel
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +47,9 @@ fun SellTransactionReceiptScreen(
     onBack: () -> Unit,
     entry: SellEntry? = null,
     buyerName: String = "खरीदार",
+    shopName: String = "",
+    mandiName: String = "",
+    partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -125,14 +130,18 @@ fun SellTransactionReceiptScreen(
                             }
                         }
 
+                        if (shopName.isNotBlank()) ReceiptLine("दुकान", shopName, isBold = true)
+                        if (mandiName.isNotBlank()) ReceiptLine("मंडी", mandiName)
+                        ReceiptLine("दिनांक / समय", receiptDateTime(entry.entryDate))
                         ReceiptLine(
                             if (entry.partyKind == SellPartyKind.MERCHANT) "व्यापारी नाम" else "ग्राहक नाम",
-                            entry.buyerId.ifBlank { buyerName }
+                            buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry.buyerId.ifBlank { "खरीदार" }
                         )
                         if (!phoneNum.isNullOrBlank()) {
                             ReceiptLine("मोबाइल नंबर", phoneNum)
                         }
-                        ReceiptLine("बिल क्रमांक", "#${entry.invoiceNumber ?: entry.id.takeLast(6)}")
+                        if (!partyVillage.isNullOrBlank()) ReceiptLine("गाँव", partyVillage)
+                        ReceiptLine("बिल क्रमांक", "#${slipLabel(entry.slipNo, entry.id)}")
 
                         val gstin = entry.gstin
                         if (!gstin.isNullOrBlank()) {
@@ -244,8 +253,8 @@ fun buildSellBillText(entry: SellEntry, buyerName: String): String {
 
     return """
 *$title*
-बिल #: ${entry.invoiceNumber ?: entry.id.takeLast(6)}
-क्रेता: ${entry.buyerId.ifBlank { buyerName }}
+बिल #: ${slipLabel(entry.slipNo, entry.id)}
+क्रेता: ${buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry.buyerId.ifBlank { "खरीदार" }}
 ${if (!entry.gstin.isNullOrBlank()) "GSTIN: ${entry.gstin}\n" else ""}--------------------
 $lotsText
 --------------------

@@ -135,8 +135,8 @@ class DealEntryViewModel(
 
         partyRepository.getPartiesStream(shopId)
             .onEach { parties ->
-                val farmers = parties.filter { it.partyType == PartyType.FARMER }
-                val buyers = parties.filter { it.partyType == PartyType.BUYER }
+                val farmers = parties
+                val buyers = parties
                 _uiState.value = _uiState.value.copy(
                     availableFarmers = farmers,
                     availableBuyers = buyers,

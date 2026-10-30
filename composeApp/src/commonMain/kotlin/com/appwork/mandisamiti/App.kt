@@ -369,7 +369,8 @@ fun App(
                     },
                     onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) },
                     onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
-                    onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) }
+                    onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                 )
             }
 
@@ -462,12 +463,19 @@ fun App(
             is Screen.BuyReceipt -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
+                var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+                val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
                 LaunchedEffect(screen.id) {
                     buyEntry = buyRepo.getBuyEntryById(screen.id)
+                    receiptParty = buyEntry?.farmerId?.let { partyRepo.getPartyById(it) }
                 }
                 BuyTransactionReceiptScreen(
                     id = screen.id,
                     entry = buyEntry,
+                    farmerName = receiptParty?.name ?: buyEntry?.farmerId.orEmpty(),
+                    shopName = receiptShop?.shopName.orEmpty(),
+                    mandiName = receiptShop?.mandiName.orEmpty(),
+                    partyVillage = receiptParty?.village,
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
                     onBack = { currentScreen = screen.backTarget() }
                 )
@@ -520,12 +528,19 @@ fun App(
             is Screen.SellReceipt -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 var sellEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.SellEntry?>(null) }
+                var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+                val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
                 LaunchedEffect(screen.id) {
                     sellEntry = sellRepo.getSellEntryById(screen.id)
+                    receiptParty = sellEntry?.buyerId?.let { partyRepo.getPartyById(it) }
                 }
                 SellTransactionReceiptScreen(
                     id = screen.id,
                     entry = sellEntry,
+                    buyerName = receiptParty?.name ?: sellEntry?.buyerId.orEmpty(),
+                    shopName = receiptShop?.shopName.orEmpty(),
+                    mandiName = receiptShop?.mandiName.orEmpty(),
+                    partyVillage = receiptParty?.village,
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
                     onBack = { currentScreen = screen.backTarget() }
                 )

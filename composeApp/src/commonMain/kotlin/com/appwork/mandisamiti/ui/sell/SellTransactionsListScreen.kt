@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.SellEntry
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
@@ -180,7 +181,7 @@ private fun SellEntryCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "बिल #${entry.invoiceNumber ?: entry.id.takeLast(6)}",
+                        text = "बिल #${slipLabel(entry.slipNo, entry.id)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

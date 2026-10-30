@@ -60,6 +60,7 @@ import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.VoidReason
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.util.LendDateFormatter
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
@@ -268,6 +269,11 @@ private fun LendCard(
             }
 
             if (isMoney) {
+                Text(
+                    text = "उधार #${slipLabel(entry.slipNo, entry.id)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(
                     text = "उधार राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.amountPaisa)}",
                     style = MaterialTheme.typography.titleSmall,

@@ -14,8 +14,8 @@ class PartyPhoneTest {
     }
 
     @Test
-    fun emptyPhoneIsAllowedOtherwiseTenDigitsStartingSixToNine() {
-        assertTrue(isValidPartyPhone(""))
+    fun phoneIsRequiredAndMustBeTenDigitsStartingSixToNine() {
+        assertFalse(isValidPartyPhone(""))
         assertTrue(isValidPartyPhone("9876543210"))
         assertTrue(isValidPartyPhone("6000000000"))
         assertFalse(isValidPartyPhone("987654321"))

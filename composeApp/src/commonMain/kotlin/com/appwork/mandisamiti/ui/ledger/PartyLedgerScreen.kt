@@ -67,7 +67,9 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
+import com.appwork.mandisamiti.ui.components.PhoneNeededBadge
 import com.appwork.mandisamiti.ui.theme.MandiAccent
 import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
@@ -102,7 +104,8 @@ fun PartyLedgerScreen(
     onShareWhatsAppReceipt: (String) -> Unit,
     onEditDeal: (String) -> Unit = {},
     onOpenBuyReceipt: (String) -> Unit = {},
-    onOpenSellReceipt: (String) -> Unit = {}
+    onOpenSellReceipt: (String) -> Unit = {},
+    isEnglish: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val party = uiState.party
@@ -154,6 +157,12 @@ fun PartyLedgerScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            if (party?.phone == null) {
+                PhoneNeededBadge(
+                    isEnglish = isEnglish,
+                    modifier = Modifier.padding(start = 14.dp, top = 10.dp),
+                )
+            }
             // Running Balance Hero Banner
             val isReceivable = uiState.balancePaisa > 0
             val isPayable = uiState.balancePaisa < 0
@@ -1017,7 +1026,6 @@ private fun FintechBuyCard(
     val weightText = "${MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)} क्विंटल"
     val rateText = "₹${MandiMathEngine.paisaToRupeesString(buy.ratePaisaPerQuintal)}/क्विंटल"
     val netRupees = MandiMathEngine.paisaToRupeesString(buy.netPayablePaisa)
-    val slipNumber = buy.slipNumber
 
     Box(
         modifier = Modifier
@@ -1051,7 +1059,7 @@ private fun FintechBuyCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (!slipNumber.isNullOrBlank()) "खरीद पर्ची #$slipNumber" else "खरीद #${buy.id.takeLast(5)}",
+                        text = "खरीद पर्ची #${slipLabel(buy.slipNo, buy.id)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
@@ -1117,7 +1125,6 @@ private fun FintechSellCard(
     val weightText = "${MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)} क्विंटल"
     val rateText = "₹${MandiMathEngine.paisaToRupeesString(sell.ratePaisaPerQuintal)}/क्विंटल"
     val grossRupees = MandiMathEngine.paisaToRupeesString(sell.totalReceivablePaisa)
-    val invoiceNumber = sell.invoiceNumber
 
     Box(
         modifier = Modifier
@@ -1151,7 +1158,7 @@ private fun FintechSellCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (!invoiceNumber.isNullOrBlank()) "बिक्री पर्ची #$invoiceNumber" else "बिक्री #${sell.id.takeLast(5)}",
+                        text = "बिक्री पर्ची #${slipLabel(sell.slipNo, sell.id)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
@@ -1246,7 +1253,7 @@ private fun FintechLendCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (isAdvanceGiven) "उधारी / पेशगी #${lend.id.takeLast(5)}" else "बोरी उधारी #${lend.id.takeLast(5)}",
+                        text = if (isAdvanceGiven) "उधार #${slipLabel(lend.slipNo, lend.id)}" else "बोरी उधार #${slipLabel(lend.slipNo, lend.id)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary

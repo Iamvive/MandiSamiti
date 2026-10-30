@@ -176,7 +176,7 @@ class HomeViewModelTest {
             onLocalWrite = { writes++ }
         )
 
-        viewModel.createParty("रामवीर", null, null, PartyType.FARMER)
+        viewModel.createParty("रामवीर", null, "9876543210", PartyType.FARMER)
 
         assertEquals(1, writes)
     }
@@ -194,7 +194,7 @@ class HomeViewModelTest {
         )
 
         kotlin.test.assertFailsWith<IllegalArgumentException> {
-            viewModel.createParty("रामवीर", null, "98765432101234567", PartyType.FARMER)
+            viewModel.createParty("रामवीर", null, "98765", PartyType.FARMER)
         }
         assertEquals(0, database.appDatabaseQueries.getAllParties("srv-shop").executeAsList().size)
     }

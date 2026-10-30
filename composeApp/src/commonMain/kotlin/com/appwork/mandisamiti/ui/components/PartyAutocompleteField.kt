@@ -57,12 +57,11 @@ fun PartyAutocompleteField(
     var expanded by remember { mutableStateOf(false) }
     val query = value.trim()
 
-    val matches = remember(parties, query, partyType) {
+    val matches = remember(parties, query) {
         if (query.isEmpty()) {
             emptyList()
         } else {
             parties.filter { p ->
-                (partyType == null || p.partyType == partyType) &&
                 (p.name.contains(query, ignoreCase = true) ||
                  (p.village?.contains(query, ignoreCase = true) == true) ||
                  (p.phone?.contains(query) == true))

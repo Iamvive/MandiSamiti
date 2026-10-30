@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.receiptDateTime
+import com.appwork.mandisamiti.domain.model.slipLabel
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,10 +48,15 @@ fun BuyTransactionReceiptScreen(
     onBack: () -> Unit,
     entry: BuyEntry? = null,
     farmerName: String = "किसान",
+    shopName: String = "",
+    mandiName: String = "",
+    partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val displayName = entry?.farmerId?.takeIf { it.isNotBlank() } ?: farmerName
+    val displayName = farmerName.takeIf { it.isNotBlank() && it != "किसान" }
+        ?: entry?.farmerId?.takeIf { it.isNotBlank() }
+        ?: "किसान"
     val lots = entry?.let { extractLots(it) } ?: emptyList()
     val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots) } ?: ""
 
@@ -110,16 +117,19 @@ fun BuyTransactionReceiptScreen(
                             }
                         }
 
+                        if (shopName.isNotBlank()) ReceiptLine("दुकान", shopName, isBold = true)
+                        if (mandiName.isNotBlank()) ReceiptLine("मंडी", mandiName)
+                        ReceiptLine("दिनांक / समय", receiptDateTime(entry.entryDate))
                         ReceiptLine("किसान नाम", displayName, isBold = true)
                         val phoneNum = entry.vehicleNumber
                         if (!phoneNum.isNullOrBlank()) {
                             ReceiptLine("मोबाइल नंबर", phoneNum)
                         }
-                        val village = extractVillage(entry.remarks)
+                        val village = partyVillage ?: extractVillage(entry.remarks)
                         if (!village.isNullOrBlank()) {
                             ReceiptLine("गाँव", village)
                         }
-                        ReceiptLine("पर्चा क्रमांक", "#${entry.slipNumber ?: entry.id.takeLast(6)}")
+                        ReceiptLine("पर्चा क्रमांक", "#${slipLabel(entry.slipNo, entry.id)}")
 
                         // Multi-crop lots section
                         if (lots.isNotEmpty()) {
@@ -197,7 +207,7 @@ private fun extractLots(entry: BuyEntry): List<BuyCropLot> {
 
 fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropLot> = emptyList()): String = buildString {
     appendLine("*किसान खरीद पर्चा*")
-    appendLine("पर्चा #: ${entry.slipNumber ?: entry.id.takeLast(6)}")
+    appendLine("पर्चा #: ${slipLabel(entry.slipNo, entry.id)}")
     appendLine("किसान: $farmerName")
     val village = extractVillage(entry.remarks)
     if (!village.isNullOrBlank()) {
