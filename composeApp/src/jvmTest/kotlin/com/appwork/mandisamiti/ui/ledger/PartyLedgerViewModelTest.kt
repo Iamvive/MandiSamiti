@@ -15,6 +15,7 @@ import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -313,4 +314,45 @@ class PartyLedgerViewModelTest {
         assertEquals(1, settlements.size)
         assertEquals(500_000L, settlements.first().amountPaisa)
     }
+
+    @Test
+    fun repayLoanWritesPrincipalAndInterestRowsAndReportsBoth() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "Kailash", village = "Nagla", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "lend-2", shopId = "shop-1", partyId = "farmer-1",
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                entryDate = 1000L, amountPaisa = 1_000_000L, createdAt = 1000L, updatedAt = 1000L
+            )
+        )
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1", partyId = "farmer-1", partyRepository = partyRepo, cashRepository = cashRepo,
+            dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            lendRepository = lendRepo, viewModelScope = backgroundScope
+        )
+        viewModel.uiState.first { it.openLoans.isNotEmpty() }
+
+        val event = async { viewModel.events.first() }
+        viewModel.repayLoan("lend-2", paymentPaisa = 120_000L, interestPaisa = 20_000L, calculatedInterestPaisa = 20_000L)
+
+        val recorded = event.await() as PartyLedgerEvent.TransactionRecorded
+        assertTrue("200" in recorded.speechText, recorded.speechText)
+        assertTrue("1000" in recorded.speechText || "1,000" in recorded.speechText, recorded.speechText)
+
+        val s = lendRepo.getSettlements("lend-2").single()
+        assertEquals(100_000L, s.principalPaisa)
+        assertEquals(20_000L, s.interestPaisa)
+        val state = viewModel.uiState.first { it.openLoans.firstOrNull()?.outstandingPaisa == 900_000L }
+        assertEquals(900_000L, state.openLoans.single().outstandingPaisa)
+    }
 }
+
