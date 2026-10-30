@@ -1,6 +1,6 @@
 # Pilot install checklist (shop, by cable)
 
-APK: `exports/mandisamiti-pilot-debug.apk` (Vivek-K repo root). Built from MandiSamiti `a62462d` (shop-sheet math, buyer GSTIN and licence fields). Server: staging, `http://64.227.142.180:8060`.
+APK: `exports/mandisamiti-pilot-debug.apk` (Vivek-K repo root). Built from MandiSamiti `ea045fc` (shop-sheet math, buyer GSTIN and licence fields). Server: staging, `http://64.227.142.180:8060`.
 The login code (static OTP) is in the private env file on the VPS. Ask Claude to show it in that message; it is not written here.
 
 ## Before you leave
