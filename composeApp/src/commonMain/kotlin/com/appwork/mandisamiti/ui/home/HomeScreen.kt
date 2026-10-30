@@ -140,7 +140,7 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .background(MandiBackground)
         ) {
-            if (needsLogin) ReLoginBanner(onReLogin)
+            if (needsLogin) ReLoginBanner(onReLogin, isEnglish = uiState.isEnglish)
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (uiState.currentTab) {
                     NavigationTab.DASHBOARD -> {
@@ -214,7 +214,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ReLoginBanner(onReLogin: () -> Unit) {
+private fun ReLoginBanner(onReLogin: () -> Unit, isEnglish: Boolean = false) {
     // Theme-aware colours (not the static light Mandi* aliases) so the banner is readable in dark mode too.
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(12.dp)
@@ -237,13 +237,13 @@ private fun ReLoginBanner(onReLogin: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
-                text = "दोबारा लॉगिन करें",
+                text = if (isEnglish) "Log in again" else "दोबारा लॉगिन करें",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = colors.onSurface
             )
             Text(
-                text = "आपकी एंट्री फ़ोन में सुरक्षित हैं",
+                text = if (isEnglish) "Your entries are safe on this phone" else "आपकी एंट्री फ़ोन में सुरक्षित हैं",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.onSurfaceVariant
             )
@@ -258,7 +258,7 @@ private fun ReLoginBanner(onReLogin: () -> Unit) {
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(
-                text = "लॉगिन करें",
+                text = if (isEnglish) "Log in" else "लॉगिन करें",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
