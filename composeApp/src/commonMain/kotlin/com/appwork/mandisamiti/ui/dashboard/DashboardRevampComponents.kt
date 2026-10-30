@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
@@ -34,10 +35,10 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.StockLine
 
 object DashboardStrings {
-    fun kpiPurchases(isEnglish: Boolean) = if (isEnglish) "Total Purchases (All-time)" else "कुल खरीद (अब तक)"
-    fun kpiSales(isEnglish: Boolean) = if (isEnglish) "Total Sales (All-time)" else "कुल बिक्री (अब तक)"
-    fun kpiOutstanding(isEnglish: Boolean) = if (isEnglish) "Total Outstanding (All-time)" else "कुल उधार (अब तक)"
-    fun kpiExpenses(isEnglish: Boolean) = if (isEnglish) "Total Expenses (All-time)" else "कुल खर्च (अब तक)"
+    fun kpiPurchases(isEnglish: Boolean) = if (isEnglish) "Purchases (All-time)" else "कुल खरीद (अब तक)"
+    fun kpiSales(isEnglish: Boolean) = if (isEnglish) "Sales (All-time)" else "कुल बिक्री (अब तक)"
+    fun kpiOutstanding(isEnglish: Boolean) = if (isEnglish) "Outstanding (All-time)" else "कुल उधार (अब तक)"
+    fun kpiExpenses(isEnglish: Boolean) = if (isEnglish) "Expenses (All-time)" else "कुल खर्च (अब तक)"
     fun profitLossNetLoss(isEnglish: Boolean) = if (isEnglish) "Estimated Net Loss" else "अनुमानित शुद्ध हानि (Loss)"
     fun profitLossNetProfit(isEnglish: Boolean) = if (isEnglish) "Estimated Net Profit" else "अनुमानित शुद्ध लाभ (Profit)"
     fun godownTitle(isEnglish: Boolean) = if (isEnglish) "Godown Stock" else "गोदाम स्टॉक (Godown Stock)"
@@ -131,7 +132,9 @@ private fun KpiCard(
                 text = label,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = if (showExact) "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}"

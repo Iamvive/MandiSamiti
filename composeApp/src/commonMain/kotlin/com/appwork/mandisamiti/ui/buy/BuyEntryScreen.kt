@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
@@ -207,7 +208,7 @@ fun BuyEntryScreen(
                         OutlinedTextField(
                             value = formState.phone,
                             onValueChange = { formState.updatePhone(it) },
-                            label = { Text(if (isEnglish) "Mobile Number (Optional)" else "मोबाइल नंबर (वैकल्पिक)") },
+                            label = { FieldLabel(if (isEnglish) "Mobile (Optional)" else "मोबाइल नंबर (वैकल्पिक)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                             isError = formState.phone.isNotEmpty() && !phoneVal.isValid,
                             supportingText = {
@@ -221,7 +222,7 @@ fun BuyEntryScreen(
                         OutlinedTextField(
                             value = formState.village,
                             onValueChange = { formState.village = it },
-                            label = { Text(if (isEnglish) "Village (Optional)" else "गाँव (वैकल्पिक)") },
+                            label = { FieldLabel(if (isEnglish) "Village (Optional)" else "गाँव (वैकल्पिक)") },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.weight(1f)
                         )
@@ -311,7 +312,7 @@ fun BuyEntryScreen(
                         OutlinedTextField(
                             value = lot.cropName,
                             onValueChange = { lot.cropName = it },
-                            label = { Text(if (isEnglish) "Crop / Variety Name" else "जिंस / फसल वैरायटी") },
+                            label = { FieldLabel(if (isEnglish) "Crop / Variety Name" else "जिंस / फसल वैरायटी") },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -320,7 +321,7 @@ fun BuyEntryScreen(
                             OutlinedTextField(
                                 value = lot.bags,
                                 onValueChange = { lot.bags = it.filter { ch -> ch.isDigit() } },
-                                label = { Text(if (isEnglish) "Bags Count *" else "बोरी संख्या *") },
+                                label = { FieldLabel(if (isEnglish) "Bags Count *" else "बोरी संख्या *") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 isError = lot.bags.isNotEmpty() && lotVal.bagsError != null,
                                 supportingText = {
@@ -333,7 +334,7 @@ fun BuyEntryScreen(
                             OutlinedTextField(
                                 value = lot.weightPerBagKg,
                                 onValueChange = { lot.weightPerBagKg = it },
-                                label = { Text(if (isEnglish) "Weight/Bag (kg)" else "वजन/बोरी (किग्रा)") },
+                                label = { FieldLabel(if (isEnglish) "Weight/Bag (kg)" else "वजन/बोरी (किग्रा)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = lot.weightPerBagKg.isNotEmpty() && lotVal.weightError != null,
                                 modifier = Modifier.weight(1f)
@@ -344,14 +345,14 @@ fun BuyEntryScreen(
                             OutlinedTextField(
                                 value = lot.extraWeightKg,
                                 onValueChange = { lot.extraWeightKg = it },
-                                label = { Text(if (isEnglish) "Extra Weight (kg)" else "अतिरिक्त वजन (किग्रा)") },
+                                label = { FieldLabel(if (isEnglish) "Extra Weight (kg)" else "अतिरिक्त वजन (किग्रा)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = lot.ratePerQuintal,
                                 onValueChange = { lot.ratePerQuintal = it },
-                                label = { Text(if (isEnglish) "Rate (₹/qtl) *" else "भाव (रु/क्विंटल) *") },
+                                label = { FieldLabel(if (isEnglish) "Rate (₹/qtl) *" else "भाव (रु/क्विंटल) *") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null,
                                 supportingText = {
@@ -435,7 +436,7 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.commissionPercent,
                     onValueChange = { formState.commissionPercent = it },
-                    label = { Text(if (isEnglish) "Commission %" else "कमीशन %") },
+                    label = { FieldLabel(if (isEnglish) "Commission %" else "कमीशन %") },
                     supportingText = if (formState.commissionPercent != defaultComm) {
                         { Text(if (isEnglish) "Changed from default ($defaultComm%)" else "डिफ़ॉल्ट से बदला गया ($defaultComm%)", color = MandiAmberDark, fontSize = 11.sp) }
                     } else null,
@@ -445,7 +446,7 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.labourPerBag,
                     onValueChange = { formState.labourPerBag = it },
-                    label = { Text(if (isEnglish) "Labour (₹/bag)" else "मजदूरी (रु/बोरी)") },
+                    label = { FieldLabel(if (isEnglish) "Labour (₹/bag)" else "मजदूरी (रु/बोरी)") },
                     supportingText = if (formState.labourPerBag != defaultLabour) {
                         { Text(if (isEnglish) "Changed from default (₹$defaultLabour)" else "डिफ़ॉल्ट से बदला गया (₹$defaultLabour)", color = MandiAmberDark, fontSize = 11.sp) }
                     } else null,
@@ -458,7 +459,7 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.tareQuintals,
                     onValueChange = { formState.tareQuintals = it },
-                    label = { Text(if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)") },
+                    label = { FieldLabel(if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)") },
                     placeholder = { Text("0") },
                     supportingText = if (formState.tareQuintals != defaultTare) {
                         { Text(if (isEnglish) "Changed from default (${defaultTare.ifBlank { "0" }} qtl)" else "डिफ़ॉल्ट से बदला गया (${defaultTare.ifBlank { "0" }} qtl)", color = MandiAmberDark, fontSize = 11.sp) }
@@ -469,7 +470,7 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.advancePaid,
                     onValueChange = { formState.advancePaid = it },
-                    label = { Text(if (isEnglish) "Advance Paid (₹)" else "अग्रिम / पेशगी (रु)") },
+                    label = { FieldLabel(if (isEnglish) "Advance Paid (₹)" else "अग्रिम / पेशगी (रु)") },
                     placeholder = { Text("0") },
                     supportingText = { Text(if (isEnglish) "Optional" else "वैकल्पिक") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
@@ -708,3 +709,7 @@ private fun SummaryRow(label: String, value: String, isHighlight: Boolean = fals
         )
     }
 }
+
+/** Single-line label so half-width fields keep equal heights when English text is longer than Hindi. */
+@Composable
+private fun FieldLabel(text: String) = Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
