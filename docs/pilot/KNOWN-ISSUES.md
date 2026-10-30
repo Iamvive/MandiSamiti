@@ -12,10 +12,12 @@
 
 ## Security gaps accepted for the pilot
 - No phone allow-list on login: anyone with the static code and a phone number can log in. Keep the code private.
+- Static OTP code length: client UI (`RegisterViewModel.kt`) and backend Pydantic schema (`VerifyOtpRequest`) enforce exactly 6 digits. Staging env code must be 6 digits, not 8.
 - `config.py` defaults `OTP_STATIC_CODE` to `123456` if the env var is unset. Staging sets it; any new environment must too.
 - Old secrets stay in public git history (rotated, history not rewritten).
 
 ## Technical debt
+- Pre-pilot upgrade crash (`duplicate column name: slip_no`): Upgrading over a pre-pilot build that already had `slip_no` added in SQLite fails in `6.sqm`. Clean install or `adb shell pm clear com.appwork.mandisamiti` is required for v7.
 - Unique index `idx_party_shop_phone`: the client migration fails on an old install that has two parties with the same phone.
 - B1 migration test compares table and column names only, not types or indexes.
 - Off-VPS backup (weekly Drive copy) not set up yet. Nightly on-VPS backup runs at 02:30, kept 14 days.
