@@ -26,9 +26,9 @@ rsync -avz --delete \
   --exclude '.env*' \
   "$BACKEND_DIR/" appworx-core-vps:/opt/mandisamiti-staging/
 
-# 3. Build & Recreate Staging Containers
-echo "🐳 Rebuilding Staging containers on VPS..."
-ssh appworx-core-vps "cd /opt/mandisamiti-staging && docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build"
+# 3. Build, Run Migrations & Recreate Staging Containers
+echo "🐳 Building Staging containers and applying migrations on VPS..."
+ssh appworx-core-vps "cd /opt/mandisamiti-staging && docker compose --env-file .env.staging -f docker-compose.staging.yml build && docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm api bash scripts/migrate.sh && docker compose --env-file .env.staging -f docker-compose.staging.yml up -d"
 
 # 4. Run Smoke Tests against Staging
 echo "🩺 Running live smoke tests on Staging..."
