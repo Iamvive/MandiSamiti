@@ -28,7 +28,7 @@ rsync -avz --delete \
 
 # 3. Build & Recreate Staging Containers
 echo "🐳 Rebuilding Staging containers on VPS..."
-ssh appworx-core-vps "cd /opt/mandisamiti-staging && docker compose -f docker-compose.staging.yml up -d --build"
+ssh appworx-core-vps "cd /opt/mandisamiti-staging && docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build"
 
 # 4. Run Smoke Tests against Staging
 echo "🩺 Running live smoke tests on Staging..."

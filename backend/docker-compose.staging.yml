@@ -8,11 +8,11 @@ services:
     ports:
       - "8060:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://mandi_staging_user:mandi_staging_secret_2026@db:5432/mandisamiti_staging
+      - DATABASE_URL=postgresql+asyncpg://mandi_staging_user:${POSTGRES_PASSWORD}@db:5432/mandisamiti_staging
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=mandisamiti-staging-jwt-mock-key-2026
+      - SECRET_KEY=${SECRET_KEY}
       - OTP_STATIC_ENABLED=true
-      - OTP_STATIC_CODE=123456
+      - OTP_STATIC_CODE=${OTP_STATIC_CODE}
     depends_on:
       - db
       - redis
@@ -29,7 +29,7 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=mandi_staging_user
-      - POSTGRES_PASSWORD=mandi_staging_secret_2026
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=mandisamiti_staging
     volumes:
       - mandisamiti_staging_postgres_data:/var/lib/postgresql/data
