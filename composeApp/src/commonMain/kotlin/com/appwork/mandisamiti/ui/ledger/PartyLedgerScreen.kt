@@ -127,6 +127,9 @@ fun PartyLedgerScreen(
     var repayDialogLoanId by remember { mutableStateOf<String?>(null) }
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
+    var cashEditTarget by remember { mutableStateOf<LedgerItem.CashItem?>(null) }
+    var cashEditAmount by remember { mutableStateOf("") }
+    var cashEditRemarks by remember { mutableStateOf("") }
 
     // Leaving the apply-to-loan dialog without a choice must not lose the deposit: reopen the entry form as typed.
     val backToCashDialog = {
@@ -593,6 +596,19 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (isEnglish) "The cancelled entry stays visible in the account but is removed from the totals." else "रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
+                    val remarksTag = (target as? LedgerItem.CashItem)?.transaction?.remarks.orEmpty()
+                    val isLinkedCash = remarksTag.contains("[LEND:") || remarksTag.contains("[EXPENSE:") || remarksTag.contains("[SETTLE:")
+                    if (target is LedgerItem.CashItem && !isLinkedCash) {
+                        Button(
+                            onClick = {
+                                cashEditAmount = (target.transaction.amountPaisa / 100L).toString()
+                                cashEditRemarks = target.transaction.remarks.orEmpty()
+                                cashEditTarget = target
+                                voidTarget = null
+                            },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) { Text(if (isEnglish) "Edit amount / note" else "रकम / नोट बदलें", fontSize = 16.sp) }
+                    }
                     val filteredReasons = if (target is LedgerItem.CashItem) {
                         VoidReason.entries.filter { it.appliesToCash }
                     } else {
@@ -609,6 +625,47 @@ fun PartyLedgerScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { voidTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(if (isEnglish) "Back" else "वापस", color = MandiTextSecondary)
+                }
+            }
+        )
+    }
+
+    cashEditTarget?.let { target ->
+        val newAmount = cashEditAmount.toLongOrNull() ?: 0L
+        AlertDialog(
+            onDismissRequest = { cashEditTarget = null },
+            title = { Text(if (isEnglish) "Edit entry" else "प्रविष्टि सुधारें", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = cashEditAmount,
+                        onValueChange = { cashEditAmount = it.filter(Char::isDigit) },
+                        label = { Text(if (isEnglish) "Amount (Rs)" else "रकम (Rs)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = cashEditRemarks,
+                        onValueChange = { cashEditRemarks = it },
+                        label = { Text(if (isEnglish) "Note" else "नोट") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = newAmount > 0,
+                    onClick = {
+                        viewModel.editCash(target, newAmount * 100L, cashEditRemarks.trim().ifEmpty { null })
+                        cashEditTarget = null
+                    },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) { Text(if (isEnglish) "Save" else "सेव करें") }
+            },
+            dismissButton = {
+                TextButton(onClick = { cashEditTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(if (isEnglish) "Back" else "वापस", color = MandiTextSecondary)
                 }
             }

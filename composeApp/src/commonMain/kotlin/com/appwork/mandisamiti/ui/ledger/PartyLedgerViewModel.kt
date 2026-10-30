@@ -364,6 +364,15 @@ class PartyLedgerViewModel(
         }
     }
 
+    fun editCash(item: LedgerItem.CashItem, amountPaisa: Long, remarks: String?) {
+        viewModelScope.launch {
+            val t = item.transaction
+            cashRepository.editTransaction(t.id, amountPaisa, t.paymentMode, t.transactionDate, remarks)
+            syncScheduler.scheduleOneTimeSync()
+            _events.emit(PartyLedgerEvent.TransactionRecorded("प्रविष्टि सुधारी गई"))
+        }
+    }
+
     fun voidEntry(item: LedgerItem, reason: VoidReason) {
         viewModelScope.launch {
             when (item) {

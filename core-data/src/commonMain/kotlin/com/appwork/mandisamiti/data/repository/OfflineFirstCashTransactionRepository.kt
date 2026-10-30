@@ -49,6 +49,33 @@ class OfflineFirstCashTransactionRepository(
         }
     }
 
+    override suspend fun editTransaction(
+        transactionId: String,
+        amountPaisa: Long,
+        paymentMode: PaymentMode,
+        transactionDate: Long,
+        remarks: String?
+    ) = withContext(ioDispatcher) {
+        require(amountPaisa > 0) { "Amount must be positive" }
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val current = queries.getCashTransactionById(transactionId).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Transaction $transactionId does not exist")
+            require(!current.isVoid) { "Voided transaction cannot be edited" }
+            val tagged = current.remarks.orEmpty().let {
+                it.contains("[LEND:") || it.contains("[EXPENSE:") || it.contains("[SETTLE:")
+            }
+            require(!tagged) { "Linked transaction must be edited from its lend or expense" }
+            ensureBaselineRevision(current)
+            val edited = current.copy(
+                amountPaisa = amountPaisa, paymentMode = paymentMode, transactionDate = transactionDate,
+                remarks = remarks, revision = current.revision + 1, updatedAt = now, syncStatus = 0
+            )
+            insertOrReplace(edited)
+            recordRevision(edited, "EDIT", now)
+        }
+    }
+
     override suspend fun voidTransaction(transactionId: String, reason: VoidReason) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
         database.transaction {

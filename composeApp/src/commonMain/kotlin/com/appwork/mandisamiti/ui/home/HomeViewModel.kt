@@ -39,6 +39,12 @@ enum class PartyFilter {
     PAYABLE     // 🟢 देना है
 }
 
+enum class PartyTypeFilter {
+    ALL,
+    KISAAN,  // PartyType.FARMER
+    VYAPARI  // PartyType.BUYER
+}
+
 data class PartyWithBalance(
     val party: Party,
     val balancePaisa: Long
@@ -62,6 +68,7 @@ data class HomeUiState(
     val stockLines: List<StockLine> = emptyList(),
     val searchQuery: String = "",
     val activeFilter: PartyFilter = PartyFilter.ALL,
+    val activeTypeFilter: PartyTypeFilter = PartyTypeFilter.ALL,
     val allParties: List<PartyWithBalance> = emptyList(),
     val filteredParties: List<PartyWithBalance> = emptyList(),
     val currentTab: NavigationTab = NavigationTab.DASHBOARD,
@@ -231,7 +238,7 @@ class HomeViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     allParties = partyWithBalances,
-                    filteredParties = filterList(partyWithBalances, _uiState.value.searchQuery, _uiState.value.activeFilter),
+                    filteredParties = filterList(partyWithBalances, _uiState.value.searchQuery, _uiState.value.activeFilter, _uiState.value.activeTypeFilter),
                     isLoading = false
                 )
 
@@ -259,7 +266,7 @@ class HomeViewModel(
                                     allParties = currentList,
                                     totalMarketReceivablePaisa = rec + _uiState.value.unlinkedLendAmountPaisa,
                                     totalFarmerPayablePaisa = pay,
-                                    filteredParties = filterList(currentList, _uiState.value.searchQuery, _uiState.value.activeFilter),
+                                    filteredParties = filterList(currentList, _uiState.value.searchQuery, _uiState.value.activeFilter, _uiState.value.activeTypeFilter),
                                     isLoading = false
                                 )
                             }
@@ -274,14 +281,21 @@ class HomeViewModel(
     fun onSearchQueryChanged(query: String) {
         _uiState.value = _uiState.value.copy(
             searchQuery = query,
-            filteredParties = filterList(_uiState.value.allParties, query, _uiState.value.activeFilter)
+            filteredParties = filterList(_uiState.value.allParties, query, _uiState.value.activeFilter, _uiState.value.activeTypeFilter)
         )
     }
 
     fun onFilterSelected(filter: PartyFilter) {
         _uiState.value = _uiState.value.copy(
             activeFilter = filter,
-            filteredParties = filterList(_uiState.value.allParties, _uiState.value.searchQuery, filter)
+            filteredParties = filterList(_uiState.value.allParties, _uiState.value.searchQuery, filter, _uiState.value.activeTypeFilter)
+        )
+    }
+
+    fun onTypeFilterSelected(typeFilter: PartyTypeFilter) {
+        _uiState.value = _uiState.value.copy(
+            activeTypeFilter = typeFilter,
+            filteredParties = filterList(_uiState.value.allParties, _uiState.value.searchQuery, _uiState.value.activeFilter, typeFilter)
         )
     }
 
@@ -355,33 +369,6 @@ class HomeViewModel(
         onLocalWrite()
         return updated
     }
-
-    private fun filterList(
-        list: List<PartyWithBalance>,
-        query: String,
-        filter: PartyFilter
-    ): List<PartyWithBalance> {
-        val cleanQuery = query.trim()
-        val phoneQuery = cleanQuery.filter { it.isDigit() }
-        return list.filter { item ->
-            val matchesQuery = cleanQuery.isEmpty() ||
-                    (phoneQuery.length >= 4 && item.party.phone?.contains(phoneQuery) == true) ||
-                    BilingualSearchEngine.matchesAny(
-                        cleanQuery,
-                        item.party.name,
-                        item.party.village,
-                        item.party.phone
-                    )
-
-            val matchesFilter = when (filter) {
-                PartyFilter.ALL -> true
-                PartyFilter.RECEIVABLE -> item.balancePaisa > 0
-                PartyFilter.PAYABLE -> item.balancePaisa < 0
-            }
-
-            matchesQuery && matchesFilter
-        }
-    }
 }
 
 private data class DashboardPayload(
@@ -390,3 +377,37 @@ private data class DashboardPayload(
     val lends: List<com.appwork.mandisamiti.domain.model.LendEntry>,
     val outlier: OutlierEntryInfo?
 )
+
+internal fun filterList(
+    list: List<PartyWithBalance>,
+    query: String,
+    filter: PartyFilter,
+    typeFilter: PartyTypeFilter
+): List<PartyWithBalance> {
+    val cleanQuery = query.trim()
+    val phoneQuery = cleanQuery.filter { it.isDigit() }
+    return list.filter { item ->
+        val matchesQuery = cleanQuery.isEmpty() ||
+                (phoneQuery.length >= 4 && item.party.phone?.contains(phoneQuery) == true) ||
+                BilingualSearchEngine.matchesAny(
+                    cleanQuery,
+                    item.party.name,
+                    item.party.village,
+                    item.party.phone
+                )
+
+        val matchesFilter = when (filter) {
+            PartyFilter.ALL -> true
+            PartyFilter.RECEIVABLE -> item.balancePaisa > 0
+            PartyFilter.PAYABLE -> item.balancePaisa < 0
+        }
+
+        val matchesType = when (typeFilter) {
+            PartyTypeFilter.ALL -> true
+            PartyTypeFilter.KISAAN -> item.party.partyType == PartyType.FARMER
+            PartyTypeFilter.VYAPARI -> item.party.partyType == PartyType.BUYER
+        }
+
+        matchesQuery && matchesFilter && matchesType
+    }
+}

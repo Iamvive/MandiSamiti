@@ -187,3 +187,52 @@ class LedgerAuditTest {
         assertEquals(false, original.isVoid)
     }
 }
+
+class CashEditTest {
+    private val fixedNow = Instant.parse("2026-10-31T05:30:00Z")
+    private val clock = object : Clock { override fun now() = fixedNow }
+
+    private fun cash(id: String = "c1", remarks: String? = null) = CashTransaction(
+        id = id, shopId = "shop-1", partyId = "p1", transactionType = TransactionType.JAMA_RECEIVED,
+        amountPaisa = 50_000L, transactionDate = 1_000L, remarks = remarks, createdAt = 1_000L, updatedAt = 1_000L
+    )
+
+    @Test
+    fun editChangesFieldsAndRecordsRevision() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstCashTransactionRepository(db, clock = clock)
+        repo.recordTransaction(cash())
+
+        repo.editTransaction("c1", 75_000L, com.appwork.mandisamiti.domain.model.PaymentMode.UPI, 2_000L, "fixed")
+
+        val saved = db.appDatabaseQueries.getCashTransactionById("c1").executeAsOne()
+        assertEquals(75_000L, saved.amount_paisa)
+        assertEquals("UPI", saved.payment_mode)
+        assertEquals(2_000L, saved.transaction_date)
+        assertEquals(2L, saved.revision)
+        assertEquals(0L, saved.sync_status)
+        val kinds = db.appDatabaseQueries.getRevisionsForEntry("c1").executeAsList().map { it.change_kind }
+        assertEquals(listOf("CREATE", "EDIT"), kinds)
+    }
+
+    @Test
+    fun linkedRowsAreRejected() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstCashTransactionRepository(db, clock = clock)
+        repo.recordTransaction(cash("c2", "[LEND:l1]"))
+        assertFailsWith<IllegalArgumentException> {
+            repo.editTransaction("c2", 1L, com.appwork.mandisamiti.domain.model.PaymentMode.CASH, 1L, null)
+        }
+    }
+
+    @Test
+    fun voidedRowCannotBeEdited() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstCashTransactionRepository(db, clock = clock)
+        repo.recordTransaction(cash())
+        repo.voidTransaction("c1", VoidReason.entries.first())
+        assertFailsWith<IllegalArgumentException> {
+            repo.editTransaction("c1", 1L, com.appwork.mandisamiti.domain.model.PaymentMode.CASH, 1L, null)
+        }
+    }
+}

@@ -190,6 +190,7 @@ fun HomeScreen(
                             uiState = uiState,
                             onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
                             onFilterSelected = { viewModel.onFilterSelected(it) },
+                            onTypeFilterSelected = { viewModel.onTypeFilterSelected(it) },
                             onPartyClick = onNavigateToPartyKhata,
                             onCreateParty = viewModel::createParty,
                             onUpdatePartyPhone = viewModel::updatePartyPhone,

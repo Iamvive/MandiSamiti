@@ -58,6 +58,7 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.PartyFilter
+import com.appwork.mandisamiti.ui.home.PartyTypeFilter
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
@@ -78,6 +79,7 @@ fun KhataLedgerTabScreen(
     uiState: HomeUiState,
     onSearchQueryChanged: (String) -> Unit,
     onFilterSelected: (PartyFilter) -> Unit,
+    onTypeFilterSelected: (PartyTypeFilter) -> Unit = {},
     onPartyClick: (Party) -> Unit,
     onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType, gstin: String?, mandiLicense: String?) -> Party,
     onUpdatePartyPhone: suspend (party: Party, phone: String) -> Party,
@@ -235,14 +237,43 @@ fun KhataLedgerTabScreen(
                 }
             }
 
-            // 3. Segmented Filter Chips
+            // 3a. Party type chips (Kisaan / Vyapari)
             item {
+                val kisaanCount = uiState.allParties.count { it.party.partyType == PartyType.FARMER }
+                val vyapariCount = uiState.allParties.count { it.party.partyType == PartyType.BUYER }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     KhataFilterChip(
                         label = if (isEnglish) "All (${uiState.allParties.size})" else "सभी (${uiState.allParties.size})",
+                        isSelected = uiState.activeTypeFilter == PartyTypeFilter.ALL,
+                        onClick = { onTypeFilterSelected(PartyTypeFilter.ALL) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    KhataFilterChip(
+                        label = if (isEnglish) "Kisaan ($kisaanCount)" else "किसान ($kisaanCount)",
+                        isSelected = uiState.activeTypeFilter == PartyTypeFilter.KISAAN,
+                        onClick = { onTypeFilterSelected(PartyTypeFilter.KISAAN) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    KhataFilterChip(
+                        label = if (isEnglish) "Vyapari ($vyapariCount)" else "व्यापारी ($vyapariCount)",
+                        isSelected = uiState.activeTypeFilter == PartyTypeFilter.VYAPARI,
+                        onClick = { onTypeFilterSelected(PartyTypeFilter.VYAPARI) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // 3b. Segmented Filter Chips
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    KhataFilterChip(
+                        label = if (isEnglish) "All" else "सभी",
                         isSelected = uiState.activeFilter == PartyFilter.ALL,
                         onClick = { onFilterSelected(PartyFilter.ALL) },
                         modifier = Modifier.weight(1f)
