@@ -24,6 +24,8 @@ CREATE TABLE partyEntity (
     party_type TEXT NOT NULL, -- 'FARMER' | 'BUYER'
     monthly_interest_rate REAL,
     photo_uri TEXT,
+    gstin TEXT,
+    mandi_license TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     is_deleted INTEGER NOT NULL DEFAULT 0,
@@ -326,8 +328,8 @@ getPartyByIdAny:
 SELECT * FROM partyEntity WHERE id = ?;
 
 insertParty:
-INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateParty:
 UPDATE partyEntity SET
@@ -337,6 +339,8 @@ UPDATE partyEntity SET
     party_type = ?,
     monthly_interest_rate = ?,
     photo_uri = ?,
+    gstin = ?,
+    mandi_license = ?,
     updated_at = ?,
     is_deleted = ?,
     sync_status = ?
@@ -465,26 +469,26 @@ deleteSyncedParty:
 DELETE FROM partyEntity WHERE id = ? AND sync_status = 1;
 
 insertPartyIfAbsent:
-INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 insertPartyFromServer:
-INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 backfillPartiesFromBuyEntries:
-INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
-SELECT DISTINCT farmer_id, shop_id, farmer_id, NULL, NULL, 'FARMER', NULL, NULL, entry_date, entry_date, 0, 0
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+SELECT DISTINCT farmer_id, shop_id, farmer_id, NULL, NULL, 'FARMER', NULL, NULL, NULL, NULL, entry_date, entry_date, 0, 0
 FROM buyEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND farmer_id IS NOT NULL AND farmer_id != '';
 
 backfillPartiesFromSellEntries:
-INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
-SELECT DISTINCT buyer_id, shop_id, buyer_id, NULL, NULL, 'BUYER', NULL, NULL, entry_date, entry_date, 0, 0
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+SELECT DISTINCT buyer_id, shop_id, buyer_id, NULL, NULL, 'BUYER', NULL, NULL, NULL, NULL, entry_date, entry_date, 0, 0
 FROM sellEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND buyer_id IS NOT NULL AND buyer_id != '';
 
 backfillPartiesFromLendEntries:
-INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, created_at, updated_at, is_deleted, sync_status)
-SELECT DISTINCT party_id, shop_id, party_id, NULL, NULL, 'FARMER', NULL, NULL, entry_date, entry_date, 0, 0
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+SELECT DISTINCT party_id, shop_id, party_id, NULL, NULL, 'FARMER', NULL, NULL, NULL, NULL, entry_date, entry_date, 0, 0
 FROM lendEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND party_id IS NOT NULL AND party_id != '';
 
 deleteSyncedDeal:

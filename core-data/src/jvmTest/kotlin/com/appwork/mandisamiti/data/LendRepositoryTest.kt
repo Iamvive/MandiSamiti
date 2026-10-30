@@ -65,7 +65,7 @@ class LendRepositoryTest {
     private fun seedPartyAndCommodity(db: com.appwork.mandisamiti.database.AppDatabase) {
         db.appDatabaseQueries.insertParty(
             "party", "shop", "Party", null, null, "FARMER", null, null,
-            1L, 1L, 0L, 0L,
+            null, null, 1L, 1L, 0L, 0L,
         )
         db.appDatabaseQueries.insertCommodity(
             "wheat", "shop", "गेहूं", "Wheat", "QUINTAL", 1L,
