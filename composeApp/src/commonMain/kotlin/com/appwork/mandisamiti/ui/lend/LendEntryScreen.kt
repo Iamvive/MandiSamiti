@@ -59,6 +59,7 @@ fun LendEntryScreen(
     onBack: () -> Unit,
     parties: List<Party> = emptyList(),
     lendRepository: LendRepository? = null,
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var lendType by remember { mutableStateOf(LendType.MONEY) }
@@ -104,7 +105,7 @@ fun LendEntryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("उधार दर्ज करें (Lend)") },
+                title = { Text(if (isEnglish) "Record Loan / Advance" else "उधार दर्ज करें (Lend)") },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -115,7 +116,7 @@ fun LendEntryScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = if (isEnglish) "Back" else "पीछे")
                     }
                 }
             )
@@ -129,17 +130,17 @@ fun LendEntryScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("उधार का प्रकार (Lend Type)")
+            Text(if (isEnglish) "Lend Type" else "उधार का प्रकार (Lend Type)")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = isMoney,
                     onClick = { lendType = LendType.MONEY },
-                    label = { Text("रुपये / नकद (Money)") }
+                    label = { Text(if (isEnglish) "Cash / Money" else "रुपये / नकद (Money)") }
                 )
                 FilterChip(
                     selected = !isMoney,
                     onClick = { lendType = LendType.GRAIN },
-                    label = { Text("अनाज (Grain)") }
+                    label = { Text(if (isEnglish) "Grain / Commodity" else "अनाज (Grain)") }
                 )
             }
 
@@ -149,7 +150,7 @@ fun LendEntryScreen(
                     partyPhoneOrName = it
                     selectedPartyId = null
                 },
-                label = "किसान / व्यक्ति का नाम या फोन *",
+                label = if (isEnglish) "Farmer / Person Name or Phone *" else "किसान / व्यक्ति का नाम या फोन *",
                 parties = parties,
                 onPartySelected = { selected ->
                     selectedPartyId = selected.id
@@ -163,7 +164,7 @@ fun LendEntryScreen(
                 OutlinedTextField(
                     value = amountRupees,
                     onValueChange = { amountRupees = it },
-                    label = { Text("उधार राशि (रु) *") },
+                    label = { Text(if (isEnglish) "Loan Amount (₹) *" else "उधार राशि (रु) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -171,7 +172,7 @@ fun LendEntryScreen(
                 OutlinedTextField(
                     value = commodityName,
                     onValueChange = { commodityName = it },
-                    label = { Text("जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
+                    label = { Text(if (isEnglish) "Crop / Commodity Name (e.g. Wheat, Gram) *" else "जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -179,14 +180,14 @@ fun LendEntryScreen(
                     OutlinedTextField(
                         value = bagsCount,
                         onValueChange = { bagsCount = it },
-                        label = { Text("बोरी संख्या") },
+                        label = { Text(if (isEnglish) "Bags Count" else "बोरी संख्या") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = weightKg,
                         onValueChange = { weightKg = it },
-                        label = { Text("कुल वजन (किग्रा) *") },
+                        label = { Text(if (isEnglish) "Total Weight (kg) *" else "कुल वजन (किग्रा) *") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f)
                     )
@@ -196,7 +197,7 @@ fun LendEntryScreen(
             // Return Date Chips & Date Picker
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "अपेक्षित वापसी तारीख (Return Due Date)",
+                    text = if (isEnglish) "Expected Return Date" else "अपेक्षित वापसी तारीख (Return Due Date)",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -204,7 +205,11 @@ fun LendEntryScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    val quickOptions = listOf(15 to "15 दिन", 30 to "30 दिन", 60 to "60 दिन")
+                    val quickOptions = if (isEnglish) {
+                        listOf(15 to "15 days", 30 to "30 days", 60 to "60 days")
+                    } else {
+                        listOf(15 to "15 दिन", 30 to "30 दिन", 60 to "60 दिन")
+                    }
                     quickOptions.forEach { (days, label) ->
                         FilterChip(
                             selected = selectedDaysChip == days,
@@ -226,7 +231,15 @@ fun LendEntryScreen(
                         onClick = {
                             showCustomDatePicker = true
                         },
-                        label = { Text(if (selectedDaysChip == -1 && expectedReturnMillis != null) "कस्टम चुना" else "कस्टम तारीख") }
+                        label = {
+                            Text(
+                                if (selectedDaysChip == -1 && expectedReturnMillis != null) {
+                                    if (isEnglish) "Custom Picked" else "कस्टम चुना"
+                                } else {
+                                    if (isEnglish) "Custom Date" else "कस्टम तारीख"
+                                }
+                            )
+                        }
                     )
                 }
 
@@ -249,7 +262,7 @@ fun LendEntryScreen(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("टिप्पणी / विवरण (वैकल्पिक)") },
+                label = { Text(if (isEnglish) "Notes / Details (Optional)" else "टिप्पणी / विवरण (वैकल्पिक)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -294,7 +307,7 @@ fun LendEntryScreen(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
-                Text("उधार सुरक्षित करें")
+                Text(if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें")
             }
 
             if (showDuplicateDialog && pendingEntryToSave != null) {
@@ -302,10 +315,11 @@ fun LendEntryScreen(
                 val detailStr = if (pending.lendType == LendType.MONEY) {
                     "${pending.partyId} • ₹${MandiMathEngine.formatIndianGrouping(pending.amountPaisa / 100)}"
                 } else {
-                    "${pending.partyId} • ${pending.commodityId} (${pending.bagsCount} बोरी)"
+                    val bagsSuffix = if (isEnglish) "bags" else "बोरी"
+                    "${pending.partyId} • ${pending.commodityId} (${pending.bagsCount} $bagsSuffix)"
                 }
                 DuplicateEntryDialog(
-                    message = "यह एंट्री पहले से है, फिर भी सुरक्षित करें?",
+                    message = if (isEnglish) "Duplicate entry detected. Still want to save?" else "यह एंट्री पहले से है, फिर भी सुरक्षित करें?",
                     details = detailStr,
                     onConfirm = {
                         showDuplicateDialog = false
@@ -331,12 +345,12 @@ fun LendEntryScreen(
                             selectedDaysChip = -1
                             showCustomDatePicker = false
                         }) {
-                            Text("तारीख चुनें")
+                            Text(if (isEnglish) "Select Date" else "तारीख चुनें")
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showCustomDatePicker = false }) {
-                            Text("रद्द करें")
+                            Text(if (isEnglish) "Cancel" else "रद्द करें")
                         }
                     }
                 ) {
@@ -346,6 +360,10 @@ fun LendEntryScreen(
 
             if (showDiscardDialog) {
                 DiscardDraftDialog(
+                    title = if (isEnglish) "Discard Changes?" else "बदलाव रद्द करें?",
+                    message = if (isEnglish) "Are you sure you want to exit without saving? All entered details will be lost." else "क्या आप बिना सुरक्षित किए बाहर जाना चाहते हैं? भरी गई जानकारी मिट जाएगी।",
+                    confirmText = if (isEnglish) "Yes, Exit" else "हाँ, बाहर निकलें",
+                    dismissText = if (isEnglish) "Continue Editing" else "भरना जारी रखें",
                     onConfirmDiscard = {
                         showDiscardDialog = false
                         onBack()

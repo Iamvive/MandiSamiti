@@ -433,6 +433,7 @@ fun App(
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
                     tradeSettings = tradeSettings,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     parties = parties,
                     activeLoanChecker = { farmerName ->
                         lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
@@ -502,6 +503,7 @@ fun App(
                     existingId = screen.existingId,
                     sellRepository = sellRepo,
                     tradeSettings = tradeSettings,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     stockLines = stockLines,
                     parties = parties,
                     onSaved = { entry ->
@@ -562,6 +564,7 @@ fun App(
                     shopId = shopId ?: "",
                     parties = parties,
                     lendRepository = lendRepo,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     onSaved = { entry ->
                         coroutineScope.launch {
                             lendRepo.saveLendEntry(entry)
@@ -638,6 +641,7 @@ fun App(
             is Screen.ExpenseEntry -> {
                 ExpenseEntryScreen(
                     shopId = shopId ?: "",
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     onSaved = { entry ->
                         coroutineScope.launch {
                             expenseRepo.saveExpense(entry)

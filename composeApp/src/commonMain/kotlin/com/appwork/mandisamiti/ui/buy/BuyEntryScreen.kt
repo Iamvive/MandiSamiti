@@ -78,6 +78,7 @@ fun BuyEntryScreen(
     activeLoanChecker: ((String) -> Boolean)? = null,
     buyRepository: BuyRepository? = null,
     parties: List<Party> = emptyList(),
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var existingEntry by remember { mutableStateOf<BuyEntry?>(null) }
@@ -123,7 +124,15 @@ fun BuyEntryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (existingId == null) "नई खरीद एंट्री (आवक सौदा)" else "खरीद एंट्री बदलें") },
+                title = {
+                    Text(
+                        if (isEnglish) {
+                            if (existingId == null) "New Purchase Entry" else "Edit Purchase Entry"
+                        } else {
+                            if (existingId == null) "नई खरीद एंट्री (आवक सौदा)" else "खरीद एंट्री बदलें"
+                        }
+                    )
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -134,7 +143,7 @@ fun BuyEntryScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = if (isEnglish) "Back" else "पीछे")
                     }
                 }
             )
@@ -159,7 +168,7 @@ fun BuyEntryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "किसान विवरण (विक्रेता)",
+                        text = if (isEnglish) "Farmer Details (Seller)" else "किसान विवरण (विक्रेता)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -171,7 +180,7 @@ fun BuyEntryScreen(
                             formState.farmerName = it
                             formState.selectedFarmerId = null
                         },
-                        label = "किसान नाम *",
+                        label = if (isEnglish) "Farmer Name *" else "किसान नाम *",
                         parties = parties,
                         partyType = PartyType.FARMER,
                         onPartySelected = { selected ->
@@ -198,7 +207,7 @@ fun BuyEntryScreen(
                         OutlinedTextField(
                             value = formState.phone,
                             onValueChange = { formState.updatePhone(it) },
-                            label = { Text("मोबाइल नंबर (वैकल्पिक)") },
+                            label = { Text(if (isEnglish) "Mobile Number (Optional)" else "मोबाइल नंबर (वैकल्पिक)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                             isError = formState.phone.isNotEmpty() && !phoneVal.isValid,
                             supportingText = {
@@ -212,7 +221,7 @@ fun BuyEntryScreen(
                         OutlinedTextField(
                             value = formState.village,
                             onValueChange = { formState.village = it },
-                            label = { Text("गाँव (वैकल्पिक)") },
+                            label = { Text(if (isEnglish) "Village (Optional)" else "गाँव (वैकल्पिक)") },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.weight(1f)
                         )
@@ -223,7 +232,7 @@ fun BuyEntryScreen(
                     if (showActiveLoan) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("सक्रिय उधार मौजूद है (हिसाब में कटौती संभव)") },
+                            label = { Text(if (isEnglish) "Active loan exists (can deduct in settlement)" else "सक्रिय उधार मौजूद है (हिसाब में कटौती संभव)") },
                             icon = { Icon(Icons.Default.Warning, contentDescription = null) },
                             colors = SuggestionChipDefaults.suggestionChipColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -236,12 +245,16 @@ fun BuyEntryScreen(
 
             // Section 2: Crop Lots / Variants
             Text(
-                text = "फसल एवं तौल विवरण (Multi-Crop Lots)",
+                text = if (isEnglish) "Crop & Weighment Details (Lots)" else "फसल एवं तौल विवरण (Multi-Crop Lots)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
 
-            val commonCrops = listOf("गेहूं शरबती", "गेहूं लोकवान", "चना", "सरसों", "सोयाबीन")
+            val commonCrops = if (isEnglish) {
+                listOf("Wheat Sharbati", "Wheat Lokwan", "Gram", "Mustard", "Soybean")
+            } else {
+                listOf("गेहूं शरबती", "गेहूं लोकवान", "चना", "सरसों", "सोयाबीन")
+            }
 
             formState.lots.forEachIndexed { index, lot ->
                 val lotResult = lot.calculateLot()
@@ -261,8 +274,9 @@ fun BuyEntryScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val defaultCropLabel = if (isEnglish) "Crop" else "फसल"
                             Text(
-                                text = "लॉट #${index + 1}: ${lot.cropName.ifBlank { "फसल" }}",
+                                text = if (isEnglish) "Lot #${index + 1}: ${lot.cropName.ifBlank { defaultCropLabel }}" else "लॉट #${index + 1}: ${lot.cropName.ifBlank { defaultCropLabel }}",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -273,7 +287,7 @@ fun BuyEntryScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.Delete,
-                                        contentDescription = "लॉट हटाएं",
+                                        contentDescription = if (isEnglish) "Delete Lot" else "लॉट हटाएं",
                                         tint = MaterialTheme.colorScheme.error
                                     )
                                 }
@@ -297,7 +311,7 @@ fun BuyEntryScreen(
                         OutlinedTextField(
                             value = lot.cropName,
                             onValueChange = { lot.cropName = it },
-                            label = { Text("जिंस / फसल वैरायटी") },
+                            label = { Text(if (isEnglish) "Crop / Variety Name" else "जिंस / फसल वैरायटी") },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -306,7 +320,7 @@ fun BuyEntryScreen(
                             OutlinedTextField(
                                 value = lot.bags,
                                 onValueChange = { lot.bags = it.filter { ch -> ch.isDigit() } },
-                                label = { Text("बोरी संख्या *") },
+                                label = { Text(if (isEnglish) "Bags Count *" else "बोरी संख्या *") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 isError = lot.bags.isNotEmpty() && lotVal.bagsError != null,
                                 supportingText = {
@@ -319,7 +333,7 @@ fun BuyEntryScreen(
                             OutlinedTextField(
                                 value = lot.weightPerBagKg,
                                 onValueChange = { lot.weightPerBagKg = it },
-                                label = { Text("वजन/बोरी (किग्रा)") },
+                                label = { Text(if (isEnglish) "Weight/Bag (kg)" else "वजन/बोरी (किग्रा)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = lot.weightPerBagKg.isNotEmpty() && lotVal.weightError != null,
                                 modifier = Modifier.weight(1f)
@@ -330,14 +344,14 @@ fun BuyEntryScreen(
                             OutlinedTextField(
                                 value = lot.extraWeightKg,
                                 onValueChange = { lot.extraWeightKg = it },
-                                label = { Text("अतिरिक्त वजन (किग्रा)") },
+                                label = { Text(if (isEnglish) "Extra Weight (kg)" else "अतिरिक्त वजन (किग्रा)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = lot.ratePerQuintal,
                                 onValueChange = { lot.ratePerQuintal = it },
-                                label = { Text("भाव (रु/क्विंटल) *") },
+                                label = { Text(if (isEnglish) "Rate (₹/qtl) *" else "भाव (रु/क्विंटल) *") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 isError = lot.ratePerQuintal.isNotEmpty() && lotVal.rateError != null,
                                 supportingText = {
@@ -356,7 +370,11 @@ fun BuyEntryScreen(
                                                 tint = MandiAmberDark,
                                                 modifier = Modifier.size(14.dp)
                                             )
-                                            Text("असामान्य भाव (< ₹500 या > ₹20,000/क्विंटल)", color = MandiAmberDark, fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                if (isEnglish) "Unusual rate (< ₹500 or > ₹20,000/qtl)" else "असामान्य भाव (< ₹500 या > ₹20,000/क्विंटल)",
+                                                color = MandiAmberDark,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
                                         }
                                     }
                                 },
@@ -376,12 +394,12 @@ fun BuyEntryScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "वजन: ${MandiMathEngine.gramsToQuintals(lotResult.totalWeightGrams)} क्विंटल",
+                                    text = if (isEnglish) "Weight: ${MandiMathEngine.gramsToQuintals(lotResult.totalWeightGrams)} qtl" else "वजन: ${MandiMathEngine.gramsToQuintals(lotResult.totalWeightGrams)} क्विंटल",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "सकल: ₹${MandiMathEngine.paisaToRupeesString(lotResult.grossPaisa)}",
+                                    text = if (isEnglish) "Gross: ₹${MandiMathEngine.paisaToRupeesString(lotResult.grossPaisa)}" else "सकल: ₹${MandiMathEngine.paisaToRupeesString(lotResult.grossPaisa)}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -399,12 +417,12 @@ fun BuyEntryScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(6.dp))
-                Text("(+) अन्य फसल / वैरायटी जोड़ें")
+                Text(if (isEnglish) "(+) Add Another Crop Lot" else "(+) अन्य फसल / वैरायटी जोड़ें")
             }
 
             // Section 3: Trade Deductions & Optional Advance
             Text(
-                text = "कटौती एवं अग्रिम (Deductions)",
+                text = if (isEnglish) "Deductions & Advance" else "कटौती एवं अग्रिम (Deductions)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -417,9 +435,9 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.commissionPercent,
                     onValueChange = { formState.commissionPercent = it },
-                    label = { Text("कमीशन %") },
+                    label = { Text(if (isEnglish) "Commission %" else "कमीशन %") },
                     supportingText = if (formState.commissionPercent != defaultComm) {
-                        { Text("डिफ़ॉल्ट से बदला गया ($defaultComm%)", color = MandiAmberDark, fontSize = 11.sp) }
+                        { Text(if (isEnglish) "Changed from default ($defaultComm%)" else "डिफ़ॉल्ट से बदला गया ($defaultComm%)", color = MandiAmberDark, fontSize = 11.sp) }
                     } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
@@ -427,9 +445,9 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.labourPerBag,
                     onValueChange = { formState.labourPerBag = it },
-                    label = { Text("मजदूरी (रु/बोरी)") },
+                    label = { Text(if (isEnglish) "Labour (₹/bag)" else "मजदूरी (रु/बोरी)") },
                     supportingText = if (formState.labourPerBag != defaultLabour) {
-                        { Text("डिफ़ॉल्ट से बदला गया (₹$defaultLabour)", color = MandiAmberDark, fontSize = 11.sp) }
+                        { Text(if (isEnglish) "Changed from default (₹$defaultLabour)" else "डिफ़ॉल्ट से बदला गया (₹$defaultLabour)", color = MandiAmberDark, fontSize = 11.sp) }
                     } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
@@ -440,10 +458,10 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.tareQuintals,
                     onValueChange = { formState.tareQuintals = it },
-                    label = { Text("काट / बारदाना (कुंतल)") },
+                    label = { Text(if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)") },
                     placeholder = { Text("0") },
                     supportingText = if (formState.tareQuintals != defaultTare) {
-                        { Text("डिफ़ॉल्ट से बदला गया (${defaultTare.ifBlank { "0" }} qtl)", color = MandiAmberDark, fontSize = 11.sp) }
+                        { Text(if (isEnglish) "Changed from default (${defaultTare.ifBlank { "0" }} qtl)" else "डिफ़ॉल्ट से बदला गया (${defaultTare.ifBlank { "0" }} qtl)", color = MandiAmberDark, fontSize = 11.sp) }
                     } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
@@ -451,9 +469,9 @@ fun BuyEntryScreen(
                 OutlinedTextField(
                     value = formState.advancePaid,
                     onValueChange = { formState.advancePaid = it },
-                    label = { Text("अग्रिम / पेशगी (रु)") },
+                    label = { Text(if (isEnglish) "Advance Paid (₹)" else "अग्रिम / पेशगी (रु)") },
                     placeholder = { Text("0") },
-                    supportingText = { Text("वैकल्पिक") },
+                    supportingText = { Text(if (isEnglish) "Optional" else "वैकल्पिक") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     modifier = Modifier.weight(1f)
                 )
@@ -469,41 +487,45 @@ fun BuyEntryScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("हिसाब पर्चा (लाइव प्रीव्यू)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Bill Receipt (Live Preview)" else "हिसाब पर्चा (लाइव प्रीव्यू)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                     // Lot breakdown lines
                     preview.lotsCalculations.forEachIndexed { idx, pair ->
                         val lot = pair.first
                         val res = pair.second
                         if (res.grossPaisa > 0) {
+                            val bagsSuffix = if (isEnglish) "bags" else "बोरी"
+                            val lotLabel = if (isEnglish) "Lot #${idx + 1} (${lot.cropName}) [${MandiMathEngine.formatIndianGrouping(res.bags)} $bagsSuffix]" else "फसल #${idx + 1} (${lot.cropName}) [${MandiMathEngine.formatIndianGrouping(res.bags)} $bagsSuffix]"
                             SummaryRow(
-                                label = "फसल #${idx + 1} (${lot.cropName}) [${MandiMathEngine.formatIndianGrouping(res.bags)} बोरी]",
+                                label = lotLabel,
                                 value = MandiMathEngine.formatRupees(res.grossPaisa)
                             )
                         }
                     }
 
-                    SummaryRow("कुल बोरी", "${MandiMathEngine.formatIndianGrouping(preview.totalBags)} बोरी")
+                    val bagsUnit = if (isEnglish) "bags" else "बोरी"
+                    val qtlUnit = if (isEnglish) "qtl" else "क्विंटल"
+                    SummaryRow(if (isEnglish) "Total Bags" else "कुल बोरी", "${MandiMathEngine.formatIndianGrouping(preview.totalBags)} $bagsUnit")
                     if (formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
-                        SummaryRow("काट / बारदाना", "- ${formState.tareQuintals} क्विंटल")
+                        SummaryRow(if (isEnglish) "Tare / Bardana" else "काट / बारदाना", "- ${formState.tareQuintals} $qtlUnit")
                     }
-                    SummaryRow("कुल वजन", "${MandiMathEngine.gramsToQuintals(preview.totalWeightGrams)} क्विंटल")
-                    SummaryRow("कुल राशि (Gross)", MandiMathEngine.formatRupees(preview.totalGrossPaisa))
-                    SummaryRow("कमीशन कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.commissionPaisa)}")
-                    SummaryRow("मजदूरी कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.labourPaisa)}")
+                    SummaryRow(if (isEnglish) "Total Weight" else "कुल वजन", "${MandiMathEngine.gramsToQuintals(preview.totalWeightGrams)} $qtlUnit")
+                    SummaryRow(if (isEnglish) "Gross Amount" else "कुल राशि (Gross)", MandiMathEngine.formatRupees(preview.totalGrossPaisa))
+                    SummaryRow(if (isEnglish) "Commission" else "कमीशन कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.commissionPaisa)}")
+                    SummaryRow(if (isEnglish) "Labour" else "मजदूरी कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(preview.labourPaisa)}")
                     if (preview.advancePaidPaisa > 0) {
-                        SummaryRow("अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(preview.advancePaidPaisa)}")
+                        SummaryRow(if (isEnglish) "Advance Paid" else "अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(preview.advancePaidPaisa)}")
                     }
                     Spacer(Modifier.height(4.dp))
                     if (formState.lots.any { it.ratePerQuintal.isBlank() || it.ratePerQuintal == "0" }) {
                         SummaryRow(
-                            "शुद्ध देय राशि (Net Payable)",
-                            "भाव दर्ज करें",
+                            if (isEnglish) "Net Payable" else "शुद्ध देय राशि (Net Payable)",
+                            if (isEnglish) "Enter Rate" else "भाव दर्ज करें",
                             isHighlight = true
                         )
                     } else {
                         SummaryRow(
-                            "शुद्ध देय राशि (Net Payable)",
+                            if (isEnglish) "Net Payable" else "शुद्ध देय राशि (Net Payable)",
                             MandiMathEngine.formatRupees(preview.netPayablePaisa),
                             isHighlight = true
                         )
@@ -568,14 +590,15 @@ fun BuyEntryScreen(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("सुरक्षित करें (सौदा पक्का)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(if (isEnglish) "Save Purchase Entry" else "सुरक्षित करें (सौदा पक्का)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
 
             if (showDuplicateDialog && pendingEntryToSave != null) {
                 val pending = pendingEntryToSave!!
+                val bagsSuffix = if (isEnglish) "bags" else "बोरी"
                 DuplicateEntryDialog(
-                    message = "यह एंट्री पहले से है, फिर भी सुरक्षित करें?",
-                    details = "${pending.farmerId} • ₹${MandiMathEngine.formatIndianGrouping(pending.netPayablePaisa / 100)} • ${pending.bagsCount} बोरी (${pending.commodityId})",
+                    message = if (isEnglish) "Duplicate entry detected. Still want to save?" else "यह एंट्री पहले से है, फिर भी सुरक्षित करें?",
+                    details = "${pending.farmerId} • ₹${MandiMathEngine.formatIndianGrouping(pending.netPayablePaisa / 100)} • ${pending.bagsCount} $bagsSuffix (${pending.commodityId})",
                     onConfirm = {
                         showDuplicateDialog = false
                         if (formState.hasSanityWarning()) {
@@ -608,14 +631,15 @@ fun BuyEntryScreen(
                     },
                     title = {
                         Text(
-                            text = "असामान्य प्रविष्टि पुष्टि (Sanity Check)",
+                            text = if (isEnglish) "Unusual Value Confirmation (Sanity Check)" else "असामान्य प्रविष्टि पुष्टि (Sanity Check)",
                             fontWeight = FontWeight.Bold
                         )
                     },
                     text = {
+                        val baseMsg = formState.sanityWarningMessage() ?: if (isEnglish) "Unusual values detected in the entry." else "प्रविष्टि में असामान्य मान दर्ज हैं।"
+                        val question = if (isEnglish) "\n\nIs this information correct or was there a typing mistake?" else "\n\nक्या विवरण सही है अथवा कोई अतिरिक्त अंक दर्ज हो गया है?"
                         Text(
-                            text = (formState.sanityWarningMessage() ?: "प्रविष्टि में असामान्य मान दर्ज हैं।") +
-                                "\n\nक्या विवरण सही है अथवा कोई अतिरिक्त अंक दर्ज हो गया है?",
+                            text = baseMsg + question,
                             fontSize = 14.sp
                         )
                     },
@@ -628,7 +652,7 @@ fun BuyEntryScreen(
                                 onSaved(entry)
                             }
                         ) {
-                            Text("हाँ, विवरण सही है (सौदा सुरक्षित करें)")
+                            Text(if (isEnglish) "Yes, Correct (Save)" else "हाँ, विवरण सही है (सौदा सुरक्षित करें)")
                         }
                     },
                     dismissButton = {
@@ -638,7 +662,7 @@ fun BuyEntryScreen(
                                 pendingEntryToSave = null
                             }
                         ) {
-                            Text("सुधारें (Edit)")
+                            Text(if (isEnglish) "Edit" else "सुधारें (Edit)")
                         }
                     }
                 )
@@ -646,6 +670,10 @@ fun BuyEntryScreen(
 
             if (showDiscardDialog) {
                 DiscardDraftDialog(
+                    title = if (isEnglish) "Discard Changes?" else "बदलाव रद्द करें?",
+                    message = if (isEnglish) "Are you sure you want to exit without saving? All entered details will be lost." else "क्या आप बिना सुरक्षित किए बाहर जाना चाहते हैं? भरी गई जानकारी मिट जाएगी।",
+                    confirmText = if (isEnglish) "Yes, Exit" else "हाँ, बाहर निकलें",
+                    dismissText = if (isEnglish) "Continue Editing" else "भरना जारी रखें",
                     onConfirmDiscard = {
                         showDiscardDialog = false
                         onBack()

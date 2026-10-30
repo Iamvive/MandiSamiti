@@ -50,12 +50,25 @@ fun ExpenseCategory.labelHi(): String = when (this) {
     ExpenseCategory.DAY_CLOSE_DIFF -> "दिन-बंदी अंतर"
 }
 
+fun ExpenseCategory.labelEn(): String = when (this) {
+    ExpenseCategory.HAMMALI -> "Labour / Hammali"
+    ExpenseCategory.KIRAYA -> "Rent"
+    ExpenseCategory.BIJLI -> "Electricity"
+    ExpenseCategory.CHAI_PANI -> "Refreshment"
+    ExpenseCategory.MAJDOORI -> "Wages"
+    ExpenseCategory.OTHER -> "Other"
+    ExpenseCategory.DAY_CLOSE_DIFF -> "Day-Close Diff"
+}
+
+fun ExpenseCategory.label(isEnglish: Boolean): String = if (isEnglish) labelEn() else labelHi()
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ExpenseEntryScreen(
     shopId: String = "",
     onSaved: (ExpenseEntry) -> Unit,
     onBack: () -> Unit,
+    isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var selectedCategory by remember { mutableStateOf(ExpenseCategory.HAMMALI) }
@@ -80,7 +93,7 @@ fun ExpenseEntryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("खर्च दर्ज करें (Expense)") },
+                title = { Text(if (isEnglish) "Record Expense" else "खर्च दर्ज करें (Expense)") },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -91,7 +104,7 @@ fun ExpenseEntryScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = if (isEnglish) "Back" else "पीछे")
                     }
                 }
             )
@@ -105,7 +118,7 @@ fun ExpenseEntryScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("खर्च श्रेणी (Category)")
+            Text(if (isEnglish) "Expense Category" else "खर्च श्रेणी (Category)")
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -114,7 +127,7 @@ fun ExpenseEntryScreen(
                     FilterChip(
                         selected = selectedCategory == cat,
                         onClick = { selectedCategory = cat },
-                        label = { Text(cat.labelHi()) }
+                        label = { Text(cat.label(isEnglish)) }
                     )
                 }
             }
@@ -122,7 +135,7 @@ fun ExpenseEntryScreen(
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("खर्च राशि (रु) *") },
+                label = { Text(if (isEnglish) "Expense Amount (₹) *" else "खर्च राशि (रु) *") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -130,17 +143,17 @@ fun ExpenseEntryScreen(
             OutlinedTextField(
                 value = paidTo,
                 onValueChange = { paidTo = it },
-                label = { Text("किसे दिया (नाम / विवरण)") },
+                label = { Text(if (isEnglish) "Paid To (Name / Description)" else "किसे दिया (नाम / विवरण)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Text("भुगतान का माध्यम (Payment Mode)")
+            Text(if (isEnglish) "Payment Mode" else "भुगतान का माध्यम (Payment Mode)")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    ExpensePaymentMode.CASH to "नकद",
+                    ExpensePaymentMode.CASH to (if (isEnglish) "Cash" else "नकद"),
                     ExpensePaymentMode.RTGS to "RTGS",
                     ExpensePaymentMode.NEFT to "NEFT",
-                    ExpensePaymentMode.CHEQUE to "चेक",
+                    ExpensePaymentMode.CHEQUE to (if (isEnglish) "Cheque" else "चेक"),
                     ExpensePaymentMode.UPI to "UPI",
                 ).forEach { (mode, label) ->
                     FilterChip(
@@ -154,7 +167,7 @@ fun ExpenseEntryScreen(
             OutlinedTextField(
                 value = remarks,
                 onValueChange = { remarks = it },
-                label = { Text("विवरण / टिप्पणी (वैकल्पिक)") },
+                label = { Text(if (isEnglish) "Remarks / Note (Optional)" else "विवरण / टिप्पणी (वैकल्पिक)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -180,11 +193,15 @@ fun ExpenseEntryScreen(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
-                Text("खर्च सुरक्षित करें")
+                Text(if (isEnglish) "Save Expense" else "खर्च सुरक्षित करें")
             }
 
             if (showDiscardDialog) {
                 DiscardDraftDialog(
+                    title = if (isEnglish) "Discard Changes?" else "बदलाव रद्द करें?",
+                    message = if (isEnglish) "Are you sure you want to exit without saving? All entered details will be lost." else "क्या आप बिना सुरक्षित किए बाहर जाना चाहते हैं? भरी गई जानकारी मिट जाएगी।",
+                    confirmText = if (isEnglish) "Yes, Exit" else "हाँ, बाहर निकलें",
+                    dismissText = if (isEnglish) "Continue Editing" else "भरना जारी रखें",
                     onConfirmDiscard = {
                         showDiscardDialog = false
                         onBack()
