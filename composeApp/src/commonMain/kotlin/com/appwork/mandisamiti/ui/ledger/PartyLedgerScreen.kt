@@ -149,15 +149,15 @@ fun PartyLedgerScreen(
     Scaffold(
         topBar = {
             SoundboxTopBar(
-                shopName = party?.name ?: "खाता विवरण",
-                mandiLocation = if (party?.village != null) "गांव: ${party.village}" else "मंडी खाता",
+                shopName = party?.name ?: (if (isEnglish) "Account Details" else "खाता विवरण"),
+                mandiLocation = if (party?.village != null) (if (isEnglish) "Village: ${party.village}" else "गांव: ${party.village}") else (if (isEnglish) "Mandi account" else "मंडी खाता"),
                 isSoundEnabled = uiState.isSoundEnabled,
                 onToggleSound = {},
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "पीछे जाएं",
+                            contentDescription = if (isEnglish) "Back" else "पीछे जाएं",
                             tint = MandiTextPrimary
                         )
                     }
@@ -422,6 +422,8 @@ fun PartyLedgerScreen(
                     when (item) {
                         is LedgerItem.BuyItem -> {
                             FintechBuyCard(
+
+                                isEnglish = isEnglish,
                                 buy = item.buy,
                                 onOpenReceipt = { onOpenBuyReceipt(item.buy.id) },
                                 onLongPress = { voidTarget = item }
@@ -429,6 +431,8 @@ fun PartyLedgerScreen(
                         }
                         is LedgerItem.SellItem -> {
                             FintechSellCard(
+
+                                isEnglish = isEnglish,
                                 sell = item.sell,
                                 onOpenReceipt = { onOpenSellReceipt(item.sell.id) },
                                 onLongPress = { voidTarget = item }
@@ -436,12 +440,16 @@ fun PartyLedgerScreen(
                         }
                         is LedgerItem.LendItem -> {
                             FintechLendCard(
+
+                                isEnglish = isEnglish,
                                 lend = item.lend,
                                 onLongPress = { voidTarget = item }
                             )
                         }
                         is LedgerItem.DealItem -> {
                             FintechDealCard(
+
+                                isEnglish = isEnglish,
                                 deal = item.deal,
                                 isBuyerLedger = party?.partyType == PartyType.BUYER,
                                 onShareSlip = { onShareWhatsAppReceipt(item.deal.id) },
@@ -451,6 +459,8 @@ fun PartyLedgerScreen(
                         }
                         is LedgerItem.CashItem -> {
                             FintechCashCard(
+
+                                isEnglish = isEnglish,
                                 transaction = item.transaction,
                                 onLongPress = { voidTarget = item }
                             )
@@ -579,10 +589,10 @@ fun PartyLedgerScreen(
     voidTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { voidTarget = null },
-            title = { Text("प्रविष्टि रद्द करें?", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
+            title = { Text(if (isEnglish) "Cancel this entry?" else "प्रविष्टि रद्द करें?", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
+                    Text(if (isEnglish) "The cancelled entry stays visible in the account but is removed from the totals." else "रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
                     val filteredReasons = if (target is LedgerItem.CashItem) {
                         VoidReason.entries.filter { it.appliesToCash }
                     } else {
@@ -592,14 +602,14 @@ fun PartyLedgerScreen(
                         OutlinedButton(
                             onClick = { viewModel.voidEntry(target, reason); voidTarget = null },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        ) { Text(reason.labelHi, color = MandiTextPrimary, fontSize = 16.sp) }
+                        ) { Text(if (isEnglish) reason.labelEn else reason.labelHi, color = MandiTextPrimary, fontSize = 16.sp) }
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { voidTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("वापस", color = MandiTextSecondary)
+                    Text(if (isEnglish) "Back" else "वापस", color = MandiTextSecondary)
                 }
             }
         )
@@ -613,7 +623,7 @@ fun PartyLedgerScreen(
             onDismissRequest = { showCashEntryType = null },
             title = {
                 Text(
-                    text = if (isDeposit) "नकद जमा प्राप्त दर्ज करें" else "नकद भुगतान दिया दर्ज करें",
+                    text = if (isDeposit) if (isEnglish) "Record cash received" else "नकद जमा प्राप्त दर्ज करें" else if (isEnglish) "Record cash paid" else "नकद भुगतान दिया दर्ज करें",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = MandiTextPrimary
@@ -624,14 +634,14 @@ fun PartyLedgerScreen(
                     OutlinedTextField(
                         value = cashAmountInput,
                         onValueChange = { cashAmountInput = it },
-                        label = { Text("राशि (₹)") },
+                        label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = cashRemarksInput,
                         onValueChange = { cashRemarksInput = it },
-                        label = { Text("विवरण / नोट (वैकल्पिक)") },
+                        label = { Text(if (isEnglish) "Note (optional)" else "विवरण / नोट (वैकल्पिक)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -668,12 +678,12 @@ fun PartyLedgerScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text("सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Save" else "सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCashEntryType = null }) {
-                    Text("रद्द करें", color = MandiTextSecondary)
+                    Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             }
         )
@@ -690,7 +700,7 @@ fun PartyLedgerScreen(
             onDismissRequest = backToCashDialog,
             title = {
                 Text(
-                    text = "उधार ऋण में काटें?",
+                    text = if (isEnglish) "Deduct from loan?" else "उधार ऋण में काटें?",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = MandiTextPrimary
@@ -699,14 +709,14 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "इस खातेदार का कुल उधार बकाया ₹${MandiMathEngine.formatIndianGrouping(totalOutstandingRs)} है। दर्ज राशि: ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}",
+                        text = if (isEnglish) "Total outstanding loan for this party is ₹${MandiMathEngine.formatIndianGrouping(totalOutstandingRs)}. Amount entered: ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}" else "इस खातेदार का कुल उधार बकाया ₹${MandiMathEngine.formatIndianGrouping(totalOutstandingRs)} है। दर्ज राशि: ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}",
                         fontSize = 14.sp,
                         color = MandiTextSecondary
                     )
 
                     if (uiState.openLoans.size > 1) {
                         Text(
-                            text = "ऋण चुनें जिसमें काटना है:",
+                            text = if (isEnglish) "Choose the loan to deduct from:" else "ऋण चुनें जिसमें काटना है:",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MandiTextPrimary
@@ -728,13 +738,13 @@ fun PartyLedgerScreen(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "ऋण: ₹${MandiMathEngine.formatIndianGrouping(loanInfo.lend.amountPaisa / 100L)}",
+                                            text = if (isEnglish) "Loan: ₹${MandiMathEngine.formatIndianGrouping(loanInfo.lend.amountPaisa / 100L)}" else "ऋण: ₹${MandiMathEngine.formatIndianGrouping(loanInfo.lend.amountPaisa / 100L)}",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = MandiTextPrimary
                                         )
                                         Text(
-                                            text = "बकाया: ₹${MandiMathEngine.formatIndianGrouping(loanOutstandingRs)}",
+                                            text = if (isEnglish) "Outstanding: ₹${MandiMathEngine.formatIndianGrouping(loanOutstandingRs)}" else "बकाया: ₹${MandiMathEngine.formatIndianGrouping(loanOutstandingRs)}",
                                             fontSize = 12.sp,
                                             color = MandiGreenReceivable
                                         )
@@ -748,7 +758,7 @@ fun PartyLedgerScreen(
                         }
                     } else if (selectedLoan != null) {
                         Text(
-                            text = "बकाया ऋण: ₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}",
+                            text = if (isEnglish) "Outstanding loan: ₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}" else "बकाया ऋण: ₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = MandiGreenReceivable
@@ -757,7 +767,7 @@ fun PartyLedgerScreen(
 
                     if (selectedLoan != null && pendingCashAmount * 100L > selectedLoan.outstandingPaisa) {
                         Text(
-                            text = "ध्यान दें: दर्ज राशि (₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}) इस ऋण के बकाया (₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}) से अधिक है। यदि पूरा ऋण चुकता करना है तो बकाया राशि जितनी ही काटें, या सामान्य जमा करें।",
+                            text = if (isEnglish) "Note: the amount entered (₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}) is more than this loan's outstanding (₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}). To clear the loan, deduct only the outstanding amount, or record a normal deposit." else "ध्यान दें: दर्ज राशि (₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}) इस ऋण के बकाया (₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}) से अधिक है। यदि पूरा ऋण चुकता करना है तो बकाया राशि जितनी ही काटें, या सामान्य जमा करें।",
                             fontSize = 12.sp,
                             color = MandiRedPayable
                         )
@@ -783,7 +793,7 @@ fun PartyLedgerScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("उधार में काटें", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(if (isEnglish) "Deduct from loan" else "उधार में काटें", color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
                     if (selectedLoan != null && !canApplyToLoan) {
@@ -800,7 +810,7 @@ fun PartyLedgerScreen(
                             )
                         ) {
                             Text(
-                                "₹${MandiMathEngine.formatIndianGrouping(loanRs)} उधार में, ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount - loanRs)} सामान्य जमा",
+                                (if (isEnglish) "₹${MandiMathEngine.formatIndianGrouping(loanRs)} to loan, ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount - loanRs)} normal deposit" else "₹${MandiMathEngine.formatIndianGrouping(loanRs)} उधार में, ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount - loanRs)} सामान्य जमा"),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
@@ -819,7 +829,7 @@ fun PartyLedgerScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("सामान्य जमा करें", color = MandiTextPrimary, fontWeight = FontWeight.Medium)
+                        Text(if (isEnglish) "Record as normal deposit" else "सामान्य जमा करें", color = MandiTextPrimary, fontWeight = FontWeight.Medium)
                     }
                 }
             },
@@ -828,7 +838,7 @@ fun PartyLedgerScreen(
                     onClick = backToCashDialog,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("वापस जाएँ", color = MandiTextSecondary)
+                    Text(if (isEnglish) "Go back" else "वापस जाएँ", color = MandiTextSecondary)
                 }
             }
         )
@@ -871,7 +881,7 @@ fun PartyLedgerScreen(
             onDismissRequest = { viewModel.closeInterestDialog() },
             title = {
                 Text(
-                    text = "देसी ब्याज हिसाब (सैकड़ा दर)",
+                    text = if (isEnglish) "Interest calculation (rate per hundred)" else "देसी ब्याज हिसाब (सैकड़ा दर)",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = MandiTextPrimary
@@ -880,7 +890,7 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "मूलधन: ₹${MandiMathEngine.paisaToRupeesString(principal)}",
+                        text = if (isEnglish) "Principal: ₹${MandiMathEngine.paisaToRupeesString(principal)}" else "मूलधन: ₹${MandiMathEngine.paisaToRupeesString(principal)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MandiAmberDark
@@ -892,13 +902,13 @@ fun PartyLedgerScreen(
                         OutlinedTextField(
                             value = interestRateInput,
                             onValueChange = { interestRateInput = it },
-                            label = { Text("दर (% प्रति माह)") },
+                            label = { Text(if (isEnglish) "Rate (% per month)" else "दर (% प्रति माह)") },
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
                             value = interestDaysInput,
                             onValueChange = { interestDaysInput = it },
-                            label = { Text("दिन") },
+                            label = { Text(if (isEnglish) "Days" else "दिन") },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -915,14 +925,14 @@ fun PartyLedgerScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("ब्याज राशि:", fontSize = 13.sp, color = MandiTextSecondary)
+                            Text(if (isEnglish) "Interest amount:" else "ब्याज राशि:", fontSize = 13.sp, color = MandiTextSecondary)
                             Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.accruedInterestPaisa)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MandiGreenReceivable)
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("कुल देय:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
+                            Text(if (isEnglish) "Total due:" else "कुल देय:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
                             Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.totalPayablePaisa)}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MandiAmberDark)
                         }
                     }
@@ -942,12 +952,12 @@ fun PartyLedgerScreen(
                         contentColor = MandiPrimaryActionText
                     )
                 ) {
-                    Text("ब्याज खाते में जोड़ें", color = MandiPrimaryActionText, fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Add interest to account" else "ब्याज खाते में जोड़ें", color = MandiPrimaryActionText, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeInterestDialog() }) {
-                    Text("बंद करें", color = MandiTextSecondary)
+                    Text(if (isEnglish) "Close" else "बंद करें", color = MandiTextSecondary)
                 }
             }
         )
@@ -995,6 +1005,7 @@ private fun FintechActionButton(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechDealCard(
+    isEnglish: Boolean,
     deal: com.appwork.mandisamiti.domain.model.Deal,
     isBuyerLedger: Boolean = false,
     onShareSlip: () -> Unit,
@@ -1033,7 +1044,7 @@ private fun FintechDealCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "सौदा पर्ची #${deal.id.takeLast(5)}",
+                        text = if (isEnglish) "Deal slip #${deal.id.takeLast(5)}" else "सौदा पर्ची #${deal.id.takeLast(5)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
@@ -1062,7 +1073,7 @@ private fun FintechDealCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "पर्ची शेयर करें",
+                            contentDescription = if (isEnglish) "Share slip" else "पर्ची शेयर करें",
                             tint = MandiAccent,
                             modifier = Modifier.size(18.dp)
                         )
@@ -1075,14 +1086,14 @@ private fun FintechDealCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${deal.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(deal.netWeightGrams)} Qtl",
+                    text = if (isEnglish) "${deal.bagsCount} bags • ${MandiMathEngine.gramsToQuintals(deal.netWeightGrams)} Qtl" else "${deal.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(deal.netWeightGrams)} Qtl",
                     fontSize = 13.sp,
                     color = MandiTextSecondary
                 )
                 if (isBuyerLedger) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "व्यापारी से वसूली",
+                            text = if (isEnglish) "Due from buyer" else "व्यापारी से वसूली",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = MandiTextSecondary
@@ -1101,7 +1112,7 @@ private fun FintechDealCard(
                     Column(horizontalAlignment = Alignment.End) {
                         if (farmerOwesShop) {
                             Text(
-                                text = "किसान से लेना है",
+                                text = if (isEnglish) "To receive from farmer" else "किसान से लेना है",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MandiGreenReceivable
@@ -1121,7 +1132,7 @@ private fun FintechDealCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${deal.voidReason?.labelHi ?: ""}",
+                    text = if (isEnglish) "Cancelled · ${deal.voidReason?.labelEn ?: ""}" else "रद्द · ${deal.voidReason?.labelHi ?: ""}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1134,6 +1145,7 @@ private fun FintechDealCard(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechCashCard(
+    isEnglish: Boolean,
     transaction: com.appwork.mandisamiti.domain.model.CashTransaction,
     onLongPress: () -> Unit
 ) {
@@ -1182,7 +1194,7 @@ private fun FintechCashCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = if (isDeposit) "नकद जमा प्राप्त" else "नकद भुगतान दिया",
+                            text = if (isDeposit) if (isEnglish) "Cash received" else "नकद जमा प्राप्त" else "नकद भुगतान दिया",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary
@@ -1224,7 +1236,7 @@ private fun FintechCashCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${transaction.voidReason?.labelHi ?: ""}",
+                    text = if (isEnglish) "Cancelled · ${transaction.voidReason?.labelEn ?: ""}" else "रद्द · ${transaction.voidReason?.labelHi ?: ""}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1237,16 +1249,17 @@ private fun FintechCashCard(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechBuyCard(
+    isEnglish: Boolean,
     buy: com.appwork.mandisamiti.domain.model.BuyEntry,
     onOpenReceipt: () -> Unit,
     onLongPress: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = buy.isVoid
-    val cropName = buy.commodityId.ifBlank { "फसल" }
-    val bagsText = "${buy.bagsCount} बोरी"
-    val weightText = "${MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)} क्विंटल"
-    val rateText = "₹${MandiMathEngine.paisaToRupeesString(buy.ratePaisaPerQuintal)}/क्विंटल"
+    val cropName = buy.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
+    val bagsText = if (isEnglish) "${buy.bagsCount} bags" else "${buy.bagsCount} बोरी"
+    val weightText = "${MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
+    val rateText = "₹${MandiMathEngine.paisaToRupeesString(buy.ratePaisaPerQuintal)}/${if (isEnglish) "Qtl" else "क्विंटल"}"
     val netRupees = MandiMathEngine.paisaToRupeesString(buy.netPayablePaisa)
 
     Box(
@@ -1281,7 +1294,7 @@ private fun FintechBuyCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "खरीद पर्ची #${slipLabel(buy.slipNo, buy.id)}",
+                        text = if (isEnglish) "Purchase slip #${slipLabel(buy.slipNo, buy.id)}" else "खरीद पर्ची #${slipLabel(buy.slipNo, buy.id)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
@@ -1307,7 +1320,7 @@ private fun FintechBuyCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "देना है (Payable)",
+                    text = if (isEnglish) "To pay (Payable)" else "देना है (Payable)",
                     fontSize = 12.sp,
                     color = MandiRedPayable,
                     fontWeight = FontWeight.Medium
@@ -1323,7 +1336,7 @@ private fun FintechBuyCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${formatVoidReason(buy.voidReason)}",
+                    text = if (isEnglish) "Cancelled · ${formatVoidReason(buy.voidReason, isEnglish)}" else "रद्द · ${formatVoidReason(buy.voidReason, false)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1336,16 +1349,17 @@ private fun FintechBuyCard(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechSellCard(
+    isEnglish: Boolean,
     sell: com.appwork.mandisamiti.domain.model.SellEntry,
     onOpenReceipt: () -> Unit,
     onLongPress: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = sell.isVoid
-    val cropName = sell.commodityId.ifBlank { "फसल" }
-    val bagsText = "${sell.bagsCount} बोरी"
-    val weightText = "${MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)} क्विंटल"
-    val rateText = "₹${MandiMathEngine.paisaToRupeesString(sell.ratePaisaPerQuintal)}/क्विंटल"
+    val cropName = sell.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
+    val bagsText = if (isEnglish) "${sell.bagsCount} bags" else "${sell.bagsCount} बोरी"
+    val weightText = "${MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
+    val rateText = "₹${MandiMathEngine.paisaToRupeesString(sell.ratePaisaPerQuintal)}/${if (isEnglish) "Qtl" else "क्विंटल"}"
     val grossRupees = MandiMathEngine.paisaToRupeesString(sell.totalReceivablePaisa)
 
     Box(
@@ -1380,7 +1394,7 @@ private fun FintechSellCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "बिक्री पर्ची #${slipLabel(sell.slipNo, sell.id)}",
+                        text = if (isEnglish) "Sale slip #${slipLabel(sell.slipNo, sell.id)}" else "बिक्री पर्ची #${slipLabel(sell.slipNo, sell.id)}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
@@ -1406,7 +1420,7 @@ private fun FintechSellCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "लेना है (Receivable)",
+                    text = if (isEnglish) "To receive (Receivable)" else "लेना है (Receivable)",
                     fontSize = 12.sp,
                     color = MandiGreenReceivable,
                     fontWeight = FontWeight.Medium
@@ -1422,7 +1436,7 @@ private fun FintechSellCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${formatVoidReason(sell.voidReason)}",
+                    text = if (isEnglish) "Cancelled · ${formatVoidReason(sell.voidReason, isEnglish)}" else "रद्द · ${formatVoidReason(sell.voidReason, false)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1435,6 +1449,7 @@ private fun FintechSellCard(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechLendCard(
+    isEnglish: Boolean,
     lend: com.appwork.mandisamiti.domain.model.LendEntry,
     onLongPress: () -> Unit
 ) {
@@ -1475,7 +1490,7 @@ private fun FintechLendCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (isAdvanceGiven) "उधार #${slipLabel(lend.slipNo, lend.id)}" else "बोरी उधार #${slipLabel(lend.slipNo, lend.id)}",
+                        text = if (isAdvanceGiven) (if (isEnglish) "Loan #${slipLabel(lend.slipNo, lend.id)}" else "उधार #${slipLabel(lend.slipNo, lend.id)}") else (if (isEnglish) "Bag loan #${slipLabel(lend.slipNo, lend.id)}" else "बोरी उधार #${slipLabel(lend.slipNo, lend.id)}"),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
@@ -1504,7 +1519,7 @@ private fun FintechLendCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isAdvanceGiven) "लेना है (Receivable)" else "बोरी वापस लेना है",
+                    text = if (isAdvanceGiven) if (isEnglish) "To receive (Receivable)" else "लेना है (Receivable)" else "बोरी वापस लेना है",
                     fontSize = 12.sp,
                     color = if (isAdvanceGiven) MandiGreenReceivable else MandiTextSecondary,
                     fontWeight = FontWeight.Medium
@@ -1520,7 +1535,7 @@ private fun FintechLendCard(
 
             if (isVoid) {
                 Text(
-                    text = "रद्द · ${formatVoidReason(lend.voidReason)}",
+                    text = if (isEnglish) "Cancelled · ${formatVoidReason(lend.voidReason, isEnglish)}" else "रद्द · ${formatVoidReason(lend.voidReason, false)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MandiTextSecondary
@@ -1530,9 +1545,9 @@ private fun FintechLendCard(
     }
 }
 
-private fun formatVoidReason(reasonStr: String?): String {
+private fun formatVoidReason(reasonStr: String?, isEnglish: Boolean): String {
     if (reasonStr.isNullOrBlank()) return ""
-    return VoidReason.entries.find { it.name == reasonStr }?.labelHi ?: reasonStr
+    return VoidReason.entries.find { it.name == reasonStr }?.let { if (isEnglish) it.labelEn else it.labelHi } ?: reasonStr
 }
 
 private fun formatEpochDate(epochMs: Long): String {
