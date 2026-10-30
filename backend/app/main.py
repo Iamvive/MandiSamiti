@@ -17,12 +17,12 @@ init_sentry()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
-    # Database initialization with retry loop for Docker / production startup
+    # Verify database connection with retry loop for Docker / production startup
     for attempt in range(1, 15):
         try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database connected and schema initialized successfully.")
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            logger.info("Database connected successfully.")
             break
         except Exception as e:
             logger.warning("Waiting for database connection (attempt %d/15)... error: %s", attempt, e)
