@@ -159,7 +159,9 @@ class SyncEngineTest {
                         name = "सुरेश कुमार",
                         phone = "9876500001",
                         role = "FARMER",
-                        village = "बलदेव"
+                        village = "बलदेव",
+                        gstin = "29ABCDE1234F1Z5",
+                        mandi_license = "LIC-001",
                     )
                 ),
                 server_sync_time = 2000L
@@ -175,6 +177,8 @@ class SyncEngineTest {
         assertEquals(1, localParties.size)
         assertEquals("सुरेश कुमार", localParties[0].name)
         assertEquals("बलदेव", localParties[0].village)
+        assertEquals("29ABCDE1234F1Z5", localParties[0].gstin)
+        assertEquals("LIC-001", localParties[0].mandiLicense)
         assertEquals(2000L, syncEngine.getLastServerSeq("srv-shop-7"))
     }
 

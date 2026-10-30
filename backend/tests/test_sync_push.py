@@ -80,6 +80,67 @@ async def test_party_last_write_wins_by_updated_at(db):
     row = (await db.execute(select(Party).where(Party.id == "p1"))).scalars().one()
     assert row.name == "नया"
 
+@pytest.mark.asyncio
+async def test_old_party_payload_preserves_tax_fields(db):
+    await sync_push(
+        SyncPushRequest(parties=[PartyCreate(
+            id="p-tax", name="Buyer", role="BUYER", updated_at=10,
+            gstin="29ABCDE1234F1Z5", mandi_license="LIC-001",
+        )]),
+        USER,
+        db,
+    )
+
+    await sync_push(
+        SyncPushRequest(parties=[PartyCreate(
+            id="p-tax", name="Buyer renamed", role="BUYER", updated_at=20,
+        )]),
+        USER,
+        db,
+    )
+
+    row = (await db.execute(select(Party).where(Party.id == "p-tax"))).scalars().one()
+    assert row.name == "Buyer renamed"
+    assert row.gstin == "29ABCDE1234F1Z5"
+    assert row.mandi_license == "LIC-001"
+
+@pytest.mark.asyncio
+async def test_explicit_null_clears_party_tax_fields(db):
+    await sync_push(
+        SyncPushRequest(parties=[PartyCreate(
+            id="p-tax", name="Buyer", role="BUYER", updated_at=10,
+            gstin="29ABCDE1234F1Z5", mandi_license="LIC-001",
+        )]),
+        USER,
+        db,
+    )
+
+    await sync_push(
+        SyncPushRequest(parties=[PartyCreate(
+            id="p-tax", name="Buyer", role="BUYER", updated_at=20,
+            gstin=None, mandi_license=None,
+        )]),
+        USER,
+        db,
+    )
+
+    row = (await db.execute(select(Party).where(Party.id == "p-tax"))).scalars().one()
+    assert row.gstin is None
+    assert row.mandi_license is None
+
+def test_party_tax_fields_are_normalised_and_validated():
+    party = PartyCreate(
+        id="p-tax", name="Buyer", role="BUYER",
+        gstin=" 29abcde1234f1z5 ", mandi_license="  LIC-001  ",
+    )
+    assert party.gstin == "29ABCDE1234F1Z5"
+    assert party.mandi_license == "LIC-001"
+
+    with pytest.raises(ValidationError):
+        PartyCreate(id="p-tax", name="Buyer", role="BUYER", gstin="invalid")
+    with pytest.raises(ValidationError):
+        PartyCreate(id="p-tax", name="Buyer", role="BUYER", mandi_license="x" * 101)
+
 def test_more_than_100_revisions_is_rejected():
     with pytest.raises(ValidationError):
         SyncPushRequest(revisions=[rev(revision=i, rid=f"r{i}") for i in range(101)])
