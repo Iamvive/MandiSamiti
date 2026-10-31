@@ -1,48 +1,22 @@
 package com.appwork.mandisamiti.ui.buy
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.components.ReceiptAmountRow
+import com.appwork.mandisamiti.ui.components.ReceiptCard
+import com.appwork.mandisamiti.ui.components.ReceiptDivider
+import com.appwork.mandisamiti.ui.components.ReceiptHero
+import com.appwork.mandisamiti.ui.components.ReceiptLot
+import com.appwork.mandisamiti.ui.components.ReceiptLotRow
+import com.appwork.mandisamiti.ui.components.ReceiptScaffold
 import kotlinx.serialization.json.Json
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuyTransactionReceiptScreen(
     id: String,
@@ -62,141 +36,64 @@ fun BuyTransactionReceiptScreen(
     val lots = entry?.let { extractLots(it) } ?: emptyList()
     val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots) } ?: ""
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("किसान पर्चा (खरीद)") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "पीछे")
-                    }
-                },
-                actions = {
-                    if (entry != null && !entry.isVoid && onEdit != null) {
-                        IconButton(onClick = { onEdit(entry.id) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "सुधारें (Edit)")
-                        }
-                    }
-                    if (entry != null && onShareWhatsApp != null) {
-                        IconButton(onClick = { onShareWhatsApp(slipText) }) {
-                            Icon(Icons.Default.Share, contentDescription = "व्हाट्सएप शेयर")
-                        }
-                    }
-                }
-            )
+    ReceiptScaffold(
+        title = "किसान पर्चा",
+        onBack = onBack,
+        onEdit = if (entry != null && !entry.isVoid && onEdit != null) ({ onEdit(entry.id) }) else null,
+        shareLabel = "व्हाट्सएप पर पर्चा भेजें",
+        onShare = if (entry != null && onShareWhatsApp != null) ({ onShareWhatsApp(slipText) }) else null,
+        modifier = modifier
+    ) {
+        if (entry == null) {
+            Text("पर्चा लोड हो रहा है...")
+            return@ReceiptScaffold
         }
-    ) { paddingValues ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (entry == null) {
-                Text("पर्चा लोड हो रहा है...")
-            } else {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("किसान खरीद पर्चा", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            if (entry.isVoid) {
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text("रद्द") },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                                        labelColor = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                )
-                            }
-                        }
+        val village = partyVillage ?: extractVillage(entry.remarks)
+        val meta = listOfNotNull(
+            "#${slipLabel(entry.slipNo, entry.id)}",
+            receiptDateTime(entry.entryDate),
+            village?.takeIf { it.isNotBlank() },
+            entry.vehicleNumber?.takeIf { it.isNotBlank() }
+        ).joinToString(" • ")
+        val shop = listOf(shopName, mandiName).filter { it.isNotBlank() }.joinToString(", ")
 
-                        if (shopName.isNotBlank()) ReceiptLine("दुकान", shopName, isBold = true)
-                        if (mandiName.isNotBlank()) ReceiptLine("मंडी", mandiName)
-                        ReceiptLine("दिनांक / समय", receiptDateTime(entry.entryDate))
-                        ReceiptLine("किसान नाम", displayName, isBold = true)
-                        val phoneNum = entry.vehicleNumber
-                        if (!phoneNum.isNullOrBlank()) {
-                            ReceiptLine("मोबाइल नंबर", phoneNum)
-                        }
-                        val village = partyVillage ?: extractVillage(entry.remarks)
-                        if (!village.isNullOrBlank()) {
-                            ReceiptLine("गाँव", village)
-                        }
-                        ReceiptLine("पर्चा क्रमांक", "#${slipLabel(entry.slipNo, entry.id)}")
-
-                        // Multi-crop lots section
-                        if (lots.isNotEmpty()) {
-                            Spacer(Modifier.height(4.dp))
-                            Text("फसल आवक विवरण:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                            lots.forEachIndexed { idx, lot ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                        .padding(10.dp)
-                                ) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text("${idx + 1}. ${lot.cropName}", fontWeight = FontWeight.SemiBold)
-                                            Text("₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}", fontWeight = FontWeight.Bold)
-                                        }
-                                        Text(
-                                            "${lot.bags} बोरी • ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}/क्विंटल",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            ReceiptLine("बोरी", "${entry.bagsCount} बोरी")
-                            ReceiptLine("कुल वजन", "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल")
-                            ReceiptLine("भाव", "₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)} /क्विंटल")
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-                        ReceiptLine("कुल बोरी", "${entry.bagsCount} बोरी")
-                        ReceiptLine("कुल वजन", "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल")
-                        ReceiptLine("कुल राशि (Gross)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-                        ReceiptLine("कमीशन कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
-                        ReceiptLine("मजदूरी कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa)}")
-                        if (entry.advancePaidPaisa > 0) {
-                            ReceiptLine("अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-                        ReceiptLine(
-                            "शुद्ध देय राशि",
-                            MandiMathEngine.formatRupees(entry.netPayablePaisa),
-                            isBold = true
+        ReceiptCard {
+            if (shop.isNotBlank()) Text(shop)
+            ReceiptHero(
+                partyName = displayName,
+                meta = meta,
+                amountLabel = "शुद्ध देय राशि",
+                amount = MandiMathEngine.formatRupees(entry.netPayablePaisa),
+                isVoid = entry.isVoid
+            )
+            if (lots.isNotEmpty()) {
+                lots.forEachIndexed { idx, lot ->
+                    ReceiptLotRow(
+                        ReceiptLot(
+                            title = "${idx + 1}. ${lot.cropName}",
+                            detail = "${lot.bags} बोरी • ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}/क्विंटल",
+                            amount = "₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}"
                         )
-                    }
+                    )
                 }
-
-                if (onShareWhatsApp != null) {
-                    Button(
-                        onClick = { onShareWhatsApp(slipText) },
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                        Text("व्हाट्सएप पर पर्चा भेजें")
-                    }
-                }
+            } else {
+                ReceiptLotRow(
+                    ReceiptLot(
+                        title = "आवक",
+                        detail = "${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}/क्विंटल",
+                        amount = "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
+                    )
+                )
             }
+            ReceiptDivider()
+            ReceiptAmountRow("कुल (${entry.bagsCount} बोरी, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
+            ReceiptAmountRow("कमीशन", "- ₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
+            ReceiptAmountRow("मजदूरी", "- ₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa)}")
+            if (entry.advancePaidPaisa > 0) {
+                ReceiptAmountRow("अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
+            }
+            ReceiptDivider()
+            ReceiptAmountRow("शुद्ध देय राशि", MandiMathEngine.formatRupees(entry.netPayablePaisa), emphasized = true)
         }
     }
 }
@@ -245,23 +142,4 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
     }
     appendLine("--------------------")
     appendLine("*शुद्ध देय राशि: ${MandiMathEngine.formatRupees(entry.netPayablePaisa)}*")
-}
-
-@Composable
-private fun ReceiptLine(label: String, value: String, isBold: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = if (isBold) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal
-        )
-        Text(
-            text = value,
-            style = if (isBold) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal
-        )
-    }
 }
