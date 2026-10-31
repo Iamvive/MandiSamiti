@@ -58,9 +58,9 @@ class OfflineFirstTradeSettingsRepository(
         const val KEY_TARE_GRAMS = "trade_settings_tare_grams"
         const val KEY_IS_ENGLISH = "trade_settings_is_english"
 
-        const val DEFAULT_FARMER_COMM_BPS = 150L
+        const val DEFAULT_FARMER_COMM_BPS = 70L
         const val DEFAULT_BUYER_COMM_BPS = 150L
-        const val DEFAULT_LABOUR_PAISA = 15000L
+        const val DEFAULT_LABOUR_PAISA = 1000L
         const val DEFAULT_TARE_GRAMS = 35000L
     }
 }

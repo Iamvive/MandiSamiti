@@ -20,9 +20,9 @@ class TradeSettingsRepositoryTest {
 
         // Initial defaults
         val initial = repo.getTradeSettings()
-        assertEquals(150L, initial.farmerCommissionBps)
+        assertEquals(70L, initial.farmerCommissionBps)
         assertEquals(150L, initial.buyerCommissionBps)
-        assertEquals(15000L, initial.defaultLabourPaisa)
+        assertEquals(1000L, initial.defaultLabourPaisa)
         assertEquals(35000L, initial.defaultTareGrams)
         assertEquals(false, initial.isEnglish)
 
@@ -61,7 +61,7 @@ class TradeSettingsRepositoryTest {
 
         repo.getTradeSettingsStream().test {
             val first = awaitItem()
-            assertEquals(150L, first.farmerCommissionBps)
+            assertEquals(70L, first.farmerCommissionBps)
 
             val updated = TradeSettings(farmerCommissionBps = 250L, buyerCommissionBps = 200L, defaultLabourPaisa = 20000L, defaultTareGrams = 30000L)
             repo.saveTradeSettings(updated)
