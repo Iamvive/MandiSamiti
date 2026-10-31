@@ -3,6 +3,10 @@ package com.appwork.mandisamiti.ui.register
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -63,16 +67,18 @@ internal fun DrawerSummaryCard(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MandiPrimaryAction, contentColor = MandiPrimaryActionText),
             ) {
+                Icon(Icons.Default.Calculate, contentDescription = null)
+                Spacer(Modifier.size(8.dp))
                 Text(if (state.physicalCountPaisa == null) {
                     if (isEnglish) "Count cash" else "नकद गिनें"
-                } else if (isEnglish) "Count again / close day" else "फिर से गिनें / दिन बंद करें")
+                } else if (isEnglish) "Count again" else "फिर गिनें")
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onOpening, enabled = !state.isReadOnly) {
-                    Text(if (isEnglish) "Set opening" else "शुरुआती रोकड़", color = MandiTextPrimary)
+                IconButton(onClick = onOpening, enabled = !state.isReadOnly) {
+                    Icon(Icons.Default.Edit, contentDescription = if (isEnglish) "Set opening" else "शुरुआती रोकड़", tint = MandiTextPrimary)
                 }
-                TextButton(onClick = onCashHome, enabled = !state.isReadOnly) {
-                    Text(if (isEnglish) "Cash to home" else "घर निकासी", color = MandiTextPrimary)
+                IconButton(onClick = onCashHome, enabled = !state.isReadOnly) {
+                    Icon(Icons.Default.Home, contentDescription = if (isEnglish) "Cash to home" else "घर निकासी", tint = MandiTextPrimary)
                 }
             }
         }

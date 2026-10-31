@@ -46,6 +46,12 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.LocalAtm
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -489,12 +495,9 @@ fun DailyCashRegisterScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(selected = !showTransactionList, colors = drawerChipColors, onClick = { showTransactionList = false },
-                    label = { Text(if (isEnglish) "Bahi" else "बही") })
-                FilterChip(selected = showTransactionList, colors = drawerChipColors, onClick = { showTransactionList = true },
-                    label = { Text(if (isEnglish) "List" else "सूची") })
-                FilterChip(selected = cashOnly, colors = drawerChipColors, onClick = { cashOnly = !cashOnly },
-                    label = { Text(if (isEnglish) "Cash only" else "सिर्फ नकद") })
+                DrawerViewToggle(Icons.Default.MenuBook, if (isEnglish) "Bahi" else "बही", !showTransactionList) { showTransactionList = false }
+                DrawerViewToggle(Icons.Default.ViewList, if (isEnglish) "List" else "सूची", showTransactionList) { showTransactionList = true }
+                DrawerViewToggle(Icons.Default.LocalAtm, if (isEnglish) "Cash only" else "सिर्फ नकद", cashOnly) { cashOnly = !cashOnly }
             }
             if (!cashOnly) {
                 Text(if (isEnglish) "Online and cheque entries do not change drawer cash."
@@ -1322,8 +1325,8 @@ fun DailyCashRegisterScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.closeDayClosingSummary() }) {
-                    Text(if (isEnglish) "Close" else "बंद करें", color = MandiTextSecondary)
+                IconButton(onClick = { viewModel.closeDayClosingSummary() }) {
+                    Icon(Icons.Default.Close, contentDescription = if (isEnglish) "Close" else "बंद करें", tint = MandiTextSecondary)
                 }
             }
         )
@@ -1761,8 +1764,9 @@ private fun BahiAnchorRow(
                 fontWeight = FontWeight.Bold, color = MandiTextPrimary)
             Text(subtitle, fontSize = 12.sp, color = MandiTextSecondary)
             if (actionLabel != null && onClick != null) {
-                TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(actionLabel, fontSize = 13.sp, color = MandiTextPrimary, maxLines = 1)
+                IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+                    Icon(if (actionLabel == "Count" || actionLabel == "गिनती") Icons.Default.Calculate else Icons.Default.Edit,
+                        contentDescription = actionLabel, tint = MandiTextPrimary)
                 }
             }
         }

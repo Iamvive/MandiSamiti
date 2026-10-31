@@ -128,7 +128,7 @@ class DrawerLayoutTest {
             click(if (english) "Save count · keep day open" else "गिनती सहेजें · दिन खुला रखें")
             assertEquals(100_000L, vm.uiState.value.physicalCountPaisa)
             assertFalse(vm.uiState.value.isDayClosed)
-            click(if (english) "Count again / close day" else "फिर से गिनें / दिन बंद करें")
+            click(if (english) "Count again" else "फिर गिनें")
             click(if (english) "Close day" else "दिन बंद करें")
             click(if (english) "Close day" else "दिन बंद करें")
             assertTrue(vm.uiState.value.isDayClosed)
@@ -141,5 +141,6 @@ class DrawerLayoutTest {
     }
 
     private fun flatten(node: SemanticsNode): List<SemanticsNode> = listOf(node) + node.children.flatMap(::flatten)
-    private fun SemanticsNode.texts() = config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
+    private fun SemanticsNode.texts() = config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } +
+        config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
 }

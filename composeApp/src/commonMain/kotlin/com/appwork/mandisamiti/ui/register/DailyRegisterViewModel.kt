@@ -165,6 +165,7 @@ class DailyRegisterViewModel(
 
     private val todayDate: LocalDate get() = clock.now().toLocalDateTime(timeZone).date
     private val _selectedDate = MutableStateFlow(clock.now().toLocalDateTime(timeZone).date)
+    private val _countRevision = MutableStateFlow(0L)
 
     private val _uiState = MutableStateFlow(
         DailyRegisterUiState(
@@ -198,8 +199,9 @@ class DailyRegisterViewModel(
         val baseFlow = combine(
             partyRepository.getPartiesStream(shopId),
             cashRepository.getTransactionsByShopStream(shopId),
-            _selectedDate
-        ) { parties, allTx, date ->
+            _selectedDate,
+            _countRevision,
+        ) { parties, allTx, date, _ ->
             Triple(parties, allTx, date)
         }
         combine(
@@ -222,9 +224,10 @@ class DailyRegisterViewModel(
                     .filter { !it.isDeleted && it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                     .map { tx ->
                         val party = partyMap[tx.partyId]
+                        val cleanRemarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(tx.remarks)
                         val resolvedName = when {
                             !party?.name.isNullOrBlank() -> party!!.name
-                            !tx.remarks.isNullOrBlank() -> tx.remarks!!
+                            !cleanRemarks.isNullOrBlank() -> cleanRemarks
                             tx.transactionType == TransactionType.JAMA_RECEIVED -> "नकद जमा"
                             else -> "विविध निकासी"
                         }
@@ -234,12 +237,17 @@ class DailyRegisterViewModel(
                 val isCurrentToday = (date == currentToday)
                 val bahiEntries = buildList {
                     allTx.filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
+                        .filter { it.transactionType in drawerMovementTypes }
                         .filterNot { it.remarks?.contains("[EXPENSE:") == true || it.remarks?.contains("[SETTLE:") == true }
                         .forEach { tx ->
                             add(BahiDayEntry(
                                 id = tx.id,
-                                kind = if (tx.transactionType == TransactionType.JAMA_RECEIVED) BahiEntryKind.BUYER_PAYMENT else BahiEntryKind.ADVANCE_PAID,
-                                label = tx.remarks ?: partyMap[tx.partyId]?.name ?: "Cash entry",
+                                kind = when (tx.transactionType) {
+                                    TransactionType.INTEREST_RECEIVED -> BahiEntryKind.LOAN_INTEREST
+                                    TransactionType.JAMA_RECEIVED -> BahiEntryKind.BUYER_PAYMENT
+                                    else -> BahiEntryKind.ADVANCE_PAID
+                                },
+                                label = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(tx.remarks) ?: partyMap[tx.partyId]?.name ?: "Cash entry",
                                 amountPaisa = tx.amountPaisa,
                                 paymentMode = tx.paymentMode.toBahiMode(),
                                 occurredAt = tx.transactionDate,
@@ -365,6 +373,7 @@ class DailyRegisterViewModel(
             try {
                 drawerCountRepository?.save(shopId, date.toString(), count)
                 if (count == null) sessionCounts.remove(date) else sessionCounts[date] = count
+                _countRevision.value += 1
                 if (_uiState.value.selectedDate == date) {
                     _uiState.value = _uiState.value.copy(
                         physicalCountPaisa = count?.countedPaisa,

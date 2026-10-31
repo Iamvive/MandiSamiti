@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Opt-in side-by-side review APK. Its manifest has no network permission or production launcher.
+val drawerReview = providers.gradleProperty("drawerReview").orNull == "true"
+
 kotlin {
     jvmToolchain(17)
     jvm()
@@ -24,6 +27,8 @@ kotlin {
     }
 
     sourceSets {
+        matching { it.name == "androidDebug" }.configureEach { kotlin.srcDir("src/reviewFixtures/kotlin") }
+        getByName("jvmTest").kotlin.srcDir("src/reviewFixtures/kotlin")
         commonMain.dependencies {
             implementation(projects.coreDomain)
             implementation(projects.coreDatabase)
@@ -81,7 +86,9 @@ android {
     }
 
     // KMP maps androidDebug -> android "debug" too late for the manifest merger; set the overlay explicitly.
-    sourceSets.getByName("debug").manifest.srcFile("src/androidDebug/AndroidManifest.xml")
+    sourceSets.getByName("debug").manifest.srcFile(
+        if (drawerReview) "src/drawerReview/AndroidManifest.xml" else "src/androidDebug/AndroidManifest.xml"
+    )
 
     packaging {
         resources {
@@ -95,6 +102,7 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
         }
         getByName("debug") {
+            if (drawerReview) applicationIdSuffix = ".drawerreview"
             val localProps = Properties().apply {
                 rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
             }
