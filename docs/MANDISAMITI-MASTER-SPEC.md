@@ -21,6 +21,7 @@ This page is an index. Each topic lives on its own page; open the one you need.
 | [Sales playbook & GTM](sales-gtm/MANDI-SAMITI-SALES-PLAYBOOK.md) | Ground GTM, Aadhati sales objection handling, and Triple Lock Zero Data Loss |
 | [Pilot plan](product/pilot-plan.md) | Running the 21-shop pilot, ending access, and what happens to shop data |
 | [Pilot cost](product/pilot-cost.md) | Cost breakdown per month, day, shop and bill |
+| [100x UX & Product Review](product/reviews/2026-10-31-antigravity-100x-review.md) | Exhaustive 6-pass review: UX, typography, NGDL, motion, and Mathura bahi ergonomics |
 
 ## Engineering
 | Page | What it covers |
