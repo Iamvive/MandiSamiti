@@ -5,6 +5,7 @@
 - **Do not block on strict TDD:** Do not enforce upfront Test-Driven Development during active feature iterations.
 - **Test upon feature finalization:** Write unit and regression tests once the feature flow and design are final.
 - Transition to strict TDD will occur later as the product matures.
+- **Approval gate for hot.md:** Update `vaults/Vivek-K/wiki/hot.md` (and bump the submodule pointer) only after the feature is tested and Vivek has approved it. Until then, no handoff entries for that feature.
 - **Silent Testing & Voice Guardrail:** Never run voice tests, soundbox TTS playback, or trigger audio output during testing unless Vivek explicitly requests it. No AI should make sound. In production, sound and voice announcements must strictly be driven by user preference (settings/toggle).
 
 ## 2. Architectural Guardrails

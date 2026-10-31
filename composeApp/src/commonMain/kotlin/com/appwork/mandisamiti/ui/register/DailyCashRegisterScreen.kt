@@ -63,6 +63,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -77,6 +78,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -372,222 +374,50 @@ fun DailyCashRegisterScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Sticky Date Navigation Bar (दैनिक तारीख चयन)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 2.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MandiSurface),
-                border = BorderStroke(1.dp, MandiBorder)
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                color = MandiSurface,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("drawer-navigation"),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    IconButton(onClick = { viewModel.navigateToPreviousDay() }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.ChevronLeft, contentDescription = if (isEnglish) "Previous Day" else "पिछला दिन", tint = MandiTextPrimary)
+                    }
+                    Text(
+                        text = "${uiState.selectedDate.dayOfMonth.toString().padStart(2, '0')}/${uiState.selectedDate.monthNumber.toString().padStart(2, '0')}/${uiState.selectedDate.year}",
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MandiTextPrimary,
+                    )
+                    IconButton(onClick = { viewModel.navigateToNextDay() }, enabled = !uiState.isToday, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.ChevronRight, contentDescription = if (isEnglish) "Next Day" else "अगला दिन", tint = MandiTextPrimary)
+                    }
                     IconButton(
-                        onClick = { viewModel.navigateToPreviousDay() },
-                        modifier = Modifier.size(36.dp)
+                        onClick = { showTransactionList = !showTransactionList },
+                        modifier = Modifier.size(48.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronLeft,
-                            contentDescription = if (isEnglish) "Previous Day" else "पिछला दिन",
-                            tint = MandiNavy,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Icon(if (showTransactionList) Icons.Default.MenuBook else Icons.Default.ViewList,
+                            contentDescription = if (showTransactionList) {
+                                if (isEnglish) "Bahi" else "बही"
+                            } else if (isEnglish) "List" else "सूची",
+                            tint = MandiTextPrimary)
                     }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = formatBahiDate(uiState.selectedDate, isEnglish, uiState.isToday),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiNavy
-                        )
-                        if (uiState.isReadOnly) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MandiNeutralLight)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = if (isEnglish) "Archived" else "सुरक्षित",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MandiTextSecondary
-                                )
-                            }
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { viewModel.navigateToNextDay() },
-                        enabled = !uiState.isToday,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = if (isEnglish) "Next Day" else "अगला दिन",
-                            tint = if (!uiState.isToday) MandiNavy else MandiTextMuted.copy(alpha = 0.4f),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    DrawerViewToggle(Icons.Default.LocalAtm, if (isEnglish) "Cash only" else "सिर्फ नकद", cashOnly) { cashOnly = !cashOnly }
                 }
             }
-
-            // View-Only Past Day Banner
             if (uiState.isReadOnly) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 2.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MandiNeutralLight),
-                    border = BorderStroke(1.dp, MandiBorder)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MandiTextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = if (isEnglish) "Past date — View Only" else "पिछला दिन, सिर्फ देखने के लिए (View Only)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MandiTextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(
-                            onClick = { viewModel.navigateToToday() },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = if (isEnglish) "Back to Today" else "आज पर जाएं",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiAmberDark
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            androidx.compose.foundation.layout.FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                DrawerViewToggle(Icons.Default.MenuBook, if (isEnglish) "Bahi" else "बही", !showTransactionList) { showTransactionList = false }
-                DrawerViewToggle(Icons.Default.ViewList, if (isEnglish) "List" else "सूची", showTransactionList) { showTransactionList = true }
-                DrawerViewToggle(Icons.Default.LocalAtm, if (isEnglish) "Cash only" else "सिर्फ नकद", cashOnly) { cashOnly = !cashOnly }
-            }
-            if (!cashOnly) {
-                Text(if (isEnglish) "Online and cheque entries do not change drawer cash."
-                    else "ऑनलाइन और चेक की प्रविष्टियों से गल्ले का नकद नहीं बदलता।",
-                    color = MandiTextSecondary, fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 14.dp))
-            }
-            // Authentic Indian Bahi Mode Switcher (पल्ला चयन)
-            if (!showTransactionList) Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Split View: दो पल्ला (जमा-नामे)
-                Box(
-                    modifier = Modifier
-                        .weight(1.2f)
-                        .height(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (bahiViewMode == BahiViewMode.SPLIT) MandiAmberLight else MandiSurface)
-                        .border(
-                            width = 1.dp,
-                            color = if (bahiViewMode == BahiViewMode.SPLIT) MandiAmberDark else MandiBorder,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable { bahiViewMode = BahiViewMode.SPLIT },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isEnglish) "Split Bahi (L/R)" else "दो पल्ला (जमा-नामे)",
-                        fontSize = 12.sp,
-                        fontWeight = if (bahiViewMode == BahiViewMode.SPLIT) FontWeight.Bold else FontWeight.Medium,
-                        color = if (bahiViewMode == BahiViewMode.SPLIT) MandiAmberDark else MandiTextSecondary
-                    )
-                }
-
-                // Left: जमा पक्ष
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (bahiViewMode == BahiViewMode.JAMA) MandiGreenLight else MandiSurface)
-                        .border(
-                            width = 1.dp,
-                            color = if (bahiViewMode == BahiViewMode.JAMA) MandiGreenReceivable else MandiBorder,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable { bahiViewMode = BahiViewMode.JAMA },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isEnglish) "Jama (${jamaList.size})" else "जमा पक्ष (${jamaList.size})",
-                        fontSize = 12.sp,
-                        fontWeight = if (bahiViewMode == BahiViewMode.JAMA) FontWeight.Bold else FontWeight.Medium,
-                        color = if (bahiViewMode == BahiViewMode.JAMA) MandiGreenReceivable else MandiTextSecondary
-                    )
-                }
-
-                // Right: नामे पक्ष
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (bahiViewMode == BahiViewMode.NAME) MandiRedLight else MandiSurface)
-                        .border(
-                            width = 1.dp,
-                            color = if (bahiViewMode == BahiViewMode.NAME) MandiRedPayable else MandiBorder,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable { bahiViewMode = BahiViewMode.NAME },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isEnglish) "Naame (${nameList.size})" else "नामे पक्ष (${nameList.size})",
-                        fontSize = 12.sp,
-                        fontWeight = if (bahiViewMode == BahiViewMode.NAME) FontWeight.Bold else FontWeight.Medium,
-                        color = if (bahiViewMode == BahiViewMode.NAME) MandiRedPayable else MandiTextSecondary
-                    )
-                }
+                Text(if (isEnglish) "View only" else "सिर्फ देखने के लिए", color = MandiTextSecondary,
+                    fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp))
             }
 
             // Main Ledger Book Body (पन्ना)
             when (if (showTransactionList) BahiViewMode.LIST else bahiViewMode) {
                 BahiViewMode.LIST -> {
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth().weight(1f).testTag("drawer-ledger"),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         item {
@@ -609,6 +439,7 @@ fun DailyCashRegisterScreen(
                     // Authentic 2-Column Split Bahi (Left Jama, Right Name)
                     Card(
                         modifier = Modifier
+                            .testTag("drawer-ledger")
                             .fillMaxWidth()
                             .weight(1f)
                             .padding(horizontal = 14.dp, vertical = 6.dp),
@@ -696,8 +527,8 @@ fun DailyCashRegisterScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight(),
-                                    contentPadding = PaddingValues(6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
                                     item {
                                         BahiAnchorRow(
@@ -748,8 +579,8 @@ fun DailyCashRegisterScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight(),
-                                    contentPadding = PaddingValues(6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
                                     items(nameList, key = { it.transaction.id }) { item ->
                                         BahiTransactionItem(
@@ -863,15 +694,9 @@ fun DailyCashRegisterScreen(
                                     }
                                     Icon(
                                         imageVector = badgeIcon,
-                                        contentDescription = null,
-                                        tint = badgeColor,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Text(
-                                        text = badgeText,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = badgeColor
+                                        contentDescription = badgeText,
+                                        tint = MandiTextPrimary,
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
 
@@ -1711,32 +1536,50 @@ private fun BahiTransactionItem(
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MandiSurfaceElevated,
-        shape = RoundedCornerShape(8.dp),
-        shadowElevation = 1.dp,
+    var showDetails by remember { mutableStateOf(false) }
+    val mode = if (item.transaction.paymentMode == PaymentMode.CASH) {
+        if (isEnglish) "Cash" else "नकद"
+    } else item.transaction.paymentMode.name
+    val time = kotlinx.datetime.Instant.fromEpochMilliseconds(item.transaction.transactionDate)
+        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).time.toString().take(5)
+    Column(
+        Modifier.fillMaxWidth().clickable(onClickLabel = if (isEnglish) "Transaction details" else "प्रविष्टि विवरण") { showDetails = true }
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(displayName, color = MandiTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text(
-                text = "${if (isDeposit) "+" else "−"}₹$amountStr",
-                fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary,
-                textDecoration = if (isVoid) TextDecoration.LineThrough else null,
-            )
-            Text(secondaryText, fontSize = 12.sp, color = MandiTextSecondary)
-            val time = kotlinx.datetime.Instant.fromEpochMilliseconds(item.transaction.transactionDate)
-                .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).time.toString().take(5)
-            val direction = if (isDeposit) {
-                if (isEnglish) "Received" else "जमा"
-            } else if (isEnglish) "Paid" else "निकासी"
-            val mode = if (item.transaction.paymentMode == PaymentMode.CASH) {
-                if (isEnglish) "Cash" else "नकद"
-            } else item.transaction.paymentMode.name
-            Text("$direction · $mode · $time", fontSize = 12.sp, color = MandiTextSecondary)
-            if (isVoid) Text(if (isEnglish) "VOID · excluded from cash totals" else "रद्द · नकद जोड़ में शामिल नहीं",
-                color = MandiTextSecondary, fontSize = 12.sp)
-        }
+        Text(displayName, color = MandiTextPrimary, fontSize = 15.sp, lineHeight = 19.sp,
+            fontWeight = FontWeight.SemiBold, maxLines = if (isCompact) 2 else 3, overflow = TextOverflow.Ellipsis)
+        Text(
+            text = "${if (isDeposit) "+" else "−"}₹$amountStr",
+            fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary,
+            textDecoration = if (isVoid) TextDecoration.LineThrough else null,
+        )
+        val meta = listOfNotNull(item.village?.takeIf { it.isNotBlank() },
+            mode.takeIf { item.transaction.paymentMode != PaymentMode.CASH }).joinToString(" · ")
+        if (meta.isNotBlank()) Text(meta, fontSize = 11.sp, lineHeight = 15.sp, color = MandiTextSecondary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (isVoid) Text(if (isEnglish) "VOID" else "रद्द", color = MandiTextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+    }
+    HorizontalDivider(color = MandiBorder)
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text(displayName, color = MandiTextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${if (isDeposit) "+" else "−"}₹$amountStr", color = MandiTextPrimary, fontWeight = FontWeight.Bold)
+                    Text(secondaryText, color = MandiTextSecondary)
+                    Text("$mode · $time", color = MandiTextSecondary)
+                    if (isVoid) Text(if (isEnglish) "VOID · excluded from cash totals" else "रद्द · नकद जोड़ में शामिल नहीं",
+                        color = MandiTextPrimary)
+                }
+            },
+            confirmButton = {
+                IconButton(onClick = { showDetails = false }) {
+                    Icon(Icons.Default.Close, contentDescription = if (isEnglish) "Close details" else "विवरण बंद करें", tint = MandiTextPrimary)
+                }
+            },
+        )
     }
 }
 
@@ -1749,28 +1592,23 @@ private fun BahiAnchorRow(
     actionLabel: String? = null,
     onClick: (() -> Unit)? = null
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MandiSurfaceElevated,
-        shape = RoundedCornerShape(8.dp),
-        shadowElevation = 1.dp,
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
-            Text(MandiCurrencyFormatter.formatRupees(amountPaisa), fontSize = 17.sp,
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontSize = 12.sp, lineHeight = 16.sp, color = MandiTextSecondary)
+            Text(MandiCurrencyFormatter.formatRupees(amountPaisa), fontSize = 16.sp, lineHeight = 20.sp,
                 fontWeight = FontWeight.Bold, color = MandiTextPrimary)
-            Text(subtitle, fontSize = 12.sp, color = MandiTextSecondary)
-            if (actionLabel != null && onClick != null) {
-                IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
-                    Icon(if (actionLabel == "Count" || actionLabel == "गिनती") Icons.Default.Calculate else Icons.Default.Edit,
-                        contentDescription = actionLabel, tint = MandiTextPrimary)
-                }
+        }
+        if (actionLabel != null && onClick != null) {
+            IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+                Icon(if (actionLabel == "Count" || actionLabel == "गिनती") Icons.Default.Calculate else Icons.Default.Edit,
+                    contentDescription = actionLabel, tint = MandiTextPrimary)
             }
         }
     }
+    HorizontalDivider(color = MandiBorder)
 }
 
 private fun formatBahiDate(date: LocalDate, isEnglish: Boolean, isToday: Boolean): String {

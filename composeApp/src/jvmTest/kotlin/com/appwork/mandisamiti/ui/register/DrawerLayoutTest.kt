@@ -81,6 +81,11 @@ class DrawerLayoutTest {
             val countText = if (english) "Count cash" else "नकद गिनें"
             assertTrue(nodes.any { it.texts().contains(countText) }, "Counting action missing")
             assertTrue(nodes.any { it.texts().contains(name) }, "Party identity missing")
+            val summary = nodes.first { it.config.getOrNull(SemanticsProperties.TestTag) == "drawer-summary" }
+            assertTrue(summary.boundsInRoot.height <= 80f, "Cash strip must remain at most 80dp")
+            val ledger = nodes.first { it.config.getOrNull(SemanticsProperties.TestTag) == "drawer-ledger" }
+            assertTrue(ledger.boundsInRoot.height >= 900f * 0.60f,
+                "Bahi needs at least 60% of screen height; actual=${ledger.boundsInRoot.height}")
             val output = File("build/drawer-review/${width}-${if (dark) "dark" else "light"}-${if (english) "en" else "hi"}.png")
             output.parentFile.mkdirs()
             surface.makeImageSnapshot().use { image ->
@@ -116,6 +121,8 @@ class DrawerLayoutTest {
                 assertEquals(true, action.config[SemanticsActions.OnClick].action?.invoke())
                 repeat(3) { frame() }
             }
+            click(name)
+            click(if (english) "Close details" else "विवरण बंद करें")
             click(countText)
             click(if (english) "Count notes and coins" else "नोट और सिक्के गिनें")
             val input = roots.flatMap { flatten(it.semanticsOwner.rootSemanticsNode) }.first {
