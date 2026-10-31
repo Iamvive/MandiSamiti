@@ -15,6 +15,7 @@ class DailyStockCarryForwardAndNegativeWarningTest {
         override fun getExpensesStream(shopId: String) = throw NotImplementedError()
         override suspend fun getExpenseById(id: String) = null
         override suspend fun saveExpense(entry: com.appwork.mandisamiti.domain.model.ExpenseEntry) = Unit
+        override suspend fun editExpense(entry: com.appwork.mandisamiti.domain.model.ExpenseEntry, cashRemarks: String) = Unit
         override suspend fun voidExpense(id: String, reason: com.appwork.mandisamiti.domain.model.VoidReason) = Unit
         override suspend fun stockTotals(shopId: String) = totals
     }

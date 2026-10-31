@@ -8,6 +8,8 @@ import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.ExpenseCategory
 import com.appwork.mandisamiti.domain.model.ExpenseEntry
 import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
+import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.ExpenseRepository
 import com.appwork.mandisamiti.domain.repository.StockTotals
@@ -41,6 +43,60 @@ class OfflineFirstExpenseRepository(
             insertOrReplace(created)
             recordRevision(created, "CREATE", created.updatedAt)
         }
+    }
+
+    override suspend fun editExpense(entry: ExpenseEntry, cashRemarks: String) = withContext(ioDispatcher) {
+        require(entry.amountPaisa > 0) { "Amount must be positive" }
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val current = queries.getExpenseById(entry.id).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Expense ${entry.id} does not exist")
+            require(!current.isVoid) { "Voided expense cannot be edited" }
+            val edited = current.copy(
+                category = entry.category, amountPaisa = entry.amountPaisa, paidTo = entry.paidTo,
+                paymentMode = entry.paymentMode, remarks = entry.remarks,
+                revision = current.revision + 1, updatedAt = now, syncStatus = 0,
+            )
+            insertOrReplace(edited)
+            recordRevision(edited, "EDIT", now)
+
+            val tag = "[EXPENSE:${entry.id}]"
+            val linked = queries.getCashTransactionsByTag(tag).executeAsList().filter { it.is_void == 0L }
+            if (edited.paymentMode != ExpensePaymentMode.CASH) {
+                linked.forEach { tx -> writeCash(tx, tx.amount_paisa, tx.party_id, tx.remarks, now, void = true) }
+            } else if (linked.isEmpty()) {
+                queries.insertCashTransaction(
+                    id = IdGenerator.newId(), shop_id = edited.shopId, party_id = "EXPENSE_${edited.category.name}",
+                    deal_id = null, transaction_type = TransactionType.UDHAR_GIVEN.name, amount_paisa = edited.amountPaisa,
+                    payment_mode = PaymentMode.CASH.name, transaction_date = edited.entryDate, voice_note_uri = null,
+                    remarks = "$cashRemarks $tag", created_at = now, updated_at = now, is_deleted = 0L,
+                    sync_status = 0L, revision = 1L, is_void = 0L, void_reason = null,
+                )
+            } else {
+                linked.forEach { tx ->
+                    writeCash(tx, edited.amountPaisa, "EXPENSE_${edited.category.name}", "$cashRemarks $tag", now, void = false)
+                }
+            }
+        }
+    }
+
+    private fun writeCash(
+        tx: com.appwork.mandisamiti.database.CashTransactionEntity, amountPaisa: Long, partyId: String,
+        remarks: String?, now: Long, void: Boolean,
+    ) {
+        queries.insertCashTransaction(
+            id = tx.id, shop_id = tx.shop_id, party_id = partyId, deal_id = tx.deal_id,
+            transaction_type = tx.transaction_type, amount_paisa = amountPaisa, payment_mode = tx.payment_mode,
+            transaction_date = tx.transaction_date, voice_note_uri = tx.voice_note_uri, remarks = remarks,
+            created_at = tx.created_at, updated_at = now, is_deleted = tx.is_deleted, sync_status = 0L,
+            revision = tx.revision + 1L, is_void = if (void) 1L else 0L,
+            void_reason = if (void) VoidReason.WRONG_ENTRY.name else null,
+        )
+        queries.insertRevision(
+            id = IdGenerator.newId(), shop_id = tx.shop_id, entry_id = tx.id, entry_kind = "CASH",
+            revision = tx.revision + 1L, change_kind = if (void) "VOID" else "EDIT", snapshot_json = "",
+            void_reason = if (void) VoidReason.WRONG_ENTRY.name else null, changed_at = now,
+        )
     }
 
     override suspend fun voidExpense(id: String, reason: VoidReason) = withContext(ioDispatcher) {

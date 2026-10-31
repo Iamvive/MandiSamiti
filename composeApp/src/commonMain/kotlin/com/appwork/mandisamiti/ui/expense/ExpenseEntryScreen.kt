@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -69,16 +70,21 @@ fun ExpenseEntryScreen(
     onSaved: (ExpenseEntry) -> Unit,
     onBack: () -> Unit,
     isEnglish: Boolean = false,
+    existing: ExpenseEntry? = null,
+    onOpenList: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var selectedCategory by remember { mutableStateOf(ExpenseCategory.HAMMALI) }
-    var amount by remember { mutableStateOf("") }
-    var paidTo by remember { mutableStateOf("") }
-    var paymentMode by remember { mutableStateOf(ExpensePaymentMode.CASH) }
-    var remarks by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(existing?.category ?: ExpenseCategory.HAMMALI) }
+    var amount by remember { mutableStateOf(existing?.let { MandiMathEngine.paisaToInputString(it.amountPaisa) } ?: "") }
+    var paidTo by remember { mutableStateOf(existing?.paidTo.orEmpty()) }
+    var paymentMode by remember { mutableStateOf(existing?.paymentMode ?: ExpensePaymentMode.CASH) }
+    var remarks by remember { mutableStateOf(existing?.remarks.orEmpty()) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    val isDirty = amount.isNotBlank() || paidTo.isNotBlank() || remarks.isNotBlank()
+    val isDirty = if (existing != null) {
+        amount != MandiMathEngine.paisaToInputString(existing.amountPaisa) || selectedCategory != existing.category ||
+            paidTo != existing.paidTo.orEmpty() || remarks != existing.remarks.orEmpty() || paymentMode != existing.paymentMode
+    } else amount.isNotBlank() || paidTo.isNotBlank() || remarks.isNotBlank()
 
     MandiBackHandler(enabled = true) {
         if (isDirty) {
@@ -93,7 +99,7 @@ fun ExpenseEntryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEnglish) "Record Expense" else "खर्च दर्ज करें (Expense)") },
+                title = { Text(if (existing != null) (if (isEnglish) "Edit Expense" else "खर्च बदलें") else if (isEnglish) "Record Expense" else "खर्च दर्ज करें (Expense)") },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -105,6 +111,13 @@ fun ExpenseEntryScreen(
                         }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = if (isEnglish) "Back" else "पीछे")
+                    }
+                },
+                actions = {
+                    if (existing == null && onOpenList != null) {
+                        IconButton(onClick = onOpenList) {
+                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = if (isEnglish) "Past expenses" else "पिछले खर्च")
+                        }
                     }
                 }
             )
@@ -176,15 +189,15 @@ fun ExpenseEntryScreen(
                     if (canSave) {
                         val now = Clock.System.now().toEpochMilliseconds()
                         val entry = ExpenseEntry(
-                            id = IdGenerator.newId(),
+                            id = existing?.id ?: IdGenerator.newId(),
                             shopId = shopId,
-                            entryDate = now,
+                            entryDate = existing?.entryDate ?: now,
                             category = selectedCategory,
                             amountPaisa = MandiMathEngine.parseRupeesToPaisa(amount),
                             paidTo = paidTo.trim().ifEmpty { null },
                             paymentMode = paymentMode,
                             remarks = remarks.trim().ifEmpty { null },
-                            createdAt = now,
+                            createdAt = existing?.createdAt ?: now,
                             updatedAt = now,
                         )
                         onSaved(entry)
@@ -193,7 +206,7 @@ fun ExpenseEntryScreen(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
-                Text(if (isEnglish) "Save Expense" else "खर्च सुरक्षित करें")
+                Text(if (existing != null) (if (isEnglish) "Save Changes" else "बदलाव सुरक्षित करें") else if (isEnglish) "Save Expense" else "खर्च सुरक्षित करें")
             }
 
             if (showDiscardDialog) {

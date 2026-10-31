@@ -85,7 +85,8 @@ sealed interface Screen {
     data class SellReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data object LendEntry : Screen
     data object LendList : Screen
-    data object ExpenseEntry : Screen
+    data class ExpenseEntry(val existingId: String? = null) : Screen
+    data object ExpenseList : Screen
     data object StockSheet : Screen
 }
 
@@ -98,7 +99,8 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.SellList -> Screen.Home
     is Screen.LendEntry -> Screen.LendList
     is Screen.LendList -> Screen.Home
-    is Screen.ExpenseEntry -> Screen.Home
+    is Screen.ExpenseEntry -> if (existingId != null) Screen.ExpenseList else Screen.Home
+    is Screen.ExpenseList -> Screen.ExpenseEntry()
     is Screen.StockSheet -> Screen.Home
     is Screen.DealEntry -> Screen.Home
     is Screen.PartyLedger -> returnScreen ?: Screen.Home
@@ -278,7 +280,7 @@ fun App(
                     onNavigateToBuy = { currentScreen = Screen.BuyEntry(null) },
                     onNavigateToSell = { currentScreen = Screen.SellEntry(null) },
                     onNavigateToLend = { currentScreen = Screen.LendEntry },
-                    onNavigateToExpense = { currentScreen = Screen.ExpenseEntry },
+                    onNavigateToExpense = { currentScreen = Screen.ExpenseEntry() },
                     onNavigateToBuyList = { currentScreen = Screen.BuyList },
                     onNavigateToSellList = { currentScreen = Screen.SellList },
                     onNavigateToLendList = { currentScreen = Screen.LendList },
@@ -647,38 +649,59 @@ fun App(
                 )
             }
             is Screen.ExpenseEntry -> {
-                ExpenseEntryScreen(
+                var existing by remember(screen.existingId) { mutableStateOf<com.appwork.mandisamiti.domain.model.ExpenseEntry?>(null) }
+                var loaded by remember(screen.existingId) { mutableStateOf(screen.existingId == null) }
+                LaunchedEffect(screen.existingId) {
+                    screen.existingId?.let { existing = expenseRepo.getExpenseById(it); loaded = true }
+                }
+                if (loaded) ExpenseEntryScreen(
                     shopId = shopId ?: "",
                     isEnglish = tradeSettings?.isEnglish ?: false,
+                    existing = existing,
+                    onOpenList = { currentScreen = Screen.ExpenseList },
                     onSaved = { entry ->
                         coroutineScope.launch {
-                            expenseRepo.saveExpense(entry)
-                            if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
-                                val payee = entry.paidTo?.trim()
-                                val payeeNote = if (payee.isNullOrBlank()) "" else " ($payee)"
-                                val expRemarks = entry.remarks?.trim()
-                                val detailRem = if (expRemarks.isNullOrBlank()) "" else " - $expRemarks"
-                                val baseRem = "खर्च: ${entry.category.labelHi()}$payeeNote$detailRem"
-                                cashRepo.recordTransaction(
-                                    com.appwork.mandisamiti.domain.model.CashTransaction(
-                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                        shopId = shopId ?: "",
-                                        partyId = "EXPENSE_${entry.category.name}",
-                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                        amountPaisa = entry.amountPaisa,
-                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                        transactionDate = entry.entryDate,
-                                        remarks = "$baseRem [EXPENSE:${entry.id}]",
-                                        createdAt = entry.createdAt,
-                                        updatedAt = entry.updatedAt,
+                            val payee = entry.paidTo?.trim()
+                            val payeeNote = if (payee.isNullOrBlank()) "" else " ($payee)"
+                            val expRemarks = entry.remarks?.trim()
+                            val detailRem = if (expRemarks.isNullOrBlank()) "" else " - $expRemarks"
+                            val baseRem = "खर्च: ${entry.category.labelHi()}$payeeNote$detailRem"
+                            if (screen.existingId != null) {
+                                expenseRepo.editExpense(entry, baseRem)
+                            } else {
+                                expenseRepo.saveExpense(entry)
+                                if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
+                                    cashRepo.recordTransaction(
+                                        com.appwork.mandisamiti.domain.model.CashTransaction(
+                                            id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                            shopId = shopId ?: "",
+                                            partyId = "EXPENSE_${entry.category.name}",
+                                            transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                            amountPaisa = entry.amountPaisa,
+                                            paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                            transactionDate = entry.entryDate,
+                                            remarks = "$baseRem [EXPENSE:${entry.id}]",
+                                            createdAt = entry.createdAt,
+                                            updatedAt = entry.updatedAt,
+                                        )
                                     )
-                                )
+                                }
                             }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = Screen.Home
+                            currentScreen = if (screen.existingId != null) Screen.ExpenseList else Screen.Home
                         }
                     },
                     onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.ExpenseList -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val expenses by expenseRepo.getExpensesStream(shopId ?: "").collectAsState(initial = emptyList())
+                com.appwork.mandisamiti.ui.expense.ExpenseListScreen(
+                    entries = expenses,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
+                    onOpen = { id -> currentScreen = Screen.ExpenseEntry(id) },
+                    onBack = { currentScreen = Screen.Home },
                 )
             }
             is Screen.StockSheet -> {
