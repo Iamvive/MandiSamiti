@@ -189,158 +189,76 @@ fun PartyLedgerScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = when {
-                        isReceivable -> MandiRedLight
-                        isPayable -> MandiGreenLight
-                        else -> MandiSurface
-                    }
-                ),
+                colors = CardDefaults.cardColors(containerColor = MandiSurface),
                 border = CardDefaults.outlinedCardBorder().copy(
-                    brush = androidx.compose.ui.graphics.SolidColor(
-                        when {
-                            isReceivable -> MandiRedBorder
-                            isPayable -> MandiGreenBorder
-                            else -> MandiBorder
-                        }
-                    )
+                    brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                val statusText = when {
+                    isReceivable -> if (isEnglish) "To receive" else "लेना है"
+                    isPayable -> if (isEnglish) "To pay" else "देना है"
+                    else -> if (isEnglish) "Settled" else "हिसाब चुकता"
+                }
+                val statusColor = when {
+                    isReceivable -> MandiGreenReceivable
+                    isPayable -> MandiRedPayable
+                    else -> MandiTextPrimary
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = if (isEnglish) "Net Balance" else "खाता शुद्ध शेष",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MandiTextSecondary
-                        )
-                        Text(
-                            text = "₹${MandiMathEngine.paisaToRupeesString(balanceAmount)}",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = when {
-                                isReceivable -> MandiGreenReceivable
-                                isPayable -> MandiRedPayable
-                                else -> MandiTextPrimary
-                            }
-                        )
-                    }
-
-                    // Semantic Status Chip
-                    val statusText = when {
-                        isReceivable -> if (isEnglish) "To receive" else "लेना है"
-                        isPayable -> if (isEnglish) "To pay" else "देना है"
-                        else -> if (isEnglish) "Settled" else "हिसाब चुकता"
-                    }
-                    val statusColor = when {
-                        isReceivable -> MandiGreenText
-                        isPayable -> MandiRedText
-                        else -> MandiNeutralText
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MandiSurface)
-                            .border(1.dp, MandiBorder, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = statusText,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = statusColor
-                        )
-                    }
+                    Text(
+                        text = statusText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = statusColor
+                    )
+                    Text(
+                        text = "₹${MandiMathEngine.paisaToRupeesString(balanceAmount)}",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        maxLines = 1
+                    )
                 }
             }
 
-            // Buyer Tax & Licence Details Card (hidden for farmers unless details exist)
+            // Tax details: one muted line, whole line opens the edit dialog
             if (party?.partyType == PartyType.BUYER || party?.gstin != null || party?.mandiLicense != null) {
-                Card(
+                val notProvided = if (isEnglish) "Not provided" else "दर्ज नहीं"
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(containerColor = MandiSurface),
-                    border = CardDefaults.outlinedCardBorder().copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
-                    )
+                        .clickable {
+                            editNameInput = party?.name ?: ""
+                            editVillageInput = party?.village ?: ""
+                            editPhoneInput = party?.phone ?: ""
+                            editGstinInput = party?.gstin ?: ""
+                            editMandiLicenseInput = party?.mandiLicense ?: ""
+                            showEditPartyDialog = true
+                        }
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (isEnglish) "Tax & Licence Details" else "कर एवं लाइसेंस विवरण",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MandiTextSecondary
-                            )
-                            Text(
-                                text = if (isEnglish) "Edit" else "बदलें",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiPrimaryAction,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable {
-                                        editNameInput = party?.name ?: ""
-                                        editVillageInput = party?.village ?: ""
-                                        editPhoneInput = party?.phone ?: ""
-                                        editGstinInput = party?.gstin ?: ""
-                                        editMandiLicenseInput = party?.mandiLicense ?: ""
-                                        showEditPartyDialog = true
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "GSTIN",
-                                    fontSize = 11.sp,
-                                    color = MandiTextMuted
-                                )
-                                Text(
-                                    text = party?.gstin ?: (if (isEnglish) "Not provided" else "दर्ज नहीं"),
-                                    fontSize = 13.sp,
-                                    fontWeight = if (party?.gstin != null) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (party?.gstin != null) MandiTextPrimary else MandiTextMuted
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (isEnglish) "Mandi Licence" else "मंडी लाइसेंस",
-                                    fontSize = 11.sp,
-                                    color = MandiTextMuted
-                                )
-                                Text(
-                                    text = party?.mandiLicense ?: (if (isEnglish) "Not provided" else "दर्ज नहीं"),
-                                    fontSize = 13.sp,
-                                    fontWeight = if (party?.mandiLicense != null) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (party?.mandiLicense != null) MandiTextPrimary else MandiTextMuted
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = "GSTIN ${party?.gstin ?: notProvided}  ·  ${if (isEnglish) "Licence" else "लाइसेंस"} ${party?.mandiLicense ?: notProvided}",
+                        modifier = Modifier.weight(1f),
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (isEnglish) "Edit" else "बदलें",
+                        modifier = Modifier.padding(start = 8.dp),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiPrimaryAction
+                    )
                 }
             }
 
@@ -408,11 +326,6 @@ fun PartyLedgerScreen(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MandiTextPrimary
-                )
-                Text(
-                    text = if (isEnglish) "By date" else "तारीख अनुसार",
-                    fontSize = 12.sp,
-                    color = MandiTextMuted
                 )
             }
 
@@ -1283,6 +1196,7 @@ private fun FintechCashCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -1301,7 +1215,7 @@ private fun FintechCashCard(
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1312,14 +1226,7 @@ private fun FintechCashCard(
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary
                         )
-                        if (transaction.syncStatus == 1) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Synced",
-                                tint = MandiGreenReceivable,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        } else {
+                        if (transaction.syncStatus != 1) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Pending Local",
@@ -1340,6 +1247,9 @@ private fun FintechCashCard(
 
             Text(
                 text = "${if (isDeposit) "+" else "-"}₹${MandiMathEngine.paisaToRupeesString(transaction.amountPaisa)}",
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(start = 8.dp),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
