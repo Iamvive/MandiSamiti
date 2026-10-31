@@ -7,7 +7,7 @@ actual class SoundboxTtsManager {
     private var currentProcess: Process? = null
 
     actual fun speak(text: String, isSoundEnabled: Boolean) {
-        if (!isSoundEnabled || text.isBlank()) return
+        if (java.lang.Boolean.getBoolean("mandi.sound.disabled") || !isSoundEnabled || text.isBlank()) return
 
         println("[MandiSoundbox Live Audio]: $text")
 

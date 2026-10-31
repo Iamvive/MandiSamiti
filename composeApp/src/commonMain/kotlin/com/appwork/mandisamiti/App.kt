@@ -246,6 +246,7 @@ fun App(
                         lendRepository = lendRepo,
                         expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
+                        drawerCountRepository = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database),
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
                 }
@@ -419,6 +420,7 @@ fun App(
                         lendRepository = lendRepo,
                         expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
+                        drawerCountRepository = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database),
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
                     )
                 }

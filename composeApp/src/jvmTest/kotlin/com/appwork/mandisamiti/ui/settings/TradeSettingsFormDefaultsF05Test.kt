@@ -97,8 +97,8 @@ class TradeSettingsFormDefaultsF05Test {
         // Initial defaults
         val initial = repo.getTradeSettingsStream().first()
         val form1 = BuyEntryFormState(initial)
-        assertEquals("1.50", form1.commissionPercent)
-        assertEquals("150", form1.labourPerBag)
+        assertEquals("0.70", form1.commissionPercent)
+        assertEquals("10", form1.labourPerBag)
         assertEquals("0.35", form1.tareQuintals)
 
         // Update settings in repository

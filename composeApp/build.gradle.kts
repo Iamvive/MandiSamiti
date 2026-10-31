@@ -122,3 +122,7 @@ tasks.register<JavaExec>("runDemo") {
     classpath = compilation.output.allOutputs + compilation.runtimeDependencyFiles
     mainClass.set("com.appwork.mandisamiti.DemoSimulator")
 }
+
+tasks.withType<Test>().configureEach {
+    systemProperty("mandi.sound.disabled", "true")
+}

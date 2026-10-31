@@ -12,14 +12,14 @@ import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.ExpenseEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
-import com.appwork.mandisamiti.domain.model.ExpenseCategory
-import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.repository.CashTransactionRepository
+import com.appwork.mandisamiti.domain.repository.DrawerCount
+import com.appwork.mandisamiti.domain.repository.DrawerCountRepository
 import com.appwork.mandisamiti.domain.repository.BuyRepository
 import com.appwork.mandisamiti.domain.repository.ExpenseRepository
 import com.appwork.mandisamiti.domain.repository.LendRepository
@@ -90,6 +90,9 @@ data class DailyRegisterUiState(
     val inHandCashDrawerPaisa: Long = 0L,
     val physicalCountPaisa: Long? = null,
     val physicalCountReason: String? = null,
+    val drawerCount: DrawerCount? = null,
+    val cashFingerprint: Long = 0L,
+    val countError: String? = null,
     val bahiDayPage: BahiDayPage? = null,
     val todayTransactions: List<TransactionWithParty> = emptyList(),
     val availableParties: List<Party> = emptyList(),
@@ -102,9 +105,15 @@ data class DailyRegisterUiState(
     val reconciliationStatus: BahiReconciliationStatus
         get() = when {
             physicalCountPaisa == null -> BahiReconciliationStatus.NOT_COUNTED
+            needsRecount -> BahiReconciliationStatus.RECOUNT_REQUIRED
             physicalCountPaisa == inHandCashDrawerPaisa -> BahiReconciliationStatus.BALANCED
             else -> BahiReconciliationStatus.DISCREPANCY
         }
+
+    val needsRecount: Boolean
+        get() = drawerCount?.let { it.cashFingerprint != cashFingerprint } ?: false
+    val isDayClosed: Boolean
+        get() = drawerCount?.closedAt != null && !needsRecount
 
     val discrepancyPaisa: Long
         get() = (physicalCountPaisa ?: inHandCashDrawerPaisa) - inHandCashDrawerPaisa
@@ -128,7 +137,7 @@ sealed interface DailyRegisterEvent {
 
 enum class CashReconciliationStatus { MATCH, SURPLUS, SHORTAGE }
 
-enum class BahiReconciliationStatus { NOT_COUNTED, BALANCED, DISCREPANCY }
+enum class BahiReconciliationStatus { NOT_COUNTED, BALANCED, DISCREPANCY, RECOUNT_REQUIRED }
 
 data class CashReconciliation(
     val expectedPaisa: Long,
@@ -150,7 +159,8 @@ class DailyRegisterViewModel(
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val clock: Clock = Clock.System,
     private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
-    private val onLocalWrite: () -> Unit = {}
+    private val onLocalWrite: () -> Unit = {},
+    private val drawerCountRepository: DrawerCountRepository? = null,
 ) {
 
     private val todayDate: LocalDate get() = clock.now().toLocalDateTime(timeZone).date
@@ -166,6 +176,7 @@ class DailyRegisterViewModel(
 
     private val _events = MutableSharedFlow<DailyRegisterEvent>()
     val events: SharedFlow<DailyRegisterEvent> = _events.asSharedFlow()
+    private val sessionCounts = mutableMapOf<LocalDate, DrawerCount>()
 
     init {
         loadDailyData()
@@ -204,9 +215,11 @@ class DailyRegisterViewModel(
                 val (parties, allTx, date) = inputs
                 val window = CashDrawer.dayWindow(date, timeZone)
                 val summary = CashDrawer.summarize(allTx, window)
+                val count = drawerCountRepository?.load(shopId, date.toString()) ?: sessionCounts[date]
+                val fingerprint = drawerCashFingerprint(allTx, window.endMs)
                 val partyMap = parties.associateBy { it.id }
                 val todays = allTx
-                    .filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
+                    .filter { !it.isDeleted && it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                     .map { tx ->
                         val party = partyMap[tx.partyId]
                         val resolvedName = when {
@@ -219,7 +232,6 @@ class DailyRegisterViewModel(
                     }
                 val currentToday = todayDate
                 val isCurrentToday = (date == currentToday)
-                val isPast = (date < currentToday)
                 val bahiEntries = buildList {
                     allTx.filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                         .filterNot { it.remarks?.contains("[EXPENSE:") == true || it.remarks?.contains("[SETTLE:") == true }
@@ -256,7 +268,7 @@ class DailyRegisterViewModel(
                 val page = BahiDayPageBuilder.build(
                     dateEpochDay = date.year * 10_000L + date.monthNumber * 100L + date.dayOfMonth,
                     openingPaisa = summary.openingPaisa.coerceAtLeast(0L),
-                    closingPaisa = (physicalCountPaisaOr(summary.closingPaisa)).coerceAtLeast(0L),
+                    closingPaisa = (count?.countedPaisa ?: summary.closingPaisa).coerceAtLeast(0L),
                     entries = bahiEntries,
                 )
                 _uiState.value = _uiState.value.copy(
@@ -269,14 +281,16 @@ class DailyRegisterViewModel(
                     todayCashInPaisa = summary.cashInPaisa,
                     todayCashOutPaisa = summary.cashOutPaisa,
                     inHandCashDrawerPaisa = summary.closingPaisa,
+                    physicalCountPaisa = count?.countedPaisa,
+                    physicalCountReason = count?.reason,
+                    drawerCount = count,
+                    cashFingerprint = fingerprint,
                     bahiDayPage = page,
                     todayTransactions = todays.sortedByDescending { it.transaction.transactionDate }
                 )
             }
             .launchIn(viewModelScope)
     }
-
-    private fun physicalCountPaisaOr(fallback: Long) = _uiState.value.physicalCountPaisa ?: fallback
 
     fun selectDate(date: LocalDate) {
         val currentToday = todayDate
@@ -330,60 +344,49 @@ class DailyRegisterViewModel(
     }
 
     fun setPhysicalCashCount(countRs: Long?, reason: String? = null) {
-        if (_uiState.value.isReadOnly) return
-        _uiState.value = _uiState.value.copy(
-            physicalCountPaisa = countRs?.let { it * 100L },
-            physicalCountReason = reason?.trim()?.takeIf { it.isNotEmpty() }
-        )
+        if (countRs != null && (countRs < 0 || countRs > Long.MAX_VALUE / 100)) return
+        saveDrawerCount(countRs?.times(100), reason, close = false)
     }
 
     fun setPhysicalCashCountPaisa(countPaisa: Long?) {
-        if (_uiState.value.isReadOnly) return
-        _uiState.value = _uiState.value.copy(
-            physicalCountPaisa = countPaisa
-        )
+        saveDrawerCount(countPaisa, null, close = false)
+    }
+
+    private fun saveDrawerCount(countPaisa: Long?, reason: String?, close: Boolean) {
+        val state = _uiState.value
+        if (state.isReadOnly || state.isSaving || (countPaisa != null && countPaisa < 0)) return
+        val date = state.selectedDate
+        val now = clock.now().toEpochMilliseconds()
+        val count = countPaisa?.let {
+            DrawerCount(it, now, state.cashFingerprint, if (close) now else null, reason?.trim()?.takeIf(String::isNotEmpty))
+        }
+        _uiState.value = _uiState.value.copy(isSaving = true, countError = null)
+        viewModelScope.launch {
+            try {
+                drawerCountRepository?.save(shopId, date.toString(), count)
+                if (count == null) sessionCounts.remove(date) else sessionCounts[date] = count
+                if (_uiState.value.selectedDate == date) {
+                    _uiState.value = _uiState.value.copy(
+                        physicalCountPaisa = count?.countedPaisa,
+                        physicalCountReason = count?.reason,
+                        drawerCount = count,
+                        isDayClosingSummaryOpen = false,
+                    )
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(countError = "COUNT_SAVE_FAILED")
+            } finally {
+                _uiState.value = _uiState.value.copy(isSaving = false)
+            }
+        }
     }
 
     fun closeDay(countedRs: Long, reason: String? = null) {
-        val expenses = expenseRepository ?: return
-        val expected = _uiState.value.inHandCashDrawerPaisa
-        val counted = countedRs * 100L
-        val shortage = (expected - counted).coerceAtLeast(0L)
-        setPhysicalCashCount(countedRs, reason)
-        if (shortage == 0L) {
-            closeDayClosingSummary()
-            return
-        }
-        val now = clock.now().toEpochMilliseconds()
-        val entryId = IdGenerator.newId()
-        val entryDate = _uiState.value.selectedInstant.toEpochMilliseconds() + 12 * 60 * 60 * 1000L
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true)
-            expenses.saveExpense(
-                ExpenseEntry(
-                    id = entryId,
-                    shopId = shopId,
-                    entryDate = entryDate,
-                    category = ExpenseCategory.DAY_CLOSE_DIFF,
-                    amountPaisa = shortage,
-                    paymentMode = ExpensePaymentMode.CASH,
-                    remarks = "Day-close difference / दिन-बंदी अंतर",
-                    createdAt = now,
-                    updatedAt = now,
-                )
-            )
-            cashRepository.recordTransaction(
-                CashTransaction(
-                    id = IdGenerator.newId(), shopId = shopId, partyId = "EXPENSE_DAY_CLOSE_DIFF",
-                    transactionType = TransactionType.UDHAR_GIVEN, amountPaisa = shortage,
-                    paymentMode = PaymentMode.CASH, transactionDate = entryDate,
-                    remarks = "Day-close difference / दिन-बंदी अंतर [EXPENSE:$entryId]",
-                    createdAt = now, updatedAt = now,
-                )
-            )
-            onLocalWrite()
-            _uiState.value = _uiState.value.copy(isSaving = false, isDayClosingSummaryOpen = false)
-        }
+        if (countedRs < 0 || countedRs > Long.MAX_VALUE / 100) return
+        // A count is an observation. Closing never invents a cash transaction to force a match.
+        saveDrawerCount(countedRs * 100, reason, close = true)
     }
 
     fun reconcilePhysicalCash(countedRs: Long): CashReconciliation {
@@ -413,7 +416,7 @@ class DailyRegisterViewModel(
         val closing = MandiMathEngine.paisaToRupeesString(_uiState.value.inHandCashDrawerPaisa)
         val txnCount = _uiState.value.todayTransactions.size
 
-        val dateStr = clock.now().toString().take(10)
+        val dateStr = _uiState.value.selectedDate.toString()
 
         val reconciliationPart = if (physicalCountRs != null) {
             val recon = reconcilePhysicalCash(physicalCountRs)
