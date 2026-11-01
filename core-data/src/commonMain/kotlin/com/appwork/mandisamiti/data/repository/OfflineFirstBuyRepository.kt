@@ -6,6 +6,8 @@ import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.BuyEntryEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.BuyRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -61,6 +63,60 @@ class OfflineFirstBuyRepository(
             }
         }
     }
+
+    /**
+     * One transaction for a new Buy slip: the party (created, renamed or updated), the slip, and each
+     * cash row linked to the slip. Anything that throws rolls all of it back. Sync picks the rows up
+     * through their pending status. [BuyEntry.paidPaisa] must equal the cash rows, so the slip and Galla agree.
+     */
+    suspend fun saveBuyCheckout(entry: BuyEntry, party: Party?, payments: List<CashTransaction>) =
+        withContext(ioDispatcher) {
+            require(entry.paidPaisa == payments.sumOf { it.amountPaisa }) { "Slip paid must equal its cash rows" }
+            database.transaction {
+                if (party != null) {
+                    if (queries.getPartyById(party.id).executeAsOneOrNull() == null) {
+                        queries.insertParty(
+                            id = party.id, shop_id = party.shopId, name = party.name, phone = party.phone,
+                            village = party.village, party_type = party.partyType.name,
+                            monthly_interest_rate = party.monthlyInterestRate, photo_uri = party.photoUri,
+                            gstin = party.gstin, mandi_license = party.mandiLicense,
+                            created_at = party.createdAt, updated_at = party.updatedAt,
+                            is_deleted = 0L, sync_status = 0L,
+                        )
+                    } else {
+                        queries.updateParty(
+                            name = party.name, phone = party.phone, village = party.village,
+                            party_type = party.partyType.name, monthly_interest_rate = party.monthlyInterestRate,
+                            photo_uri = party.photoUri, gstin = party.gstin, mandi_license = party.mandiLicense,
+                            updated_at = party.updatedAt, is_deleted = 0L, sync_status = 0L, id = party.id,
+                        )
+                    }
+                }
+                val slipNo = entry.slipNo ?: queries.nextBuySlipNo(entry.shopId).executeAsOne()
+                val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
+                insertOrReplace(created)
+                recordRevision(created, "CREATE", created.updatedAt)
+                payments.forEach { p ->
+                    require(p.amountPaisa > 0) { "Payment must be positive" }
+                    val row = p.copy(revision = 1, syncStatus = 0, sourceEntryType = "BUY", sourceEntryId = entry.id)
+                    queries.insertCashTransaction(
+                        id = row.id, shop_id = row.shopId, party_id = row.partyId, deal_id = row.dealId,
+                        transaction_type = row.transactionType.name, amount_paisa = row.amountPaisa,
+                        payment_mode = row.paymentMode.name, transaction_date = row.transactionDate,
+                        voice_note_uri = row.voiceNoteUri, remarks = row.remarks, created_at = row.createdAt,
+                        updated_at = row.updatedAt, is_deleted = 0L, sync_status = 0L, revision = 1L,
+                        is_void = 0L, void_reason = null,
+                        source_entry_type = row.sourceEntryType, source_entry_id = row.sourceEntryId,
+                    )
+                    queries.insertRevision(
+                        id = IdGenerator.newId(), shop_id = row.shopId, entry_id = row.id, entry_kind = "CASH",
+                        revision = 1L, change_kind = "CREATE",
+                        snapshot_json = json.encodeToString(CashTransaction.serializer(), row),
+                        void_reason = null, changed_at = row.updatedAt,
+                    )
+                }
+            }
+        }
 
     private fun extractVillage(remarks: String?): String? {
         if (remarks.isNullOrBlank()) return null

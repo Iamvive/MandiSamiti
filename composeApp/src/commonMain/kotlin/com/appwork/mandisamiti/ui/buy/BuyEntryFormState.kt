@@ -92,7 +92,10 @@ data class AggregatedBuyPreview(
     val labourPaisa: Long,
     val advancePaidPaisa: Long,
     val netPayablePaisa: Long
-)
+) {
+    /** Still to hand over after the advance. */
+    val payoutPaisa: Long get() = netPayablePaisa - advancePaidPaisa
+}
 
 class BuyEntryFormState(
     tradeSettings: TradeSettings? = null
@@ -240,7 +243,8 @@ class BuyEntryFormState(
         val unroundedFinal = totalGross - labourPaisa - commRaw
         val roundedFinal = ((unroundedFinal + 500L) / 1000L) * 1000L
         val commissionPaisa = totalGross - labourPaisa - roundedFinal
-        val netPayable = roundedFinal - advancePaisa
+        // Net is the commodity value only (Vivek's sheet, 2026-11-01). Advance is money already paid, tracked in paid.
+        val netPayable = roundedFinal
 
         return AggregatedBuyPreview(
             lotsCalculations = lotResults,
@@ -279,7 +283,7 @@ class BuyEntryFormState(
         if (lotsVal.isEmpty() || lotsVal.any { !it.isValid }) return false
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return false
-        if (agg.netPayablePaisa < 0) return false
+        if (agg.payoutPaisa < 0) return false
         return true
     }
 
@@ -298,7 +302,7 @@ class BuyEntryFormState(
         }
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return "कुल राशि शून्य से अधिक होनी चाहिए"
-        if (agg.netPayablePaisa < 0) return "चेतावनी: पेशगी राशि कुल हिसाब से अधिक है"
+        if (agg.payoutPaisa < 0) return "चेतावनी: पेशगी राशि कुल हिसाब से अधिक है"
         return null
     }
 
