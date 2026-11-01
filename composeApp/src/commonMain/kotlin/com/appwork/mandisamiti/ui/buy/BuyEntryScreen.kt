@@ -63,6 +63,9 @@ import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
+import com.appwork.mandisamiti.ui.components.NewPartyConfirmDialog
+import com.appwork.mandisamiti.ui.components.TypedPartyCheck
+import com.appwork.mandisamiti.ui.components.checkTypedParty
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import kotlinx.datetime.Clock
 
@@ -85,6 +88,7 @@ fun BuyEntryScreen(
     var existingEntry by remember { mutableStateOf<BuyEntry?>(null) }
     var showRateOutlierConfirmation by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var pendingEntryToSave by remember { mutableStateOf<BuyEntry?>(null) }
 
@@ -561,8 +565,7 @@ fun BuyEntryScreen(
                 }
             }
 
-            Button(
-                onClick = {
+            val performSave: () -> Unit = {
                     val entry = formState.toBuyEntry(
                         shopId = shopId,
                         existingId = existingId,
@@ -587,11 +590,28 @@ fun BuyEntryScreen(
                     } else {
                         onSaved(entry)
                     }
+            }
+            Button(
+                onClick = {
+                    when (val check = checkTypedParty(formState.farmerName, formState.selectedFarmerId, parties)) {
+                        is TypedPartyCheck.ExactMatch -> { formState.selectedFarmerId = check.party.id; performSave() }
+                        is TypedPartyCheck.NeedsConfirm -> { newPartyCheck = check }
+                        else -> performSave()
+                    }
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 Text(if (isEnglish) "Save Purchase Entry" else "सुरक्षित करें (सौदा पक्का)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+
+            newPartyCheck?.let { check ->
+                NewPartyConfirmDialog(
+                    check = check,
+                    isEnglish = isEnglish,
+                    onCreate = { newPartyCheck = null; performSave() },
+                    onDismiss = { newPartyCheck = null },
+                )
             }
 
             if (showDuplicateDialog && pendingEntryToSave != null) {

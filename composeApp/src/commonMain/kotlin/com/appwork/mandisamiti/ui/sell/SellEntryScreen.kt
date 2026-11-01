@@ -66,6 +66,9 @@ import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
+import com.appwork.mandisamiti.ui.components.NewPartyConfirmDialog
+import com.appwork.mandisamiti.ui.components.TypedPartyCheck
+import com.appwork.mandisamiti.ui.components.checkTypedParty
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +91,7 @@ fun SellEntryScreen(
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showSanityConfirmation by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
     var pendingEntryToSave by remember { mutableStateOf<SellEntry?>(null) }
 
     val recentSells by (sellRepository?.getSellEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
@@ -714,8 +718,7 @@ fun SellEntryScreen(
             }
 
             // Save Action Button
-            Button(
-                onClick = {
+            val performSave: () -> Unit = {
                     val entry = formState.toSellEntry(existingId, shopId)
                     val now = Clock.System.now().toEpochMilliseconds()
                     val isDuplicate = existingId == null && recentSells.any { prev ->
@@ -736,6 +739,14 @@ fun SellEntryScreen(
                     } else {
                         onSaved(entry)
                     }
+            }
+            Button(
+                onClick = {
+                    when (val check = checkTypedParty(formState.buyerName, formState.selectedBuyerId, parties)) {
+                        is TypedPartyCheck.ExactMatch -> { formState.selectedBuyerId = check.party.id; performSave() }
+                        is TypedPartyCheck.NeedsConfirm -> { newPartyCheck = check }
+                        else -> performSave()
+                    }
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -747,6 +758,15 @@ fun SellEntryScreen(
                     if (isEnglish) "Save Sale Entry" else "सुरक्षित करें (बिक्री सौदा पक्का)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
+                )
+            }
+
+            newPartyCheck?.let { check ->
+                NewPartyConfirmDialog(
+                    check = check,
+                    isEnglish = isEnglish,
+                    onCreate = { newPartyCheck = null; performSave() },
+                    onDismiss = { newPartyCheck = null },
                 )
             }
 

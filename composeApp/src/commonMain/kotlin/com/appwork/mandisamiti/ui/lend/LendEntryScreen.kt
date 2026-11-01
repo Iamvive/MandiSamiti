@@ -49,6 +49,9 @@ import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
+import com.appwork.mandisamiti.ui.components.NewPartyConfirmDialog
+import com.appwork.mandisamiti.ui.components.TypedPartyCheck
+import com.appwork.mandisamiti.ui.components.checkTypedParty
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +78,7 @@ fun LendEntryScreen(
     var notes by remember { mutableStateOf("") }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
     var pendingEntryToSave by remember { mutableStateOf<LendEntry?>(null) }
 
     val recentLends by (lendRepository?.getLendEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
@@ -266,9 +270,7 @@ fun LendEntryScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Button(
-                onClick = {
-                    if (canSave) {
+            val performSave: () -> Unit = {
                         val now = Clock.System.now().toEpochMilliseconds()
                         val entryAmount = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountRupees) else 0L
                         val entry = LendEntry(
@@ -302,12 +304,28 @@ fun LendEntryScreen(
                         } else {
                             onSaved(entry)
                         }
+            }
+            Button(
+                onClick = {
+                    when (val check = checkTypedParty(partyPhoneOrName, selectedPartyId, parties)) {
+                        is TypedPartyCheck.ExactMatch -> { selectedPartyId = check.party.id; performSave() }
+                        is TypedPartyCheck.NeedsConfirm -> { newPartyCheck = check }
+                        else -> performSave()
                     }
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Text(if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें")
+            }
+
+            newPartyCheck?.let { check ->
+                NewPartyConfirmDialog(
+                    check = check,
+                    isEnglish = isEnglish,
+                    onCreate = { newPartyCheck = null; performSave() },
+                    onDismiss = { newPartyCheck = null },
+                )
             }
 
             if (showDuplicateDialog && pendingEntryToSave != null) {
