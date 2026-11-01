@@ -38,10 +38,19 @@ class Phase3UiCheckTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(contents, encoding="utf-8")
 
+    def write_bytes(self, relative_path: str, contents: bytes) -> None:
+        path = self.repo / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(contents)
+
     def commit_change(self, relative_path: str, contents: str) -> None:
         self.write(relative_path, contents)
         self.run_git("add", ".")
         self.run_git("commit", "-qm", "changed file")
+
+    def commit_base_change(self, relative_path: str, contents: str) -> None:
+        self.commit_change(relative_path, contents)
+        self.run_git("branch", "-f", "phase3/integration")
 
     def check(self) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -80,6 +89,18 @@ class Phase3UiCheckTests(unittest.TestCase):
 
         self.assert_violation("raw-colour", "feature/EntryScreen.kt")
 
+    def test_rejects_numeric_channel_raw_colour_outside_theme_tokens(self) -> None:
+        self.commit_change("feature/EntryScreen.kt", "val accent = Color(255, 0, 0)\n")
+
+        self.assert_violation("raw-colour", "feature/EntryScreen.kt")
+
+    def test_rejects_underscore_hex_raw_colour_outside_theme_tokens(self) -> None:
+        self.commit_change(
+            "feature/EntryScreen.kt", "val accent = Color(0xFF_12_34_56)\n"
+        )
+
+        self.assert_violation("raw-colour", "feature/EntryScreen.kt")
+
     def test_allows_raw_colour_definition_in_theme_tokens(self) -> None:
         self.commit_change(
             "ui/theme/Color.kt", "val HarvestGreen = Color(0x" + "FF123456)\n"
@@ -91,6 +112,25 @@ class Phase3UiCheckTests(unittest.TestCase):
         self.commit_change("feature/EntryScreen.kt", 'Text("Ready ' + chr(0x1F642) + '")\n')
 
         self.assert_violation("emoji", "feature/EntryScreen.kt")
+
+    def test_rejects_keycap_emoji_sequence(self) -> None:
+        keycap = "1" + "\ufe0f" + "\u20e3"
+        self.commit_change("feature/EntryScreen.kt", f'Text("{keycap}")\n')
+
+        self.assert_violation("emoji", "feature/EntryScreen.kt")
+
+    def test_rejects_zwj_emoji_sequence(self) -> None:
+        family = "\U0001f468" + "\u200d" + "\U0001f469" + "\u200d" + "\U0001f467"
+        self.commit_change("feature/EntryScreen.kt", f'Text("{family}")\n')
+
+        self.assert_violation("emoji", "feature/EntryScreen.kt")
+
+    def test_allows_ordinary_dingbat_symbol(self) -> None:
+        self.commit_change(
+            "feature/EntryScreen.kt", 'Text("Checked ' + chr(0x2713) + '")\n'
+        )
+
+        self.assert_clean()
 
     def test_rejects_paisa_arithmetic_in_a_screen(self) -> None:
         self.commit_change(
@@ -113,6 +153,31 @@ class Phase3UiCheckTests(unittest.TestCase):
 
         self.assert_violation("paisa-gram-arithmetic", "feature/ConfirmDialog.kt")
 
+    def test_rejects_multiline_paisa_arithmetic_in_a_screen(self) -> None:
+        self.commit_change(
+            "feature/EntryScreen.kt",
+            "val total =\n    salePaisa\n        +\n    feePaisa\n",
+        )
+
+        self.assert_violation("paisa-gram-arithmetic", "feature/EntryScreen.kt")
+
+    def test_allows_lambda_arrow_with_paisa_name(self) -> None:
+        self.commit_change(
+            "feature/EntryScreen.kt", "entries.map { paisa -> paisa.toString() }\n"
+        )
+
+        self.assert_clean()
+
+    def test_allows_paisa_arithmetic_text_in_comments_and_strings(self) -> None:
+        self.commit_change(
+            "feature/EntryScreen.kt",
+            "// totalPaisa = salePaisa + feePaisa\n"
+            "val help = \"totalPaisa = salePaisa + feePaisa\"\n"
+            "/* totalPaisa = salePaisa + feePaisa */\n",
+        )
+
+        self.assert_clean()
+
     def test_allows_paisa_arithmetic_outside_ui_target_files(self) -> None:
         self.commit_change(
             "feature/EntryCalculator.kt", "val totalPaisa = salePaisa + feePaisa\n"
@@ -132,6 +197,37 @@ class Phase3UiCheckTests(unittest.TestCase):
         self.run_git("commit", "-qm", "legacy colour")
         self.run_git("branch", "-f", "phase3/integration")
         self.commit_change("feature/LegacyScreen.kt", legacy_colour + "fun render() = Unit\n")
+
+        self.assert_clean()
+
+    def test_uses_new_path_for_renamed_file_with_quoted_name(self) -> None:
+        old_path = 'feature/Old "Quote" Screen.kt'
+        new_path = 'feature/New "Quote" Screen.kt'
+        self.commit_base_change(old_path, "fun render() = Unit\n" * 6)
+        self.run_git("mv", old_path, new_path)
+        self.write(new_path, "fun render() = Unit\n" * 5 + "val accent = Color.Red\n")
+        self.run_git("add", ".")
+        self.run_git("commit", "-qm", "rename and change")
+
+        self.assert_violation("raw-colour", new_path)
+
+    def test_ignores_deleted_file_content(self) -> None:
+        self.commit_base_change(
+            "feature/DeletedScreen.kt", "val accent = Color(0xFF123456)\n"
+        )
+        self.run_git("rm", "feature/DeletedScreen.kt")
+        self.run_git("commit", "-qm", "delete old file")
+
+        self.assert_clean()
+
+    def test_ignores_binary_changed_content(self) -> None:
+        self.write_bytes("feature/Picture.bin", b"\x00baseline\x00")
+        self.run_git("add", ".")
+        self.run_git("commit", "-qm", "binary base")
+        self.run_git("branch", "-f", "phase3/integration")
+        self.write_bytes("feature/Picture.bin", b"\x00changed\x00")
+        self.run_git("add", ".")
+        self.run_git("commit", "-qm", "binary change")
 
         self.assert_clean()
 
