@@ -438,11 +438,36 @@ fun App(
             is Screen.BuyEntry -> {
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val buyForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings) }
+                // Loan section: the picked party's oldest open money loan, with interest due as of now.
+                val loanPartyId = buyForm.selectedFarmerId
+                LaunchedEffect(loanPartyId, lends) {
+                    val open = lends
+                        .filter { !it.isVoid && it.partyId == loanPartyId && it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
+                        .sortedBy { it.entryDate }
+                    var found: Triple<String, Long, Long>? = null
+                    for (lend in open) {
+                        val live = lendRepo.getSettlements(lend.id).filter { !it.isVoid }
+                        val principal = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
+                        if (principal <= 0L) continue
+                        val rate = partyRepo.getPartyById(lend.partyId)?.monthlyInterestRate
+                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate ?: 1.5
+                        val interest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
+                            lend.amountPaisa, rate, lend.entryDate, live, kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                        )
+                        found = Triple(lend.id, principal, interest)
+                        break
+                    }
+                    if (found?.first != buyForm.loanLendId || found?.second != buyForm.loanPrincipalPaisa || found?.third != buyForm.loanInterestDuePaisa) {
+                        buyForm.setLoan(found?.first, found?.second ?: 0L, found?.third ?: 0L)
+                    }
+                }
                 BuyEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
                     tradeSettings = tradeSettings,
+                    formState = buyForm,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     parties = parties,
                     activeLoanChecker = { farmerName ->
@@ -462,7 +487,11 @@ fun App(
                                     createdAt = now,
                                     updatedAt = now,
                                 )
-                                buyRepo.saveBuyCheckout(entry, party, if (advance.amountPaisa > 0) listOf(advance) else emptyList())
+                                buyRepo.saveBuyCheckout(
+                                    entry, party,
+                                    if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
+                                    buyForm.buildLoanCut(entry.shopId, now),
+                                )
                             } else {
                                 buyRepo.editBuyEntry(entry)
                             }
