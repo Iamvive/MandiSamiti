@@ -188,13 +188,13 @@ def test_cli_dry_run_prints_counts_without_personal_fields(tmp_path):
     result = subprocess.run(
         [
             sys.executable,
-            "scripts/import_parties.py",
+            "backend/scripts/import_parties.py",
             "--farmers",
             str(farmers),
             "--import-root",
             str(tmp_path),
         ],
-        cwd=Path(__file__).parents[1],
+        cwd=Path(__file__).parents[2],
         capture_output=True,
         text=True,
         check=False,
