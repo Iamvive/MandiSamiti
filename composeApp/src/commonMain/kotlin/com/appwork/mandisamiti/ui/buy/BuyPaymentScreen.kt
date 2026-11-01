@@ -62,7 +62,7 @@ fun BuyPaymentScreen(
 
     val totalPayablePaisa = entry.netPayablePaisa
     val advanceOrCutPaisa = entry.paidPaisa
-    val finalPayablePaisa = (totalPayablePaisa - advanceOrCutPaisa).coerceAtLeast(0L)
+    val finalPayablePaisa = BuyPaymentCalculations.calculateFinalPayable(totalPayablePaisa, advanceOrCutPaisa)
 
     var payMode by remember { mutableStateOf(PaymentMode.FULL) }
     var customAmountText by remember { mutableStateOf("") }
@@ -71,11 +71,11 @@ fun BuyPaymentScreen(
         PaymentMode.FULL -> finalPayablePaisa
         PaymentMode.PARTIAL -> {
             val enteredRupees = customAmountText.toLongOrNull() ?: 0L
-            (enteredRupees * 100L).coerceAtMost(finalPayablePaisa)
+            BuyPaymentCalculations.rupeesToPaisa(enteredRupees).coerceAtMost(finalPayablePaisa)
         }
     }
 
-    val remainingLeftPaisa = (finalPayablePaisa - amountToPayPaisa).coerceAtLeast(0L)
+    val remainingLeftPaisa = BuyPaymentCalculations.calculateRemainingLeft(finalPayablePaisa, amountToPayPaisa)
     val slipNum = slipLabel(entry.slipNo, entry.id)
 
     Scaffold(

@@ -103,14 +103,14 @@ fun BuyTransactionReceiptScreen(
             if (entry.advancePaidPaisa > 0) {
                 ReceiptAmountRow("अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
             }
-            val loanCutPaisa = (entry.paidPaisa - entry.advancePaidPaisa).coerceAtLeast(0L)
+            val loanCutPaisa = BuyPaymentCalculations.calculateLoanCut(entry.paidPaisa, entry.advancePaidPaisa)
             if (loanCutPaisa > 0) {
                 ReceiptAmountRow("उधार कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(loanCutPaisa)}")
             }
             ReceiptDivider()
             ReceiptAmountRow("शुद्ध देय राशि", MandiMathEngine.formatRupees(entry.netPayablePaisa), emphasized = true)
             if (entry.paidPaisa > 0) {
-                val leftPaisa = (entry.netPayablePaisa - entry.paidPaisa).coerceAtLeast(0L)
+                val leftPaisa = BuyPaymentCalculations.calculateLeft(entry.netPayablePaisa, entry.paidPaisa)
                 ReceiptAmountRow("भुगतान किया", "₹${MandiMathEngine.paisaToRupeesString(entry.paidPaisa)}")
                 ReceiptAmountRow("बाकी राशि", MandiMathEngine.formatRupees(leftPaisa), emphasized = true)
             }
@@ -171,14 +171,14 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
     if (entry.advancePaidPaisa > 0) {
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }
-    val loanCutPaisa = (entry.paidPaisa - entry.advancePaidPaisa).coerceAtLeast(0L)
+    val loanCutPaisa = BuyPaymentCalculations.calculateLoanCut(entry.paidPaisa, entry.advancePaidPaisa)
     if (loanCutPaisa > 0) {
         appendLine("उधार कटौती: -₹${MandiMathEngine.paisaToRupeesString(loanCutPaisa)}")
     }
     appendLine("--------------------")
     appendLine("*शुद्ध देय राशि: ${MandiMathEngine.formatRupees(entry.netPayablePaisa)}*")
     if (entry.paidPaisa > 0) {
-        val leftPaisa = (entry.netPayablePaisa - entry.paidPaisa).coerceAtLeast(0L)
+        val leftPaisa = BuyPaymentCalculations.calculateLeft(entry.netPayablePaisa, entry.paidPaisa)
         appendLine("भुगतान किया: ₹${MandiMathEngine.paisaToRupeesString(entry.paidPaisa)}")
         appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(leftPaisa)}*")
     }
