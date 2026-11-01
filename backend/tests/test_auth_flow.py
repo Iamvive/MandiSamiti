@@ -1,9 +1,18 @@
 import pytest
+
+from app.config import settings
+
+TEST_OTP = str(1) * 6
+
+@pytest.fixture(autouse=True)
+def _use_test_otp(monkeypatch):
+    monkeypatch.setattr(settings, "OTP_STATIC_ENABLED", True)
+    monkeypatch.setattr(settings, "OTP_STATIC_CODE", TEST_OTP)
 P = "9876512345"
 
 async def otp(client, phone=P):
     await client.post("/api/v1/auth/otp/send", json={"phone": phone})
-    return (await client.post("/api/v1/auth/otp/verify", json={"phone": phone, "otp": "123456"})).json()
+    return (await client.post("/api/v1/auth/otp/verify", json={"phone": phone, "otp": TEST_OTP})).json()
 
 async def signup(client, phone=P, mpin="4826"):
     v = await otp(client, phone)
@@ -202,7 +211,7 @@ async def _signup_with_stale_pass(client, phone=P):
 async def test_legacy_disabled_or_non_owner_is_refused_and_shop_unchanged(client, db_sessionmaker, role, is_active):
     await _seed_legacy_user(db_sessionmaker, P, "sha", role=role, is_active=is_active)
     await client.post("/api/v1/auth/otp/send", json={"phone": P})
-    v = await client.post("/api/v1/auth/otp/verify", json={"phone": P, "otp": "123456"})
+    v = await client.post("/api/v1/auth/otp/verify", json={"phone": P, "otp": TEST_OTP})
     assert v.status_code == 401 and v.json()["detail"] == {"code": "ACCOUNT_DISABLED"}
     r = await _signup_with_stale_pass(client)  # a signup pass obtained some other way
     assert r.status_code == 401 and r.json()["detail"] == {"code": "ACCOUNT_DISABLED"}
