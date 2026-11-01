@@ -1,4 +1,4 @@
-package com.appwork.mandisamiti.domain.buy
+package com.appwork.mandisamiti.ui.buy
 
 object BuyPaymentCalculations {
     fun calculateFinalPayable(netPayablePaisa: Long, advanceOrCutPaisa: Long): Long {
@@ -19,5 +19,9 @@ object BuyPaymentCalculations {
 
     fun rupeesToPaisa(rupees: Long): Long {
         return rupees * 100L
+    }
+
+    fun isGreaterThanZero(paisa: Long): Boolean {
+        return paisa > 0L
     }
 }

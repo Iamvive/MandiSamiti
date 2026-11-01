@@ -96,13 +96,13 @@ fun BuyPaymentScreen(
                 MandiPrimaryButton(
                     text = if (isEnglish) "Save Payment" else "भुगतान सुरक्षित करें",
                     onClick = {
-                        if (amountToPayPaisa > 0) {
+                        if (amountToPayPaisa > 0L) {
                             onSavePayment(amountToPayPaisa)
                         } else {
                             onSkip()
                         }
                     },
-                    enabled = finalPayablePaisa > 0 && amountToPayPaisa > 0,
+                    enabled = finalPayablePaisa > 0L && amountToPayPaisa > 0L,
                     modifier = Modifier.fillMaxWidth()
                 )
 
