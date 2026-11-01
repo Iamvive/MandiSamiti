@@ -88,7 +88,7 @@ fi
 
 if [[ "$BOOTED" != "1" ]]; then
     echo "[1/5] Starting AVD '$AVD_NAME' with -no-audio in background..."
-    "$EMULATOR_BIN" -avd "$AVD_NAME" -no-audio -gpu auto >/dev/null 2>&1 &
+    nohup "$EMULATOR_BIN" -avd "$AVD_NAME" -no-audio -gpu auto </dev/null >/dev/null 2>&1 &
     EMULATOR_PID=$!
     echo "$EMULATOR_PID" > /tmp/mandi_emulator.pid
 
@@ -151,7 +151,7 @@ echo "  ✓ Base.metadata.create_all completed on scratch database."
 lsof -ti :"$BACKEND_PORT" | xargs kill -9 2>/dev/null || true
 
 # Launch uvicorn
-"$UVICORN_BIN" app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" > /tmp/mandi_backend_phase3.log 2>&1 &
+nohup "$UVICORN_BIN" app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" </dev/null > /tmp/mandi_backend_phase3.log 2>&1 &
 BACKEND_PID=$!
 echo "$BACKEND_PID" > /tmp/mandi_backend_phase3.pid
 
