@@ -53,7 +53,11 @@ fun MandiSamitiTheme(
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+    CompositionLocalProvider(
+        LocalIsDarkTheme provides darkTheme,
+        LocalMandiSpacing provides MandiSpacing(),
+        LocalMandiTypeScale provides MandiTypeScale()
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = MandiTypography,
