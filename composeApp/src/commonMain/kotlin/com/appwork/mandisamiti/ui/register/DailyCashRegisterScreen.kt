@@ -964,7 +964,7 @@ fun DailyCashRegisterScreen(
                                     lines.takeLast(5).forEach { line ->
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                             Text(
-                                                line.label,
+                                                bahiLineLabel(line, isEnglish),
                                                 modifier = Modifier.weight(1f),
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
@@ -1671,3 +1671,23 @@ private fun formatBahiDate(date: LocalDate, isEnglish: Boolean, isToday: Boolean
     }
 }
 
+
+/** Domain lines carry English defaults and raw mode names; show Hindi unless the app is in English. */
+internal fun bahiLineLabel(line: com.appwork.mandisamiti.domain.bahi.BahiDayLine, isEnglish: Boolean): String {
+    if (isEnglish) return line.label
+    val fixed = mapOf(
+        "Opening balance" to "खुला बाकी",
+        "Closing cash" to "बंद नकद",
+        "Day-close difference" to "दिन का अंतर",
+        "Buyer payment" to "खरीदार से जमा",
+        "Loan principal repaid" to "कर्ज मूलधन वापस",
+        "Loan interest received" to "कर्ज ब्याज मिला",
+        "Cash entry" to "नकद प्रविष्टि",
+    )
+    var label = fixed[line.label] ?: line.label
+    val modeNames = mapOf(
+        "RTGS" to "आरटीजीएस", "NEFT" to "एनईएफटी", "CHEQUE" to "चेक", "UPI" to "यूपीआई", "ONLINE" to "ऑनलाइन", "CASH" to "नकद",
+    )
+    modeNames.forEach { (raw, hi) -> if (label.endsWith(" · $raw")) label = label.removeSuffix(" · $raw") + " · $hi" }
+    return label
+}

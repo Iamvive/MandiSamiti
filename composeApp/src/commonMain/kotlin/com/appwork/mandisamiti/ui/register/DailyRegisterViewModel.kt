@@ -254,11 +254,8 @@ class DailyRegisterViewModel(
                                 isVoid = tx.isVoid || tx.isDeleted,
                             ))
                         }
-                    inputs.buys.filter { it.entryDate in window.startMs until window.endMs }.forEach { buy ->
-                        add(BahiDayEntry("${buy.id}:grain", BahiEntryKind.GRAIN_LEDGER, "Grain purchased", buy.grossPaisa, occurredAt = buy.entryDate, isVoid = buy.isVoid))
-                        add(BahiDayEntry("${buy.id}:net", BahiEntryKind.FARMER_RECEIPT_NET, "Farmer receipt net", buy.netPayablePaisa, occurredAt = buy.entryDate, isVoid = buy.isVoid))
-                        if (buy.advancePaidPaisa > 0L) add(BahiDayEntry("${buy.id}:advance", BahiEntryKind.ADVANCE_PAID, "Advance adjusted", buy.advancePaidPaisa, occurredAt = buy.entryDate, isVoid = buy.isVoid, isSameDayAdvance = true))
-                    }
+                    // Buy slips are not drawer movements: cash paid to a farmer is a cash row above,
+                    // and a credit purchase moves nothing. Listing gross/net here opened the day with a false अंतर.
                     inputs.sells.filter { it.entryDate in window.startMs until window.endMs && it.receivedPaisa > 0L }.forEach { sell ->
                         add(BahiDayEntry(sell.id, BahiEntryKind.BUYER_PAYMENT, "Buyer payment", sell.receivedPaisa, occurredAt = sell.entryDate, isVoid = sell.isVoid))
                     }
