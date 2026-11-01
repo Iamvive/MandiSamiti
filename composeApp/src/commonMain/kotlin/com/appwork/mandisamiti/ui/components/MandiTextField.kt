@@ -198,6 +198,13 @@ fun MandiPartyLookupField(
                 searchQuery = input
                 expanded = true
                 onPhoneChange(input)
+                val digits = input.filter { it.isDigit() }
+                if (digits.length == 10) {
+                    val exact = parties.firstOrNull { it.phone == digits }
+                    if (exact != null) {
+                        onPartySelected(exact)
+                    }
+                }
             },
             label = label,
             placeholder = placeholder,
