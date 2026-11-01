@@ -83,6 +83,48 @@ class PilotSchemaMigrationTest {
         }
     }
 
+    @Test
+    fun versionEightSnapshotAddsNullablePaymentLinkWithoutDataLoss() {
+        val snapshot = committedSnapshot(8)
+        val database = Files.createTempFile("mandisamiti-v8-", ".db")
+        Files.copy(snapshot, database, StandardCopyOption.REPLACE_EXISTING)
+        val driver = JdbcSqliteDriver("jdbc:sqlite:${database.toAbsolutePath()}")
+
+        try {
+            driver.execute(
+                null,
+                """INSERT INTO shopProfileEntity
+                    (id, shop_name, owner_name, mandi_name, phone_number, pin_hash, created_at, updated_at)
+                    VALUES ('shop-pl', 'Shop', 'Owner', 'Mandi', '9000000000', 'hash', 1, 1)""".trimIndent(),
+                0
+            )
+            driver.execute(
+                null,
+                """INSERT INTO partyEntity
+                    (id, shop_id, name, phone, party_type, created_at, updated_at)
+                    VALUES ('party-pl', 'shop-pl', 'Party', '9111111111', 'FARMER', 2, 2)""".trimIndent(),
+                0
+            )
+            driver.execute(
+                null,
+                """INSERT INTO cashTransactionEntity
+                    (id, shop_id, party_id, transaction_type, amount_paisa, payment_mode, transaction_date,
+                     created_at, updated_at)
+                    VALUES ('tx-old', 'shop-pl', 'party-pl', 'UDHAR_GIVEN', 12345, 'CASH', 5, 5, 5)""".trimIndent(),
+                0
+            )
+
+            AppDatabase.Schema.migrate(driver, 8, CURRENT_SCHEMA_VERSION)
+
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM cashTransactionEntity WHERE id = 'tx-old' AND amount_paisa = 12345"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(source_entry_type) FROM cashTransactionEntity"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(source_entry_id) FROM cashTransactionEntity"))
+        } finally {
+            driver.close()
+            database.deleteIfExists()
+        }
+    }
+
     private fun committedV1Snapshot(): Path {
         return committedSnapshot(1)
     }
@@ -164,7 +206,7 @@ class PilotSchemaMigrationTest {
 
     private companion object {
         const val PRE_PILOT_VERSION = 6L
-        const val CURRENT_SCHEMA_VERSION = 8L
+        const val CURRENT_SCHEMA_VERSION = 9L
 
         val TABLES = listOf(
             "shopProfileEntity",

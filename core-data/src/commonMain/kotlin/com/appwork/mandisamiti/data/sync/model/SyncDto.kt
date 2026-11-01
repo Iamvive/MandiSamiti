@@ -64,6 +64,8 @@ data class CashTransactionSyncDto(
     val transaction_date: Long? = null,
     val voice_note_uri: String? = null,
     val remarks: String? = null,
+    val source_entry_type: String? = null,
+    val source_entry_id: String? = null,
     val is_void: Int = 0,
     val void_reason: String? = null,
     val revision: Int = 1,

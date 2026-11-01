@@ -134,7 +134,7 @@ class OfflineFirstLendRepository(
             payment_mode = tx.paymentMode.name, transaction_date = tx.transactionDate,
             voice_note_uri = tx.voiceNoteUri, remarks = tx.remarks, created_at = tx.createdAt,
             updated_at = tx.updatedAt, is_deleted = 0L, sync_status = tx.syncStatus.toLong(),
-            revision = tx.revision.toLong(), is_void = 0L, void_reason = null,
+            revision = tx.revision.toLong(), is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null
         )
         queries.insertRevision(
             id = IdGenerator.newId(), shop_id = tx.shopId, entry_id = tx.id, entry_kind = "CASH",
@@ -176,7 +176,7 @@ class OfflineFirstLendRepository(
                             payment_mode = tx.payment_mode, transaction_date = tx.transaction_date,
                             voice_note_uri = tx.voice_note_uri, remarks = "$rem [LEND:$id]",
                             created_at = tx.created_at, updated_at = now, is_deleted = tx.is_deleted,
-                            sync_status = 0L, revision = tx.revision + 1L, is_void = 0L, void_reason = null,
+                            sync_status = 0L, revision = tx.revision + 1L, is_void = 0L, void_reason = null, source_entry_type = tx.source_entry_type, source_entry_id = tx.source_entry_id
                         )
                         queries.insertRevision(
                             id = IdGenerator.newId(), shop_id = tx.shop_id, entry_id = tx.id, entry_kind = "CASH",
@@ -252,7 +252,7 @@ class OfflineFirstLendRepository(
                 sync_status = 0L,
                 revision = txEntity.revision + 1L,
                 is_void = 1L,
-                void_reason = reason.name
+                void_reason = reason.name, source_entry_type = null, source_entry_id = null
             )
             queries.insertRevision(
                 id = IdGenerator.newId(),

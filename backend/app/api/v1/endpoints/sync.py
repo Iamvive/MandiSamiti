@@ -213,6 +213,8 @@ async def sync_push(
                     existing_tx.transaction_date = t_in.transaction_date or existing_tx.transaction_date
                     existing_tx.voice_note_uri = t_in.voice_note_uri
                     existing_tx.remarks = t_in.remarks
+                    existing_tx.source_entry_type = t_in.source_entry_type
+                    existing_tx.source_entry_id = t_in.source_entry_id
                     existing_tx.is_void = t_in.is_void
                     existing_tx.void_reason = t_in.void_reason
                     existing_tx.revision = t_in.revision
@@ -238,6 +240,8 @@ async def sync_push(
                 transaction_date=t_in.transaction_date or now_ms,
                 voice_note_uri=t_in.voice_note_uri,
                 remarks=t_in.remarks,
+                source_entry_type=t_in.source_entry_type,
+                source_entry_id=t_in.source_entry_id,
                 soundbox_broadcasted=1,
                 is_void=t_in.is_void,
                 void_reason=t_in.void_reason,
