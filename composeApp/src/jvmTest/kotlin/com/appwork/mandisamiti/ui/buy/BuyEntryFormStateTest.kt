@@ -69,6 +69,8 @@ class BuyEntryFormStateTest {
         assertEquals("किसान का नाम दर्ज करें", f.validationReason())
 
         f.farmerName = "रामू"
+        f.updatePhone("9876543210")
+        f.village = "TEST गाँव"
         // Active lot with empty bags blocks saving
         assertFalse(f.canSave())
         assertTrue(f.validationReason()?.contains("बोरी") == true)
@@ -77,8 +79,10 @@ class BuyEntryFormStateTest {
         f.weightPerBagKg = "50"
         f.ratePerQuintal = "2500"
 
-        // Valid form can save with optional phone and optional advance blank
-        assertTrue(f.canSave())
+        // Phone is required now (2026-10-31); a blank phone blocks saving
+        f.phone = ""
+        assertFalse(f.canSave())
+        assertEquals("मोबाइल नंबर दर्ज करें", f.validationReason())
 
         // Invalid phone (< 10 digits) blocks saving
         f.updatePhone("98765")
@@ -128,7 +132,7 @@ class BuyEntryFormStateTest {
         assertEquals("party-123", restoredForm.selectedFarmerId)
         assertEquals("9876543210", restoredForm.phone)
         assertEquals("10", restoredForm.bags)
-        assertEquals("50.0", restoredForm.weightPerBagKg)
+        assertEquals("50", restoredForm.weightPerBagKg)
         assertEquals("5.0", restoredForm.extraWeightKg)
         assertEquals("2500", restoredForm.ratePerQuintal)
         assertEquals("2", restoredForm.commissionPercent)
