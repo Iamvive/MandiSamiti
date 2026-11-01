@@ -92,4 +92,12 @@ class BuyPartyResolverTest {
         assertEquals("TEST गाँव", toSave.village)
         assertNotEquals(old, toSave)
     }
+
+    @Test
+    fun existingIsFoundByPickedIdOrExactPhone() {
+        assertEquals("p1", BuyPartyResolver.existing(all, "p1", "")?.id)
+        assertEquals("p1", BuyPartyResolver.existing(all, null, "9876543210")?.id)
+        assertEquals(null, BuyPartyResolver.existing(all, null, "98765"))
+        assertEquals(null, BuyPartyResolver.existing(all, null, ""))
+    }
 }
