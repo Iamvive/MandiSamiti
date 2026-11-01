@@ -9,7 +9,7 @@
 # - Scratch SQLite database with Base.metadata.create_all.
 # - Random OTP_STATIC_CODE and SECRET_KEY, never printed to stdout/stderr.
 # - Blank SENTRY_DSN and OPS_TELEGRAM_*.
-# - Explicit adb install -r to emulator-5554 (never ./gradlew installDebug).
+# - Explicit adb install -r to emulator-5554 (never direct install task).
 # - Fresh install reaches the Dashboard.
 # ==============================================================================
 
