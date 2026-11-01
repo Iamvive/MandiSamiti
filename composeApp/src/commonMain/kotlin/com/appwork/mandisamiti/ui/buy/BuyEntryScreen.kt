@@ -758,7 +758,10 @@ fun BuyEntryScreenContent(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val cutPaisa = state.loanDeposit.cutToInterestPaisa + state.loanDeposit.cutToPrincipalPaisa
+                    val cutPaisa = BuyPaymentCalculations.calculateTotalCut(
+                        state.loanDeposit.cutToInterestPaisa,
+                        state.loanDeposit.cutToPrincipalPaisa
+                    )
                     if (cutPaisa > 0L) {
                         val remPrincipal = BuyPaymentCalculations.calculateRemainingPrincipal(
                             state.loanDeposit.loanPrincipalPaisa,

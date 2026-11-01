@@ -380,9 +380,11 @@ class BuyEntryFormState(
         val domainLots = lots.map { it.calculateLot() }
         val lotsJson = Json.encodeToString(domainLots)
         val cleanVillage = MandiValidators.sanitizeVillage(village)
+        val cutPaisa = if (agg.loanCutPaisa > 0) agg.loanCutPaisa else extractLoanCut(existingEntry?.remarks)
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
             if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
+            if (cutPaisa > 0) append("उधार कटौती: $cutPaisa | ")
             append("DATA: $lotsJson")
         }
 
@@ -505,4 +507,16 @@ fun extractTare(remarks: String?): String? {
     }
     return null
 }
+
+fun extractLoanCut(remarks: String?): Long {
+    if (remarks.isNullOrBlank()) return 0L
+    if (remarks.contains("उधार कटौती:")) {
+        val cutStr = remarks.substringAfter("उधार कटौती:").substringBefore("|").trim()
+        val paisa = cutStr.toLongOrNull()
+        if (paisa != null && paisa > 0L) return paisa
+    }
+    val match = Regex("""(?:उधार कटौती|Loan cut|LOAN_CUT):\s*([0-9]+)""").find(remarks)
+    return match?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+}
+
 

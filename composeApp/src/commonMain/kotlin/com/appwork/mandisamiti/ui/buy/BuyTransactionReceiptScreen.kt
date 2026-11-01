@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.receiptDateShort
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.platform.MandiBackHandler
@@ -135,7 +136,7 @@ fun BuyTransactionReceiptScreen(
             if (isEnglish) "Original slip · ${receiptDateTime(entry.createdAt)}" else "मूल पर्ची · ${receiptDateTime(entry.createdAt)}"
         }
 
-        val loanCutPaisa = BuyPaymentCalculations.calculateLoanCut(entry.paidPaisa, entry.advancePaidPaisa)
+        val loanCutPaisa = extractLoanCut(entry.remarks)
         val hasAdvance = entry.advancePaidPaisa > 0L
         val hasLoanCut = loanCutPaisa > 0L
         val postDeductionPayable = BuyPaymentCalculations.calculatePostDeductionPayable(
@@ -230,7 +231,7 @@ fun BuyTransactionReceiptScreen(
 
                 if (cashPaymentPaisa > 0L) {
                     Line(
-                        label = if (isEnglish) "Cash paid · ${receiptDateTime(entry.updatedAt)}" else "नकद भुगतान · ${receiptDateTime(entry.updatedAt)}",
+                        label = if (isEnglish) "Cash paid · ${receiptDateShort(entry.updatedAt)}" else "नकद भुगतान · ${receiptDateShort(entry.updatedAt)}",
                         amountText = "− ₹${MandiMathEngine.paisaToRupeesString(cashPaymentPaisa)}"
                     )
                     TotalLine(
@@ -297,17 +298,19 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
     if (entry.advancePaidPaisa > 0) {
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }
-    val loanCutPaisa = BuyPaymentCalculations.calculateLoanCut(entry.paidPaisa, entry.advancePaidPaisa)
+    val loanCutPaisa = extractLoanCut(entry.remarks)
     if (loanCutPaisa > 0) {
         appendLine("उधार कटौती: -₹${MandiMathEngine.paisaToRupeesString(loanCutPaisa)}")
     }
     val postDeduction = BuyPaymentCalculations.calculatePostDeductionPayable(entry.netPayablePaisa, entry.advancePaidPaisa, loanCutPaisa)
-    appendLine("--------------------")
-    appendLine("*अंतिम देय राशि: ${MandiMathEngine.formatRupees(postDeduction)}*")
+    if (entry.advancePaidPaisa > 0 || loanCutPaisa > 0) {
+        appendLine("--------------------")
+        appendLine("*अंतिम देय राशि: ${MandiMathEngine.formatRupees(postDeduction)}*")
+    }
     val cashPaid = BuyPaymentCalculations.calculateCashPayment(entry.paidPaisa, entry.advancePaidPaisa, loanCutPaisa)
     if (cashPaid > 0) {
         val left = BuyPaymentCalculations.calculateRemainingLeft(postDeduction, cashPaid)
-        appendLine("नकद भुगतान: ₹${MandiMathEngine.paisaToRupeesString(cashPaid)}")
+        appendLine("नकद भुगतान: -₹${MandiMathEngine.paisaToRupeesString(cashPaid)}")
         appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(left)}*")
     }
 }
