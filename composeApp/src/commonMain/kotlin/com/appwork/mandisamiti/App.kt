@@ -78,6 +78,7 @@ sealed interface Screen {
 
     // Revamp Screens (Tasks 11-15)
     data class BuyEntry(val existingId: String? = null) : Screen
+    data class BuyPayment(val entryId: String, val returnScreen: Screen? = null) : Screen
     data object BuyList : Screen
     data class BuyReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data class SellEntry(val existingId: String? = null) : Screen
@@ -92,6 +93,7 @@ sealed interface Screen {
 
 fun Screen.backTarget(): Screen = when (this) {
     is Screen.BuyEntry -> Screen.BuyList
+    is Screen.BuyPayment -> Screen.BuyReceipt(entryId, returnScreen)
     is Screen.BuyReceipt -> returnScreen ?: Screen.BuyList
     is Screen.BuyList -> Screen.Home
     is Screen.SellEntry -> Screen.SellList
@@ -496,11 +498,62 @@ fun App(
                                 buyRepo.editBuyEntry(entry)
                             }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = Screen.BuyReceipt(entry.id)
+                            currentScreen = if (screen.existingId == null) {
+                                Screen.BuyPayment(entry.id)
+                            } else {
+                                Screen.BuyReceipt(entry.id)
+                            }
                         }
                     },
                     onBack = { currentScreen = screen.backTarget() }
                 )
+            }
+            is Screen.BuyPayment -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
+                var paymentParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+                LaunchedEffect(screen.entryId) {
+                    buyEntry = buyRepo.getBuyEntryById(screen.entryId)
+                    paymentParty = buyEntry?.farmerId?.let { partyRepo.getPartyById(it) }
+                }
+                buyEntry?.let { entry ->
+                    com.appwork.mandisamiti.ui.buy.BuyPaymentScreen(
+                        entry = entry,
+                        farmerName = paymentParty?.name ?: entry.farmerId,
+                        isEnglish = tradeSettings?.isEnglish ?: false,
+                        onSavePayment = { paidAmtPaisa ->
+                            coroutineScope.launch {
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = entry.shopId,
+                                    partyId = entry.farmerId,
+                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                    amountPaisa = paidAmtPaisa,
+                                    transactionDate = now,
+                                    paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                    remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
+                                    createdAt = now,
+                                    updatedAt = now,
+                                    sourceEntryType = "BUY",
+                                    sourceEntryId = entry.id,
+                                )
+                                cashRepo.recordTransaction(tx)
+                                val updated = entry.copy(
+                                    paidPaisa = entry.paidPaisa + paidAmtPaisa,
+                                    updatedAt = now,
+                                    revision = entry.revision + 1L
+                                )
+                                buyRepo.editBuyEntry(updated)
+                                syncScheduler.scheduleOneTimeSync()
+                                currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
+                            }
+                        },
+                        onSkip = {
+                            currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
+                        }
+                    )
+                }
             }
             is Screen.BuyList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }

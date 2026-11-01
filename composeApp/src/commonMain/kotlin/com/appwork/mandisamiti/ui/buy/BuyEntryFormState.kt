@@ -490,3 +490,12 @@ fun extractVillage(remarks: String?): String? {
     return null
 }
 
+fun extractTare(remarks: String?): String? {
+    if (remarks.isNullOrBlank()) return null
+    if (remarks.contains("काट: ")) {
+        val tare = remarks.substringAfter("काट: ").substringBefore("Q").substringBefore("|").trim()
+        if (tare.isNotBlank()) return tare
+    }
+    return null
+}
+

@@ -57,11 +57,19 @@ fun BuyTransactionReceiptScreen(
         ).joinToString(" • ")
         val shop = listOf(shopName, mandiName).filter { it.isNotBlank() }.joinToString(", ")
 
+        val tareQ = extractTare(entry.remarks)
+        val isRevised = entry.revision > 1
+        val revisionLabel = if (isRevised) {
+            "संशोधित • ${receiptDateTime(entry.updatedAt)}"
+        } else {
+            "मूल पर्ची • ${receiptDateTime(entry.createdAt)}"
+        }
+
         ReceiptCard {
             if (shop.isNotBlank()) Text(shop)
             ReceiptHero(
                 partyName = displayName,
-                meta = meta,
+                meta = "$revisionLabel • $meta",
                 amountLabel = "शुद्ध देय राशि",
                 amount = MandiMathEngine.formatRupees(entry.netPayablePaisa),
                 isVoid = entry.isVoid
@@ -87,13 +95,25 @@ fun BuyTransactionReceiptScreen(
             }
             ReceiptDivider()
             ReceiptAmountRow("कुल (${entry.bagsCount} बोरी, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-            ReceiptAmountRow("कमीशन", "- ₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
+            if (!tareQ.isNullOrBlank() && tareQ != "0") {
+                ReceiptAmountRow("काट / बारदाना", "- $tareQ क्विंटल")
+            }
             ReceiptAmountRow("मजदूरी", "- ₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa)}")
+            ReceiptAmountRow("कमीशन", "- ₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
             if (entry.advancePaidPaisa > 0) {
                 ReceiptAmountRow("अग्रिम / पेशगी", "- ₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
             }
+            val loanCutPaisa = (entry.paidPaisa - entry.advancePaidPaisa).coerceAtLeast(0L)
+            if (loanCutPaisa > 0) {
+                ReceiptAmountRow("उधार कटौती", "- ₹${MandiMathEngine.paisaToRupeesString(loanCutPaisa)}")
+            }
             ReceiptDivider()
             ReceiptAmountRow("शुद्ध देय राशि", MandiMathEngine.formatRupees(entry.netPayablePaisa), emphasized = true)
+            if (entry.paidPaisa > 0) {
+                val leftPaisa = (entry.netPayablePaisa - entry.paidPaisa).coerceAtLeast(0L)
+                ReceiptAmountRow("भुगतान किया", "₹${MandiMathEngine.paisaToRupeesString(entry.paidPaisa)}")
+                ReceiptAmountRow("बाकी राशि", MandiMathEngine.formatRupees(leftPaisa), emphasized = true)
+            }
         }
     }
 }
@@ -110,8 +130,15 @@ private fun extractLots(entry: BuyEntry): List<BuyCropLot> {
 }
 
 fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropLot> = emptyList()): String = buildString {
-    appendLine("*किसान खरीद पर्चा*")
+    val isRevised = entry.revision > 1
+    val headerTitle = if (isRevised) "*किसान खरीद पर्चा (संशोधित)*" else "*किसान खरीद पर्चा*"
+    appendLine(headerTitle)
     appendLine("पर्चा #: ${slipLabel(entry.slipNo, entry.id)}")
+    if (isRevised) {
+        appendLine("संशोधन समय: ${receiptDateTime(entry.updatedAt)}")
+    } else {
+        appendLine("दिनांक: ${receiptDateTime(entry.createdAt)}")
+    }
     appendLine("किसान: $farmerName")
     val village = extractVillage(entry.remarks)
     if (!village.isNullOrBlank()) {
@@ -121,6 +148,7 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
         appendLine("मोबाइल: ${entry.vehicleNumber}")
     }
     appendLine("--------------------")
+    val tareQ = extractTare(entry.remarks)
     if (lots.isNotEmpty()) {
         lots.forEachIndexed { i, lot ->
             appendLine("फसल ${i + 1}: ${lot.cropName}")
@@ -135,11 +163,23 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
         appendLine("--------------------")
     }
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-    appendLine("कमीशन: -₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
+    if (!tareQ.isNullOrBlank() && tareQ != "0") {
+        appendLine("काट / बारदाना: -$tareQ क्विंटल")
+    }
     appendLine("मजदूरी: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa)}")
+    appendLine("कमीशन: -₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
     if (entry.advancePaidPaisa > 0) {
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }
+    val loanCutPaisa = (entry.paidPaisa - entry.advancePaidPaisa).coerceAtLeast(0L)
+    if (loanCutPaisa > 0) {
+        appendLine("उधार कटौती: -₹${MandiMathEngine.paisaToRupeesString(loanCutPaisa)}")
+    }
     appendLine("--------------------")
     appendLine("*शुद्ध देय राशि: ${MandiMathEngine.formatRupees(entry.netPayablePaisa)}*")
+    if (entry.paidPaisa > 0) {
+        val leftPaisa = (entry.netPayablePaisa - entry.paidPaisa).coerceAtLeast(0L)
+        appendLine("भुगतान किया: ₹${MandiMathEngine.paisaToRupeesString(entry.paidPaisa)}")
+        appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(leftPaisa)}*")
+    }
 }
