@@ -112,12 +112,11 @@ def changed_lines(base_ref: str) -> list[ChangedLine]:
     ]
 
 
-def strip_kotlin_comments_and_strings(lines: list[ChangedLine]) -> list[str]:
+def strip_kotlin_comments_and_strings(lines: list[str]) -> list[str]:
     cleaned: list[str] = []
     in_block_comment = False
     in_triple_string = False
-    for line in lines:
-        source = line.text
+    for source in lines:
         output: list[str] = []
         index = 0
         while index < len(source):
@@ -165,6 +164,22 @@ def strip_kotlin_comments_and_strings(lines: list[ChangedLine]) -> list[str]:
     return cleaned
 
 
+def current_file_lines(path: str) -> list[str]:
+    return git_output(["show", f"HEAD:{path}"]).splitlines()
+
+
+def continues_expression(source: str, next_source: str) -> bool:
+    source = source.rstrip()
+    next_source = next_source.lstrip()
+    if not source or not next_source:
+        return False
+    if re.search(r"(?:[=+*/%,.]|&&|\|\|)$", source):
+        return True
+    if re.match(r"(?:[+*/%]|-(?!>))", next_source):
+        return True
+    return source.count("(") > source.count(")") or source.count("[") > source.count("]")
+
+
 def arithmetic_violations(lines: list[ChangedLine]) -> list[ChangedLine]:
     by_path: dict[str, list[ChangedLine]] = defaultdict(list)
     for line in lines:
@@ -173,10 +188,20 @@ def arithmetic_violations(lines: list[ChangedLine]) -> list[ChangedLine]:
 
     violations: list[ChangedLine] = []
     for path_lines in by_path.values():
-        code_lines = strip_kotlin_comments_and_strings(path_lines)
+        source_lines = strip_kotlin_comments_and_strings(
+            current_file_lines(path_lines[0].path)
+        )
+        code_lines = [
+            source_lines[line.number - 1] if line.number <= len(source_lines) else ""
+            for line in path_lines
+        ]
         run_start = 0
         for index in range(1, len(path_lines) + 1):
-            if index < len(path_lines) and path_lines[index].number == path_lines[index - 1].number + 1:
+            if (
+                index < len(path_lines)
+                and path_lines[index].number == path_lines[index - 1].number + 1
+                and continues_expression(code_lines[index - 1], code_lines[index])
+            ):
                 continue
             run = path_lines[run_start:index]
             code = "\n".join(code_lines[run_start:index])
