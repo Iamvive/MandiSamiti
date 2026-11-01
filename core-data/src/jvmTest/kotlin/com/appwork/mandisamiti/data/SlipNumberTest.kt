@@ -40,7 +40,7 @@ class SlipNumberTest {
     )
 
     @Test
-    fun farmerSeriesIsPerFarmerAndVoidsNeverReuseNumbers() = runTest {
+    fun buySeriesIsOneForTheWholeShopAndVoidsNeverReuseNumbers() = runTest {
         val repo = OfflineFirstBuyRepository(createTestDatabase())
         repo.saveBuyEntry(buy("a1", "farmer-a"))
         repo.saveBuyEntry(buy("a2", "farmer-a"))
@@ -50,8 +50,8 @@ class SlipNumberTest {
 
         assertEquals(1L, repo.getBuyEntryById("a1")?.slipNo)
         assertEquals(2L, repo.getBuyEntryById("a2")?.slipNo)
-        assertEquals(1L, repo.getBuyEntryById("b1")?.slipNo)
-        assertEquals(3L, repo.getBuyEntryById("a3")?.slipNo)
+        assertEquals(3L, repo.getBuyEntryById("b1")?.slipNo)
+        assertEquals(4L, repo.getBuyEntryById("a3")?.slipNo)
     }
 
     @Test

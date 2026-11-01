@@ -36,7 +36,7 @@ class OfflineFirstBuyRepository(
         database.transaction {
             val slipNo = queries.getBuyEntryById(entry.id).executeAsOneOrNull()?.slip_no
                 ?: entry.slipNo
-                ?: queries.nextFarmerSlipNo(entry.shopId, entry.farmerId).executeAsOne()
+                ?: queries.nextBuySlipNo(entry.shopId).executeAsOne()
             val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
             insertOrReplace(created)
             recordRevision(created, "CREATE", created.updatedAt)
