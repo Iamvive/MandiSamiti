@@ -76,9 +76,14 @@ class OfflineFirstLendRepository(
     }
 
     override suspend fun settle(rawSettlement: LendSettlement, cashEntries: List<CashTransaction>) = withContext(ioDispatcher) {
-        val settlement = rawSettlement.withSplit()
         val now = clock.now().toEpochMilliseconds()
-        database.transaction {
+        database.transaction { settleInTransaction(rawSettlement, cashEntries, now) }
+    }
+
+    /** The settle body without its own transaction, so a Buy checkout can run it inside its own. */
+    internal fun settleInTransaction(rawSettlement: LendSettlement, cashEntries: List<CashTransaction>, now: Long) {
+        val settlement = rawSettlement.withSplit()
+        run {
             val lend = queries.getLendEntryById(settlement.lendId).executeAsOneOrNull()?.toDomain()
                 ?: throw IllegalArgumentException("Lend ${settlement.lendId} does not exist")
             require(!lend.isVoid) { "Lend ${settlement.lendId} is void" }

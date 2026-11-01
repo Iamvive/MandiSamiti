@@ -9,6 +9,8 @@ import com.appwork.mandisamiti.domain.math.BuyMathResult
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.LendSettlement
+import com.appwork.mandisamiti.ui.ledger.repayPreview
 import com.appwork.mandisamiti.domain.model.TradeSettings
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.domain.validation.ValidationResult
@@ -91,10 +93,11 @@ data class AggregatedBuyPreview(
     val commissionPaisa: Long,
     val labourPaisa: Long,
     val advancePaidPaisa: Long,
-    val netPayablePaisa: Long
+    val netPayablePaisa: Long,
+    val loanCutPaisa: Long = 0L
 ) {
-    /** Still to hand over after the advance. */
-    val payoutPaisa: Long get() = netPayablePaisa - advancePaidPaisa
+    /** Still to hand over after the advance and the loan cut. */
+    val payoutPaisa: Long get() = netPayablePaisa - advancePaidPaisa - loanCutPaisa
 }
 
 class BuyEntryFormState(
@@ -122,6 +125,50 @@ class BuyEntryFormState(
     var tareQuintals by mutableStateOf("")
     var advancePaid by mutableStateOf("") // Optional, default blank
     var showRateOutlierConfirmation by mutableStateOf(false)
+
+    // Loan section: the caller sets the person's open money loan; the cut is typed in whole rupees.
+    var loanLendId: String? by mutableStateOf(null)
+        private set
+    var loanPrincipalPaisa by mutableStateOf(0L)
+        private set
+    var loanInterestDuePaisa by mutableStateOf(0L)
+        private set
+    var loanCut by mutableStateOf("")
+
+    fun setLoan(lendId: String?, principalPaisa: Long, interestDuePaisa: Long) {
+        loanLendId = lendId
+        loanPrincipalPaisa = principalPaisa
+        loanInterestDuePaisa = interestDuePaisa
+        loanCut = ""
+    }
+
+    fun loanCutPaisa(): Long = (loanCut.toLongOrNull() ?: 0L) * 100L
+
+    /** Interest first, then principal, as in RepayLoanDialog. */
+    fun loanCutSplit() = repayPreview(loanCutPaisa(), loanInterestDuePaisa, loanPrincipalPaisa)
+
+    fun loanCutError(): String? {
+        val cut = loanCutPaisa()
+        if (cut == 0L) return null
+        if (loanLendId == null) return "इस पार्टी का कोई उधार नहीं है"
+        if (cut > loanPrincipalPaisa + loanInterestDuePaisa) return "कटौती बकाया उधार से अधिक है"
+        return null
+    }
+
+    /** The settlement saved with the slip, or null when no cut was entered. */
+    fun buildLoanCut(shopId: String, now: Long): LendSettlement? {
+        val cut = loanCutPaisa()
+        val lendId = loanLendId
+        if (cut <= 0L || lendId == null) return null
+        val split = loanCutSplit()
+        return LendSettlement(
+            id = IdGenerator.newId(), shopId = shopId, lendId = lendId, settledAt = now,
+            amountPaisa = split.interestPaisa + split.principalPaisa,
+            createdAt = now, updatedAt = now,
+            principalPaisa = split.principalPaisa, interestPaisa = split.interestPaisa,
+            calculatedInterestPaisa = loanInterestDuePaisa,
+        )
+    }
 
     fun applySettings(settings: TradeSettings) {
         commissionPercent = MandiMathEngine.paisaToInputString(settings.farmerCommissionBps)
@@ -254,7 +301,8 @@ class BuyEntryFormState(
             commissionPaisa = commissionPaisa,
             labourPaisa = labourPaisa,
             advancePaidPaisa = advancePaisa,
-            netPayablePaisa = netPayable
+            netPayablePaisa = netPayable,
+            loanCutPaisa = loanCutPaisa()
         )
     }
 
@@ -284,6 +332,7 @@ class BuyEntryFormState(
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return false
         if (agg.payoutPaisa < 0) return false
+        if (loanCutError() != null) return false
         return true
     }
 
@@ -302,7 +351,8 @@ class BuyEntryFormState(
         }
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return "कुल राशि शून्य से अधिक होनी चाहिए"
-        if (agg.payoutPaisa < 0) return "चेतावनी: पेशगी राशि कुल हिसाब से अधिक है"
+        loanCutError()?.let { return it }
+        if (agg.payoutPaisa < 0) return "चेतावनी: पेशगी और उधार कटौती कुल हिसाब से अधिक है"
         return null
     }
 
@@ -347,7 +397,7 @@ class BuyEntryFormState(
             commissionPaisa = agg.commissionPaisa,
             labourPaisa = agg.labourPaisa,
             netPayablePaisa = agg.netPayablePaisa,
-            paidPaisa = advancePaisa,
+            paidPaisa = advancePaisa + agg.loanCutPaisa,
             vehicleNumber = phone.ifBlank { null },
             slipNumber = existingEntry?.slipNumber,
             remarks = combinedRemarks,

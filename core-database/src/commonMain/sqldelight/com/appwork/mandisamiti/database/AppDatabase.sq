@@ -413,14 +413,14 @@ SELECT
     p.village AS party_village,
     p.party_type AS party_type,
     (
-        -- 1. Cash Advances given to party (+) (excluding those tagged as lend advances or shop expenses)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR (remarks NOT LIKE 'उधार ऋण%' AND remarks NOT LIKE '%[LEND:%' AND remarks NOT LIKE 'LEND%' AND remarks NOT LIKE '%[EXPENSE:%'))), 0)
+        -- 1. Cash Advances given to party (+) (excluding rows linked to a slip, whose paid_paisa already counts them in term 8; excluding those tagged as lend advances or shop expenses)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND source_entry_id IS NULL AND (remarks IS NULL OR (remarks NOT LIKE 'उधार ऋण%' AND remarks NOT LIKE '%[LEND:%' AND remarks NOT LIKE 'LEND%' AND remarks NOT LIKE '%[EXPENSE:%'))), 0)
         +
         -- 2. Interest added to party (+)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)
         -
         -- 3. Cash Received from party (-) (excluding loan repayments to avoid double counting with term 10)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0 AND is_void = 0 AND (remarks IS NULL OR (remarks NOT LIKE 'उधार वापसी%' AND remarks NOT LIKE '%[SETTLE:%' AND remarks NOT LIKE 'LEND_REPAY%'))), 0)
+        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0 AND is_void = 0 AND source_entry_id IS NULL AND (remarks IS NULL OR (remarks NOT LIKE 'उधार वापसी%' AND remarks NOT LIKE '%[SETTLE:%' AND remarks NOT LIKE 'LEND_REPAY%'))), 0)
         -
         -- 4. Discounts given to party (-)
         COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'DISCOUNT_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
