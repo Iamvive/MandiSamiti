@@ -23,6 +23,11 @@ object BuyPartyResolver {
         }.take(5)
     }
 
+    /** The saved party this slip belongs to: the picked one, else an exact phone match (same rule as Save). */
+    fun existing(parties: List<Party>, selectedId: String?, phone: String): Party? =
+        parties.firstOrNull { it.id == selectedId }
+            ?: phone.takeIf { it.isNotBlank() }?.let { ph -> parties.firstOrNull { it.phone == ph } }
+
     fun pick(form: BuyEntryFormState, party: Party) {
         form.selectedFarmerId = party.id
         form.farmerName = party.name

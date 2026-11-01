@@ -439,8 +439,8 @@ fun App(
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val buyForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings) }
-                // Loan section: the picked party's oldest open money loan, with interest due as of now.
-                val loanPartyId = buyForm.selectedFarmerId
+                // Loan section: the picked or phone-matched party's oldest open money loan, with interest due as of now.
+                val loanPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, buyForm.selectedFarmerId, buyForm.phone)?.id
                 LaunchedEffect(loanPartyId, lends) {
                     val open = lends
                         .filter { !it.isVoid && it.partyId == loanPartyId && it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
