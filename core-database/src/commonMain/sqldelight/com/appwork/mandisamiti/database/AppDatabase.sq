@@ -123,6 +123,8 @@ CREATE TABLE cashTransactionEntity (
     revision INTEGER NOT NULL DEFAULT 1,
     is_void INTEGER NOT NULL DEFAULT 0,
     void_reason TEXT,
+    source_entry_type TEXT, -- 'BUY' | 'SELL': the slip this payment belongs to
+    source_entry_id TEXT,
     FOREIGN KEY(party_id) REFERENCES partyEntity(id),
     FOREIGN KEY(deal_id) REFERENCES dealEntity(id)
 );
@@ -396,8 +398,8 @@ getCashTransactionsByShop:
 SELECT * FROM cashTransactionEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC;
 
 insertCashTransaction:
-INSERT OR REPLACE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason, source_entry_type, source_entry_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getCashTransactionById:
 SELECT * FROM cashTransactionEntity WHERE id = ?;
@@ -510,8 +512,8 @@ deleteSyncedCashTransaction:
 DELETE FROM cashTransactionEntity WHERE id = ? AND sync_status = 1;
 
 insertCashTransactionIfAbsent:
-INSERT OR IGNORE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR IGNORE INTO cashTransactionEntity(id, shop_id, party_id, deal_id, transaction_type, amount_paisa, payment_mode, transaction_date, voice_note_uri, remarks, created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason, source_entry_type, source_entry_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- A revision pulled from the server: already synced; ignored if we hold (id) or (entry_id, revision).
 insertRevisionFromServer:

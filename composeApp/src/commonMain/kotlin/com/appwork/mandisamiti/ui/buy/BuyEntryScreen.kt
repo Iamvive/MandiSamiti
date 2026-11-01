@@ -74,7 +74,7 @@ import kotlinx.datetime.Clock
 fun BuyEntryScreen(
     shopId: String = "",
     existingId: String? = null,
-    onSaved: (BuyEntry) -> Unit,
+    onSaved: (BuyEntry, com.appwork.mandisamiti.domain.model.Party?) -> Unit,
     onBack: () -> Unit,
     tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings? = null,
     formState: BuyEntryFormState = remember(tradeSettings) { BuyEntryFormState(tradeSettings) },
@@ -565,6 +565,14 @@ fun BuyEntryScreen(
                 }
             }
 
+            // New party (or changed name, phone or village) travels with the slip so App saves both in one transaction.
+            val commit: (BuyEntry) -> Unit = { raw ->
+                val existing = parties.firstOrNull { it.id == formState.selectedFarmerId || it.id == raw.farmerId }
+                    ?: formState.phone.takeIf { it.isNotBlank() }?.let { ph -> parties.firstOrNull { it.phone == ph } }
+                val party = BuyPartyResolver.partyToSave(formState, shopId, existing, Clock.System.now().toEpochMilliseconds())
+                val partyId = existing?.id ?: party?.id
+                onSaved(if (partyId != null) raw.copy(farmerId = partyId) else raw, party)
+            }
             val performSave: () -> Unit = {
                     val entry = formState.toBuyEntry(
                         shopId = shopId,
@@ -588,7 +596,7 @@ fun BuyEntryScreen(
                         pendingEntryToSave = entry
                         showRateOutlierConfirmation = true
                     } else {
-                        onSaved(entry)
+                        commit(entry)
                     }
             }
             Button(
@@ -625,7 +633,7 @@ fun BuyEntryScreen(
                         if (formState.hasSanityWarning()) {
                             showRateOutlierConfirmation = true
                         } else {
-                            onSaved(pending)
+                            commit(pending)
                             pendingEntryToSave = null
                         }
                     },
@@ -670,7 +678,7 @@ fun BuyEntryScreen(
                                 val entry = pendingEntryToSave!!
                                 showRateOutlierConfirmation = false
                                 pendingEntryToSave = null
-                                onSaved(entry)
+                                commit(entry)
                             }
                         ) {
                             Text(if (isEnglish) "Yes, Correct (Save)" else "हाँ, विवरण सही है (सौदा सुरक्षित करें)")

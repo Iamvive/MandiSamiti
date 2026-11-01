@@ -219,6 +219,8 @@ class OfflineFirstCashTransactionRepository(
             revision = transaction.revision.toLong(),
             is_void = if (transaction.isVoid) 1L else 0L,
             void_reason = transaction.voidReason?.name,
+            source_entry_type = transaction.sourceEntryType,
+            source_entry_id = transaction.sourceEntryId,
         )
     }
 
@@ -240,7 +242,9 @@ class OfflineFirstCashTransactionRepository(
             syncStatus = sync_status.toInt(),
             revision = revision.toInt(),
             isVoid = is_void == 1L,
-            voidReason = void_reason?.let { VoidReason.valueOf(it) }
+            voidReason = void_reason?.let { VoidReason.valueOf(it) },
+            sourceEntryType = source_entry_type,
+            sourceEntryId = source_entry_id,
         )
     }
 }

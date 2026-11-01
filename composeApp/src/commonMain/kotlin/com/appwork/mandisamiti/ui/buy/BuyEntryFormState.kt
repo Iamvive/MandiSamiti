@@ -50,15 +50,30 @@ class BuyLotItemState(
         val weightVal = MandiValidators.validatePositiveNumber(weightPerBagKg, "वजन/बोरी")
         val rateVal = MandiValidators.validatePositiveNumber(ratePerQuintal, "भाव")
         val extraVal = MandiValidators.validateNonNegativeNumber(extraWeightKg, "अतिरिक्त वजन")
+        val bagGrams = MandiMathEngine.parseKgToGrams(weightPerBagKg.ifBlank { "0" })
+        val extraGrams = MandiMathEngine.parseKgToGrams(extraWeightKg.ifBlank { "0" })
+        val ratePaisa = MandiMathEngine.parseRupeesToPaisa(ratePerQuintal.ifBlank { "0" })
+        val bagsError = bagsVal.errorOrNull
+            ?: if ((bags.toLongOrNull() ?: 0L) > MAX_BAGS) "बोरी संख्या अधिकतम $MAX_BAGS" else null
+        val weightError = weightVal.errorOrNull
+            ?: if (bagGrams % 1000L != 0L || bagGrams > MAX_BAG_WEIGHT_KG * 1000L) "वजन/बोरी पूरे किलो में, अधिकतम $MAX_BAG_WEIGHT_KG" else null
+        val rateError = rateVal.errorOrNull
+            ?: if (ratePaisa % 100L != 0L || ratePaisa > MAX_RATE_RUPEES * 100L) "भाव पूरे रुपये में, अधिकतम $MAX_RATE_RUPEES" else null
+        val extraError = extraVal.errorOrNull
+            ?: if (bagGrams > 0L && extraGrams >= bagGrams) "अतिरिक्त वजन बोरी के वजन से कम होना चाहिए" else null
         return LotValidation(
-            bagsError = bagsVal.errorOrNull,
-            weightError = weightVal.errorOrNull,
-            rateError = rateVal.errorOrNull,
-            extraError = extraVal.errorOrNull,
-            isValid = bagsVal.isValid && weightVal.isValid && rateVal.isValid && extraVal.isValid
+            bagsError = bagsError,
+            weightError = weightError,
+            rateError = rateError,
+            extraError = extraError,
+            isValid = bagsError == null && weightError == null && rateError == null && extraError == null
         )
     }
 }
+
+const val MAX_BAGS = 9_999L
+const val MAX_BAG_WEIGHT_KG = 999L
+const val MAX_RATE_RUPEES = 100_000L
 
 data class LotValidation(
     val bagsError: String?,
@@ -77,7 +92,10 @@ data class AggregatedBuyPreview(
     val labourPaisa: Long,
     val advancePaidPaisa: Long,
     val netPayablePaisa: Long
-)
+) {
+    /** Still to hand over after the advance. */
+    val payoutPaisa: Long get() = netPayablePaisa - advancePaidPaisa
+}
 
 class BuyEntryFormState(
     tradeSettings: TradeSettings? = null
@@ -100,16 +118,14 @@ class BuyEntryFormState(
     var labourPerBag by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
-    var tareQuintals by mutableStateOf(
-        tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
-    )
+    // Tare is gone for new slips (Vivek, 2026-10-31). Only populateFrom() fills it, so a saved slip keeps its own tare.
+    var tareQuintals by mutableStateOf("")
     var advancePaid by mutableStateOf("") // Optional, default blank
     var showRateOutlierConfirmation by mutableStateOf(false)
 
     fun applySettings(settings: TradeSettings) {
         commissionPercent = MandiMathEngine.paisaToInputString(settings.farmerCommissionBps)
         labourPerBag = MandiMathEngine.paisaToRupeesString(settings.defaultLabourPaisa)
-        tareQuintals = MandiMathEngine.gramsToQuintalsInputString(settings.defaultTareGrams)
     }
 
     fun hasRateOutlier(): Boolean {
@@ -227,7 +243,8 @@ class BuyEntryFormState(
         val unroundedFinal = totalGross - labourPaisa - commRaw
         val roundedFinal = ((unroundedFinal + 500L) / 1000L) * 1000L
         val commissionPaisa = totalGross - labourPaisa - roundedFinal
-        val netPayable = roundedFinal - advancePaisa
+        // Net is the commodity value only (Vivek's sheet, 2026-11-01). Advance is money already paid, tracked in paid.
+        val netPayable = roundedFinal
 
         return AggregatedBuyPreview(
             lotsCalculations = lotResults,
@@ -253,17 +270,20 @@ class BuyEntryFormState(
     }
 
     fun validateFarmerName(): ValidationResult = MandiValidators.validateFarmerName(farmerName)
-    fun validatePhone(): ValidationResult = MandiValidators.validatePhone(phone, isRequired = false)
+    fun validatePhone(): ValidationResult = MandiValidators.validatePhone(phone, isRequired = true)
+    fun validateVillage(): ValidationResult =
+        if (MandiValidators.sanitizeVillage(village).isBlank()) ValidationResult.Invalid("गाँव का नाम दर्ज करें") else ValidationResult.Valid
     fun validateLots(): List<LotValidation> = lots.map { it.validate() }
 
     fun canSave(): Boolean {
         if (!validateFarmerName().isValid) return false
         if (!validatePhone().isValid) return false
+        if (!validateVillage().isValid) return false
         val lotsVal = validateLots()
         if (lotsVal.isEmpty() || lotsVal.any { !it.isValid }) return false
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return false
-        if (agg.netPayablePaisa < 0) return false
+        if (agg.payoutPaisa < 0) return false
         return true
     }
 
@@ -272,15 +292,17 @@ class BuyEntryFormState(
         if (!nameVal.isValid) return nameVal.errorOrNull
         val phoneVal = validatePhone()
         if (!phoneVal.isValid) return phoneVal.errorOrNull
+        val villageVal = validateVillage()
+        if (!villageVal.isValid) return villageVal.errorOrNull
         val lotsVal = validateLots()
         val firstInvalidIdx = lotsVal.indexOfFirst { !it.isValid }
         if (firstInvalidIdx != -1) {
             val err = lotsVal[firstInvalidIdx]
-            return "फसल #${firstInvalidIdx + 1}: ${err.bagsError ?: err.weightError ?: err.rateError ?: "विवरण सही करें"}"
+            return "फसल #${firstInvalidIdx + 1}: ${err.bagsError ?: err.weightError ?: err.extraError ?: err.rateError ?: "विवरण सही करें"}"
         }
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return "कुल राशि शून्य से अधिक होनी चाहिए"
-        if (agg.netPayablePaisa < 0) return "चेतावनी: पेशगी राशि कुल हिसाब से अधिक है"
+        if (agg.payoutPaisa < 0) return "चेतावनी: पेशगी राशि कुल हिसाब से अधिक है"
         return null
     }
 
@@ -365,7 +387,7 @@ class BuyEntryFormState(
                                     id = lot.id,
                                     initialCropName = lot.cropName,
                                     initialBags = if (lot.bags > 0) lot.bags.toString() else "",
-                                    initialWeightPerBagKg = if (lot.weightPerBagGrams > 0) (lot.weightPerBagGrams / 1000.0).toString() else "50",
+                                    initialWeightPerBagKg = if (lot.weightPerBagGrams > 0) MandiMathEngine.paisaToInputString(lot.weightPerBagGrams / 10) else "50",
                                     initialExtraWeightKg = if (lot.extraWeightGrams > 0) (lot.extraWeightGrams / 1000.0).toString() else "",
                                     initialRatePerQuintal = if (lot.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToInputString(lot.ratePaisaPerQuintal) else ""
                                 )
@@ -383,7 +405,7 @@ class BuyEntryFormState(
             BuyLotItemState(
                 initialCropName = entry.commodityId,
                 initialBags = if (entry.bagsCount > 0) entry.bagsCount.toString() else "",
-                initialWeightPerBagKg = if (entry.weightPerBagGrams > 0) (entry.weightPerBagGrams / 1000.0).toString() else "50",
+                initialWeightPerBagKg = if (entry.weightPerBagGrams > 0) MandiMathEngine.paisaToInputString(entry.weightPerBagGrams / 10) else "50",
                 initialExtraWeightKg = if (entry.extraWeightGrams > 0) (entry.extraWeightGrams / 1000.0).toString() else "",
                 initialRatePerQuintal = if (entry.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToInputString(entry.ratePaisaPerQuintal) else ""
             )

@@ -174,7 +174,7 @@ class LedgerAuditTest {
             transaction_type = TransactionType.UDHAR_GIVEN.name, amount_paisa = 500_000L,
             payment_mode = "CASH", transaction_date = 1_000L, voice_note_uri = null, remarks = null,
             created_at = 1_000L, updated_at = 1_000L, is_deleted = 0L, sync_status = 0L,
-            revision = 1L, is_void = 0L, void_reason = null,
+            revision = 1L, is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null
         )
 
         cashRepo.voidTransaction("tx-raw", VoidReason.WRONG_ENTRY)

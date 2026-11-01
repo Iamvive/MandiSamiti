@@ -13,9 +13,10 @@ class BuyEntryFormStateTest {
             bags = "10"; weightPerBagKg = "50"; extraWeightKg = "5"; ratePerQuintal = "2500"
             commissionPercent = "2"; labourPerBag = "5"; advancePaid = "1000"
         }
-        // Net payable = roundToNearest10(1,262,500 - 5,000 - 25,250) - 100,000 = 1,232,250 - 100,000 = 1,132,000
+        // Net payable = roundToNearest10(1,262,500 - 5,000 - 25,250) = 1,232,000; payout after the 100,000 advance = 1,132,000
         // Commission absorbs rounding: 1,262,500 - 5,000 - 1,232,000 = 25,500 paisa
-        assertEquals(1_132_000, f.preview().netPayablePaisa)
+        assertEquals(1_232_000, f.preview().netPayablePaisa)
+        assertEquals(1_132_000, f.aggregatePreview().payoutPaisa)
     }
 
     @Test
@@ -69,6 +70,8 @@ class BuyEntryFormStateTest {
         assertEquals("किसान का नाम दर्ज करें", f.validationReason())
 
         f.farmerName = "रामू"
+        f.updatePhone("9876543210")
+        f.village = "TEST गाँव"
         // Active lot with empty bags blocks saving
         assertFalse(f.canSave())
         assertTrue(f.validationReason()?.contains("बोरी") == true)
@@ -77,8 +80,10 @@ class BuyEntryFormStateTest {
         f.weightPerBagKg = "50"
         f.ratePerQuintal = "2500"
 
-        // Valid form can save with optional phone and optional advance blank
-        assertTrue(f.canSave())
+        // Phone is required now (2026-10-31); a blank phone blocks saving
+        f.phone = ""
+        assertFalse(f.canSave())
+        assertEquals("मोबाइल नंबर दर्ज करें", f.validationReason())
 
         // Invalid phone (< 10 digits) blocks saving
         f.updatePhone("98765")
@@ -120,7 +125,7 @@ class BuyEntryFormStateTest {
         assertEquals(1_262_500L, entry.grossPaisa)
         assertEquals(25_500L, entry.commissionPaisa)
         assertEquals(5_000L, entry.labourPaisa)
-        assertEquals(1_132_000L, entry.netPayablePaisa)
+        assertEquals(1_232_000L, entry.netPayablePaisa)
 
         val restoredForm = BuyEntryFormState()
         restoredForm.populateFrom(entry)
@@ -128,7 +133,7 @@ class BuyEntryFormStateTest {
         assertEquals("party-123", restoredForm.selectedFarmerId)
         assertEquals("9876543210", restoredForm.phone)
         assertEquals("10", restoredForm.bags)
-        assertEquals("50.0", restoredForm.weightPerBagKg)
+        assertEquals("50", restoredForm.weightPerBagKg)
         assertEquals("5.0", restoredForm.extraWeightKg)
         assertEquals("2500", restoredForm.ratePerQuintal)
         assertEquals("2", restoredForm.commissionPercent)

@@ -448,10 +448,21 @@ fun App(
                     activeLoanChecker = { farmerName ->
                         lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
                     },
-                    onSaved = { entry ->
+                    onSaved = { entry, party ->
                         coroutineScope.launch {
                             if (screen.existingId == null) {
-                                buyRepo.saveBuyEntry(entry)
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val advance = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = entry.shopId,
+                                    partyId = entry.farmerId,
+                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                    amountPaisa = entry.advancePaidPaisa,
+                                    transactionDate = now,
+                                    createdAt = now,
+                                    updatedAt = now,
+                                )
+                                buyRepo.saveBuyCheckout(entry, party, if (advance.amountPaisa > 0) listOf(advance) else emptyList())
                             } else {
                                 buyRepo.editBuyEntry(entry)
                             }

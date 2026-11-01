@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 class TradeSettingsFormDefaultsF05Test {
 
     @Test
-    fun buyForm_seedsFromTradeSettings_andAppliesTareInWeight() {
+    fun buyForm_seedsFromTradeSettings_andNewSlipsSkipTare() {
         val settings = TradeSettings(
             farmerCommissionBps = 150L, // 1.5%
             buyerCommissionBps = 150L,  // 1.5%
@@ -32,26 +32,19 @@ class TradeSettingsFormDefaultsF05Test {
         // 1. Defaults seeded correctly from TradeSettings
         assertEquals("1.50", form.commissionPercent)
         assertEquals("10", form.labourPerBag)
-        assertEquals("0.35", form.tareQuintals)
+        assertEquals("", form.tareQuintals) // tare removed for new Buy slips (2026-10-31)
 
-        // 2. Tare deduction applied in weight and math:
-        // Gross weight: 10 * 50 = 500 kg = 500,000 grams (5.00 Qtl)
-        // Tare: 0.35 Qtl = 35 kg = 35,000 grams
-        // Net weight: 500,000 - 35,000 = 465,000 grams (4.65 Qtl)
+        // 2. No tare: the entered weight is the billed weight.
+        // Weight 10 * 50 = 500 kg (5.00 Qtl); gross = 5 Qtl * 2500 = 12,500 Rs = 1,250,000 paisa
         val preview = form.aggregatePreview()
-        assertEquals(465_000L, preview.totalWeightGrams)
+        assertEquals(500_000L, preview.totalWeightGrams)
+        assertEquals(1_250_000L, preview.totalGrossPaisa)
 
-        // Gross = 4.65 Qtl * 2500 Rs = 11,625 Rs = 1,162,500 paisa
-        assertEquals(1_162_500L, preview.totalGrossPaisa)
-
-        // Commission = 1.5% on 1,162,500 = 17,437.5 -> rounded to nearest 10 = final 1,135,000 paisa, commission absorbs = 17,500 paisa (₹175.00)
-        assertEquals(17_500L, preview.commissionPaisa)
-
-        // Labour = 10 bags * ₹10 = ₹100 = 10,000 paisa
+        // Commission 1.5% = 18,750; final rounds to nearest Rs 10: 1,250,000 - 10,000 - 18,750 = 1,221,250 -> 1,221,000
+        // Commission absorbs the rounding: 19,000. Labour = 10 bags * Rs 10 = 10,000.
+        assertEquals(19_000L, preview.commissionPaisa)
         assertEquals(10_000L, preview.labourPaisa)
-
-        // Net Payable = 1,162,500 - 17,500 - 10,000 = 1,135,000 paisa
-        assertEquals(1_135_000L, preview.netPayablePaisa)
+        assertEquals(1_221_000L, preview.netPayablePaisa)
     }
 
     @Test
@@ -99,7 +92,7 @@ class TradeSettingsFormDefaultsF05Test {
         val form1 = BuyEntryFormState(initial)
         assertEquals("0.70", form1.commissionPercent)
         assertEquals("10", form1.labourPerBag)
-        assertEquals("0.35", form1.tareQuintals)
+        assertEquals("", form1.tareQuintals)
 
         // Update settings in repository
         val updated = TradeSettings(
@@ -115,7 +108,7 @@ class TradeSettingsFormDefaultsF05Test {
         val form2 = BuyEntryFormState(latest)
         assertEquals("2.50", form2.commissionPercent)
         assertEquals("12", form2.labourPerBag)
-        assertEquals("0.5", form2.tareQuintals)
+        assertEquals("", form2.tareQuintals)
 
         val sellForm = SellEntryFormState(latest)
         assertEquals("1.75", sellForm.commissionPercent)

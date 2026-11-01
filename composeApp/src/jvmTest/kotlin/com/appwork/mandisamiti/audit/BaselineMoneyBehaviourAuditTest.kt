@@ -35,7 +35,7 @@ class BaselineMoneyBehaviourAuditTest {
         val preview = reviewBuyForm().aggregatePreview()
 
         assertEquals(16_000L, preview.commissionPaisa)
-        assertEquals(2_180_000L, preview.netPayablePaisa)
+        assertEquals(2_280_000L, preview.netPayablePaisa)
     }
 
     @Test
@@ -43,7 +43,7 @@ class BaselineMoneyBehaviourAuditTest {
         val preview = reviewBuyForm(commissionPercent = "0.72").aggregatePreview()
 
         assertEquals(17_000L, preview.commissionPaisa)
-        assertEquals(2_179_000L, preview.netPayablePaisa)
+        assertEquals(2_279_000L, preview.netPayablePaisa)
     }
 
     @Test
@@ -55,13 +55,16 @@ class BaselineMoneyBehaviourAuditTest {
         assertEquals(20_000L, withoutLabour.netPayablePaisa - withLabour.netPayablePaisa)
     }
 
+    // Changed on purpose (Phase 3 C6, Vivek's sheet 2026-11-01): net is the commodity value, advance is tracked in paid.
     @Test
-    fun advanceRemainsAnExactDeductionFromFinalPayable() {
+    fun advanceDoesNotChangeNetPayableAndReducesPayoutByExactlyTheAdvance() {
         val withoutAdvance = reviewBuyForm(advancePaid = "0").aggregatePreview()
         val withAdvance = reviewBuyForm(advancePaid = "1000").aggregatePreview()
 
-        assertEquals(100_000L, withoutAdvance.netPayablePaisa - withAdvance.netPayablePaisa)
-        assertEquals(2_180_000L, withAdvance.netPayablePaisa)
+        assertEquals(withoutAdvance.netPayablePaisa, withAdvance.netPayablePaisa)
+        assertEquals(100_000L, withoutAdvance.payoutPaisa - withAdvance.payoutPaisa)
+        assertEquals(2_280_000L, withAdvance.netPayablePaisa)
+        assertEquals(2_180_000L, withAdvance.payoutPaisa)
     }
 
     @Test
@@ -83,11 +86,11 @@ class BaselineMoneyBehaviourAuditTest {
         assertEquals(16_000L, saved.commissionPaisa)
         assertEquals(20_000L, saved.labourPaisa)
         assertEquals(100_000L, saved.advancePaidPaisa)
-        assertEquals(2_180_000L, saved.netPayablePaisa)
+        assertEquals(2_280_000L, saved.netPayablePaisa)
 
         val restored = BuyEntryFormState().apply { populateFrom(saved) }
         assertEquals("0.35", restored.tareQuintals)
-        assertEquals(2_180_000L, restored.aggregatePreview().netPayablePaisa)
+        assertEquals(2_280_000L, restored.aggregatePreview().netPayablePaisa)
     }
 
     @Test

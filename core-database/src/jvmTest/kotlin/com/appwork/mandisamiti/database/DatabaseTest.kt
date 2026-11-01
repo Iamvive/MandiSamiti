@@ -150,7 +150,7 @@ class DatabaseTest {
             updated_at = 1710928000000L,
             is_deleted = 0L,
             sync_status = 0L,
-            revision = 1L, is_void = 0L, void_reason = null
+            revision = 1L, is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null
         )
 
         // Farmer balance should now be -9,509,000 + 5,000,000 = -4,509,000 paisa (Shop still owes ₹45,090)
@@ -178,14 +178,14 @@ class DatabaseTest {
             transaction_type = "UDHAR_GIVEN", amount_paisa = 500_000L, payment_mode = "CASH",
             transaction_date = 1L, voice_note_uri = null, remarks = null,
             created_at = 1L, updated_at = 1L, is_deleted = 0L, sync_status = 0L,
-            revision = 1L, is_void = 0L, void_reason = null
+            revision = 1L, is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null
         )
         q.insertCashTransaction(
             id = "tx-2", shop_id = "shop-1", party_id = "farmer-1", deal_id = null,
             transaction_type = "UDHAR_GIVEN", amount_paisa = 99_900L, payment_mode = "CASH",
             transaction_date = 2L, voice_note_uri = null, remarks = null,
             created_at = 2L, updated_at = 2L, is_deleted = 0L, sync_status = 0L,
-            revision = 2L, is_void = 1L, void_reason = "WRONG_ENTRY"
+            revision = 2L, is_void = 1L, void_reason = "WRONG_ENTRY", source_entry_type = null, source_entry_id = null
         )
         assertEquals(500_000L, q.getPartyBalance("farmer-1").executeAsOne().balance_paisa)
 
