@@ -1,9 +1,9 @@
 package com.appwork.mandisamiti.ui.buy
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,8 +27,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,50 +43,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.Party
-import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.repository.BuyRepository
-import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.MandiCard
 import com.appwork.mandisamiti.ui.components.MandiChip
-import com.appwork.mandisamiti.ui.components.MandiMoneyRow
+import com.appwork.mandisamiti.ui.components.MandiFlatTextField
+import com.appwork.mandisamiti.ui.components.MandiLinesCard
+import com.appwork.mandisamiti.ui.components.MandiPartyLookupField
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
 import com.appwork.mandisamiti.ui.components.MandiScreenHeader
 import com.appwork.mandisamiti.ui.components.MandiSecondaryButton
-import com.appwork.mandisamiti.ui.components.MandiSection
 import com.appwork.mandisamiti.ui.components.NewPartyConfirmDialog
-import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
 import com.appwork.mandisamiti.ui.components.TypedPartyCheck
 import com.appwork.mandisamiti.ui.components.checkTypedParty
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
-import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
-import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 import kotlinx.datetime.Clock
 
 /**
- * Rebuilt BuyEntryScreen adhering strictly to Direction B final & NGDL guardrails:
- * - Renders only [BuyEntryUiState] mapped via [BuyEntryFormState.toUiState] and dispatches events via [BuyEntryActions].
- * - Always-visible bottom sticky action dock showing live calculated final payable amount & Save button.
- * - Dedicated loan & deposit section: displays outstanding principal, calculated interest due,
- *   cut input field, split preview (interest-first, then principal), and validation errors.
- * - Deposit is strictly read-only per Vivek decision (2026-11-01).
+ * BuyEntryScreen adhering strictly to Direction B final & NGDL guardrails:
+ * - Header: "नई खरीद एंट्री", no subtitle.
+ * - Flat grey-filled boxes for fields (MandiSurfaceElevated, 56dp tall, 20sp text, 8dp squircle).
+ * - Farmer block: "मोबाइल नंबर या नाम" lookup first, then farmer name, then village.
+ *   Hint line below for saved number, new number, or missing number on old party.
+ * - Save stays off until there is a valid number.
+ * - Lots: Bags, kg/bag and extra weight on one line (grid3), rate on the next line.
+ * - Flat sections: no bordered cards around farmer or crop details.
+ * - Slip: हिसाब पर्ची with lines (Lot lines, Labour, Commission, Slip value).
+ * - After slip: पर्ची के बाद का हिसाब (Advance, Loan card, Deposit card, Summary lines).
+ * - Always-visible sticky action dock: live final payable amount and "सुरक्षित करें" button.
  */
 @Composable
 fun BuyEntryScreen(
@@ -289,7 +286,7 @@ fun BuyEntryScreen(
 }
 
 /**
- * Pure presentation composable that renders [BuyEntryUiState] and communicates strictly via [BuyEntryActions].
+ * Pure presentation composable that renders [BuyEntryUiState] according to Direction B final.
  */
 @Composable
 fun BuyEntryScreenContent(
@@ -309,11 +306,11 @@ fun BuyEntryScreenContent(
         topBar = {
             MandiScreenHeader(
                 title = if (isEnglish) {
-                    if (existingId == null) "New Purchase" else "Edit Purchase"
+                    if (existingId == null) "New purchase" else "Edit purchase"
                 } else {
-                    if (existingId == null) "नई खरीद" else "खरीद बदलें"
+                    if (existingId == null) "नई खरीद एंट्री" else "खरीद बदलें"
                 },
-                subtitle = if (isEnglish) "Buy Entry & Farmer Bill" else "आवक सौदा व किसान पर्ची",
+                subtitle = null,
                 onBack = {
                     if (isDirty) {
                         onDiscardRequest()
@@ -324,10 +321,10 @@ fun BuyEntryScreenContent(
             )
         },
         bottomBar = {
-            // Direction B final: Always-visible sticky action dock (eliminating long scroll)
+            // Direction B final: Always-visible sticky action dock
             Surface(
                 color = MandiSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder),
+                border = BorderStroke(1.dp, MandiBorder),
                 shadowElevation = 8.dp,
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding()
             ) {
@@ -340,42 +337,49 @@ fun BuyEntryScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text(
-                                text = if (isEnglish) "Final Payable" else "अंतिम देय राशि",
-                                fontSize = 12.sp,
-                                color = MandiTextSecondary
-                            )
-                            Text(
-                                text = MandiMathEngine.formatRupees(state.payoutPaisa),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiGreenReceivable
-                            )
-                        }
-
-                        if (!state.canSave && state.saveBlockedReason != null) {
-                            Text(
-                                text = state.saveBlockedReason,
-                                fontSize = 12.sp,
-                                color = MandiRedPayable,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false).padding(start = 12.dp)
-                            )
-                        }
+                        Text(
+                            text = if (isEnglish) "Final payable" else "अंतिम देय राशि",
+                            fontSize = 14.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = MandiMathEngine.formatRupees(state.payoutPaisa),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
                     }
 
-                    MandiPrimaryButton(
-                        text = if (isEnglish) {
-                            if (existingId == null) "Save (Deal Confirmed)" else "Save Changes"
+                    if (state.canSave) {
+                        MandiPrimaryButton(
+                            text = if (isEnglish) {
+                                if (existingId == null) "Save" else "Save changes"
+                            } else {
+                                if (existingId == null) "सुरक्षित करें" else "बदलाव सुरक्षित करें"
+                            },
+                            height = 56.dp,
+                            fontSize = 16.sp,
+                            onClick = { actions.onSave() },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        val disabledText = if (state.party.needsPhonePrompt || state.party.phone.isBlank()) {
+                            if (isEnglish) "Add number to save" else "नंबर डालने पर सुरक्षित होगा"
+                        } else if (state.party.name.isBlank() || state.party.village.isBlank()) {
+                            if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
                         } else {
-                            if (existingId == null) "सुरक्षित करें (सौदा पक्का)" else "बदलाव सुरक्षित करें"
-                        },
-                        onClick = { actions.onSave() },
-                        enabled = state.canSave,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                            state.saveBlockedReason ?: if (isEnglish) "Save" else "सुरक्षित करें"
+                        }
+
+                        MandiSecondaryButton(
+                            text = disabledText,
+                            enabled = false,
+                            height = 56.dp,
+                            fontSize = 16.sp,
+                            onClick = {},
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         },
@@ -388,103 +392,125 @@ fun BuyEntryScreenContent(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
                 .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Section 1: Farmer Details
-            MandiSection(title = if (isEnglish) "Farmer Details" else "किसान विवरण") {
-                MandiCard {
-                    PartyAutocompleteField(
-                        value = state.party.name,
-                        onValueChange = { actions.onNameChange(it) },
-                        label = if (isEnglish) "Farmer Name *" else "किसान का नाम *",
-                        parties = parties,
-                        partyType = PartyType.FARMER,
-                        onPartySelected = { party ->
-                            actions.onPickParty(party.id)
-                            actions.onNameChange(party.name)
-                            party.phone?.let { actions.onPhoneChange(it) }
-                            party.village?.let { actions.onVillageChange(it) }
-                        },
-                        isError = state.party.nameError != null,
-                        supportingText = state.party.nameError?.let {
-                            { Text(it, color = MandiRedPayable, fontSize = 11.sp) }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+            // Section 1: Farmer block (Flat inputs, order: Mobile/Name lookup, Farmer name, Village)
+            val existingParty = BuyPartyResolver.existing(parties, state.party.selectedPartyId, state.party.phone)
+            val isOldPartyWithoutPhone = state.party.selectedPartyId != null && state.party.phone.isBlank()
+
+            MandiPartyLookupField(
+                phoneValue = state.party.phone,
+                onPhoneChange = { actions.onPhoneChange(it) },
+                onPartySelected = { party ->
+                    actions.onPickParty(party.id)
+                    actions.onNameChange(party.name)
+                    party.phone?.let { actions.onPhoneChange(it) }
+                    party.village?.let { actions.onVillageChange(it) }
+                },
+                parties = parties,
+                label = if (isEnglish) "Mobile number or name" else "मोबाइल नंबर या नाम",
+                placeholder = if (isOldPartyWithoutPhone) (if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें") else null,
+                isError = state.party.phoneError != null,
+                errorMessage = state.party.phoneError
+            )
+
+            MandiFlatTextField(
+                value = state.party.name,
+                onValueChange = { actions.onNameChange(it) },
+                label = if (isEnglish) "Farmer name" else "किसान का नाम",
+                placeholder = if (isEnglish) "Type name" else "नाम लिखें",
+                isError = state.party.nameError != null,
+                errorMessage = state.party.nameError,
+                isTall = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            MandiFlatTextField(
+                value = state.party.village,
+                onValueChange = { actions.onVillageChange(it) },
+                label = if (isEnglish) "Village" else "गांव",
+                placeholder = if (isEnglish) "Type village" else "गांव लिखें",
+                isError = state.party.villageError != null,
+                errorMessage = state.party.villageError,
+                isTall = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Farmer Hint Line
+            if (isOldPartyWithoutPhone) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MandiAmberDark,
+                        modifier = Modifier.size(16.dp)
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = state.party.phone,
-                            onValueChange = { actions.onPhoneChange(it) },
-                            label = { Text(if (isEnglish) "Mobile Number *" else "मोबाइल नंबर *", fontSize = 13.sp) },
-                            isError = state.party.phoneError != null,
-                            supportingText = state.party.phoneError?.let {
-                                { Text(it, color = MandiRedPayable, fontSize = 11.sp) }
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MandiBorder,
-                                unfocusedBorderColor = MandiBorder
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        OutlinedTextField(
-                            value = state.party.village,
-                            onValueChange = { actions.onVillageChange(it) },
-                            label = { Text(if (isEnglish) "Village *" else "गाँव *", fontSize = 13.sp) },
-                            isError = state.party.villageError != null,
-                            supportingText = state.party.villageError?.let {
-                                { Text(it, color = MandiRedPayable, fontSize = 11.sp) }
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MandiBorder,
-                                unfocusedBorderColor = MandiBorder
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    if (state.loanDeposit.hasAnything) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MandiSurfaceElevated,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(Icons.Default.Warning, contentDescription = null, tint = MandiAmberDark, modifier = Modifier.size(16.dp))
-                                Text(
-                                    if (isEnglish) "Active loan / balance exists (can deduct in settlement below)" else "सक्रिय उधार मौजूद है (नीचे हिसाब में कटौती संभव)",
-                                    fontSize = 12.sp,
-                                    color = MandiTextPrimary
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = if (isEnglish) "This account has no number. Add one before saving." else "इस खाते में नंबर नहीं है। सेव से पहले नंबर डालें।",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiTextPrimary
+                    )
                 }
+            } else if (existingParty != null && state.party.phone.isNotBlank()) {
+                Text(
+                    text = if (isEnglish) "Filled from the saved number. Changing them updates this account everywhere." else "सेव नंबर से नाम और गांव भरे। बदलने पर यह खाते में हर जगह बदलेगा।",
+                    fontSize = 12.sp,
+                    color = MandiTextSecondary
+                )
+            } else if (existingParty == null && state.party.phone.isNotBlank()) {
+                Text(
+                    text = if (isEnglish) "New number. The account is created when the entry is saved." else "नया नंबर। एंट्री सेव होते ही खाता बन जाएगा।",
+                    fontSize = 12.sp,
+                    color = MandiTextSecondary
+                )
             }
 
-            // Section 2: Crop Lots / Varieties
-            MandiSection(title = if (isEnglish) "Crop Details" else "फसल विवरण") {
+            // Section 2: Crop Lots / Varieties (Flat layout)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = if (isEnglish) "Crop / variety" else "जिंस / फसल वैरायटी",
+                    fontSize = 12.sp,
+                    color = MandiTextSecondary
+                )
+
                 val commonCrops = if (isEnglish) {
                     listOf("Wheat", "Wheat Sharbati", "Gram", "Mustard", "Soybean")
                 } else {
                     listOf("गेहूं", "गेहूं शरबती", "चना", "सरसों", "सोयाबीन")
                 }
 
-                state.lots.forEachIndexed { index, lot ->
-                    MandiCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        isElevated = index % 2 == 1
-                    ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                ) {
+                    val currentLot = state.lots.firstOrNull()
+                    commonCrops.forEach { crop ->
+                        MandiChip(
+                            label = crop,
+                            selected = currentLot?.cropName == crop,
+                            onClick = {
+                                currentLot?.let { actions.onLotChange(it.id, BuyLotField.Crop, crop) }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Crop input lines
+            state.lots.forEachIndexed { index, lot ->
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (state.lots.size > 1) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -496,355 +522,342 @@ fun BuyEntryScreenContent(
                                 fontWeight = FontWeight.Bold,
                                 color = MandiTextPrimary
                             )
-
-                            if (state.lots.size > 1) {
-                                IconButton(
-                                    onClick = { actions.onRemoveLot(lot.id) },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = if (isEnglish) "Remove Lot" else "लॉट हटाएं",
-                                        tint = MandiRedPayable,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Quick-Select Crop Chips
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            commonCrops.forEach { crop ->
-                                MandiChip(
-                                    label = crop,
-                                    selected = lot.cropName == crop,
-                                    onClick = { actions.onLotChange(lot.id, BuyLotField.Crop, crop) }
-                                )
-                            }
-                        }
-
-                        // Lot Input Fields
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = lot.bags,
-                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.Bags, it) },
-                                label = { Text(if (isEnglish) "Bags *" else "बोरी संख्या *", fontSize = 13.sp) },
-                                isError = lot.bagsError != null,
-                                supportingText = lot.bagsError?.let { { Text(it, color = MandiRedPayable, fontSize = 11.sp) } },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MandiBorder,
-                                    unfocusedBorderColor = MandiBorder
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = lot.weightPerBagKg,
-                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.WeightPerBag, it) },
-                                label = { Text(if (isEnglish) "Weight/Bag (kg)" else "वजन/बोरी (किग्रा)", fontSize = 13.sp) },
-                                isError = lot.weightError != null,
-                                supportingText = lot.weightError?.let { { Text(it, color = MandiRedPayable, fontSize = 11.sp) } },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MandiBorder,
-                                    unfocusedBorderColor = MandiBorder
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = lot.extraWeightKg,
-                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.ExtraWeight, it) },
-                                label = { Text(if (isEnglish) "Extra (kg)" else "अतिरिक्त (किग्रा)", fontSize = 13.sp) },
-                                placeholder = { Text("0") },
-                                isError = lot.extraError != null,
-                                supportingText = lot.extraError?.let { { Text(it, color = MandiRedPayable, fontSize = 11.sp) } },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MandiBorder,
-                                    unfocusedBorderColor = MandiBorder
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = lot.ratePerQuintal,
-                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.Rate, it) },
-                                label = { Text(if (isEnglish) "Rate (₹/qtl) *" else "भाव (रु/क्विंटल) *", fontSize = 13.sp) },
-                                isError = lot.rateError != null,
-                                supportingText = lot.rateError?.let {
-                                    { Text(it, color = MandiRedPayable, fontSize = 11.sp) }
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MandiBorder,
-                                    unfocusedBorderColor = MandiBorder
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        // Lot Subtotal Line
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MandiSurfaceElevated,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                            IconButton(
+                                onClick = { actions.onRemoveLot(lot.id) },
+                                modifier = Modifier.size(28.dp)
                             ) {
-                                Text(
-                                    text = if (isEnglish) "Weight: ${MandiMathEngine.gramsToQuintals(lot.netWeightGrams)} qtl" else "वजन: ${MandiMathEngine.gramsToQuintals(lot.netWeightGrams)} क्विंटल",
-                                    fontSize = 12.sp,
-                                    color = MandiTextSecondary
-                                )
-                                Text(
-                                    text = if (isEnglish) "Gross: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}" else "सकल: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MandiTextPrimary
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = if (isEnglish) "Remove Lot" else "लॉट हटाएं",
+                                    tint = MandiTextSecondary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
-                }
 
-                // Add Another Crop Lot Button
-                MandiSecondaryButton(
-                    text = if (isEnglish) "Add Another Crop Lot" else "अन्य फसल / वैरायटी जोड़ें",
-                    leadingIcon = Icons.Default.Add,
-                    onClick = { actions.onAddLot() },
+                    // B final Line 1: Bags, Weight/Bag, Extra weight in a 3-column row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        MandiFlatTextField(
+                            value = lot.bags,
+                            onValueChange = { actions.onLotChange(lot.id, BuyLotField.Bags, it) },
+                            label = if (isEnglish) "Bags" else "बोरी संख्या",
+                            isError = lot.bagsError != null,
+                            errorMessage = lot.bagsError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                            isTall = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MandiFlatTextField(
+                            value = lot.weightPerBagKg,
+                            onValueChange = { actions.onLotChange(lot.id, BuyLotField.WeightPerBag, it) },
+                            label = if (isEnglish) "Kg/bag" else "वजन/बोरी (किग्रा)",
+                            isError = lot.weightError != null,
+                            errorMessage = lot.weightError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                            isTall = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MandiFlatTextField(
+                            value = lot.extraWeightKg,
+                            onValueChange = { actions.onLotChange(lot.id, BuyLotField.ExtraWeight, it) },
+                            label = if (isEnglish) "Extra (kg)" else "अतिरिक्त (किग्रा)",
+                            placeholder = "0",
+                            isError = lot.extraError != null,
+                            errorMessage = lot.extraError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                            isTall = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // B final Line 2: Rate on next line
+                    MandiFlatTextField(
+                        value = lot.ratePerQuintal,
+                        onValueChange = { actions.onLotChange(lot.id, BuyLotField.Rate, it) },
+                        label = if (isEnglish) "Rate (₹/qtl)" else "भाव (रु/क्विंटल)",
+                        isError = lot.rateError != null,
+                        errorMessage = lot.rateError,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        isTall = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // B final Line 3: Subtotal row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Weight: ${MandiMathEngine.gramsToQuintals(lot.netWeightGrams)} qtl" else "वजन: ${MandiMathEngine.gramsToQuintals(lot.netWeightGrams)} क्विंटल",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextPrimary
+                        )
+                        Text(
+                            text = if (isEnglish) "Gross: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}" else "सकल: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextPrimary
+                        )
+                    }
+                }
+            }
+
+            // Add Another Crop Lot Button
+            MandiSecondaryButton(
+                text = if (isEnglish) "Add another crop lot" else "अन्य फसल / वैरायटी जोड़ें",
+                leadingIcon = Icons.Default.Add,
+                onClick = { actions.onAddLot() },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Deductions Grid (Commission % and Labour in 2-column grid)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                MandiFlatTextField(
+                    value = state.rates.commissionPercent,
+                    onValueChange = { actions.onCommissionChange(it) },
+                    label = if (isEnglish) "Commission %" else "कमीशन %",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    isTall = true,
+                    modifier = Modifier.weight(1f)
+                )
+                MandiFlatTextField(
+                    value = state.rates.labourPerBag,
+                    onValueChange = { actions.onLabourChange(it) },
+                    label = if (isEnglish) "Labour (₹/bag)" else "मजदूरी (रु/बोरी)",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    isTall = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // For editing existing slips with stored tare only
+            if (existingId != null && tareQuintals.isNotBlank() && tareQuintals != "0") {
+                MandiFlatTextField(
+                    value = tareQuintals,
+                    onValueChange = onTareChange,
+                    label = if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    isTall = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // Section 3: Deductions & Optional Advance
-            MandiSection(title = if (isEnglish) "Deductions & Advance" else "कटौती एवं अग्रिम") {
-                MandiCard {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = state.rates.commissionPercent,
-                            onValueChange = { actions.onCommissionChange(it) },
-                            label = { Text(if (isEnglish) "Commission %" else "कमीशन %", fontSize = 13.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MandiBorder,
-                                unfocusedBorderColor = MandiBorder
-                            ),
-                            modifier = Modifier.weight(1f)
+            // Section 3: हिसाब पर्ची (Slip summary card with lines)
+            Text(
+                text = if (isEnglish) "Slip" else "हिसाब पर्ची",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MandiTextPrimary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            MandiLinesCard {
+                state.lots.forEachIndexed { i, lot ->
+                    Line(
+                        label = if (isEnglish) "Lot #${i + 1}: ${lot.cropName}, ${lot.bags} bags" else "फसल #${i + 1}: ${lot.cropName}, ${lot.bags} बोरी",
+                        amountText = MandiMathEngine.formatRupees(lot.grossPaisa)
+                    )
+                }
+                if (existingId != null && tareQuintals.isNotBlank() && tareQuintals != "0") {
+                    Line(
+                        label = if (isEnglish) "Tare / Bardana" else "काट / बारदाना",
+                        amountText = "− $tareQuintals ${if (isEnglish) "qtl" else "क्विंटल"}"
+                    )
+                }
+                Line(
+                    label = if (isEnglish) "Labour" else "मजदूरी कटौती",
+                    amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.labourPaisa)}"
+                )
+                Line(
+                    label = if (isEnglish) "Commission" else "कमीशन कटौती",
+                    amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.commissionPaisa)}"
+                )
+                TotalLine(
+                    label = if (isEnglish) "Slip value" else "पर्ची राशि",
+                    amountText = MandiMathEngine.formatRupees(state.slip.netPayablePaisa),
+                    largeAmount = true
+                )
+            }
+
+            // Section 4: पर्ची के बाद का हिसाब (After the slip)
+            Text(
+                text = if (isEnglish) "After the slip" else "पर्ची के बाद का हिसाब",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MandiTextPrimary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            // Advance field
+            MandiFlatTextField(
+                value = state.advanceText,
+                onValueChange = { actions.onAdvanceChange(it) },
+                label = if (isEnglish) "Advance (₹)" else "अग्रिम / पेशगी (रु)",
+                placeholder = if (isEnglish) "Optional" else "वैकल्पिक",
+                isError = state.advanceError != null,
+                errorMessage = state.advanceError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                isTall = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Balances: Loan card (hidden when editing an existing entry per contract)
+            if (existingId == null && state.loanDeposit.hasAnything &&
+                BuyPaymentCalculations.hasLoanBalance(state.loanDeposit.loanPrincipalPaisa, state.loanDeposit.loanInterestDuePaisa)
+            ) {
+                MandiCard(padding = 14.dp, spacing = 10.dp) {
+                    val totalDebtPaisa = BuyPaymentCalculations.calculateTotalDebt(
+                        state.loanDeposit.loanPrincipalPaisa,
+                        state.loanDeposit.loanInterestDuePaisa
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Open loan" else "पुराना उधार",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextPrimary
                         )
-                        OutlinedTextField(
-                            value = state.rates.labourPerBag,
-                            onValueChange = { actions.onLabourChange(it) },
-                            label = { Text(if (isEnglish) "Labour (₹/bag)" else "मजदूरी (रु/बोरी)", fontSize = 13.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MandiBorder,
-                                unfocusedBorderColor = MandiBorder
-                            ),
-                            modifier = Modifier.weight(1f)
+                        Text(
+                            text = MandiMathEngine.formatRupees(totalDebtPaisa),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
                         )
                     }
 
-                    // For editing existing slips with stored tare only
-                    if (existingId != null && tareQuintals.isNotBlank() && tareQuintals != "0") {
-                        OutlinedTextField(
-                            value = tareQuintals,
-                            onValueChange = onTareChange,
-                            label = { Text(if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)", fontSize = 13.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MandiBorder,
-                                unfocusedBorderColor = MandiBorder
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    val principalStr = MandiMathEngine.formatRupees(state.loanDeposit.loanPrincipalPaisa)
+                    val interestStr = MandiMathEngine.formatRupees(state.loanDeposit.loanInterestDuePaisa)
+                    Text(
+                        text = if (isEnglish) "Principal $principalStr + interest $interestStr" else "मूल $principalStr + ब्याज $interestStr",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
 
-                    OutlinedTextField(
-                        value = state.advanceText,
-                        onValueChange = { actions.onAdvanceChange(it) },
-                        label = { Text(if (isEnglish) "Advance Paid (₹)" else "अग्रिम / पेशगी (रु)", fontSize = 13.sp) },
-                        placeholder = { Text("0") },
-                        isError = state.advanceError != null,
-                        supportingText = {
-                            if (state.advanceError != null) {
-                                Text(state.advanceError, color = MandiRedPayable, fontSize = 11.sp)
-                            } else {
-                                Text(if (isEnglish) "Optional" else "वैकल्पिक", fontSize = 11.sp)
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MandiBorder,
-                            unfocusedBorderColor = MandiBorder
-                        ),
+                    MandiFlatTextField(
+                        value = state.loanDeposit.loanCutText,
+                        onValueChange = { actions.onLoanCutChange(it) },
+                        label = if (isEnglish) "Cut from loan (₹)" else "उधार से काटें (रु)",
+                        placeholder = "0",
+                        isError = state.loanDeposit.loanCutError != null,
+                        errorMessage = state.loanDeposit.loanCutError,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        isTall = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-            }
 
-            // Section 4: Loan & Deposit Settlement Section
-            if (state.loanDeposit.hasAnything) {
-                MandiSection(title = if (isEnglish) "Loan Deduction" else "उधार कटौती") {
-                    MandiCard {
-                        // Principal & Interest Due Display
-                        if (BuyPaymentCalculations.hasLoanBalance(state.loanDeposit.loanPrincipalPaisa, state.loanDeposit.loanInterestDuePaisa)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                val pStr = MandiMathEngine.formatRupees(state.loanDeposit.loanPrincipalPaisa)
-                                val pLabel = if (isEnglish) "Principal Due $pStr" else "बकाया मूल $pStr"
-                                Text(
-                                    text = pLabel,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MandiGreenReceivable
-                                )
-                                val iStr = MandiMathEngine.formatRupees(state.loanDeposit.loanInterestDuePaisa)
-                                val iLabel = if (isEnglish) "Interest Due $iStr" else "ब्याज बकाया $iStr"
-                                Text(
-                                    text = iLabel,
-                                    fontSize = 13.sp,
-                                    color = MandiTextSecondary
-                                )
-                            }
-                        }
-
-                        // Read-only deposit balance if any (per Vivek decision 2026-11-01, deposit is not used on slip)
-                        if (state.loanDeposit.depositPaisa > 0L) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MandiSurfaceElevated,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = if (isEnglish) "Existing Deposit (Safe in Khata)" else "जमा राशि (खाते में सुरक्षित)",
-                                        fontSize = 12.sp,
-                                        color = MandiTextSecondary
-                                    )
-                                    Text(
-                                        text = MandiMathEngine.formatRupees(state.loanDeposit.depositPaisa),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MandiTextPrimary
-                                    )
-                                }
-                            }
-                        }
-
-                        // Cut Input Field
-                        OutlinedTextField(
-                            value = state.loanDeposit.loanCutText,
-                            onValueChange = { actions.onLoanCutChange(it) },
-                            label = { Text(if (isEnglish) "Deduct From Loan (₹)" else "उधार से कटौती (रु)", fontSize = 13.sp) },
-                            placeholder = { Text("0") },
-                            isError = state.loanDeposit.loanCutError != null,
-                            supportingText = {
-                                if (state.loanDeposit.loanCutError != null) {
-                                    Text(state.loanDeposit.loanCutError, color = MandiRedPayable, fontSize = 11.sp)
-                                } else {
-                                    Text(if (isEnglish) "Takes interest first, then principal" else "पहले ब्याज कटेगा, फिर मूलधन", fontSize = 11.sp)
-                                }
+                    val cutPaisa = state.loanDeposit.cutToInterestPaisa + state.loanDeposit.cutToPrincipalPaisa
+                    if (cutPaisa > 0L) {
+                        val remPrincipal = BuyPaymentCalculations.calculateRemainingPrincipal(
+                            state.loanDeposit.loanPrincipalPaisa,
+                            state.loanDeposit.cutToPrincipalPaisa
+                        )
+                        val cutIntStr = MandiMathEngine.formatRupees(state.loanDeposit.cutToInterestPaisa)
+                        val cutPrincStr = MandiMathEngine.formatRupees(state.loanDeposit.cutToPrincipalPaisa)
+                        val remPrincStr = MandiMathEngine.formatRupees(remPrincipal)
+                        Text(
+                            text = if (isEnglish) {
+                                "Interest $cutIntStr first, then principal $cutPrincStr. Principal left $remPrincStr."
+                            } else {
+                                "पहले ब्याज $cutIntStr, फिर मूल $cutPrincStr। बाकी मूल $remPrincStr।"
                             },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MandiBorder,
-                                unfocusedBorderColor = MandiBorder
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary
                         )
-
-                        // Interest / Principal Split Preview
-                        if (state.loanDeposit.cutToInterestPaisa > 0L || state.loanDeposit.cutToPrincipalPaisa > 0L) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MandiSurfaceElevated,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = if (isEnglish) "Cut Split Preview:" else "कटौती का विवरण:",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MandiTextPrimary
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = if (isEnglish) "To Interest: ₹${MandiMathEngine.paisaToRupeesString(state.loanDeposit.cutToInterestPaisa)}" else "ब्याज में जमा: ₹${MandiMathEngine.paisaToRupeesString(state.loanDeposit.cutToInterestPaisa)}",
-                                            fontSize = 12.sp,
-                                            color = MandiTextSecondary
-                                        )
-                                        Text(
-                                            text = if (isEnglish) "To Principal: ₹${MandiMathEngine.paisaToRupeesString(state.loanDeposit.cutToPrincipalPaisa)}" else "मूलधन में जमा: ₹${MandiMathEngine.paisaToRupeesString(state.loanDeposit.cutToPrincipalPaisa)}",
-                                            fontSize = 12.sp,
-                                            color = MandiTextSecondary
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    } else {
+                        Text(
+                            text = if (isEnglish) "Takes interest first, then principal" else "पहले ब्याज कटेगा, फिर मूलधन",
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary
+                        )
                     }
                 }
             }
 
-            // Section 5: Live Parcha Receipt Summary
-            MandiSection(title = if (isEnglish) "Slip Summary" else "हिसाब पर्ची") {
-                MandiCard {
-                    val bagsUnit = if (isEnglish) "bags" else "बोरी"
-                    val qtlUnit = if (isEnglish) "qtl" else "क्विंटल"
-                    MandiMoneyRow(label = if (isEnglish) "Total Bags" else "कुल बोरी", amountText = "${MandiMathEngine.formatIndianGrouping(state.slip.totalBags)} $bagsUnit")
-                    if (tareQuintals.isNotBlank() && tareQuintals != "0") {
-                        MandiMoneyRow(label = if (isEnglish) "Tare / Bardana" else "काट / बारदाना", amountText = "- $tareQuintals $qtlUnit")
-                    }
-                    MandiMoneyRow(label = if (isEnglish) "Total Weight" else "कुल वजन", amountText = "${MandiMathEngine.gramsToQuintals(state.slip.totalWeightGrams)} $qtlUnit")
-                    MandiMoneyRow(label = if (isEnglish) "Gross Amount" else "सकल राशि", amountText = MandiMathEngine.formatRupees(state.slip.grossPaisa))
-                    // B final rule: Labour sits above Commission
-                    MandiMoneyRow(label = if (isEnglish) "Labour" else "मजदूरी कटौती", amountText = "- ₹${MandiMathEngine.paisaToRupeesString(state.slip.labourPaisa)}")
-                    MandiMoneyRow(label = if (isEnglish) "Commission" else "कमीशन कटौती", amountText = "- ₹${MandiMathEngine.paisaToRupeesString(state.slip.commissionPaisa)}")
-                    if (state.slip.netPayablePaisa > 0) {
-                        MandiMoneyRow(
-                            label = if (isEnglish) "Slip Value" else "पर्ची राशि (सौदा)",
-                            amountText = MandiMathEngine.formatRupees(state.slip.netPayablePaisa),
-                            emphasized = true
+            // Balances: Deposit card (deposit is read-only on slip per decision C6)
+            if (state.loanDeposit.depositPaisa > 0L) {
+                MandiCard(padding = 14.dp, spacing = 10.dp) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Deposit with us" else "हमारे पास जमा",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextPrimary
+                        )
+                        Text(
+                            text = MandiMathEngine.formatRupees(state.loanDeposit.depositPaisa),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
                         )
                     }
-                    if (state.loanDeposit.cutToInterestPaisa > 0L || state.loanDeposit.cutToPrincipalPaisa > 0L) {
-                        val totalCut = BuyPaymentCalculations.calculateTotalCut(state.loanDeposit.cutToInterestPaisa, state.loanDeposit.cutToPrincipalPaisa)
-                        MandiMoneyRow(label = if (isEnglish) "Loan Cut" else "उधार कटौती", amountText = "- ₹${MandiMathEngine.paisaToRupeesString(totalCut)}")
-                    }
-                    if (state.advanceText.isNotBlank()) {
-                        val advPaisa = MandiMathEngine.parseRupeesToPaisa(state.advanceText)
-                        if (advPaisa > 0) {
-                            MandiMoneyRow(label = if (isEnglish) "Advance Paid" else "अग्रिम / पेशगी", amountText = "- ₹${MandiMathEngine.paisaToRupeesString(advPaisa)}")
-                        }
-                    }
 
-                    Spacer(Modifier.height(4.dp))
-                    MandiMoneyRow(
-                        label = if (isEnglish) "Final Payout" else "अंतिम देय राशि",
-                        amountText = MandiMathEngine.formatRupees(state.payoutPaisa),
-                        emphasized = true
+                    MandiFlatTextField(
+                        value = "",
+                        onValueChange = {},
+                        label = if (isEnglish) "Pay from deposit (₹)" else "जमा से दें (रु)",
+                        placeholder = if (isEnglish) "Optional" else "वैकल्पिक",
+                        readOnly = true,
+                        enabled = false,
+                        isTall = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = if (isEnglish) "Deposit remains safe in account (per decision, does not reduce slip)." else "खाते में जमा सुरक्षित है (निर्णय अनुसार, पर्ची में कटौती नहीं होती)।",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
                     )
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            // Summary Lines (After the slip calculation card)
+            MandiLinesCard {
+                Line(
+                    label = if (isEnglish) "Slip value" else "पर्ची राशि",
+                    amountText = MandiMathEngine.formatRupees(state.slip.netPayablePaisa)
+                )
+                val advPaisa = MandiMathEngine.parseRupeesToPaisa(state.advanceText)
+                if (advPaisa > 0L) {
+                    Line(
+                        label = if (isEnglish) "Advance" else "अग्रिम / पेशगी",
+                        amountText = "− ₹${MandiMathEngine.paisaToRupeesString(advPaisa)}"
+                    )
+                }
+                val totalCut = BuyPaymentCalculations.calculateTotalCut(
+                    state.loanDeposit.cutToInterestPaisa,
+                    state.loanDeposit.cutToPrincipalPaisa
+                )
+                if (totalCut > 0L) {
+                    Line(
+                        label = if (isEnglish) "Loan cut" else "उधार कटौती",
+                        amountText = "− ₹${MandiMathEngine.paisaToRupeesString(totalCut)}"
+                    )
+                }
+                TotalLine(
+                    label = if (isEnglish) "Final payable" else "अंतिम देय राशि",
+                    amountText = MandiMathEngine.formatRupees(state.payoutPaisa),
+                    largeAmount = true
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

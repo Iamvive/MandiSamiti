@@ -463,6 +463,13 @@ fun App(
                     if (found?.first != buyForm.loanLendId || found?.second != buyForm.loanPrincipalPaisa || found?.third != buyForm.loanInterestDuePaisa) {
                         buyForm.setLoan(found?.first, found?.second ?: 0L, found?.third ?: 0L)
                     }
+                    if (loanPartyId != null) {
+                        val partyCash = cashRepo.getTransactionsByPartyStream(loanPartyId).first()
+                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED }.sumOf { it.amountPaisa }
+                        buyForm.setDeposit(deposit)
+                    } else {
+                        buyForm.setDeposit(0L)
+                    }
                 }
                 BuyEntryScreen(
                     shopId = shopId ?: "",
@@ -591,6 +598,8 @@ fun App(
                     partyVillage = receiptParty?.village,
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
                     onEdit = { currentScreen = Screen.BuyEntry(it) },
+                    onNewBuy = { currentScreen = Screen.BuyEntry(null) },
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }

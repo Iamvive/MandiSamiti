@@ -135,6 +135,13 @@ class BuyEntryFormState(
         private set
     var loanCut by mutableStateOf("")
 
+    var depositPaisa by mutableStateOf(0L)
+        private set
+
+    fun setDeposit(paisa: Long) {
+        depositPaisa = paisa
+    }
+
     fun setLoan(lendId: String?, principalPaisa: Long, interestDuePaisa: Long) {
         loanLendId = lendId
         loanPrincipalPaisa = principalPaisa

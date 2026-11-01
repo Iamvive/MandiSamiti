@@ -17,6 +17,14 @@ object BuyPaymentCalculations {
         return (netPayablePaisa - paidPaisa).coerceAtLeast(0L)
     }
 
+    fun calculatePostDeductionPayable(netPayablePaisa: Long, advancePaisa: Long, loanCutPaisa: Long): Long {
+        return (netPayablePaisa - advancePaisa - loanCutPaisa).coerceAtLeast(0L)
+    }
+
+    fun calculateCashPayment(totalPaidPaisa: Long, advancePaisa: Long, loanCutPaisa: Long): Long {
+        return (totalPaidPaisa - advancePaisa - loanCutPaisa).coerceAtLeast(0L)
+    }
+
     fun rupeesToPaisa(rupees: Long): Long {
         return rupees * 100L
     }
@@ -31,5 +39,13 @@ object BuyPaymentCalculations {
 
     fun hasLoanBalance(principalPaisa: Long, interestPaisa: Long): Boolean {
         return principalPaisa > 0L || interestPaisa > 0L
+    }
+
+    fun calculateTotalDebt(principalPaisa: Long, interestPaisa: Long): Long {
+        return principalPaisa + interestPaisa
+    }
+
+    fun calculateRemainingPrincipal(principalPaisa: Long, principalCutPaisa: Long): Long {
+        return (principalPaisa - principalCutPaisa).coerceAtLeast(0L)
     }
 }

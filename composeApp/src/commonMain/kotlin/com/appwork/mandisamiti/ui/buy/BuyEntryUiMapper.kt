@@ -60,6 +60,7 @@ fun BuyEntryFormState.toUiState(): BuyEntryUiState {
             loanCutError = cutError,
             cutToInterestPaisa = split.interestPaisa,
             cutToPrincipalPaisa = split.principalPaisa,
+            depositPaisa = depositPaisa,
         ),
         advanceText = advancePaid,
         payoutPaisa = agg.payoutPaisa,

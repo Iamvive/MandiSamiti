@@ -45,7 +45,9 @@ fun MandiPrimaryButton(
     enabled: Boolean = true,
     isLoading: Boolean = false,
     leadingIcon: ImageVector? = null,
-    fullWidth: Boolean = true
+    fullWidth: Boolean = true,
+    height: androidx.compose.ui.unit.Dp = 48.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 15.sp
 ) {
     val haptics = rememberMandiHaptics()
     Button(
@@ -61,7 +63,7 @@ fun MandiPrimaryButton(
         ),
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(48.dp)
+            .height(height)
             .mandiPressEffect(enabled = enabled && !isLoading)
     ) {
         if (isLoading) {
@@ -84,7 +86,7 @@ fun MandiPrimaryButton(
                 }
                 Text(
                     text = text,
-                    fontSize = 15.sp,
+                    fontSize = fontSize,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -102,7 +104,9 @@ fun MandiSecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     leadingIcon: ImageVector? = null,
-    fullWidth: Boolean = true
+    fullWidth: Boolean = true,
+    height: androidx.compose.ui.unit.Dp = 48.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 15.sp
 ) {
     val haptics = rememberMandiHaptics()
     Button(
@@ -118,7 +122,7 @@ fun MandiSecondaryButton(
         ),
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(48.dp)
+            .height(height)
             .mandiPressEffect(enabled = enabled)
     ) {
         Row(
@@ -134,7 +138,7 @@ fun MandiSecondaryButton(
             }
             Text(
                 text = text,
-                fontSize = 15.sp,
+                fontSize = fontSize,
                 fontWeight = FontWeight.Medium
             )
         }
