@@ -693,19 +693,23 @@ fun BuyEntryScreenContent(
                 MandiSection(title = if (isEnglish) "Loan Deduction" else "उधार कटौती") {
                     MandiCard {
                         // Principal & Interest Due Display
-                        if (state.loanDeposit.loanPrincipalPaisa > 0L || state.loanDeposit.loanInterestDuePaisa > 0L) {
+                        if (BuyPaymentCalculations.hasLoanBalance(state.loanDeposit.loanPrincipalPaisa, state.loanDeposit.loanInterestDuePaisa)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
+                                val pStr = MandiMathEngine.formatRupees(state.loanDeposit.loanPrincipalPaisa)
+                                val pLabel = if (isEnglish) "Principal Due $pStr" else "बकाया मूल $pStr"
                                 Text(
-                                    text = (if (isEnglish) "Principal Due: " else "बकाया मूल: ") + MandiMathEngine.formatRupees(state.loanDeposit.loanPrincipalPaisa),
+                                    text = pLabel,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MandiGreenReceivable
                                 )
+                                val iStr = MandiMathEngine.formatRupees(state.loanDeposit.loanInterestDuePaisa)
+                                val iLabel = if (isEnglish) "Interest Due $iStr" else "ब्याज बकाया $iStr"
                                 Text(
-                                    text = (if (isEnglish) "Interest Due: " else "ब्याज बकाया: ") + MandiMathEngine.formatRupees(state.loanDeposit.loanInterestDuePaisa),
+                                    text = iLabel,
                                     fontSize = 13.sp,
                                     color = MandiTextSecondary
                                 )
@@ -821,7 +825,7 @@ fun BuyEntryScreenContent(
                         )
                     }
                     if (state.loanDeposit.cutToInterestPaisa > 0L || state.loanDeposit.cutToPrincipalPaisa > 0L) {
-                        val totalCut = state.loanDeposit.cutToInterestPaisa + state.loanDeposit.cutToPrincipalPaisa
+                        val totalCut = BuyPaymentCalculations.calculateTotalCut(state.loanDeposit.cutToInterestPaisa, state.loanDeposit.cutToPrincipalPaisa)
                         MandiMoneyRow(label = if (isEnglish) "Loan Cut" else "उधार कटौती", amountText = "- ₹${MandiMathEngine.paisaToRupeesString(totalCut)}")
                     }
                     if (state.advanceText.isNotBlank()) {

@@ -24,4 +24,12 @@ object BuyPaymentCalculations {
     fun isGreaterThanZero(paisa: Long): Boolean {
         return paisa > 0L
     }
+
+    fun calculateTotalCut(interestCutPaisa: Long, principalCutPaisa: Long): Long {
+        return interestCutPaisa + principalCutPaisa
+    }
+
+    fun hasLoanBalance(principalPaisa: Long, interestPaisa: Long): Boolean {
+        return principalPaisa > 0L || interestPaisa > 0L
+    }
 }
