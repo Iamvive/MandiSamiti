@@ -217,7 +217,7 @@ data class SyncPushRequestDto(
     val sell_entries: List<SellEntrySyncDto> = emptyList(),
     val lend_entries: List<LendEntrySyncDto> = emptyList(),
     val lend_settlements: List<LendSettlementSyncDto> = emptyList(),
-    val expenses: List<ExpenseEntrySyncDto> = emptyList(),
+    @SerialName("expense_entries") val expenses: List<ExpenseEntrySyncDto> = emptyList(),
     val revisions: List<EntryRevisionSyncDto> = emptyList()
 )
 
@@ -231,7 +231,7 @@ data class SyncPushResponseDto(
     val synced_sell_entries: List<String> = emptyList(),
     val synced_lend_entries: List<String> = emptyList(),
     val synced_lend_settlements: List<String> = emptyList(),
-    val synced_expenses: List<String> = emptyList(),
+    @SerialName("synced_expense_entries") val synced_expenses: List<String> = emptyList(),
     val synced_revisions: List<String> = emptyList(),
     val server_sync_time: Long = 0L,
     val server_seq: Long = 0L,
@@ -250,7 +250,7 @@ data class SyncPullResponseDto(
     val sell_entries: List<SellEntrySyncDto> = emptyList(),
     val lend_entries: List<LendEntrySyncDto> = emptyList(),
     val lend_settlements: List<LendSettlementSyncDto> = emptyList(),
-    val expenses: List<ExpenseEntrySyncDto> = emptyList(),
+    @SerialName("expense_entries") val expenses: List<ExpenseEntrySyncDto> = emptyList(),
     val revisions: List<EntryRevisionSyncDto> = emptyList(),
     val server_sync_time: Long = 0L
 )
