@@ -159,12 +159,12 @@ fun BuyEntryScreen(
         )
         val now = Clock.System.now().toEpochMilliseconds()
         val isDuplicate = existingId == null && recentBuys.any { prev ->
-            !prev.isVoid &&
-            prev.farmerId.trim().equals(entry.farmerId.trim(), ignoreCase = true) &&
-            prev.netPayablePaisa == entry.netPayablePaisa &&
-            prev.bagsCount == entry.bagsCount &&
-            prev.commodityId.trim().equals(entry.commodityId.trim(), ignoreCase = true) &&
-            kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
+            val isSameParty = prev.farmerId.trim().equals(entry.farmerId.trim(), ignoreCase = true)
+            val isSameCommodity = prev.commodityId.trim().equals(entry.commodityId.trim(), ignoreCase = true)
+            val isSameBags = prev.bagsCount == entry.bagsCount
+            val isSameAmount = prev.netPayablePaisa == entry.netPayablePaisa
+            val isRecent = kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
+            !prev.isVoid && isSameParty && isSameCommodity && isSameBags && isSameAmount && isRecent
         }
 
         if (isDuplicate) {
