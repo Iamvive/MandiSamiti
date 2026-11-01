@@ -223,9 +223,9 @@ fun BuyEntryScreen(
                                 fontSize = 12.sp,
                                 color = MandiTextSecondary
                             )
-                            val finalPaisa = (preview.netPayablePaisa - preview.advancePaidPaisa).coerceAtLeast(0L)
+                            val finalAmount = preview.payoutPaisa.coerceAtLeast(0L)
                             Text(
-                                text = "₹${MandiMathEngine.formatIndianGrouping(finalPaisa / 100)}",
+                                text = "₹${MandiMathEngine.formatIndianGrouping(finalAmount / 100)}",
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MandiTextPrimary
