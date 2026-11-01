@@ -161,6 +161,15 @@ class Phase3UiCheckTests(unittest.TestCase):
 
         self.assert_violation("paisa-gram-arithmetic", "feature/EntryScreen.kt")
 
+    def test_allows_unrelated_statement_after_paisa_assignment(self) -> None:
+        self.commit_change(
+            "feature/EntryScreen.kt",
+            "val displayPaisa = inputPaisa\n"
+            "val page = index + 1\n",
+        )
+
+        self.assert_clean()
+
     def test_allows_lambda_arrow_with_paisa_name(self) -> None:
         self.commit_change(
             "feature/EntryScreen.kt", "entries.map { paisa -> paisa.toString() }\n"
@@ -177,6 +186,28 @@ class Phase3UiCheckTests(unittest.TestCase):
         )
 
         self.assert_clean()
+
+    def test_detects_arithmetic_after_comment_closed_in_unchanged_context(self) -> None:
+        self.commit_base_change(
+            "feature/EntryScreen.kt", "/*\n*/\nval stable = Unit\n"
+        )
+        self.commit_change(
+            "feature/EntryScreen.kt",
+            "/*\n/* added nested comment\n*/\nval stable = Unit\n"
+            "val duePaisa = totalPaisa + feePaisa\n",
+        )
+
+        self.assert_violation("paisa-gram-arithmetic", "feature/EntryScreen.kt")
+
+    def test_detects_arithmetic_after_triple_string_closed_in_unchanged_context(self) -> None:
+        self.commit_base_change("feature/EntryScreen.kt", '\"\"\"\nval stable = Unit\n')
+        self.commit_change(
+            "feature/EntryScreen.kt",
+            '\"\"\"\n\"\"\"\nval stable = Unit\n'
+            "val duePaisa = totalPaisa + feePaisa\n",
+        )
+
+        self.assert_violation("paisa-gram-arithmetic", "feature/EntryScreen.kt")
 
     def test_allows_paisa_arithmetic_outside_ui_target_files(self) -> None:
         self.commit_change(
