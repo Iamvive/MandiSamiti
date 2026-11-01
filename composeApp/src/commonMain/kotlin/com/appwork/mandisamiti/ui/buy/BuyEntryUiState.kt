@@ -85,7 +85,7 @@ data class BuySlipState(
 /**
  * The person's existing loan (we lent) or deposit (they left with us), shown after the slip.
  * A loan cut reduces the payout, interest first and then principal, as in RepayLoanDialog.
- * A deposit used adds to the payout.
+ * Deposit is not used on the Buy slip (Vivek, 2026-11-01: the slip covers the current transaction only); [depositUseText] stays unused.
  */
 data class LoanDepositState(
     val loanPrincipalPaisa: Long = 0L,
