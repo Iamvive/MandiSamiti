@@ -7,6 +7,7 @@ import com.appwork.mandisamiti.database.BuyEntryEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.BuyRepository
@@ -69,9 +70,16 @@ class OfflineFirstBuyRepository(
      * cash row linked to the slip. Anything that throws rolls all of it back. Sync picks the rows up
      * through their pending status. [BuyEntry.paidPaisa] must equal the cash rows, so the slip and Galla agree.
      */
-    suspend fun saveBuyCheckout(entry: BuyEntry, party: Party?, payments: List<CashTransaction>) =
+    suspend fun saveBuyCheckout(
+        entry: BuyEntry,
+        party: Party?,
+        payments: List<CashTransaction>,
+        loanCut: LendSettlement? = null,
+    ) =
         withContext(ioDispatcher) {
-            require(entry.paidPaisa == payments.sumOf { it.amountPaisa }) { "Slip paid must equal its cash rows" }
+            // A loan cut is an offset on the slip: it counts as paid but moves no drawer cash (no cash row).
+            val cut = loanCut?.let { it.principalPaisa + it.interestPaisa } ?: 0L
+            require(entry.paidPaisa == payments.sumOf { it.amountPaisa } + cut) { "Slip paid must equal its cash rows plus the loan cut" }
             database.transaction {
                 if (party != null) {
                     if (queries.getPartyById(party.id).executeAsOneOrNull() == null) {
@@ -96,6 +104,10 @@ class OfflineFirstBuyRepository(
                 val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
                 insertOrReplace(created)
                 recordRevision(created, "CREATE", created.updatedAt)
+                if (loanCut != null) {
+                    OfflineFirstLendRepository(database, ioDispatcher, clock)
+                        .settleInTransaction(loanCut, emptyList(), clock.now().toEpochMilliseconds())
+                }
                 payments.forEach { p ->
                     require(p.amountPaisa > 0) { "Payment must be positive" }
                     val row = p.copy(revision = 1, syncStatus = 0, sourceEntryType = "BUY", sourceEntryId = entry.id)
