@@ -39,6 +39,14 @@ class BaselineMoneyBehaviourAuditTest {
     }
 
     @Test
+    fun commissionAboveFiveRupeeMidpointRoundsUpToNextTenRupees() {
+        val preview = reviewBuyForm(commissionPercent = "0.72").aggregatePreview()
+
+        assertEquals(17_000L, preview.commissionPaisa)
+        assertEquals(2_179_000L, preview.netPayablePaisa)
+    }
+
+    @Test
     fun labourChangesPayableByExactlyRatePerBagTimesBagCount() {
         val withoutLabour = reviewBuyForm(labourPerBag = "0").aggregatePreview()
         val withLabour = reviewBuyForm(labourPerBag = "10").aggregatePreview()
@@ -96,6 +104,7 @@ class BaselineMoneyBehaviourAuditTest {
 
     private fun reviewBuyForm(
         tareQuintals: String = "0.35",
+        commissionPercent: String = "0.70",
         labourPerBag: String = "10",
         advancePaid: String = "1000",
     ) = BuyEntryFormState().apply {
@@ -104,7 +113,7 @@ class BaselineMoneyBehaviourAuditTest {
         weightPerBagKg = "50"
         ratePerQuintal = "2400"
         this.tareQuintals = tareQuintals
-        commissionPercent = "0.70"
+        this.commissionPercent = commissionPercent
         this.labourPerBag = labourPerBag
         this.advancePaid = advancePaid
     }
