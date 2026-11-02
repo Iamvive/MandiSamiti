@@ -15,15 +15,13 @@ class AuthRepository(
     private val clock: Clock = Clock.System,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
-    suspend fun sendOtp(phone: String): Result<Unit> = api.sendOtp(phone)
+    suspend fun checkPhone(phone: String): Result<Boolean> = api.checkPhone(phone)
 
-    suspend fun verifyOtp(phone: String, otp: String): Result<OtpVerifyResult> = api.verifyOtp(phone, otp)
+    suspend fun signup(phone: String, shopName: String, ownerName: String, mandiName: String, mpin: String): Result<Session> =
+        api.signup(phone, shopName, ownerName, mandiName, mpin).mapCatchingSuspend { adopt(it, phone) }
 
-    suspend fun signup(pass: String, shopName: String, ownerName: String, mandiName: String, mpin: String): Result<Session> =
-        api.signup(pass, shopName, ownerName, mandiName, mpin).mapCatchingSuspend { adopt(it, phone = "") }
-
-    suspend fun login(pass: String, mpin: String): Result<Session> =
-        api.login(pass, mpin).mapCatchingSuspend { adopt(it, phone = "") }
+    suspend fun login(phone: String, mpin: String): Result<Session> =
+        api.login(phone, mpin).mapCatchingSuspend { adopt(it, phone) }
 
     /**
      * Makes the server's shop the local one: wipes foreign/demo data, saves the profile, then the session.

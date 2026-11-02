@@ -10,29 +10,24 @@ from app.database import get_db
 from app.models.user import User, ShopProfile
 from app.models.refresh_token import RefreshToken
 from app.schemas.auth import (
-    SendOtpRequest, SendOtpResponse, VerifyOtpRequest, VerifyOtpResponse,
-    SignupRequest, LoginRequest, RefreshRequest, LogoutRequest,
-    AuthSession, ShopOut, RefreshResponse,
+    CheckPhoneRequest, CheckPhoneResponse, SignupRequest, LoginRequest,
+    RefreshRequest, LogoutRequest, AuthSession, ShopOut, RefreshResponse,
 )
 from app.core.security import (
-    create_access_token, create_refresh_token, create_pass_token,
-    decode_token, get_password_hash, verify_password,
+    create_access_token, create_refresh_token, decode_token,
+    get_password_hash, verify_password,
 )
-from app.core.otp_service import OtpService, OtpRateLimited
-from app.core.otp_sender import OtpSender, get_otp_sender
 from app.core.redis_client import get_redis
 from app.config import settings
 
 router = APIRouter()
 
 PHONE_RE = re.compile(r"^[6-9]\d{9}$")
-MAX_MPIN_FAILS = 5
 MAX_MPIN_FAILS_PER_PHONE = 10
 PHONE_LOCK_S = 86400
-OTP_COOLDOWN_S = 30
 
 
-def _unauthorized(detail="INVALID_PASS"):
+def _unauthorized(detail="INVALID_MPIN"):
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
@@ -43,26 +38,6 @@ def _clean_phone(raw: str) -> str:
     if not PHONE_RE.match(phone):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="INVALID_PHONE")
     return phone
-
-
-def _otp_service(redis) -> OtpService:
-    return OtpService(redis, settings.OTP_STATIC_CODE if settings.OTP_STATIC_ENABLED else None)
-
-
-def _decode_pass(token: str, expected_type: str) -> dict:
-    try:
-        payload = decode_token(token)
-    except HTTPException:
-        raise _unauthorized()
-    if payload.get("type") != expected_type or not payload.get("jti") or not payload.get("phone"):
-        raise _unauthorized()
-    return payload
-
-
-async def _consume_pass(redis, jti: str) -> bool:
-    """Atomic single-use: True only for the caller that sets the key."""
-    ttl = settings.AUTH_PASS_EXPIRE_MINUTES * 60
-    return bool(await redis.set(f"pass_used:{jti}", 1, nx=True, ex=ttl))
 
 
 async def _issue_session(db: AsyncSession, user: User, shop: ShopProfile) -> AuthSession:
@@ -112,40 +87,17 @@ async def _reset_legacy_user(db: AsyncSession, user: User, req: SignupRequest) -
     return await _issue_session(db, user, shop)
 
 
-@router.post("/otp/send", response_model=SendOtpResponse)
-async def send_otp(req: SendOtpRequest, redis=Depends(get_redis), sender: OtpSender = Depends(get_otp_sender)):
+@router.post("/check-phone", response_model=CheckPhoneResponse)
+async def check_phone(req: CheckPhoneRequest, db: AsyncSession = Depends(get_db)):
     phone = _clean_phone(req.phone)
-    try:
-        code = await _otp_service(redis).issue(phone)
-    except OtpRateLimited:
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail="OTP_RATE_LIMITED")
-    await sender.send(phone, code)
-    return SendOtpResponse(sent=True, cooldown_s=OTP_COOLDOWN_S)
-
-
-@router.post("/otp/verify", response_model=VerifyOtpResponse)
-async def verify_otp(req: VerifyOtpRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
-    phone = _clean_phone(req.phone)
-    if not await _otp_service(redis).verify(phone, req.otp):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="OTP_INVALID")
     user = (await db.execute(select(User).where(User.phone_number == phone))).scalars().first()
-    # A pre-bcrypt (or missing) hash can never verify: treat as NEW so signup can re-set the MPIN,
-    # but only for an active OWNER (disabled users and legacy staff are refused).
-    if user and not _is_bcrypt(user.mpin_hash) and not _legacy_reset_allowed(user):
-        raise _account_disabled()
-    if user and _is_bcrypt(user.mpin_hash):
-        token, _ = create_pass_token("login_pass", phone)
-        return VerifyOtpResponse(status="EXISTING", login_pass=token)
-    token, _ = create_pass_token("signup_pass", phone)
-    return VerifyOtpResponse(status="NEW", signup_pass=token)
+    is_new = user is None or not _is_bcrypt(user.mpin_hash)
+    return CheckPhoneResponse(is_new_user=is_new)
 
 
 @router.post("/signup", response_model=AuthSession)
-async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
-    payload = _decode_pass(req.signup_pass, "signup_pass")
-    phone = payload["phone"]
-    if not await _consume_pass(redis, payload["jti"]):
-        raise _unauthorized()
+async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
+    phone = _clean_phone(req.phone)
     existing = (await db.execute(select(User).where(User.phone_number == phone))).scalars().first()
     if existing:
         if _is_bcrypt(existing.mpin_hash):
@@ -172,41 +124,25 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db), redis=D
 
 @router.post("/login", response_model=AuthSession)
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
-    payload = _decode_pass(req.login_pass, "login_pass")
-    jti = payload["jti"]
-    ttl = settings.AUTH_PASS_EXPIRE_MINUTES * 60
-    if await redis.exists(f"pass_used:{jti}"):
-        raise _unauthorized()
+    phone = _clean_phone(req.phone)
 
-    # Count the attempt first (atomic), per pass AND per phone, then decide.
-    # Per-phone counting stops brute force via fresh passes (static OTP).
-    fail_key = f"mpin_fail:{jti}"
-    user_fail_key = f"mpin_fail_user:{payload['phone']}"
-    async with redis.pipeline(transaction=True) as pipe:
-        pipe.incr(fail_key)
-        pipe.expire(fail_key, ttl, nx=True)
-        pipe.incr(user_fail_key)
-        pipe.expire(user_fail_key, PHONE_LOCK_S, nx=True)
-        attempts, _, user_attempts, _ = await pipe.execute()
-    if user_attempts > MAX_MPIN_FAILS_PER_PHONE:
+    # Track MPIN failures per phone; reset on success
+    fail_key = f"mpin_fail:{phone}"
+    user_fails = await redis.incr(fail_key)
+    await redis.expire(fail_key, PHONE_LOCK_S, nx=True)
+
+    if user_fails > MAX_MPIN_FAILS_PER_PHONE:
         raise _unauthorized({"code": "ACCOUNT_LOCKED"})
-    if attempts > MAX_MPIN_FAILS:
-        raise _unauthorized({"code": "PASS_BURNED"})
 
-    user = (await db.execute(select(User).where(User.phone_number == payload["phone"]))).scalars().first()
+    user = (await db.execute(select(User).where(User.phone_number == phone))).scalars().first()
     ok = bool(
         user and user.is_active and user.mpin_hash
         and await run_in_threadpool(verify_password, req.mpin, user.mpin_hash)
     )
     if not ok:
-        if attempts >= MAX_MPIN_FAILS:
-            await _consume_pass(redis, jti)  # burn the pass
-            raise _unauthorized({"code": "PASS_BURNED"})
-        raise _unauthorized({"code": "MPIN_INVALID", "attempts_left": MAX_MPIN_FAILS - attempts})
+        raise _unauthorized({"code": "MPIN_INVALID", "attempts_left": MAX_MPIN_FAILS_PER_PHONE - user_fails})
 
-    if not await _consume_pass(redis, jti):
-        raise _unauthorized()
-    await redis.delete(user_fail_key)
+    await redis.delete(fail_key)
     shop = (await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))).scalars().first()
     if not shop:
         raise _unauthorized()

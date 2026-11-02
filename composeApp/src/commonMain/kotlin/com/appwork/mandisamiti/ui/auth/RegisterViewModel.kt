@@ -17,7 +17,6 @@ import kotlinx.datetime.Clock
 
 enum class AuthStep {
     PHONE,
-    OTP,
     NEW_SHOP,
     ENTER_MPIN
 }
@@ -28,31 +27,25 @@ data class RegisterUiState(
     val shopName: String = "",
     val ownerName: String = "",
     val mandiName: String = "",
-    val otp: String = "",
     val mpin: String = "",
     val confirmMpin: String = "",
-    
+
     // Field-level Validation Errors
     val phoneError: String? = null,
     val shopNameError: String? = null,
     val ownerNameError: String? = null,
     val mandiNameError: String? = null,
-    val otpError: String? = null,
     val mpinError: String? = null,
     val confirmMpinError: String? = null,
     val generalErrorMessage: String? = null,
-    
-    // Throttling & Cooldowns
-    val resendCooldownSeconds: Int = 0,
-    val isResendEnabled: Boolean = true,
-    
+
     // Progress Status
     val isLoading: Boolean = false,
     val isRegistrationComplete: Boolean = false,
     /** The session AuthRepository saved; handed to App so it never re-reads the store. */
     val completedSession: Session? = null
 ) {
-    val isStep1Valid: Boolean
+    val isPhoneValid: Boolean
         get() = phoneNumber.length == 10 &&
                 (phoneNumber.startsWith("6") || phoneNumber.startsWith("7") || phoneNumber.startsWith("8") || phoneNumber.startsWith("9"))
 
@@ -61,9 +54,6 @@ data class RegisterUiState(
 
     val isEnterMpinValid: Boolean
         get() = mpin.length == 4
-
-    val isOtpValid: Boolean
-        get() = otp.length == 6
 
     val isMpinValid: Boolean
         get() = mpin.length == 4 && confirmMpin.length == 4 && mpin == confirmMpin
@@ -84,9 +74,6 @@ class RegisterViewModel(
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     private var lastClickTime = Long.MIN_VALUE
-    private var cooldownJob: Job? = null
-    private var signupPass: String? = null
-    private var loginPass: String? = null
 
     // Click Debouncing / Throttling (Prevents duplicate requests within 600ms)
     private fun isClickThrottled(): Boolean {
@@ -124,16 +111,6 @@ class RegisterViewModel(
         _uiState.update { it.copy(mandiName = value, mandiNameError = null, generalErrorMessage = null) }
     }
 
-    fun onOtpChanged(value: String) {
-        val digitsOnly = value.filter { it.isDigit() }.take(6)
-        val error = if (digitsOnly.isNotEmpty() && digitsOnly.length < 6) "6-अंकीय कोड पूरा दर्ज करें (${digitsOnly.length}/6)" else null
-        _uiState.update { it.copy(otp = digitsOnly, otpError = error, generalErrorMessage = null) }
-
-        // Auto-advance when 6 digits are typed
-        if (digitsOnly.length == 6) {
-            submitOtp()
-        }
-    }
 
     fun onMpinChanged(value: String) {
         val digitsOnly = value.filter { it.isDigit() }.take(4)
@@ -151,12 +128,12 @@ class RegisterViewModel(
         }
     }
 
-    /** PHONE: validate the number, then ask the server to send an OTP. */
+    /** PHONE: validate the number, then ask the server to check if it's a new or existing user. */
     fun submitPhone() {
         if (isClickThrottled()) return
         val s = _uiState.value
         if (s.isLoading) return
-        if (!s.isStep1Valid) {
+        if (!s.isPhoneValid) {
             _uiState.update {
                 it.copy(
                     generalErrorMessage = "कृपया सभी आवश्यक विवरण सही से भरें",
@@ -165,77 +142,21 @@ class RegisterViewModel(
             }
             return
         }
-        requestOtp(s.phoneNumber, moveToOtpStep = true)
-    }
-
-    fun resendOtp() {
-        if (isClickThrottled()) return
-        val s = _uiState.value
-        if (s.isLoading || !s.isResendEnabled) return
-        requestOtp(s.phoneNumber, moveToOtpStep = false)
-    }
-
-    private fun requestOtp(phone: String, moveToOtpStep: Boolean) {
         _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
-            authRepository.sendOtp(phone).fold(
-                onSuccess = {
+            authRepository.checkPhone(s.phoneNumber).fold(
+                onSuccess = { isNewUser ->
+                    val nextStep = if (isNewUser) AuthStep.NEW_SHOP else AuthStep.ENTER_MPIN
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            step = if (moveToOtpStep) AuthStep.OTP else it.step,
-                            otp = "",
-                            otpError = null
+                            step = nextStep,
+                            mpin = "",
+                            confirmMpin = "",
+                            shopName = "",
+                            ownerName = "",
+                            mandiName = ""
                         )
-                    }
-                    startResendCooldownTimer(30)
-                },
-                onFailure = { fail(it) }
-            )
-        }
-    }
-
-    private fun startResendCooldownTimer(seconds: Int) {
-        cooldownJob?.cancel()
-        _uiState.update { it.copy(resendCooldownSeconds = seconds, isResendEnabled = false) }
-        cooldownJob = viewModelScope.launch {
-            for (remaining in (seconds - 1) downTo 0) {
-                delay(1000)
-                _uiState.update {
-                    it.copy(
-                        resendCooldownSeconds = remaining,
-                        isResendEnabled = remaining == 0
-                    )
-                }
-            }
-        }
-    }
-
-    /** OTP: 6 digits, then verify. NEW shop -> NEW_SHOP, existing shop -> ENTER_MPIN. */
-    fun submitOtp() {
-        if (isClickThrottled()) return
-        val s = _uiState.value
-        if (s.isLoading) return
-        if (s.otp.length != 6) {
-            _uiState.update { it.copy(otpError = "कृपया 6 अंकों का OTP दर्ज करें") }
-            return
-        }
-        _uiState.update { it.copy(isLoading = true, generalErrorMessage = null, otpError = null) }
-        viewModelScope.launch {
-            authRepository.verifyOtp(s.phoneNumber, s.otp).fold(
-                onSuccess = { result ->
-                    cooldownJob?.cancel()
-                    when (result) {
-                        is OtpVerifyResult.NewShop -> {
-                            signupPass = result.signupPass
-                            loginPass = null
-                            _uiState.update { it.copy(isLoading = false, step = AuthStep.NEW_SHOP, mpin = "", confirmMpin = "") }
-                        }
-                        is OtpVerifyResult.ExistingShop -> {
-                            loginPass = result.loginPass
-                            signupPass = null
-                            _uiState.update { it.copy(isLoading = false, step = AuthStep.ENTER_MPIN, mpin = "", confirmMpin = "") }
-                        }
                     }
                 },
                 onFailure = { fail(it) }
@@ -248,11 +169,6 @@ class RegisterViewModel(
         if (isClickThrottled()) return
         val s = _uiState.value
         if (s.isLoading) return
-        val pass = signupPass
-        if (pass == null) {
-            resetToPhone("समय समाप्त — दोबारा OTP लें")
-            return
-        }
         if (!s.isNewShopValid) {
             _uiState.update {
                 it.copy(
@@ -267,9 +183,8 @@ class RegisterViewModel(
         }
         _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
-            authRepository.signup(pass, s.shopName.trim(), s.ownerName.trim(), s.mandiName.trim(), s.mpin).fold(
+            authRepository.signup(s.phoneNumber, s.shopName.trim(), s.ownerName.trim(), s.mandiName.trim(), s.mpin).fold(
                 onSuccess = { session ->
-                    signupPass = null
                     ttsManager.speak("नमस्ते ${s.ownerName} जी, आपकी फर्म ${s.shopName} का पंजीयन सफल रहा।", isSoundEnabled = true)
                     _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true, completedSession = session) }
                 },
@@ -278,25 +193,19 @@ class RegisterViewModel(
         }
     }
 
-    /** ENTER_MPIN: 4 digits, then log in with the pass from OTP verification. */
+    /** ENTER_MPIN: 4 digits, then log in. */
     fun submitMpin() {
         if (isClickThrottled()) return
         val s = _uiState.value
         if (s.isLoading) return
-        val pass = loginPass
-        if (pass == null) {
-            resetToPhone("बहुत गलत MPIN — दोबारा OTP लें")
-            return
-        }
         if (!s.isEnterMpinValid) {
             _uiState.update { it.copy(generalErrorMessage = "कृपया 4 अंकों का MPIN दर्ज करें") }
             return
         }
         _uiState.update { it.copy(isLoading = true, generalErrorMessage = null) }
         viewModelScope.launch {
-            authRepository.login(pass, s.mpin).fold(
+            authRepository.login(s.phoneNumber, s.mpin).fold(
                 onSuccess = { session ->
-                    loginPass = null
                     _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true, completedSession = session) }
                 },
                 onFailure = { fail(it) }
@@ -305,20 +214,11 @@ class RegisterViewModel(
     }
 
     private fun fail(error: Throwable) {
-        val step = _uiState.value.step
         when (error) {
-            is AuthError.RateLimited ->
-                showError("बहुत बार OTP माँगा गया, 5 मिनट बाद कोशिश करें")
-            is AuthError.OtpInvalid ->
-                showError("OTP गलत है")
             is AuthError.MpinInvalid -> {
                 _uiState.update { it.copy(mpin = "") }
                 showError("MPIN गलत है — ${error.attemptsLeft} कोशिश बाकी")
             }
-            is AuthError.PassBurned ->
-                resetToPhone(if (step == AuthStep.NEW_SHOP) "समय समाप्त — दोबारा OTP लें" else "बहुत गलत MPIN — दोबारा OTP लें")
-            is AuthError.PassExpired ->
-                resetToPhone("समय समाप्त — दोबारा OTP लें")
             is AuthError.AccountDisabled ->
                 resetToPhone("यह खाता बंद है — दुकान मालिक से संपर्क करें")
             is AuthError.AccountLocked ->
@@ -328,7 +228,7 @@ class RegisterViewModel(
             is AuthError.UnsyncedOtherShop ->
                 resetToPhone("इस फ़ोन पर दूसरी दुकान की प्रविष्टियाँ अभी सर्वर पर नहीं गईं — पहले उस दुकान से लॉगिन करके सिंक करें")
             is AuthError.PhoneAlreadyRegistered ->
-                resetToPhone("यह नंबर पहले से रजिस्टर है — दोबारा OTP लेकर लॉगिन करें")
+                resetToPhone("यह नंबर पहले से रजिस्टर है — दोबारा कोशिश करें")
             else ->
                 showError("नेटवर्क नहीं है — दोबारा कोशिश करें")
         }
@@ -339,18 +239,15 @@ class RegisterViewModel(
     }
 
     private fun resetToPhone(message: String?) {
-        cooldownJob?.cancel()
-        signupPass = null
-        loginPass = null
         _uiState.update {
             it.copy(
                 step = AuthStep.PHONE,
-                otp = "",
                 mpin = "",
                 confirmMpin = "",
+                shopName = "",
+                ownerName = "",
+                mandiName = "",
                 isLoading = false,
-                resendCooldownSeconds = 0,
-                isResendEnabled = true,
                 generalErrorMessage = message
             )
         }

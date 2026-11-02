@@ -31,59 +31,40 @@ fun mandiHttpClient(engine: HttpClientEngine? = null): HttpClient {
 
 class AuthApi(private val http: HttpClient, private val baseUrl: String) {
 
-    suspend fun sendOtp(phone: String): Result<Unit> =
-        call("otp/send", SendOtpRequest(phone), { status, _ ->
+    suspend fun checkPhone(phone: String): Result<Boolean> =
+        call("check-phone", CheckPhoneRequest(phone), { status, _ ->
             when (status) {
-                HttpStatusCode.TooManyRequests -> AuthError.RateLimited
-                HttpStatusCode.ServiceUnavailable -> AuthError.Network("OTP service unavailable")
-                else -> null
-            }
-        }) { }
-
-    suspend fun verifyOtp(phone: String, otp: String): Result<OtpVerifyResult> =
-        call("otp/verify", VerifyOtpRequest(phone, otp), { status, text ->
-            when {
-                status == HttpStatusCode.BadRequest && detailString(text) == "OTP_INVALID" -> AuthError.OtpInvalid
-                status == HttpStatusCode.TooManyRequests -> AuthError.RateLimited
-                status == HttpStatusCode.Unauthorized && detailCode(text) == "ACCOUNT_DISABLED" -> AuthError.AccountDisabled
                 else -> null
             }
         }) { resp ->
-            val r: VerifyOtpResponse = resp.body()
-            when (r.status) {
-                "NEW" -> OtpVerifyResult.NewShop(r.signupPass ?: throw AuthError.Network("Malformed response"))
-                "EXISTING" -> OtpVerifyResult.ExistingShop(r.loginPass ?: throw AuthError.Network("Malformed response"))
-                else -> throw AuthError.Network("Unknown status ${r.status}")
-            }
+            val r: CheckPhoneResponse = resp.body()
+            r.isNewUser
         }
 
     suspend fun signup(
-        signupPass: String,
+        phone: String,
         shopName: String,
         ownerName: String,
         mandiName: String,
         mpin: String,
     ): Result<AuthSessionDto> =
-        call("signup", SignupRequest(signupPass, shopName, ownerName, mandiName, mpin), { status, text ->
+        call("signup", SignupRequest(phone, shopName, ownerName, mandiName, mpin), { status, text ->
             when (status) {
-                HttpStatusCode.Unauthorized ->
-                    if (detailCode(text) == "ACCOUNT_DISABLED") AuthError.AccountDisabled else AuthError.PassExpired
+                HttpStatusCode.Unauthorized -> AuthError.AccountDisabled
                 HttpStatusCode.Conflict -> AuthError.PhoneAlreadyRegistered
                 else -> null
             }
         }) { it.body<AuthSessionDto>() }
 
-    suspend fun login(loginPass: String, mpin: String): Result<AuthSessionDto> =
-        call("login", LoginRequest(loginPass, mpin), { status, text ->
+    suspend fun login(phone: String, mpin: String): Result<AuthSessionDto> =
+        call("login", LoginRequest(phone, mpin), { status, text ->
             if (status == HttpStatusCode.Unauthorized) {
                 val detail = detailObject(text)
                 when (detail?.get("code")?.jsonPrimitive?.contentOrNull) {
                     "MPIN_INVALID" -> AuthError.MpinInvalid(detail["attempts_left"]?.jsonPrimitive?.intOrNull ?: 0)
                     "ACCOUNT_LOCKED" -> AuthError.AccountLocked
                     "ACCOUNT_DISABLED" -> AuthError.AccountDisabled
-                    "PASS_BURNED" -> AuthError.PassBurned
-                    // plain "INVALID_PASS" (expired/used pass) or any unrecognised 401: the pass is dead.
-                    else -> AuthError.PassExpired
+                    else -> AuthError.Network("HTTP ${status.value}")
                 }
             } else null
         }) { it.body<AuthSessionDto>() }
