@@ -7,16 +7,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,27 +22,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Store
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.CallMade
+import androidx.compose.material.icons.filled.CallReceived
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,36 +52,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.Party
-import com.appwork.mandisamiti.ui.components.PartyCard
+import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.OutlierEntryInfo
-import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
-import com.appwork.mandisamiti.ui.theme.MandiAmberDark
-import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
-import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiBlueSell
-import com.appwork.mandisamiti.ui.theme.MandiGreenBuy
 import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
-import com.appwork.mandisamiti.ui.theme.MandiOrangeLend
-import com.appwork.mandisamiti.ui.theme.MandiPinkExpense
-import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
-import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
-import com.appwork.mandisamiti.ui.theme.MandiRedPayable
-import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
-import com.appwork.mandisamiti.ui.theme.opaqueTint
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
+
+enum class DashboardDateFilter {
+    TODAY,
+    YESTERDAY,
+    THIS_WEEK,
+    ALL_TIME
+}
 
 @Composable
 fun DashboardScreen(
@@ -99,6 +92,7 @@ fun DashboardScreen(
     onNavigateToSellList: () -> Unit = {},
     onNavigateToLendList: () -> Unit = {},
     onNavigateToStockSheet: () -> Unit = {},
+    onNavigateToGalla: () -> Unit = {},
     onNavigateToPartyKhata: (Party) -> Unit = {},
     onNavigateToAllKhata: () -> Unit = {},
     onNavigateToBuyReceipt: (String) -> Unit = {},
@@ -109,394 +103,533 @@ fun DashboardScreen(
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val receivableCount = uiState.allParties.count { it.balancePaisa > 0 }
-    val payableCount = uiState.allParties.count { it.balancePaisa < 0 }
-    val receivableSubtitle = when {
-        receivableCount > 0 && uiState.unlinkedLendCount > 0 ->
-            if (isEnglish) "$receivableCount accounts + ${uiState.unlinkedLendCount} unlinked"
-            else "$receivableCount खातों से + ${uiState.unlinkedLendCount} बिना खाते"
-        receivableCount > 0 ->
-            if (isEnglish) "From $receivableCount accounts" else "$receivableCount खातों से"
-        uiState.unlinkedLendCount > 0 ->
-            if (isEnglish) "${uiState.unlinkedLendCount} unlinked lend" else "${uiState.unlinkedLendCount} बिना खाते का उधार"
-        else ->
-            if (isEnglish) "From 0 accounts" else "0 खातों से"
-    }
+    var selectedFilter by remember { mutableStateOf(DashboardDateFilter.TODAY) }
 
     if (uiState.isLoading) {
         DashboardSkeleton(modifier = modifier)
         return
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MandiBackground),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // 1. Modern 4-Way Quick Actions
-        item {
-            QuickActionsRow(
-                onBuy = onNavigateToBuy,
-                onSell = onNavigateToSell,
-                onLend = onNavigateToLend,
-                onExpense = onNavigateToExpense,
-                isEnglish = isEnglish
-            )
-        }
+    // Date Bounds Calculation
+    val tz = TimeZone.currentSystemDefault()
+    val todayDate = Clock.System.now().toLocalDateTime(tz).date
+    val todayStartMs = todayDate.atStartOfDayIn(tz).toEpochMilliseconds()
+    val yesterdayDate = todayDate.minus(1, DateTimeUnit.DAY)
+    val yesterdayStartMs = yesterdayDate.atStartOfDayIn(tz).toEpochMilliseconds()
+    val weekStartMs = todayDate.minus(7, DateTimeUnit.DAY).atStartOfDayIn(tz).toEpochMilliseconds()
 
-        // Entries that exist only on this phone: a trader must know before clearing data or changing phones.
-        if (uiState.pendingSyncCount > 0) {
-            item {
-                SyncPendingLine(count = uiState.pendingSyncCount, isEnglish = isEnglish, needsLogin = needsLogin)
-            }
+    // Filtered Dated Entries
+    val datedBuys = remember(uiState.buys, selectedFilter) {
+        when (selectedFilter) {
+            DashboardDateFilter.TODAY -> uiState.buys.filter { it.entryDate >= todayStartMs }
+            DashboardDateFilter.YESTERDAY -> uiState.buys.filter { it.entryDate in yesterdayStartMs until todayStartMs }
+            DashboardDateFilter.THIS_WEEK -> uiState.buys.filter { it.entryDate >= weekStartMs }
+            DashboardDateFilter.ALL_TIME -> uiState.buys
         }
+    }
 
-        // Outlier Entry Warning Card (F07)
-        if (uiState.outlierEntry != null) {
-            val outlier = uiState.outlierEntry
-            item {
-                OutlierWarningCard(
-                    outlier = outlier,
-                    onClick = {
-                        if (outlier.isBuy) onNavigateToBuyReceipt(outlier.entryId)
-                        else onNavigateToSellReceipt(outlier.entryId)
-                    },
-                    isEnglish = isEnglish
-                )
-            }
+    val datedSells = remember(uiState.sells, selectedFilter) {
+        when (selectedFilter) {
+            DashboardDateFilter.TODAY -> uiState.sells.filter { it.entryDate >= todayStartMs }
+            DashboardDateFilter.YESTERDAY -> uiState.sells.filter { it.entryDate in yesterdayStartMs until todayStartMs }
+            DashboardDateFilter.THIS_WEEK -> uiState.sells.filter { it.entryDate >= weekStartMs }
+            DashboardDateFilter.ALL_TIME -> uiState.sells
         }
+    }
 
-        // 3. Core Financial KPIs Grid
-        item {
-            RevampKpiGrid(
-                kpis = uiState.kpis,
-                onBuyClick = onNavigateToBuyList,
-                onSellClick = onNavigateToSellList,
-                onLendClick = onNavigateToLendList,
-                onExpenseClick = onNavigateToExpense,
-                isEnglish = isEnglish
-            )
+    val datedExpenses = remember(uiState.expenses, selectedFilter) {
+        when (selectedFilter) {
+            DashboardDateFilter.TODAY -> uiState.expenses.filter { it.entryDate >= todayStartMs }
+            DashboardDateFilter.YESTERDAY -> uiState.expenses.filter { it.entryDate in yesterdayStartMs until todayStartMs }
+            DashboardDateFilter.THIS_WEEK -> uiState.expenses.filter { it.entryDate >= weekStartMs }
+            DashboardDateFilter.ALL_TIME -> uiState.expenses
         }
+    }
 
-        // 4. High-Trust Financial Metric Tiles (Ledger Balances)
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+    // Dated Metrics (Direction B Formulas)
+    // 1. Net Payable: Buy slip value only, without advance or subsequent payments
+    val datedNetPayablePaisa = remember(datedBuys) {
+        datedBuys.filter { !it.isVoid }.sumOf {
+            (it.grossPaisa - it.labourPaisa - it.commissionPaisa).coerceAtLeast(0L)
+        }
+    }
+
+    // 2. Vyapari Receivable: Unpaid amount on Sell slips in the selected dates (after received payments)
+    val datedVyapariReceivablePaisa = remember(datedSells) {
+        datedSells.filter { !it.isVoid }.sumOf {
+            it.balanceDuePaisa.coerceAtLeast(0L)
+        }
+    }
+
+    // 3. Crop Weights bought and sold
+    val datedCropWeights = remember(datedBuys, datedSells) {
+        val crops = (datedBuys.map { it.commodityId } + datedSells.map { it.commodityId }).toSet().filter { it.isNotBlank() }
+        crops.associateWith { crop ->
+            val bought = datedBuys.filter { !it.isVoid && it.commodityId == crop }.sumOf { it.totalWeightGrams } / 100_000.0
+            val sold = datedSells.filter { !it.isVoid && it.commodityId == crop }.sumOf { it.totalWeightGrams } / 100_000.0
+            Pair(bought, sold)
+        }
+    }
+
+    // 4. Expenses Total
+    val datedExpensesTotalPaisa = remember(datedExpenses) {
+        datedExpenses.filter { !it.isVoid }.sumOf { it.amountPaisa }
+    }
+
+    // Top 5 Recent Buy Slips
+    val recentBuys = remember(uiState.buys) {
+        uiState.buys.filter { !it.isVoid }.sortedByDescending { it.entryDate }.take(5)
+    }
+
+    // All-Time Totals
+    val allTimeBuysGross = remember(uiState.buys) { uiState.buys.filter { !it.isVoid }.sumOf { it.grossPaisa } }
+    val allTimeSellsNet = remember(uiState.sells) { uiState.sells.filter { !it.isVoid }.sumOf { it.totalReceivablePaisa } }
+    val allTimeLendsTotal = remember(uiState.lends) { uiState.lends.filter { !it.isVoid }.sumOf { it.amountPaisa } }
+    val allTimeExpensesTotal = remember(uiState.expenses) { uiState.expenses.filter { !it.isVoid }.sumOf { it.amountPaisa } }
+
+    Scaffold(
+        bottomBar = {
+            // Fixed 4-Way Action Dock (Direction B Ergonomics)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 8.dp,
+                tonalElevation = 2.dp,
+                color = MaterialTheme.colorScheme.surface
             ) {
-                DashboardMetricCard(
-                    title = if (isEnglish) "Receivable (Market)" else "कुल लेना (बाजार बाकी)",
-                    subtitle = receivableSubtitle,
-                    amountPaisa = uiState.totalMarketReceivablePaisa,
-                    textColor = MandiGreenReceivable,
-                    icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    iconTint = MandiGreenReceivable,
-                    isEnglish = isEnglish,
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                )
-
-                DashboardMetricCard(
-                    title = if (isEnglish) "Payable (Farmers)" else "कुल देना (किसान जमा)",
-                    subtitle = if (isEnglish) "To $payableCount accounts" else "$payableCount खातों को",
-                    amountPaisa = uiState.totalFarmerPayablePaisa,
-                    textColor = MandiRedPayable,
-                    icon = Icons.AutoMirrored.Filled.TrendingDown,
-                    iconTint = MandiRedPayable,
-                    isEnglish = isEnglish,
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                )
-            }
-        }
-
-        // 4. Recent Active Accounts Header
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isEnglish) "Active Ledger Accounts" else "सक्रिय खाते (हाल का लेन-देन)",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary
-                )
                 Row(
-                    modifier = Modifier.clickable { onNavigateToAllKhata() },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = if (isEnglish) "View All" else "सभी देखें",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiTextSecondary
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = MandiTextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
-        // 5. Active Accounts Preview List (Top 5)
-        val previewParties = uiState.allPartiesWithBalance.take(5)
-        items(previewParties, key = { it.party.id }) { partyWithBalance ->
-            PartyCard(
-                party = partyWithBalance.party,
-                balancePaisa = partyWithBalance.balancePaisa,
-                isEnglish = isEnglish,
-                onPhoneNeededClick = { onPhoneNeeded { onNavigateToPartyKhata(partyWithBalance.party) } },
-                onClick = { onNavigateToPartyKhata(partyWithBalance.party) }
-            )
-        }
-
-        if (previewParties.isEmpty()) {
-            item {
-                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MandiSurfaceElevated)
-                        .border(1.dp, MandiBorder, RoundedCornerShape(12.dp))
-                        .padding(vertical = 24.dp, horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = if (isEnglish) "No accounts added yet" else "अभी कोई खाता नहीं है",
-                        color = MandiTextMuted,
-                        fontSize = 14.sp
-                    )
-                    OutlinedButton(
-                        onClick = onNavigateToAllKhata,
-                        shape = RoundedCornerShape(8.dp)
+                    Button(
+                        onClick = onNavigateToBuy,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isEnglish) "Buy" else "नई खरीद", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+
+                    OutlinedButton(
+                        onClick = onNavigateToSell,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.CallMade, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isEnglish) "Sell" else "नई बिक्री", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+
+                    OutlinedButton(
+                        onClick = onNavigateToLend,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.CallReceived, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isEnglish) "Lend" else "उधार", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+
+                    OutlinedButton(
+                        onClick = onNavigateToExpense,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isEnglish) "Expense" else "खर्च", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                }
+            }
+        },
+        containerColor = MandiBackground
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 1. Rokdi Balance Hero Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToGalla),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isEnglish) "Rokdi Balance" else "रोकड़ शेष",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MandiTextSecondary
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MandiTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         Text(
-                            text = if (isEnglish) "Add First Account" else "पहला खाता जोड़ें",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
+                            text = MandiMathEngine.formatRupees(uiState.rokdiBalancePaisa),
+                            fontSize = 34.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        Text(
+                            text = if (isEnglish) "By the book, in the galla now" else "बही के अनुसार, गल्ले में अभी",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MandiTextSecondary
                         )
                     }
                 }
             }
-        }
 
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
+            // 2. Date Filter Chips
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedFilter == DashboardDateFilter.TODAY,
+                        onClick = { selectedFilter = DashboardDateFilter.TODAY },
+                        label = { Text(if (isEnglish) "Today" else "आज") }
+                    )
+                    FilterChip(
+                        selected = selectedFilter == DashboardDateFilter.YESTERDAY,
+                        onClick = { selectedFilter = DashboardDateFilter.YESTERDAY },
+                        label = { Text(if (isEnglish) "Yesterday" else "कल") }
+                    )
+                    FilterChip(
+                        selected = selectedFilter == DashboardDateFilter.THIS_WEEK,
+                        onClick = { selectedFilter = DashboardDateFilter.THIS_WEEK },
+                        label = { Text(if (isEnglish) "This Week" else "इस हफ्ते") }
+                    )
+                    FilterChip(
+                        selected = selectedFilter == DashboardDateFilter.ALL_TIME,
+                        onClick = { selectedFilter = DashboardDateFilter.ALL_TIME },
+                        label = { Text(if (isEnglish) "All Time" else "कस्टम तारीख") }
+                    )
+                }
+            }
 
-@Composable
-private fun DashboardMetricCard(
-    title: String,
-    subtitle: String,
-    amountPaisa: Long,
-    textColor: Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: Color,
-    isEnglish: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    var showExact by remember { mutableStateOf(false) }
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MandiSurface)
-            .border(1.dp, MandiBorder, RoundedCornerShape(12.dp))
-            .clickable { showExact = !showExact }
-            .padding(14.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // 3. Dated Metric: शुद्ध देय (Net Payable)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToBuyList),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(if (isEnglish) "Net Payable" else "शुद्ध देय", style = MaterialTheme.typography.bodyMedium, color = MandiTextSecondary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MandiTextSecondary, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text = MandiMathEngine.formatRupees(datedNetPayablePaisa),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        Text(
+                            text = if (isEnglish) "Buy slip value only. Advance and payments not included." else "केवल खरीद पर्ची की राशि। अग्रिम और भुगतान शामिल नहीं।",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MandiTextSecondary
+                        )
+                    }
+                }
+            }
+
+            // 4. Dated Metric: व्यापारी से लेना (Vyapari Receivable)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToSellList),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(if (isEnglish) "To Receive from Vyapari" else "व्यापारी से लेना", style = MaterialTheme.typography.bodyMedium, color = MandiTextSecondary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MandiTextSecondary, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text = MandiMathEngine.formatRupees(datedVyapariReceivablePaisa),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiGreenReceivable
+                        )
+                        Text(
+                            text = if (isEnglish) "Unpaid on Sell slips in the selected dates, after money received." else "चुनी तारीख की बिक्री पर्चियों का बाकी। मिली रकम घटाकर।",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MandiTextSecondary
+                        )
+                    }
+                }
+            }
+
+            // 5. Dated Metric: गोदाम (Godown summary)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToStockSheet),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(if (isEnglish) "Crop Weight (qtl)" else "फसल का वजन (क्विंटल)", style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
+                            Text(if (isEnglish) "Bought / Sold" else "खरीद / बिक्री", style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
+                        }
+                        if (datedCropWeights.isEmpty()) {
+                            Text(
+                                text = if (isEnglish) "No transactions for selected dates" else "चुनी तारीख में कोई सौदा नहीं",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MandiTextMuted
+                            )
+                        } else {
+                            datedCropWeights.forEach { (crop, pair) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(crop, fontWeight = FontWeight.SemiBold, color = MandiTextPrimary)
+                                    Text(
+                                        text = "${MandiMathEngine.formatIndianGrouping(pair.first.toLong())} / ${MandiMathEngine.formatIndianGrouping(pair.second.toLong())}",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MandiTextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. Dated Metric: खर्च (Expenses)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToExpense),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(if (isEnglish) "Expenses" else "खर्च", style = MaterialTheme.typography.bodyMedium, color = MandiTextSecondary)
+                        Text(
+                            text = MandiMathEngine.formatRupees(datedExpensesTotalPaisa),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+                }
+            }
+
+            // 7. Recent Buy Slips (हाल की खरीद पर्चियां)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isEnglish) "Recent Buy Slips" else "हाल की खरीद पर्चियां",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                    TextButton(onClick = onNavigateToBuyList) {
+                        Text(if (isEnglish) "See All" else "सभी देखें", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            if (recentBuys.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Text(if (isEnglish) "No buy slips yet" else "अभी कोई खरीद पर्ची नहीं है", color = MandiTextMuted)
+                        }
+                    }
+                }
+            } else {
+                items(recentBuys, key = { it.id }) { slip ->
+                    RecentSlipRow(
+                        slip = slip,
+                        farmerName = uiState.allParties.find { it.party.id == slip.farmerId }?.party?.name ?: slip.farmerId,
+                        onClick = { onNavigateToBuyReceipt(slip.id) }
+                    )
+                }
+            }
+
+            // 8. All-Time Block (अब तक)
+            item {
                 Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MandiTextSecondary
-                )
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(16.dp)
+                    text = if (isEnglish) "All Time" else "अब तक",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
-            Text(
-                text = if (showExact) "₹${MandiMathEngine.paisaToRupeesString(amountPaisa)}"
-                       else MandiCurrencyFormatter.formatCompactRupees(amountPaisa, isEnglish),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor
-            )
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AllTimeCard(
+                            label = if (isEnglish) "Purchases" else "कुल खरीद",
+                            value = MandiMathEngine.formatRupees(allTimeBuysGross),
+                            onClick = onNavigateToBuyList,
+                            modifier = Modifier.weight(1f)
+                        )
+                        AllTimeCard(
+                            label = if (isEnglish) "Sales" else "कुल बिक्री",
+                            value = MandiMathEngine.formatRupees(allTimeSellsNet),
+                            onClick = onNavigateToSellList,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AllTimeCard(
+                            label = if (isEnglish) "Outstanding Loans" else "कुल उधार",
+                            value = MandiMathEngine.formatRupees(allTimeLendsTotal),
+                            onClick = onNavigateToLendList,
+                            modifier = Modifier.weight(1f)
+                        )
+                        AllTimeCard(
+                            label = if (isEnglish) "Expenses" else "कुल खर्च",
+                            value = MandiMathEngine.formatRupees(allTimeExpensesTotal),
+                            onClick = onNavigateToExpense,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
 
+            item {
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentSlipRow(
+    slip: BuyEntry,
+    farmerName: String,
+    onClick: () -> Unit
+) {
+    val slipNet = (slip.grossPaisa - slip.labourPaisa - slip.commissionPaisa).coerceAtLeast(0L)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(farmerName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MandiTextPrimary)
+                Text(
+                    text = "#${slipLabel(slip.slipNo, slip.id)} • ${slip.commodityId} • ${slip.bagsCount} बोरी",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MandiTextSecondary
+                )
+            }
             Text(
-                text = subtitle,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Normal,
-                color = MandiTextMuted
+                text = "₹${MandiMathEngine.paisaToRupeesString(slipNet)}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MandiTextPrimary
             )
         }
     }
 }
 
 @Composable
-fun QuickActionsRow(
-    onBuy: () -> Unit,
-    onSell: () -> Unit,
-    onLend: () -> Unit,
-    onExpense: () -> Unit,
-    isEnglish: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    val bg = MandiSurface
-    Row(
-        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        QuickActionButton(
-            label = DashboardStrings.quickActionBuy(isEnglish),
-            subLabel = DashboardStrings.quickActionBuySub(isEnglish),
-            icon = Icons.Default.ShoppingCart,
-            containerColor = opaqueTint(MandiGreenBuy, bg, 0.12f),
-            contentColor = MandiGreenBuy,
-            onClick = onBuy,
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-        QuickActionButton(
-            label = DashboardStrings.quickActionSell(isEnglish),
-            subLabel = DashboardStrings.quickActionSellSub(isEnglish),
-            icon = Icons.AutoMirrored.Filled.TrendingUp,
-            containerColor = opaqueTint(MandiBlueSell, bg, 0.12f),
-            contentColor = MandiBlueSell,
-            onClick = onSell,
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-        QuickActionButton(
-            label = DashboardStrings.quickActionLend(isEnglish),
-            subLabel = DashboardStrings.quickActionLendSub(isEnglish),
-            icon = Icons.Default.AccountBalanceWallet,
-            containerColor = opaqueTint(MandiOrangeLend, bg, 0.12f),
-            contentColor = MandiOrangeLend,
-            onClick = onLend,
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-        QuickActionButton(
-            label = DashboardStrings.quickActionExpense(isEnglish),
-            subLabel = DashboardStrings.quickActionExpenseSub(isEnglish),
-            icon = Icons.Default.MonetizationOn,
-            containerColor = opaqueTint(MandiPinkExpense, bg, 0.12f),
-            contentColor = MandiPinkExpense,
-            onClick = onExpense,
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-    }
-}
-
-@Composable
-private fun QuickActionButton(
+private fun AllTimeCard(
     label: String,
-    subLabel: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    containerColor: Color,
-    contentColor: Color,
+    value: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(22.dp)
-            )
-            Text(
-                text = label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = contentColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subLabel,
-                fontSize = 12.sp,
-                color = contentColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
+            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
         }
     }
 }
 
 @Composable
-private fun SyncPendingLine(count: Int, isEnglish: Boolean, needsLogin: Boolean = false) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(MandiAmberLight)
-            .border(1.dp, MandiAmberBorder, shape)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Sync,
-            contentDescription = null,
-            tint = MandiAmberDark,
-            modifier = Modifier.size(20.dp)
-        )
-        Text(
-            text = when {
-                needsLogin && isEnglish -> "$count entries saved on this phone. Log in to upload entries."
-                needsLogin -> "$count एंट्रियाँ सिर्फ इस फ़ोन में हैं। लॉगिन करें, फिर एंट्री अपलोड होंगी।"
-                isEnglish -> "$count entries are saved on this phone only. They upload when the internet is on."
-                else -> "$count एंट्रियाँ सिर्फ इस फोन में हैं। इंटरनेट मिलते ही सर्वर पर जाएँगी।"
-            },
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = MandiAmberDark,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
 fun DashboardSkeleton(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition()
+    val transition = rememberInfiniteTransition(label = "shimmer")
     val alpha by transition.animateFloat(
         initialValue = 0.3f,
         targetValue = 0.7f,
@@ -514,133 +647,14 @@ fun DashboardSkeleton(modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Quick actions skeleton
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            repeat(4) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(72.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(shimmerColor)
-                )
-            }
-        }
-
-        // KPI grid skeleton (2x2)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(2) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    repeat(2) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(80.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(shimmerColor)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Ledger metric cards skeleton
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            repeat(2) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(88.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(shimmerColor)
-                )
-            }
-        }
-
-        // Account list item skeleton
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(3) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(shimmerColor)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun OutlierWarningCard(
-    outlier: OutlierEntryInfo,
-    onClick: () -> Unit,
-    isEnglish: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(28.dp)
+        repeat(4) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(shimmerColor)
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (isEnglish) "Outlier Entry Detected" else "असामान्य भाव प्रविष्टि (Outlier Entry)",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "${outlier.partyName}, ${outlier.description}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-            TextButton(
-                onClick = onClick,
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text(
-                    text = if (isEnglish) "Review" else "जाँचें",
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
         }
     }
 }
-
-

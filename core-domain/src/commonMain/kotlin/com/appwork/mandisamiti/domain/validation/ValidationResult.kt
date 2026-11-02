@@ -108,4 +108,50 @@ object MandiValidators {
             else -> ValidationResult.Valid
         }
     }
+
+    fun validateBags(bags: String): ValidationResult {
+        val b = bags.toLongOrNull()
+        return when {
+            bags.isBlank() -> ValidationResult.Invalid("बोरी संख्या दर्ज करें")
+            b == null || b <= 0L -> ValidationResult.Invalid("बोरी संख्या शून्य से अधिक होनी चाहिए")
+            b > 9999L -> ValidationResult.Invalid("बोरी संख्या अधिकतम 4 अंकों (9,999) की हो सकती है")
+            else -> ValidationResult.Valid
+        }
+    }
+
+    fun validateWeightPerBag(weightKg: String): ValidationResult {
+        val w = weightKg.toDoubleOrNull()
+        return when {
+            weightKg.isBlank() -> ValidationResult.Invalid("वजन प्रति बोरी दर्ज करें")
+            w == null || w <= 0.0 -> ValidationResult.Invalid("वजन प्रति बोरी शून्य से अधिक होना चाहिए")
+            w > 999.0 -> ValidationResult.Invalid("वजन प्रति बोरी अधिकतम 3 अंकों (999 किग्रा) का हो सकता है")
+            else -> ValidationResult.Valid
+        }
+    }
+
+    fun validateExtraWeight(extraKg: String, weightPerBagKg: String): ValidationResult {
+        if (extraKg.isBlank()) return ValidationResult.Valid
+        val extra = extraKg.toDoubleOrNull()
+        val weight = weightPerBagKg.toDoubleOrNull()
+        return when {
+            extra == null || extra < 0.0 -> ValidationResult.Invalid("अतिरिक्त वजन ऋणात्मक नहीं हो सकता")
+            weight != null && weight > 0.0 && extra >= weight -> ValidationResult.Invalid("अतिरिक्त वजन बोरी वजन से कम होना चाहिए")
+            else -> ValidationResult.Valid
+        }
+    }
+
+    fun validateRatePerQuintal(rate: String): ValidationResult {
+        val r = rate.toDoubleOrNull()
+        return when {
+            rate.isBlank() -> ValidationResult.Invalid("भाव दर्ज करें")
+            r == null || r <= 0.0 -> ValidationResult.Invalid("भाव शून्य से अधिक होना चाहिए")
+            r > 100_000.0 -> ValidationResult.Invalid("भाव अधिकतम ₹1,00,000 प्रति क्विंटल हो सकता है")
+            else -> ValidationResult.Valid
+        }
+    }
+
+    fun validateVillage(village: String): ValidationResult {
+        val v = sanitizeVillage(village)
+        return if (v.isBlank()) ValidationResult.Invalid("गाँव दर्ज करें") else ValidationResult.Valid
+    }
 }

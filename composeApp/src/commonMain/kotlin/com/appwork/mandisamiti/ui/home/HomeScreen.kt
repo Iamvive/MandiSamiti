@@ -174,6 +174,7 @@ fun HomeScreen(
                             onNavigateToSellList = onNavigateToSellList,
                             onNavigateToLendList = onNavigateToLendList,
                             onNavigateToStockSheet = onNavigateToStockSheet,
+                            onNavigateToGalla = { viewModel.selectTab(NavigationTab.GALLA) },
                             onNavigateToPartyKhata = onNavigateToPartyKhata,
                             onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
                             onNavigateToBuyReceipt = onNavigateToBuyReceipt,

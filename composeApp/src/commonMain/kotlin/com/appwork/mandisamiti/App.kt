@@ -228,6 +228,7 @@ fun App(
                         sellRepository = sellRepo,
                         lendRepository = lendRepo,
                         expenseRepository = expenseRepo,
+                        cashRepository = cashRepo,
                         stockUseCase = stockUseCase,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
@@ -442,6 +443,9 @@ fun App(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
+                    partyRepository = partyRepo,
+                    cashRepository = cashRepo,
+                    lendRepository = lendRepo,
                     tradeSettings = tradeSettings,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     parties = parties,
@@ -450,16 +454,13 @@ fun App(
                     },
                     onSaved = { entry ->
                         coroutineScope.launch {
-                            if (screen.existingId == null) {
-                                buyRepo.saveBuyEntry(entry)
-                            } else {
-                                buyRepo.editBuyEntry(entry)
-                            }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = Screen.BuyReceipt(entry.id)
                         }
                     },
-                    onBack = { currentScreen = screen.backTarget() }
+                    onBack = { currentScreen = screen.backTarget() },
+                    onShareWhatsApp = { slipText ->
+                        whatsAppShareManager.shareText(slipText, null)
+                    }
                 )
             }
             is Screen.BuyList -> {

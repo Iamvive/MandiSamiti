@@ -75,7 +75,8 @@ data class OpenLoanInfo(
     val lend: LendEntry,
     val outstandingPaisa: Long,
     val interestDuePaisa: Long = 0L,
-    val monthlyRatePercent: Double = 0.0
+    val monthlyRatePercent: Double = 0.0,
+    val settlements: List<LendSettlement> = emptyList()
 )
 
 data class PartyLedgerUiState(
@@ -176,7 +177,13 @@ class PartyLedgerViewModel(
                     val interestDue = if (isMoney) {
                         RuralInterestEngine.interestDue(lend.amountPaisa, rate, lend.entryDate, nonVoidSettlements, Clock.System.now().toEpochMilliseconds())
                     } else 0L
-                    OpenLoanInfo(lend = lend, outstandingPaisa = outstandingPaisa, interestDuePaisa = interestDue, monthlyRatePercent = rate)
+                    OpenLoanInfo(
+                        lend = lend,
+                        outstandingPaisa = outstandingPaisa,
+                        interestDuePaisa = interestDue,
+                        monthlyRatePercent = rate,
+                        settlements = nonVoidSettlements
+                    )
                 } else {
                     null
                 }
@@ -255,6 +262,92 @@ class PartyLedgerViewModel(
                 if (split.generalPaisa > 0) add("₹${MandiMathEngine.paisaToRupeesString(split.generalPaisa)} सामान्य जमा")
             }
             _events.emit(PartyLedgerEvent.TransactionRecorded(parts.joinToString(", ") + " दर्ज किया गया"))
+        }
+    }
+
+    /**
+     * Settle Buy slip with full or partial cash payment.
+     * Updates BuyEntry.paidPaisa and records a linked CashTransaction that moves Galla cash.
+     */
+    fun settleBuySlip(
+        buyId: String,
+        amountPaisa: Long,
+        note: String? = null
+    ) {
+        if (amountPaisa <= 0L) return
+        viewModelScope.launch {
+            val buyRepo = buyRepository ?: return@launch
+            val currentBuy = buyRepo.getBuyEntryById(buyId) ?: return@launch
+            if (currentBuy.isVoid) return@launch
+
+            val newPaidPaisa = currentBuy.paidPaisa + amountPaisa
+            buyRepo.editBuyEntry(currentBuy.copy(paidPaisa = newPaidPaisa))
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            val slipRef = currentBuy.slipNo?.let { "#$it" } ?: buyId.takeLast(5)
+            val tx = CashTransaction(
+                id = IdGenerator.newId(),
+                shopId = shopId,
+                partyId = partyId,
+                transactionType = TransactionType.UDHAR_GIVEN, // Farmer payout / cash out from galla
+                amountPaisa = amountPaisa,
+                paymentMode = PaymentMode.CASH,
+                transactionDate = now,
+                remarks = "खरीद पर्ची $slipRef भुगतान${if (!note.isNullOrBlank()) ": $note" else ""}",
+                createdAt = now,
+                updatedAt = now
+            )
+            cashRepository.recordTransaction(tx)
+            syncScheduler.scheduleOneTimeSync()
+
+            val speechText = "पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(amountPaisa)} भुगतान किया गया।"
+            ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
+            _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
+        }
+    }
+
+    /**
+     * Settle Sell slip with full or partial cash receipt.
+     * Updates SellEntry.receivedPaisa and records a linked CashTransaction that moves Galla cash.
+     */
+    fun settleSellSlip(
+        sellId: String,
+        amountPaisa: Long,
+        note: String? = null
+    ) {
+        if (amountPaisa <= 0L) return
+        viewModelScope.launch {
+            val sellRepo = sellRepository ?: return@launch
+            val currentSell = sellRepo.getSellEntryById(sellId) ?: return@launch
+            if (currentSell.isVoid) return@launch
+
+            val newReceivedPaisa = currentSell.receivedPaisa + amountPaisa
+            val newBalanceDue = (currentSell.totalReceivablePaisa - newReceivedPaisa).coerceAtLeast(0L)
+            sellRepo.editSellEntry(currentSell.copy(
+                receivedPaisa = newReceivedPaisa,
+                balanceDuePaisa = newBalanceDue
+            ))
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            val slipRef = currentSell.slipNo?.let { "#$it" } ?: sellId.takeLast(5)
+            val tx = CashTransaction(
+                id = IdGenerator.newId(),
+                shopId = shopId,
+                partyId = partyId,
+                transactionType = TransactionType.JAMA_RECEIVED, // Cash receipt into galla
+                amountPaisa = amountPaisa,
+                paymentMode = PaymentMode.CASH,
+                transactionDate = now,
+                remarks = "बिक्री पर्ची $slipRef वसूली${if (!note.isNullOrBlank()) ": $note" else ""}",
+                createdAt = now,
+                updatedAt = now
+            )
+            cashRepository.recordTransaction(tx)
+            syncScheduler.scheduleOneTimeSync()
+
+            val speechText = "बिक्री पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(amountPaisa)} जमा प्राप्त।"
+            ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
+            _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
         }
     }
 

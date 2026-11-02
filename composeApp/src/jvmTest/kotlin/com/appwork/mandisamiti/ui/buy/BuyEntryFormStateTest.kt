@@ -64,11 +64,26 @@ class BuyEntryFormStateTest {
     fun appLevelValidationChecks() {
         val f = BuyEntryFormState()
 
-        // Empty farmer name blocks saving
+        // Empty phone blocks saving
+        assertFalse(f.canSave())
+        assertTrue(f.validationReason()?.contains("मोबाइल नंबर") == true)
+
+        // Invalid phone (< 10 digits) blocks saving
+        f.updatePhone("98765")
+        assertFalse(f.canSave())
+        assertTrue(f.validationReason()?.contains("10 अंकों") == true)
+
+        // Valid 10-digit Indian phone
+        f.updatePhone("9876543210")
         assertFalse(f.canSave())
         assertEquals("किसान का नाम दर्ज करें", f.validationReason())
 
         f.farmerName = "रामू"
+        // Empty village blocks saving
+        assertFalse(f.canSave())
+        assertEquals("गाँव दर्ज करें", f.validationReason())
+
+        f.village = "इंदौर"
         // Active lot with empty bags blocks saving
         assertFalse(f.canSave())
         assertTrue(f.validationReason()?.contains("बोरी") == true)
@@ -77,17 +92,13 @@ class BuyEntryFormStateTest {
         f.weightPerBagKg = "50"
         f.ratePerQuintal = "2500"
 
-        // Valid form can save with optional phone and optional advance blank
+        // Valid form can save
         assertTrue(f.canSave())
 
-        // Invalid phone (< 10 digits) blocks saving
-        f.updatePhone("98765")
+        // Old party without phone blocks saving
+        f.isOldPartyWithoutPhone = true
         assertFalse(f.canSave())
-        assertTrue(f.validationReason()?.contains("10 अंकों") == true)
-
-        // Valid 10-digit Indian phone allows saving
-        f.updatePhone("9876543210")
-        assertTrue(f.canSave())
+        assertTrue(f.validationReason()?.contains("नंबर नहीं है") == true)
     }
 
     @Test

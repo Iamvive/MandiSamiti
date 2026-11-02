@@ -1054,19 +1054,12 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Difference / Discrepancy Indicator
+                    // Difference / Discrepancy Indicator with Taraju Scale (Direction B Final)
                     if (diffPaisa != null) {
-                        val diffColor = MandiTextPrimary
-                        val diffLabel = when {
-                            diffPaisa == 0L -> if (isEnglish) "Cash matches perfectly (₹0)" else "हिसाब बिल्कुल बराबर है (₹0)"
-                            diffPaisa > 0L -> if (isEnglish) "Surplus Cash: +₹${MandiMathEngine.paisaToRupeesString(diffPaisa)}" else "फालतू नकदी: +₹${MandiMathEngine.paisaToRupeesString(diffPaisa)}"
-                            else -> if (isEnglish) "Shortage: -₹${MandiMathEngine.paisaToRupeesString(-diffPaisa)}" else "कमी: -₹${MandiMathEngine.paisaToRupeesString(-diffPaisa)}"
-                        }
-                        Text(
-                            text = diffLabel,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = diffColor
+                        TarajuBalanceScale(
+                            diffPaisa = diffPaisa,
+                            isEnglish = isEnglish,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         )
                     }
 
@@ -1670,4 +1663,147 @@ private fun formatBahiDate(date: LocalDate, isEnglish: Boolean, isToday: Boolean
         else "${date.dayOfMonth} $monthNameHindi ${date.year}, $dayNameHindi"
     }
 }
+
+/**
+ * Direction B Final तराजू (Taraju) balance scale.
+ * Renders level when discrepancy is 0 (balanced), tilts when there is a cash surplus or shortage.
+ */
+@Composable
+fun TarajuBalanceScale(
+    diffPaisa: Long,
+    isEnglish: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val isBalanced = diffPaisa == 0L
+    val isSurplus = diffPaisa > 0L
+    // Tilt angle: 0 for balanced, +6 deg if surplus (right pan down), -6 deg if shortage (left pan down)
+    val tiltDegrees = when {
+        isBalanced -> 0f
+        isSurplus -> 6f
+        else -> -6f
+    }
+    val diffAbs = kotlin.math.abs(diffPaisa)
+    val diffStr = MandiMathEngine.paisaToRupeesString(diffAbs)
+
+    val scaleColor = MandiTextPrimary
+    val bgScaleColor = if (isBalanced) MandiGreenLight else MandiAmberLight
+    val statusColor = if (isBalanced) MandiGreenReceivable else MandiAmberDark
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgScaleColor)
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Physical Vector Drawing of Taraju (Scale)
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .width(160.dp)
+                .height(44.dp)
+        ) {
+            val strokeWidth = 2.5.dp.toPx()
+            val centerX = size.width / 2f
+            val centerY = 14f
+
+            // Central vertical stand / post
+            drawLine(
+                color = scaleColor,
+                start = androidx.compose.ui.geometry.Offset(centerX, 2f),
+                end = androidx.compose.ui.geometry.Offset(centerX, size.height - 4f),
+                strokeWidth = strokeWidth
+            )
+
+            // Central base
+            drawLine(
+                color = scaleColor,
+                start = androidx.compose.ui.geometry.Offset(centerX - 16f, size.height - 4f),
+                end = androidx.compose.ui.geometry.Offset(centerX + 16f, size.height - 4f),
+                strokeWidth = strokeWidth
+            )
+
+            // Rotating Crossbar / Beam
+            val beamHalfLength = 54f
+            val rad = tiltDegrees * (kotlin.math.PI / 180f).toFloat()
+            val dx = beamHalfLength * kotlin.math.cos(rad)
+            val dy = beamHalfLength * kotlin.math.sin(rad)
+
+            val leftEnd = androidx.compose.ui.geometry.Offset(centerX - dx, centerY - dy)
+            val rightEnd = androidx.compose.ui.geometry.Offset(centerX + dx, centerY + dy)
+
+            drawLine(
+                color = scaleColor,
+                start = leftEnd,
+                end = rightEnd,
+                strokeWidth = strokeWidth
+            )
+
+            // Left Pan strings & bowl
+            val stringLength = 14f
+            val panWidth = 26f
+            val leftPanBottom = androidx.compose.ui.geometry.Offset(leftEnd.x, leftEnd.y + stringLength)
+            drawLine(
+                color = scaleColor,
+                start = leftEnd,
+                end = androidx.compose.ui.geometry.Offset(leftEnd.x - panWidth / 2f, leftEnd.y + stringLength),
+                strokeWidth = 1.2.dp.toPx()
+            )
+            drawLine(
+                color = scaleColor,
+                start = leftEnd,
+                end = androidx.compose.ui.geometry.Offset(leftEnd.x + panWidth / 2f, leftEnd.y + stringLength),
+                strokeWidth = 1.2.dp.toPx()
+            )
+            // Left pan bowl arc
+            drawArc(
+                color = scaleColor,
+                startAngle = 0f,
+                sweepAngle = 180f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(leftEnd.x - panWidth / 2f, leftEnd.y + stringLength - 4f),
+                size = androidx.compose.ui.geometry.Size(panWidth, 12f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+            )
+
+            // Right Pan strings & bowl
+            drawLine(
+                color = scaleColor,
+                start = rightEnd,
+                end = androidx.compose.ui.geometry.Offset(rightEnd.x - panWidth / 2f, rightEnd.y + stringLength),
+                strokeWidth = 1.2.dp.toPx()
+            )
+            drawLine(
+                color = scaleColor,
+                start = rightEnd,
+                end = androidx.compose.ui.geometry.Offset(rightEnd.x + panWidth / 2f, rightEnd.y + stringLength),
+                strokeWidth = 1.2.dp.toPx()
+            )
+            // Right pan bowl arc
+            drawArc(
+                color = scaleColor,
+                startAngle = 0f,
+                sweepAngle = 180f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(rightEnd.x - panWidth / 2f, rightEnd.y + stringLength - 4f),
+                size = androidx.compose.ui.geometry.Size(panWidth, 12f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+            )
+        }
+
+        // Status description
+        val statusText = when {
+            isBalanced -> if (isEnglish) "Books balance exactly (₹0)" else "हिसाब बिल्कुल बराबर है (₹0)"
+            isSurplus -> if (isEnglish) "Surplus cash: +₹$diffStr" else "फालतू नकदी: +₹$diffStr"
+            else -> if (isEnglish) "Shortage: -₹$diffStr" else "कमी: -₹$diffStr"
+        }
+        Text(
+            text = statusText,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = statusColor
+        )
+    }
+}
+
 

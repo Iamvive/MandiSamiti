@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="hi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MandiSamiti design directions</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="theme.css">
+<style>
+*{box-sizing:border-box;margin:0}
+html{background:var(--ngdl-bg-canvas);color:var(--ngdl-text-primary);font-family:Roboto,'Noto Sans Devanagari',sans-serif;-webkit-text-size-adjust:100%}
+body{padding:16px;min-width:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+.page{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.page h1{font-size:24px;font-weight:600;line-height:1.2}
+.page h2{font-size:18px;font-weight:600;line-height:1.3}
+.page p,.page li{font-size:14px;line-height:1.5;color:var(--ngdl-text-secondary)}
+.page ul{padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.panel{background:var(--ngdl-surface-card);border:1px solid var(--ngdl-border-subtle);border-radius:14px;box-shadow:var(--ngdl-card-shadow);padding:16px;display:flex;flex-direction:column;gap:10px}
+.panel strong{color:var(--ngdl-text-primary);font-weight:600}
+.controls{display:flex;flex-wrap:wrap;gap:12px 20px}
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ctl-label{font-size:12px;color:var(--ngdl-text-secondary)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{padding:8px 12px;min-height:40px;border-radius:8px;font-size:14px;font-weight:500;border:1px solid var(--ngdl-border-active);background:var(--ngdl-surface-card);transition:transform var(--ngdl-duration-micro) var(--ngdl-ease-spring)}
+.seg button:active{transform:scale(.98)}
+.seg button[aria-pressed=true]{background:var(--ngdl-text-primary);color:var(--ngdl-surface-card);border-color:var(--ngdl-text-primary)}
+.stage{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(390px,100%),390px));gap:24px;justify-content:center}
+.stage>*{min-width:0}
+.cap{display:flex;flex-direction:column;gap:8px;min-width:0}
+.cap-title{font-size:14px;font-weight:600}
+.today{width:100%;height:auto;display:block;border:1px solid var(--ngdl-border-active);border-radius:24px}
+.today-wrap{height:var(--device-h,800px);overflow:auto;border-radius:24px}
+
+/* Phone frame. Type scales through --t the way Android sp does; layout dp does not. */
+.device{--t:1;--i:1;position:relative;width:100%;height:var(--device-h,800px);display:flex;flex-direction:column;overflow:hidden;background:var(--ngdl-bg-canvas);color:var(--ngdl-text-primary);border:1px solid var(--ngdl-border-active);border-radius:24px;box-shadow:var(--ngdl-elevated-shadow);font-size:calc(14px*var(--t));line-height:1.45;word-break:keep-all;overflow-wrap:normal}
+.big{--i:1.4}
+.f12{font-size:calc(12px*var(--t))}.f14{font-size:calc(14px*var(--t))}.f16{font-size:calc(16px*var(--t))}
+.f20{font-size:calc(20px*var(--t));line-height:1.3}.f28{font-size:calc(28px*var(--t));line-height:1.2}.f36{font-size:calc(36px*var(--t));line-height:1.15}
+.w5{font-weight:500}.w6{font-weight:600}.w7{font-weight:700}
+.mute{color:var(--ngdl-text-secondary)}
+.pos{color:var(--ngdl-status-success);font-weight:700}
+.neg{color:var(--ngdl-status-danger);font-weight:700}
+.num{white-space:nowrap}
+.ic{flex:none;width:calc(var(--s,20px)*var(--i));height:calc(var(--s,20px)*var(--i))}
+.status{flex:none;display:flex;align-items:center;justify-content:space-between;padding:8px 20px 2px;background:var(--ngdl-surface-card)}
+.status-icons{display:flex;gap:6px;--s:14px}
+.sample{font-size:12px;font-weight:500;color:var(--ngdl-text-secondary)}
+.head{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 16px 12px;background:var(--ngdl-surface-card);border-bottom:1px solid var(--ngdl-border-subtle)}
+.head-text{flex:1 1 150px;min-width:0}
+.iconbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border-radius:8px}
+.syncchip{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 10px;border:1px solid var(--ngdl-border-active);border-radius:8px;--s:16px}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.foot{flex:none;padding:10px 16px;background:var(--ngdl-surface-card);border-top:1px solid var(--ngdl-border-subtle);display:flex;flex-direction:column;gap:8px}
+.tabs{flex:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;padding:6px 6px 10px;background:var(--ngdl-surface-card);border-top:1px solid var(--ngdl-border-subtle)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;min-height:52px;border-radius:8px;color:var(--ngdl-text-secondary);text-align:center;font-size:calc(12px*var(--t));line-height:1.2;--s:22px;min-width:0}
+.tab.on{color:var(--ngdl-text-primary);background:var(--ngdl-surface-elevated);font-weight:600}
+.big .tab:not(.on) span{display:none}
+.big .tab.on span{font-size:13px}
+.press{transition:transform var(--ngdl-duration-micro) var(--ngdl-ease-spring),background-color var(--ngdl-duration-micro) var(--ngdl-ease-spring)}
+.press:active{transform:scale(.98);background-color:var(--ngdl-surface-elevated)}
+.btn-primary.press:active,.btn-success.press:active{background-color:var(--ngdl-border-active)}
+.card{background:var(--ngdl-surface-card);border:1px solid var(--ngdl-border-subtle);border-radius:14px;box-shadow:var(--ngdl-card-shadow);min-width:0}
+.pad{padding:14px}
+.tile{background:var(--ngdl-surface-elevated);border-radius:8px;padding:10px 12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 12px;min-width:0}
+.row>:first-child{min-width:0}
+.stack{display:flex;flex-direction:column;gap:2px;min-width:0}
+.amt{margin-left:auto;align-items:flex-end;text-align:right}
+.lines>*{padding:11px 14px;border-top:1px solid var(--ngdl-border-subtle)}
+.lines>*:first-child{border-top:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid2>*,.grid3>*,.grid4>*{min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.big .grid2,.big .grid3{grid-template-columns:minmax(0,1fr)}
+.big .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sect{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;min-height:48px;padding:8px 14px;border-radius:8px;font-weight:600;text-align:center;--s:18px;min-width:0}
+.btn-primary{background:var(--ngdl-text-primary);color:var(--ngdl-surface-card)}
+.btn-second{background:var(--ngdl-surface-card);border:1px solid var(--ngdl-border-active)}
+.btn-success{background:var(--ngdl-btn-success-bg);color:var(--ngdl-btn-success-fg)}
+.btn-danger-line{background:var(--ngdl-surface-card);border:1px solid var(--ngdl-border-active)}
+.btn-danger-line .ic{color:var(--ngdl-status-danger)}
+.tall{min-height:56px}
+.grid3 .btn{flex-direction:column;flex-wrap:nowrap;gap:4px;padding:8px 4px}
+.chip{display:inline-flex;align-items:center;min-height:40px;padding:4px 12px;border-radius:8px;border:1px solid var(--ngdl-border-active);font-weight:500;white-space:nowrap}
+.chip.on{background:var(--ngdl-text-primary);color:var(--ngdl-surface-card);border-color:var(--ngdl-text-primary)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.statuschip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:var(--ngdl-surface-elevated);font-weight:500;--s:16px;align-self:flex-start}
+.statuschip .warn{color:var(--ngdl-status-warning)}
+.field{display:flex;flex-direction:column;gap:2px;min-width:0}
+.field-box{display:flex;align-items:center;min-height:48px;padding:6px 12px;background:var(--ngdl-surface-elevated);border:1px solid var(--ngdl-border-subtle);border-radius:8px}
+.tall-fields .field-box{min-height:56px;font-size:calc(20px*var(--t));font-weight:500}
+.ph{color:var(--ngdl-text-secondary)}
+.action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 4px;min-height:64px;border-radius:8px;font-weight:600;text-align:center;--s:22px;min-width:0}
+.total{font-weight:700;border-top:1px solid var(--ngdl-border-active)}
+/* A: bahi */
+.rokad{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.rokad>*{min-width:0}
+.rokad>*:first-child{border-right:1px solid var(--ngdl-border-subtle)}
+.big .rokad{grid-template-columns:minmax(0,1fr)}
+.big .rokad>*:first-child{border-right:0;border-bottom:1px solid var(--ngdl-border-subtle)}
+.rokad-h{padding:8px 12px;background:var(--ngdl-surface-elevated);font-weight:600}
+.rokad-i{padding:9px 12px;border-top:1px solid var(--ngdl-border-subtle)}
+.dbl{height:5px;border-top:2px solid var(--ngdl-text-primary);border-bottom:2px solid var(--ngdl-text-primary);transform-origin:left}
+.ledger-table{display:grid;grid-template-columns:minmax(0,1fr) auto auto}
+.ledger-table>*:not(.l){padding-left:12px}
+.big .ledger-table{grid-template-columns:minmax(0,1fr)}
+.ledger-cell{padding:10px 0;border-top:1px solid var(--ngdl-border-subtle);text-align:right;min-width:0}
+.ledger-cell.l{text-align:left}
+.big .ledger-cell{text-align:left;border-top:0;padding:2px 0}
+.big .ledger-cell.l{border-top:1px solid var(--ngdl-border-subtle);padding-top:10px}
+/* B: taraazu */
+.beam-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:6px;--s:28px}
+.beam{width:82%;height:4px;border-radius:2px;background:var(--ngdl-text-primary);transform:rotate(var(--tilt,0deg));transition:transform var(--ngdl-duration-sheet) var(--ngdl-ease-spring)}
+.beam{position:relative}
+.pan{position:absolute;top:2px;width:56px;height:16px;border:3px solid var(--ngdl-text-primary);border-top:0;border-radius:0 0 28px 28px}
+.pan.l{left:-8px}.pan.r{right:-8px}
+.post{width:4px;height:26px;background:var(--ngdl-text-primary);margin-top:-6px}
+.beam-wrap.small{padding:4px 0 2px;gap:0}
+.small .beam{width:46%;height:3px}
+.small .pan{width:30px;height:10px;border-width:2px;border-top:0}
+.small .pan.l{left:-4px}.small .pan.r{right:-4px}
+.small .post{height:16px;width:3px;margin-top:-4px}
+.pick{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;padding:8px 12px;border:1px solid var(--ngdl-border-subtle);border-radius:8px;background:var(--ngdl-surface-card);text-align:left}
+.pick.on{border:2px solid var(--ngdl-text-primary)}
+.chips .chip{cursor:pointer}
+/* C: aaj */
+.story{position:relative;display:flex;flex-direction:column;gap:10px;padding-left:34px}
+.story::before{content:"";position:absolute;left:13px;top:6px;bottom:6px;width:2px;background:var(--ngdl-border-active)}
+.story-i{position:relative}
+.node{position:absolute;left:-34px;top:12px;width:28px;height:28px;border-radius:14px;background:var(--ngdl-surface-card);border:1px solid var(--ngdl-border-active);display:flex;align-items:center;justify-content:center;--s:14px;--i:1}
+.fab{position:absolute;right:16px;bottom:96px;width:60px;height:60px;border-radius:14px;background:var(--ngdl-text-primary);color:var(--ngdl-surface-card);display:flex;align-items:center;justify-content:center;box-shadow:var(--ngdl-elevated-shadow);--s:26px;--i:1;z-index:2}
+.fab.press:active{background-color:var(--ngdl-text-secondary)}
+.big .fab{bottom:76px}
+.scrim{position:absolute;inset:0;background:var(--ngdl-surface-overlay);z-index:3;display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--ngdl-surface-elevated);border-radius:24px 24px 0 0;padding:16px;box-shadow:var(--ngdl-elevated-shadow);display:flex;flex-direction:column;gap:12px}
+.sheet .action{background:var(--ngdl-surface-card);border:1px solid var(--ngdl-border-subtle)}
+.toast{position:absolute;left:16px;right:16px;bottom:96px;z-index:4;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--ngdl-text-primary);color:var(--ngdl-surface-card);box-shadow:var(--ngdl-elevated-shadow);font-weight:600;--s:20px}
+/* Motion runs once on the event that caused it, never on load. Values are visible throughout. */
+.anim-rise{animation:rise var(--ngdl-duration-sheet) var(--ngdl-ease-spring)}
+.anim-rule{animation:rule var(--ngdl-duration-sheet) var(--ngdl-ease-spring)}
+.anim-settle{animation:settle var(--ngdl-duration-sheet) var(--ngdl-ease-spring)}
+@keyframes rise{from{transform:translateY(12px)}to{transform:none}}
+@keyframes rule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes settle{from{transform:rotate(-4deg)}to{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.press:active{transform:none}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="stack" style="gap:6px">
+    <h1>MandiSamiti: तराज़ू direction, updated with Vivek's feedback</h1>
+    <p>"B final" shows the four updated screens. The older directions and today's app stay for comparison. Tap inside the phones: नकद गिनें, Save, the bill card and हिसाब चुकता respond.</p>
+  </header>
+  <section class="panel">
+    <h2>Decision</h2>
+    <p id="rec"></p>
+  </section>
+  <section class="panel"><div class="controls" id="controls"></div></section>
+  <section class="stage" id="stage" aria-live="polite"></section>
+  <section class="panel">
+    <h2 id="dir-title"></h2>
+    <ul id="dir-notes"></ul>
+  </section>
+  <section class="panel">
+    <h2>Before you judge these</h2>
+    <ul>
+      <li><strong>B final samples.</strong> All slips, the ₹200 interest and the ₹500 deposit are made-up examples. Buy shows a loan and a deposit together so both can be judged; many parties will have only one. Sell keeps its balance display only and is not drawn here. Slip totals use the app's real rule: final rounded to the nearest ₹10, with commission absorbing the rounding.</li>
+      <li><strong>Sample data.</strong> Amounts come from the test day in the Phase 1 review, with TEST parties. The one number made up for this page is the ₹1,600 count in the "difference" state, used to show how a shortfall looks.</li>
+      <li><strong>The balanced day close depends on bug P2.</strong> The app today opens day close with a false "अंतर: ₹47,885". The balanced moment cannot ship until that is fixed. A real difference gets a plain, neutral treatment, never a celebration.</li>
+      <li><strong>The running बाकी in directions A to C is new display only.</strong> B final drops it: with one card per bill and loan there is no row order to run a balance along, so the देना है card states how its figure is made up. In A to C it adds up the same figures the app already holds: ₹22,800, then ₹17,800, then ₹19,800. No money math, schema or stored data changes. Tare and bardana are unchanged in the older directions and removed in B final, as decided on 2026-10-31.</li>
+      <li><strong>Moved in all three:</strong> सीखें goes to Settings, voice mute becomes one icon, party initials are replaced by a farmer or merchant icon, which also removes the broken Hindi avatar. Bracketed English is gone from Hindi labels.</li>
+      <li><strong>Stress test:</strong> with a long Hindi name and ₹1,24,00,000 in every amount, A and A+ hold at 100% and 200% text. B and C overflow at 200% because of their 36px headline numbers, which need the compact units from NGDL §5.5 (₹1.24 Cr) in any build.</li>
+      <li><strong>Not testable here:</strong> haptics, real sunlight, and how it feels on the Redmi. This page runs in a browser. It says nothing about speed in the yard.</li>
+      <li><strong>NGDL:</strong> no token change is needed. Two limits shaped the designs. Green and warning colours are too faint for small text in light theme, so coloured amounts are always bold on a white card and warnings use an icon with dark text. NGDL has no on-colour pair for a red fill, so cash out is an outlined button. NGDL also names Inter and JetBrains Mono, which have no Hindi, so these use the same system fonts as the app.</li>
+    </ul>
+  </section>
+</main>
+<script>
+const ICON={
+back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+trend:'<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>',
+wallet:'<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+receipt:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/>',
+dash:'<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+sliders:'<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>',
+check:'<path d="M20 6 9 17l-5-5"/>',
+alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+share2:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+minus:'<path d="M5 12h14"/>',
+down:'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+up:'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+sync:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+calc:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M8 6h8M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01M8 10h.01M12 10h.01M16 10h.01"/>',
+mute:'<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/>',
+right:'<path d="m9 18 6-6-6-6"/>',
+left:'<path d="m15 18-6-6 6-6"/>',
+battery:'<rect width="16" height="10" x="2" y="7" rx="2"/><path d="M22 11v2"/>',
+signal:'<path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/>',
+store:'<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>',
+sprout:'<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>'
+};
+const ic=(n,s)=>`<svg class="ic" ${s?`style="--s:${s}px"`:''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+
+const S={dir:'f',screen:'buy',theme:'light',lang:'hi',t:1,view:'one',day:'open',sheet:null,toast:null,anim:null,buyState:'found',settle:'',settleItem:'slip',settleMode:'full',buyStep:'form',payMode:'part',billPaid:0,ledgerBill:'',ledgerExtra:0};
+const T=(hi,en)=>S.lang==='hi'?hi:en;
+
+const DIRS={
+  f:['B final','तराज़ू','Final'],r:['A+','बही + Save','Earlier recommendation'],a:['A','बही','Bahi'],b:['B','तराज़ू, before feedback','Taraazu'],c:['C','आज','Aaj']
+};
+const DECIDED='Vivek chose direction B, तराज़ू, on 2026-10-31. Galla day close uses A\'s layout with a small तराज़ू. B final draws his feedback on Buy, Dashboard, party ledger and Galla. Nothing has changed in the app yet.';
+const NOTES={
+  f:{t:'B final: what changed',n:[
+    'Buy: phone comes first and finds a party by number or name. Use the Phone state control to see a saved number, a new number and an old party with no number. Save stays off until there is a number.',
+    'Buy: bags, weight per bag and extra weight on one line, rate on the next. Limits: bags 4 digits, bag weight whole kg up to 999, extra weight with decimals and less than bag weight, rate whole rupees up to ₹1,00,000.',
+    'Buy: tare is gone from the form and the math. A new section after the slip handles advance, loan cut and deposit. The loan cut takes interest first, as the ledger repay does.',
+    'Dashboard: Rokdi, dated metrics, last 5 Buy slips, then all-time totals, with the action dock fixed above the tabs. Net payable is Buy slip value only.',
+    'Buy: Save opens a payment screen. Pay part or all in cash, or tap अभी नहीं. The next screen is the bill. A payment keeps the slip number, adds paid and left lines and marks it संशोधित with date and time. Share always sends the latest. The अग्रिम field stays on the form, so a bill can show both.',
+    'Party ledger: one card per bill with total, paid and left, and one card per loan with principal, interest, repaid and left, with repayments listed inside. Tap the bill card to see the bill.',
+    'Party ledger: हिसाब चुकता lets the operator pick one slip or loan, then pay full or part. Always cash, so it moves Galla and Rokdi. Paying a slip updates that same bill. Galla lists the sample ₹70 against slip #1, taking Rokdi from ₹1,650 to ₹1,580.',
+    'This page does not carry new payments forward. A payment entered here shows on its bill only; closing the bill returns the ledger to the ₹70 sample, and Galla and Dashboard keep their sample figures.',
+    'Party ledger: जमा मिला records a party\'s deposit with us and भुगतान दिया records our loan, each with an optional interest rate and no slip link. Those two forms are not drawn here.',
+    'Dashboard: every card opens its screen. Tapping one here shows which screen it opens; Rokdi really switches to Galla.',
+    'Galla: A\'s layout. The small तराज़ू appears in the count card only after counting: level if equal, tilted if not.']},
+  r:{t:'A+, recommended: बही with an always-visible Save',n:[
+    'Direction A, with two changes taken from B: net amount and Save stay on screen on Buy and Sell, and the लेना and देना figures on the Dashboard are larger.',
+    'Only those two screens differ from A. Party ledger and Galla are the same as A.',
+    'B\'s permanent four-button dock is left out, because the Dashboard already has those actions and the height is better spent on numbers.',
+    'Haptics: one light tick on save, two short on a warning, one firm on a balanced day.']},
+  a:{t:'A. बही, the ledger',n:[
+    'Quiet and monochrome. Screens read like a clean account book: thin rows, aligned rupee columns, colour only for लेना and देना.',
+    'Closest to how a trader already reads paper, so the least retraining during the pilot.',
+    'Pride moment: a double rule draws under the day\'s totals, the way a munim closes a page.',
+    'Weak spot: Save still sits at the end of the form, so each buy keeps its scroll.',
+    'Haptics: one light tick on save, two short on a warning, one firm on a balanced day.']},
+  b:{t:'B. तराज़ू, the yard tool',n:[
+    'Built for one thumb and bright sun: bigger numbers, 56dp fields, four actions always in the bottom dock.',
+    'Net amount and Save stay on screen on Buy. This removes the scroll from every buy, which Phase 1 found was the main repeated cost.',
+    'Pride moment: book cash and counted cash sit on a balance that settles level when they match.',
+    'Weak spot: dock plus tabs take height, so fewer rows fit, and 200% text needs the most care.',
+    'Haptics: firm tick on every dock tap and save, two short on a warning, a slow double on a balanced day.']},
+  c:{t:'C. आज, the day\'s story',n:[
+    'The Dashboard becomes today\'s running timeline. Each entry lands in the feed, and close is where the story ends.',
+    'Strongest emotional pull, and the day summary is worth sharing.',
+    'Pride moment: the closing card rises at the end of the timeline with the whole day on it.',
+    'Weak spot: biggest change to navigation, so the Mathura pilot would need retraining. Totals move down below the feed, and a list with real volume is untested.',
+    'Haptics: light tick when an entry lands, two short on a warning, one firm on a balanced day.']}
+};
+const REC='I recommend A+, shown first below: the calm बही look across the app, plus B\'s always-visible net amount and Save on Buy and Sell. Phase 1 showed Save below the fold on every entry, so that is the change with evidence behind it. The बही look keeps the pilot familiar and is the most faithful to NGDL. I would leave out B\'s permanent dock, because tabs plus dock take too much height from a screen of numbers, and Dashboard tiles do that job. C is the most striking but carries the highest retraining cost during a live pilot.';
+
+/* Sample day */
+const rupee={net:'₹22,800',pay:'₹19,800',rec:'₹5,676'};
+const shopHead=()=>`<div class="head">
+  <div class="head-text"><div class="f16 w6">TEST Kisan Traders</div><div class="f12 mute">Mathura Mandi</div></div>
+  <div class="syncchip press f12 w5" role="img" aria-label="${T('1 एंट्री सर्वर पर जाना बाकी','1 entry waiting to upload')}">${ic('sync')}${T('1 बाकी','1 waiting')}</div>
+  <button class="iconbtn press" aria-label="${T('आवाज़ बंद','Sound off')}">${ic('mute')}</button>
+</div>`;
+const backHead=(title,sub,extra='')=>`<div class="head">
+  <button class="iconbtn press" aria-label="${T('वापस','Back')}">${ic('back')}</button>
+  <div class="head-text"><div class="f16 w6">${title}</div>${sub?`<div class="f12 mute">${sub}</div>`:''}</div>${extra}
+</div>`;
+const tabs=(on)=>`<nav class="tabs">${[['dash','dash',T('डैशबोर्ड','Dashboard')],['users','ledger',T('खाता बही','Ledger')],['archive','godown',T('गोदाम','Godown')],['wallet','galla',T('गल्ला रोकड़','Cash Drawer')],['sliders','set',T('सेटिंग्स','Settings')]].map(([i,k,l])=>`<button class="tab press ${k===on?'on':''}" ${k===on?'aria-current="page"':''} aria-label="${l}">${ic(i)}<span>${l}</span></button>`).join('')}</nav>`;
+const ACTIONS=()=>[['cart',T('खरीद','Buy')],['trend',T('बिक्री','Sell')],['wallet',T('उधार','Lend')],['receipt',T('खर्च','Expense')]];
+const field=(label,val,ph)=>`<div class="field"><div class="f12 mute">${label}</div><div class="field-box ${ph?'ph':''}">${val}</div></div>`;
+const PARTIES=()=>[{n:'TEST Ramesh',i:'sprout',role:T('किसान','Farmer'),a:rupee.pay,c:'neg',l:T('देना है','To pay')},{n:'TEST Shyam',i:'store',role:T('व्यापारी','Merchant'),a:rupee.rec,c:'pos',l:T('लेना है','To receive')}];
+const TOTALS=()=>[[T('कुल खरीद','Purchases'),'₹23,160'],[T('कुल बिक्री','Sales'),'₹5,590'],[T('कुल उधार','Outstanding'),'₹3,000'],[T('कुल खर्च','Expenses'),'₹350']];
+const ENTRIES=()=>[
+  {i:'receipt',t:T('खर्च: हम्माली','Expense: Hammali'),s:'TEST Palledar',a:'−₹350',c:''},
+  {i:'down',t:T('उधार वापसी','Loan repaid'),s:'TEST Ramesh',a:'+₹2,000',c:'pos'},
+  {i:'wallet',t:T('उधार','Lend'),s:'TEST Ramesh',a:'₹5,000',c:''},
+  {i:'trend',t:T('बिक्री','Sale'),s:'TEST Shyam · '+T('लेना है','to receive'),a:rupee.rec,c:'pos'},
+  {i:'cart',t:T('खरीद पर्ची #1','Purchase slip #1'),s:'TEST Ramesh · '+T('देना है','to pay'),a:rupee.net,c:'neg'}
+];
+const LEDGER=()=>[
+  {t:T('नकद जमा प्राप्त','Cash received'),s:T('उधार वापसी','Loan repaid'),a:'+₹2,000',c:'pos',b:'₹19,800'},
+  {t:T('उधार #1','Loan #1'),s:T('नकद भुगतान दिया','Cash paid'),a:'−₹5,000',c:'neg',b:'₹17,800'},
+  {t:T('खरीद पर्ची #1','Purchase slip #1'),s:T('गेहूं · 20 बोरी · 9.65 क्विंटल @ ₹2,400/क्विंटल','Wheat · 20 bags · 9.65 qtl @ ₹2,400/qtl'),a:'₹22,800',c:'',b:'₹22,800'}
+];
+const BUYROWS=()=>[
+  [T('फसल #1: गेहूं, 20 बोरी','Lot #1: Wheat, 20 bags'),'₹24,000'],
+  [T('काट / बारदाना','Tare / bardana'),T('− 0.35 क्विंटल','− 0.35 qtl')],
+  [T('कुल वजन','Total weight'),T('9.65 क्विंटल','9.65 qtl')],
+  [T('कुल राशि','Total'),'₹23,160'],
+  [T('कमीशन कटौती','Commission'),'− ₹160'],
+  [T('मजदूरी कटौती','Labour'),'− ₹200']
+];
+const JAMA=()=>[[T('बाकी निकाला','Opening'),'₹5,000'],['TEST Ramesh','+₹2,000']];
+const NAME=()=>[[T('खर्च: हम्माली','Expense: Hammali'),'−₹350'],['TEST Ramesh','−₹5,000'],[T('सिल्क बाकी','Closing cash'),'₹1,650']];
+const counted=()=>S.day==='equal'?'₹1,650':'₹1,600';
+const toast=()=>S.toast?`<div class="toast anim-rise" role="status">${ic('check')}<span>${S.toast}</span></div>`:'';
+const anim=(k,c)=>S.anim===k?c:'';
+
+const buyFields=(tall)=>`
+  <div class="${tall?'tall-fields':''}" style="display:flex;flex-direction:column;gap:12px">
+    ${field(T('किसान का नाम','Farmer name'),'TEST Ramesh')}
+    <div class="stack" style="gap:8px"><div class="f12 mute">${T('जिंस / फसल वैरायटी','Crop / variety')}</div>
+      <div class="chips"><span class="chip on">${T('गेहूं','Wheat')}</span><span class="chip">${T('गेहूं शरबती','Wheat Sharbati')}</span><span class="chip">${T('चना','Gram')}</span></div></div>
+    <div class="grid2">${field(T('बोरी संख्या','Bags count'),'20')}${field(T('वजन/बोरी (किग्रा)','Weight/bag (kg)'),'50')}</div>
+    <div class="grid2">${field(T('अतिरिक्त वजन (किग्रा)','Extra weight (kg)'),T('वैकल्पिक','Optional'),1)}${field(T('भाव (रु/क्विंटल)','Rate (₹/qtl)'),'2,400')}</div>
+    <div class="row f14 w5"><span>${T('वजन: 10.0 क्विंटल','Weight: 10.0 qtl')}</span><span class="num">${T('सकल','Gross')}: ₹24,000</span></div>
+    <button class="btn btn-second press">${ic('plus')}${T('अन्य फसल / वैरायटी जोड़ें','Add another crop lot')}</button>
+    <div class="f16 w6">${T('कटौती एवं अग्रिम','Deductions and advance')}</div>
+    <div class="grid2">${field(T('कमीशन %','Commission %'),'0.70')}${field(T('मजदूरी (रु/बोरी)','Labour (₹/bag)'),'10')}</div>
+    <div class="grid2">${field(T('काट / बारदाना (क्विंटल)','Tare / bardana (qtl)'),'0.35')}${field(T('अग्रिम / पेशगी (रु)','Advance (₹)'),T('वैकल्पिक','Optional'),1)}</div>
+  </div>`;
+const buyHead=()=>backHead(T('नई खरीद एंट्री','New purchase'));
+const saveBtn=(cls='')=>`<button class="btn btn-primary press ${cls}" data-do="save" style="width:100%">${T('सुरक्षित करें','Save')}</button>`;
+const slip=()=>`<div class="card lines">${BUYROWS().map(([a,b])=>`<div class="row"><span class="mute">${a}</span><span class="num">${b}</span></div>`).join('')}
+  <div class="row total"><span>${T('शुद्ध देय राशि','Net payable')}</span><span class="f20 num">${rupee.net}</span></div></div>`;
+
+/* ---------- B final: Vivek's feedback, 2026-10-31 ---------- */
+const inr=(n)=>'₹'+Math.round(n).toLocaleString('en-IN');
+const q=(n)=>n.toFixed(2);
+/* Same rule as BuyEntryFormState: final rounded to nearest ₹10, commission absorbs the rounding. */
+const slipCalc=(bags,kg,rate)=>{const qtl=bags*kg/100,gross=qtl*rate,labour=bags*10,net=Math.floor((gross-labour-gross*.007+5)/10)*10;return{qtl,gross,labour,comm:gross-labour-net,net}};
+const SLIPS=()=>[
+  {no:5,n:'TEST Mohan',crop:T('चना','Gram'),bags:10,kg:50,rate:5000},
+  {no:4,n:'TEST Suresh',crop:T('गेहूं','Wheat'),bags:30,kg:50,rate:2400},
+  {no:3,n:'TEST Kamal',crop:T('सरसों','Mustard'),bags:15,kg:60,rate:5800},
+  {no:2,n:'TEST Raju',crop:T('गेहूं शरबती','Wheat Sharbati'),bags:8,kg:50,rate:3000},
+  {no:1,n:'TEST Ramesh',crop:T('गेहूं','Wheat'),bags:20,kg:50,rate:2400}
+].map(s=>({...s,...slipCalc(s.bags,s.kg,s.rate)}));
+const SOLD=()=>({[T('गेहूं','Wheat')]:2.15});
+const hint=(t)=>`<div class="f12 mute">${t}</div>`;
+const fNewSlip=slipCalc(20,50,2400);
+/* One bill, same number. Payments are added to it and the mark says which copy is newest. */
+const billBody=({adv=0,cut=0,payments=[]})=>{
+  const final=fNewSlip.net-adv-cut,paid=payments.reduce((a,p)=>a+p,0),line=(a,b)=>`<div class="row"><span class="mute">${a}</span><span class="num">${b}</span></div>`;
+  return `<div class="f12 w6">${paid?T('संशोधित · 31 Oct 2026, 10:42','Revised · 31 Oct 2026, 10:42'):T('मूल पर्ची · 31 Oct 2026, 10:30','Original slip · 31 Oct 2026, 10:30')}</div>
+  <div class="card lines">
+    ${line(T('फसल #1: गेहूं, 20 बोरी','Lot #1: Wheat, 20 bags'),inr(fNewSlip.gross))}
+    ${line(T('मजदूरी कटौती','Labour'),'− '+inr(fNewSlip.labour))}
+    ${line(T('कमीशन कटौती','Commission'),'− '+inr(fNewSlip.comm))}
+    <div class="row total"><span>${T('पर्ची राशि','Slip value')}</span><span class="num">${inr(fNewSlip.net)}</span></div>
+    ${adv?line(T('अग्रिम / पेशगी','Advance'),'− '+inr(adv)):''}
+    ${cut?line(T('उधार कटौती','Loan cut'),'− '+inr(cut)):''}
+    ${adv||cut?`<div class="row total"><span>${T('अंतिम देय राशि','Final payable')}</span><span class="num">${inr(final)}</span></div>`:''}
+    ${payments.map(p=>line(T('नकद भुगतान · 31 Oct','Cash paid · 31 Oct'),'− '+inr(p))).join('')}
+    ${paid?`<div class="row total"><span>${T('बाकी','Left')}</span><span class="f20 num">${inr(final-paid)}</span></div>`:''}
+  </div>`;
+};
+const shareBtn=()=>`<button class="btn btn-primary tall press f16" data-do="share" style="width:100%">${ic('share2')}${T('पर्ची भेजें','Share slip')}</button>`;
+const fBuyPay=()=>{
+  const final=fNewSlip.net-4000,full=S.payMode==='full',amt=full?final:70;
+  const mode=(k,l)=>`<button class="chip f14 ${S.payMode===k?'on':''}" data-set="payMode:${k}" aria-pressed="${S.payMode===k}">${l}</button>`;
+  return {head:backHead(T('किसान को भुगतान','Pay the farmer'),T('पर्ची #6 · TEST Ramesh','Slip #6 · TEST Ramesh')),foot:`<button class="btn btn-primary tall press f16" data-do="paid" data-amt="${amt}" style="width:100%">${T('भुगतान सुरक्षित करें','Save payment')}</button><button class="btn btn-second press f14" data-do="skip" style="width:100%">${T('अभी नहीं','Not now')}</button>`,body:`
+  <div class="tile row f14 w6" style="justify-content:flex-start;gap:8px">${ic('check')}<span>${T('पर्ची #6 सुरक्षित हुई','Slip #6 saved')}</span></div>
+  <div class="card pad stack"><span class="f14 mute">${T('अंतिम देय राशि','Final payable')}</span><span class="f28 w7 num">${inr(final)}</span></div>
+  <div class="card pad stack" style="gap:12px">
+    <div class="chips">${mode('part',T('आंशिक','Partial'))}${mode('full',T('पूरा','Full'))}</div>
+    <div class="tall-fields">${field(T('अभी नकद दें (रु)','Pay cash now (₹)'),amt.toLocaleString('en-IN'))}</div>
+    <div class="stack"><span class="f14 w6">${T('पर्ची बाकी','Slip left')} ${inr(final-amt)}</span><span class="f12 mute">${T(`गल्ले से ${inr(amt)} नकद निकलेगा`,`${inr(amt)} cash goes out of the galla`)}</span></div>
+  </div>`};
+};
+const fBuyBill=()=>({head:backHead(T('खरीद पर्ची #6','Purchase slip #6'),'TEST Ramesh'),foot:`${shareBtn()}<button class="btn btn-second press f14" data-do="newbuy" style="width:100%">${T('नई खरीद','New purchase')}</button>`,body:billBody({adv:3000,cut:1000,payments:S.billPaid?[S.billPaid]:[]})});
+const fBuy=()=>{
+  if(S.buyStep==='pay')return fBuyPay();
+  if(S.buyStep==='bill')return fBuyBill();
+  const st=S.buyState,found=st==='found',adv=found?3000:0,cut=found?1000:0,final=fNewSlip.net-adv-cut;
+  const who={
+    found:field(T('मोबाइल नंबर या नाम','Mobile number or name'),'98765 43210')+field(T('किसान का नाम','Farmer name'),'TEST Ramesh')+field(T('गांव','Village'),'TEST Nagla')+hint(T('सेव नंबर से नाम और गांव भरे। बदलने पर यह खाते में हर जगह बदलेगा।','Filled from the saved number. Changing them updates this account everywhere.')),
+    fresh:field(T('मोबाइल नंबर या नाम','Mobile number or name'),'98765 00002')+field(T('किसान का नाम','Farmer name'),T('नाम लिखें','Type name'),1)+field(T('गांव','Village'),T('गांव लिखें','Type village'),1)+hint(T('नया नंबर। एंट्री सेव होते ही खाता बन जाएगा।','New number. The account is created when the entry is saved.')),
+    old:field(T('मोबाइल नंबर या नाम','Mobile number or name'),T('10 अंकों का नंबर डालें','Enter 10-digit number'),1)+field(T('किसान का नाम','Farmer name'),'TEST Prem')+field(T('गांव','Village'),'TEST Nagla')+`<div class="row f14 w6" style="justify-content:flex-start;gap:8px"><span class="statuschip" style="padding:0;background:none"><span class="warn" style="display:flex">${ic('alert')}</span></span>${T('इस खाते में नंबर नहीं है। सेव से पहले नंबर डालें।','This account has no number. Add one before saving.')}</div>`
+  }[st];
+  const balances=found?`
+    <div class="card pad stack" style="gap:10px">
+      <div class="row"><span class="f14 w6">${T('पुराना उधार','Open loan')}</span><span class="f20 w7 num">₹3,200</span></div>
+      ${hint(T('मूल ₹3,000 + ब्याज ₹200','Principal ₹3,000 + interest ₹200'))}
+      ${field(T('उधार से काटें (रु)','Cut from loan (₹)'),'1,000')}
+      ${hint(T('पहले ब्याज ₹200, फिर मूल ₹800। बाकी मूल ₹2,200।','Interest ₹200 first, then principal ₹800. Principal left ₹2,200.'))}
+    </div>
+    <div class="card pad stack" style="gap:10px">
+      <div class="row"><span class="f14 w6">${T('हमारे पास जमा','Deposit with us')}</span><span class="f20 w7 num">₹500</span></div>
+      ${field(T('जमा से दें (रु)','Pay from deposit (₹)'),T('वैकल्पिक','Optional'),1)}
+      ${hint(T('यह राशि देय में जुड़ेगी।','This amount adds to the payout.'))}
+    </div>`:'';
+  const rows=[[T('पर्ची राशि','Slip value'),inr(fNewSlip.net)]].concat(found?[[T('अग्रिम / पेशगी','Advance'),'− ₹3,000'],[T('उधार कटौती','Loan cut'),'− ₹1,000']]:[]);
+  return {head:buyHead(),foot:`<div class="row"><span class="f14 mute">${T('अंतिम देय राशि','Final payable')}</span><span class="f28 w7 num">${inr(final)}</span></div>${st!=='found'?`<button class="btn btn-second tall f16" disabled style="width:100%;color:var(--ngdl-text-secondary)">${st==='old'?T('नंबर डालने पर सुरक्षित होगा','Add number to save'):T('नाम और गांव डालने पर सुरक्षित होगा','Add name and village to save')}</button>`:saveBtn('tall f16')}`,body:`
+  <div class="tall-fields" style="display:flex;flex-direction:column;gap:12px">
+    ${who}
+    <div class="stack" style="gap:8px"><div class="f12 mute">${T('जिंस / फसल वैरायटी','Crop / variety')}</div>
+      <div class="chips"><span class="chip on">${T('गेहूं','Wheat')}</span><span class="chip">${T('गेहूं शरबती','Wheat Sharbati')}</span><span class="chip">${T('चना','Gram')}</span></div></div>
+    <div class="grid3">${field(T('बोरी संख्या','Bags'),'20')}${field(T('वजन/बोरी (किग्रा)','Kg/bag'),'50')}${field(T('अतिरिक्त (किग्रा)','Extra (kg)'),'0',1)}</div>
+    ${field(T('भाव (रु/क्विंटल)','Rate (₹/qtl)'),'2,400')}
+    <div class="row f14 w5"><span>${T('वजन','Weight')}: ${q(fNewSlip.qtl)} ${T('क्विंटल','qtl')}</span><span class="num">${T('सकल','Gross')}: ${inr(fNewSlip.gross)}</span></div>
+    <button class="btn btn-second press">${ic('plus')}${T('अन्य फसल / वैरायटी जोड़ें','Add another crop lot')}</button>
+    <div class="grid2">${field(T('कमीशन %','Commission %'),'0.70')}${field(T('मजदूरी (रु/बोरी)','Labour (₹/bag)'),'10')}</div>
+  </div>
+  <div class="f16 w6">${T('हिसाब पर्ची','Slip')}</div>
+  <div class="card lines">
+    <div class="row"><span class="mute">${T('फसल #1: गेहूं, 20 बोरी','Lot #1: Wheat, 20 bags')}</span><span class="num">${inr(fNewSlip.gross)}</span></div>
+    <div class="row"><span class="mute">${T('मजदूरी कटौती','Labour')}</span><span class="num">− ${inr(fNewSlip.labour)}</span></div>
+    <div class="row"><span class="mute">${T('कमीशन कटौती','Commission')}</span><span class="num">− ${inr(fNewSlip.comm)}</span></div>
+    <div class="row total"><span>${T('पर्ची राशि','Slip value')}</span><span class="f20 num">${inr(fNewSlip.net)}</span></div>
+  </div>
+  <div class="f16 w6">${T('पर्ची के बाद का हिसाब','After the slip')}</div>
+  <div class="tall-fields">${field(T('अग्रिम / पेशगी (रु)','Advance (₹)'),found?'3,000':T('वैकल्पिक','Optional'),!found)}</div>
+  ${balances}
+  <div class="card lines">${rows.map(([a,b])=>`<div class="row"><span class="mute">${a}</span><span class="num">${b}</span></div>`).join('')}
+    <div class="row total"><span>${T('अंतिम देय राशि','Final payable')}</span><span class="f20 num">${inr(final)}</span></div></div>`};
+};
+const fDash=()=>{
+  const sl=SLIPS(),net=sl.reduce((a,s)=>a+s.net,0),gross=sl.reduce((a,s)=>a+s.gross,0);
+  const bought={};sl.forEach(s=>bought[s.crop]=(bought[s.crop]||0)+s.qtl);
+  const sold=SOLD();
+  return {head:shopHead(),tab:'dash',foot:`<div class="grid4">${ACTIONS().map(([i,l],n)=>`<button class="action press f14 ${n?'btn-second':'btn-primary'}">${ic(i)}<span>${l}</span></button>`).join('')}</div>`,body:`
+  <button class="card pad stack press" data-go="galla" style="width:100%;text-align:left"><span class="row f14 mute"><span>${T('रोकड़ शेष','Rokdi balance')}</span>${ic('right',16)}</span><span class="f36 w7 num">₹1,580</span><span class="f12 mute">${T('बही के अनुसार, गल्ले में अभी','By the book, in the galla now')}</span></button>
+  <div class="chips"><span class="chip on f14">${T('आज','Today')}</span><span class="chip f14">${T('कल','Yesterday')}</span><span class="chip f14">${T('इस हफ्ते','This week')}</span><span class="chip f14">${T('कस्टम तारीख','Custom date')}</span></div>
+  <button class="card pad stack press" data-go="${T('खरीद सूची','Buy list')}" style="width:100%;text-align:left"><span class="row f14 mute"><span>${T('शुद्ध देय','Net payable')}</span>${ic('right',16)}</span><span class="f28 w7 num">${inr(net)}</span><span class="f12 mute">${T('केवल खरीद पर्ची की राशि। अग्रिम और भुगतान शामिल नहीं।','Buy slip value only. Advance and payments not included.')}</span></button>
+  <button class="card pad stack press" data-go="${T('बिक्री सूची, बाकी पर्चियां','Sell list, unpaid slips')}" style="width:100%;text-align:left"><span class="row f14 mute"><span>${T('व्यापारी से लेना','To receive from vyapari')}</span>${ic('right',16)}</span><span class="f28 pos num">₹3,590</span><span class="f12 mute">${T('चुनी तारीख की बिक्री पर्चियों का बाकी। मिली रकम घटाकर।','Unpaid on Sell slips in the selected dates, after money received.')}</span></button>
+  <button class="card lines press" data-go="${T('गोदाम','Godown')}" style="width:100%;display:block;text-align:left"><div class="row f12 mute"><span>${T('फसल का वजन (क्विंटल)','Crop weight (qtl)')}</span><span>${T('खरीद / बिक्री','Bought / sold')}</span></div>${Object.keys(bought).map(c=>`<div class="row"><span>${c}</span><span class="f14 w6 num">${q(bought[c])} / ${q(sold[c]||0)}</span></div>`).join('')}</button>
+  <button class="card pad row press" data-go="${T('खर्च सूची','Expense list')}" style="width:100%;text-align:left"><span class="f14 mute">${T('खर्च','Expenses')}</span><span class="f20 w7 num">₹350</span></button>
+  <div class="sect"><span class="f16 w6">${T('हाल की खरीद पर्चियां','Recent Buy slips')}</span><button class="press f14 mute" style="min-height:44px">${T('सभी देखें','See all')}</button></div>
+  <div class="card lines">${sl.map(s=>`<button class="row press" style="width:100%;text-align:left"><span class="stack"><span class="f14 w6">${s.n}</span><span class="f12 mute">#${s.no} · ${s.crop} · ${s.bags} ${T('बोरी','bags')}</span></span><span class="f16 w7 num amt">${inr(s.net)}</span></button>`).join('')}</div>
+  <div class="f16 w6">${T('अब तक','All time')}</div>
+  <div class="grid2">${[[T('कुल खरीद','Purchases'),inr(gross),T('खरीद सूची','Buy list')],[T('कुल बिक्री','Sales'),'₹5,590',T('बिक्री सूची','Sell list')],[T('कुल उधार','Outstanding'),'₹3,000',T('उधार सूची','Lend list')],[T('कुल खर्च','Expenses'),'₹350',T('खर्च सूची','Expense list')]].map(([a,b,g])=>`<button class="card pad stack press" data-go="${g}" style="text-align:left"><span class="f12 mute">${a}</span><span class="f20 w7 num">${b}</span></button>`).join('')}</div>`};
+};
+const fLedger=()=>{
+  const n=slipCalc(20,50,2400).net,due=n-70;
+  const it=S.settleItem,full=S.settleMode==='full',isSlip=it==='slip';
+  const amt=isSlip?(full?due:500):(full?3200:1000);
+  const money=(a,b,cls='')=>`<span class="row f14 ${cls}"><span>${a}</span><span class="num">${b}</span></span>`;
+  const left=isSlip?`${T('पर्ची बाकी','Slip left')} ${inr(due-amt)}`:(full?T('उधार पूरा चुकता','Loan fully cleared'):T('ब्याज ₹200, मूल ₹800। बाकी मूल ₹2,200।','Interest ₹200, principal ₹800. Principal left ₹2,200.'));
+  const cash=isSlip?T(`गल्ले से ${inr(amt)} नकद निकलेगा`,`${inr(amt)} cash goes out of the galla`):T(`गल्ले में ${inr(amt)} नकद आएगा`,`${inr(amt)} cash comes into the galla`);
+  const pick=(k,title,sub,val)=>`<button class="pick press ${it===k?'on':''}" data-set="settleItem:${k}" aria-pressed="${it===k}"><span class="stack" style="flex:1"><span class="f14 w6">${title}</span><span class="f12 mute">${sub}</span></span><span class="f16 w7 num">${val}</span>${it===k?ic('check'):''}</button>`;
+  const mode=(k,l)=>`<button class="chip f14 ${S.settleMode===k?'on':''}" data-set="settleMode:${k}" aria-pressed="${S.settleMode===k}">${l}</button>`;
+  const over=S.settle?`<div class="scrim"><div class="sheet anim-rise" style="max-height:88%;overflow-y:auto">
+    <div class="row"><span class="f16 w6">${T('हिसाब चुकता','Settle')}</span><button class="iconbtn press f14 w6" data-set="settle:">${T('बंद','Close')}</button></div>
+    ${pick('slip',T('खरीद पर्ची #1','Purchase slip #1'),T('बाकी, हमें देना है','Left, we pay'),inr(due))}
+    ${pick('loan',T('उधार #1','Loan #1'),T('हमें लेना है, ब्याज सहित','We receive, with interest'),'₹3,200')}
+    <div class="chips">${mode('full',T('पूरा','Full'))}${mode('part',T('आंशिक','Partial'))}</div>
+    ${field(T('राशि (रु)','Amount (₹)'),inr(amt).slice(1))}
+    <div class="stack"><span class="f14 w6">${left}</span><span class="f12 mute">${cash}</span>${isSlip?`<span class="f12 mute">${T('पर्ची #1 इसी नंबर से अपडेट होगी।','Slip #1 updates under the same number.')}</span>`:''}</div>
+    <button class="btn btn-primary tall press f16" data-do="settled" ${isSlip?`data-amt="${amt}"`:''} style="width:100%">${T('सुरक्षित करें','Save')}</button>
+  </div></div>`:S.ledgerBill?`<div class="scrim"><div class="sheet anim-rise" style="max-height:88%;overflow-y:auto">
+    <div class="row"><span class="f16 w6">${T('खरीद पर्ची #1','Purchase slip #1')}</span><button class="iconbtn press f14 w6" data-do="billclose">${T('बंद','Close')}</button></div>
+    ${billBody({payments:[70].concat(+S.ledgerExtra?[+S.ledgerExtra]:[])})}
+    ${shareBtn()}
+  </div></div>`:'';
+  return {over,head:backHead('TEST Ramesh',T('मंडी खाता','Mandi account'),`<button class="iconbtn press" aria-label="${T('फ़ोन करें','Call')}">${ic('phone')}</button>`),foot:`<button class="btn btn-primary tall press f16" data-set="settle:1" style="width:100%">${ic('check')}${T('हिसाब चुकता','Settle')}</button><div class="grid2"><button class="btn btn-success press f14">${ic('down')}${T('जमा मिला','Received')}</button><button class="btn btn-danger-line press f14">${ic('up')}${T('भुगतान दिया','Paid')}</button></div>`,body:`
+  <div class="card pad stack"><span class="f14 mute">${T('देना है','To pay')}</span><span class="f36 neg num">${inr(due-3000)}</span><span class="f12 mute">${T(`पर्ची बाकी ${inr(due)} − उधार मूल ₹3,000। ब्याज ₹200 इसमें नहीं।`,`Slip left ${inr(due)} − loan principal ₹3,000. Interest ₹200 not included.`)}</span></div>
+  <div class="row"><span class="f16 w6">${T('लेन-देन विवरण','Transactions')}</span><button class="btn btn-second press f14" style="min-height:44px">${ic('calc')}${T('ब्याज हिसाब','Interest')}</button></div>
+  <button class="card pad stack press" data-set="ledgerBill:1" style="gap:8px;width:100%;text-align:left">
+    <span class="row"><span class="f16 w6">${T('खरीद पर्ची #1','Purchase slip #1')}</span><span class="f20 w7 num">${inr(n)}</span></span>
+    <span class="f12 mute">${T('गेहूं · 20 बोरी · 10.00 क्विंटल @ ₹2,400/क्विंटल','Wheat · 20 bags · 10.00 qtl @ ₹2,400/qtl')}</span>
+    <span class="tile stack" style="gap:4px">${money(T('भुगतान हुआ','Paid'),'₹70')}${money(T('बाकी','Left'),inr(due),'w6')}</span>
+    <span class="row f12 mute"><span>${T('संशोधित · 31 Oct 2026','Revised · 31 Oct 2026')}</span><span class="row" style="gap:4px;justify-content:flex-end">${T('पर्ची देखें','View slip')}${ic('right',16)}</span></span>
+  </button>
+  <div class="card pad stack" style="gap:8px">
+    <div class="row"><span class="f16 w6">${T('उधार #1','Loan #1')}</span><span class="f20 w7 num">₹5,000</span></div>
+    <div class="f12 mute">${T('मूल · नकद दिया · 31 Oct 2026','Principal · cash given · 31 Oct 2026')}</div>
+    <div class="tile stack" style="gap:4px">${money(T('ब्याज','Interest'),'₹200')}${money(T('वापस मिला','Repaid'),'₹2,000')}${money(T('बाकी','Left'),'₹3,200','w6')}<span class="f12 mute">${T('मूल ₹3,000 + ब्याज ₹200','Principal ₹3,000 + interest ₹200')}</span></div>
+    <div class="f12 w6">${T('वापसी','Repayments')}</div>
+    <div class="row f14"><span class="mute">${T('31 Oct 2026 · नकद','31 Oct 2026 · cash')}</span><span class="pos w7 num">+₹2,000</span></div>
+  </div>`};
+};
+const fGalla=()=>{
+  const a=SCREENS.a.galla();
+  const closing=`<div class="rokad-i"><div class="f12 mute">${T('सिल्क बाकी','Closing cash')}`;
+  a.body=a.body.replace(closing,`<div class="rokad-i"><div class="f12 mute">TEST Ramesh · ${T('पर्ची #1','Slip #1')}</div><div class="f14 w6 num">−₹70</div></div>`+closing).replaceAll('₹1,650','₹1,580').replaceAll('₹1,600','₹1,530');
+  if(S.day==='open')return a;
+  const tilt=S.day==='equal'?'0deg':'-3deg';
+  const small=`<div class="beam-wrap small"><div class="beam ${S.day==='equal'?anim('count','anim-settle'):''}" style="--tilt:${tilt}"><span class="pan l"></span><span class="pan r"></span></div><div class="post"></div></div>`;
+  const mark='<div class="card pad stack" style="gap:10px"><div class="row"><span class="f14 mute">';
+  const i=a.body.lastIndexOf(mark);
+  a.body=a.body.slice(0,i)+'<div class="card pad stack" style="gap:10px">'+small+'<div class="row"><span class="f14 mute">'+a.body.slice(i+mark.length);
+  return a;
+};
+const SCREENS={
+f:{dash:fDash,buy:fBuy,ledger:fLedger,galla:fGalla},
+/* ---------- A: bahi ---------- */
+a:{
+dash:()=>({head:shopHead(),tab:'dash',body:`
+  <div class="card grid2 pad">
+    <div class="stack"><span class="f14 mute">${T('कुल लेना','Receivable')}</span><span class="f20 pos num">${rupee.rec}</span><span class="f12 mute">${T('1 खाते से','from 1 account')}</span></div>
+    <div class="stack"><span class="f14 mute">${T('कुल देना','Payable')}</span><span class="f20 neg num">${rupee.pay}</span><span class="f12 mute">${T('1 खाते को','to 1 account')}</span></div>
+  </div>
+  <div class="card grid4" style="padding:4px;gap:0">${ACTIONS().map(([i,l])=>`<button class="action press f14">${ic(i)}<span>${l}</span></button>`).join('')}</div>
+  <div class="f16 w6">${T('अब तक','All time')}</div>
+  <div class="card lines">${TOTALS().map(([a,b])=>`<div class="row"><span class="mute">${a}</span><span class="f16 w6 num">${b}</span></div>`).join('')}</div>
+  <div class="sect"><span class="f16 w6">${T('सक्रिय खाते','Active accounts')}</span><button class="press f14 mute">${T('सभी देखें','View all')}</button></div>
+  <div class="card lines">${PARTIES().map(p=>`<button class="row press" style="width:100%"><span class="row" style="gap:10px;justify-content:flex-start;--s:18px"><span class="mute" style="display:flex">${ic(p.i)}</span><span class="stack"><span class="f14 w5">${p.n}</span><span class="f12 mute">${p.role}</span></span></span><span class="stack amt"><span class="f16 ${p.c} num">${p.a}</span><span class="f12 mute">${p.l}</span></span></button>`).join('')}</div>`}),
+buy:()=>({head:buyHead(),body:`${buyFields()}<div class="f16 w6">${T('हिसाब पर्ची','Slip')}</div>${slip()}${saveBtn()}`}),
+ledger:()=>({head:backHead('TEST Ramesh',T('मंडी खाता','Mandi account'),`<button class="iconbtn press" aria-label="${T('फ़ोन करें','Call')}">${ic('phone')}</button>`),body:`
+  <div class="card pad stack"><span class="f14 mute">${T('देना है','To pay')}</span><span class="f28 neg num">${rupee.pay}</span></div>
+  <div class="grid3">${[['down',T('जमा मिला','Received')],['up',T('भुगतान दिया','Paid')],['calc',T('ब्याज हिसाब','Interest')]].map(([i,l])=>`<button class="btn btn-second press f14">${ic(i)}<span>${l}</span></button>`).join('')}</div>
+  <div class="row"><span class="f16 w6">${T('लेन-देन विवरण','Transactions')}</span><span class="f12 mute">31 Oct 2026</span></div>
+  <div class="card pad"><div class="ledger-table">
+    <div class="f12 mute" style="padding-bottom:6px">${T('विवरण','Details')}</div><div class="f12 mute" style="text-align:right">${T('रकम','Amount')}</div><div class="f12 mute" style="text-align:right">${T('देना बाकी','To pay')}</div>
+    ${LEDGER().map(r=>`<div class="ledger-cell l"><div class="f14 w5">${r.t}</div><div class="f12 mute">${r.s}</div></div><div class="ledger-cell f14 ${r.c} w6 num">${r.a}</div><div class="ledger-cell f14 w6 num">${r.b}</div>`).join('')}
+  </div></div>`}),
+galla:()=>{
+  const closeArea={
+    open:`<button class="btn btn-primary press" data-do="count" style="width:100%">${ic('calc')}${T('नकद गिनें','Count cash')}</button>`,
+    equal:`<div class="row"><span class="f14 mute">${T('गिनती','Counted')}</span><span class="f20 w7 num">₹1,650</span></div><div class="dbl ${anim('count','anim-rule')}"></div><div class="row f16 w6" style="gap:8px;justify-content:flex-start"><span class="pos" style="display:flex">${ic('check')}</span>${T('हिसाब बिल्कुल बराबर है','Books balance exactly')}</div><button class="btn btn-primary press" data-do="close" style="width:100%">${T('दिन बंद करें','Close day')}</button>`,
+    diff:`<div class="row"><span class="f14 mute">${T('गिनती','Counted')}</span><span class="f16 w6 num">${counted()}</span></div><div class="row"><span class="row f14 w6" style="gap:8px;justify-content:flex-start"><span class="statuschip" style="padding:0;background:none"><span class="warn" style="display:flex">${ic('alert')}</span></span>${T('अंतर: -₹50','Difference: -₹50')}</span><button class="press f14 w6" data-do="count" style="min-height:44px">${T('फिर गिनें','Count again')}</button></div><button class="btn btn-second press" data-do="close" style="width:100%">${T('दिन बंद करें','Close day')}</button><div class="f12 mute">${T('कमी या अधिक रकम दिखती रहेगी।','The shortfall stays visible.')}</div>`
+  }[S.day];
+  return {head:shopHead(),tab:'galla',foot:cashFoot(),body:`
+  <div class="row"><button class="iconbtn press" aria-label="${T('पिछला दिन','Previous day')}">${ic('left')}</button><span class="f14 w5">31/10/2026</span><button class="iconbtn press" aria-label="${T('अगला दिन','Next day')}">${ic('right')}</button></div>
+  <div class="card stack" style="overflow:hidden;gap:0"><div class="rokad">
+    <div><div class="rokad-h f14">${T('जमा पक्ष','Receipts')}</div>${JAMA().map(([a,b])=>`<div class="rokad-i"><div class="f12 mute">${a}</div><div class="f14 w6 num">${b}</div></div>`).join('')}</div>
+    <div><div class="rokad-h f14">${T('नामे पक्ष','Payments')}</div>${NAME().map(([a,b])=>`<div class="rokad-i"><div class="f12 mute">${a}</div><div class="f14 w6 num">${b}</div></div>`).join('')}</div>
+  </div><div class="row pad total" style="padding:10px 12px"><span class="f14">${T('जोड़','Total')}</span><span class="f14 num">₹7,000 = ₹7,000</span></div></div>
+  <div class="card pad stack" style="gap:10px"><div class="row"><span class="f14 mute">${T('बही के अनुसार नकद','Expected cash')}</span><span class="f20 w7 num">₹1,650</span></div>${closeArea}</div>`};
+}},
+/* ---------- B: taraazu ---------- */
+b:{
+dash:()=>({head:shopHead(),tab:'dash',foot:`<div class="grid4">${ACTIONS().map(([i,l],n)=>`<button class="action press f14 ${n?'btn-second':'btn-primary'}">${ic(i)}<span>${l}</span></button>`).join('')}</div>`,body:`
+  <div class="grid2">
+    <div class="card pad stack"><span class="f14 mute">${T('कुल लेना','Receivable')}</span><span class="f28 pos num">${rupee.rec}</span><span class="f12 mute">${T('1 खाते से','from 1 account')}</span></div>
+    <div class="card pad stack"><span class="f14 mute">${T('कुल देना','Payable')}</span><span class="f28 neg num">${rupee.pay}</span><span class="f12 mute">${T('1 खाते को','to 1 account')}</span></div>
+  </div>
+  <div class="sect"><span class="f16 w6">${T('सक्रिय खाते','Active accounts')}</span><button class="press f14 mute">${T('सभी देखें','View all')}</button></div>
+  ${PARTIES().map(p=>`<button class="card pad row press" style="width:100%"><span class="row" style="gap:12px;justify-content:flex-start"><span class="mute" style="display:flex">${ic(p.i,24)}</span><span class="stack"><span class="f16 w6">${p.n}</span><span class="f12 mute">${p.role}</span></span></span><span class="stack amt"><span class="f20 ${p.c} num">${p.a}</span><span class="f12 mute">${p.l}</span></span></button>`).join('')}
+  <div class="f16 w6">${T('अब तक','All time')}</div>
+  <div class="grid2">${TOTALS().map(([a,b])=>`<div class="card pad stack"><span class="f12 mute">${a}</span><span class="f20 w7 num">${b}</span></div>`).join('')}</div>`}),
+buy:()=>({head:buyHead(),foot:`<div class="row"><span class="f14 mute">${T('शुद्ध देय राशि','Net payable')}</span><span class="f28 w7 num">${rupee.net}</span></div>${saveBtn('tall f16')}`,body:`${buyFields(1)}<div class="f16 w6">${T('हिसाब पर्ची','Slip')}</div>${slip()}`}),
+ledger:()=>({head:backHead('TEST Ramesh',T('मंडी खाता','Mandi account'),`<button class="iconbtn press" aria-label="${T('फ़ोन करें','Call')}">${ic('phone')}</button>`),foot:`<div class="grid2"><button class="btn btn-success tall press f16">${ic('down')}${T('जमा मिला','Received')}</button><button class="btn btn-danger-line tall press f16">${ic('up')}${T('भुगतान दिया','Paid')}</button></div>`,body:`
+  <div class="card pad stack"><span class="f14 mute">${T('देना है','To pay')}</span><span class="f36 neg num">${rupee.pay}</span></div>
+  <div class="row"><span class="f16 w6">${T('लेन-देन विवरण','Transactions')}</span><button class="btn btn-second press f14" style="min-height:44px">${ic('calc')}${T('ब्याज हिसाब','Interest')}</button></div>
+  ${LEDGER().map(r=>`<div class="card pad stack" style="gap:6px"><div class="row"><span class="f16 w6">${r.t}</span><span class="f20 ${r.c} ${r.c?'':'w7'} num">${r.a}</span></div><div class="f12 mute">${r.s}</div><div class="row f12 mute"><span>31 Oct 2026</span><span class="num">${T('देना बाकी','To pay')} ${r.b}</span></div></div>`).join('')}`}),
+galla:()=>{
+  const tilt={open:'-4deg',equal:'0deg',diff:'-1.5deg'}[S.day];
+  const right=S.day==='open'?T('गिनती बाकी','Not counted'):counted();
+  const foot={
+    open:`<button class="btn btn-primary tall press f16" data-do="count" style="width:100%">${ic('calc')}${T('नकद गिनें','Count cash')}</button>`,
+    equal:`<button class="btn btn-primary tall press f16" data-do="close" style="width:100%">${T('दिन बंद करें','Close day')}</button>`,
+    diff:`<div class="grid2"><button class="btn btn-second tall press f16" data-do="count">${T('फिर गिनें','Count again')}</button><button class="btn btn-second tall press f16" data-do="close">${T('दिन बंद करें','Close day')}</button></div>`
+  }[S.day];
+  const msg={
+    open:`<div class="f14 mute" style="text-align:center">${T('नोट और सिक्के गिनें','Count notes and coins')}</div>`,
+    equal:`<div class="row f16 w6 ${anim('count','anim-rise')}" style="justify-content:center;gap:8px"><span class="pos" style="display:flex">${ic('check')}</span>${T('हिसाब बिल्कुल बराबर है','Books balance exactly')}</div>`,
+    diff:`<div class="row f14 w6" style="justify-content:center;gap:8px"><span class="statuschip" style="padding:0;background:none"><span class="warn" style="display:flex">${ic('alert')}</span></span>${T('अंतर: -₹50 · कमी दिखती रहेगी','Difference: -₹50 · stays visible')}</div>`
+  }[S.day];
+  return {head:shopHead(),tab:'galla',foot,body:`
+  <div class="card pad stack" style="gap:12px">
+    <div class="beam-wrap"><div class="beam ${anim('count','anim-settle')}" style="--tilt:${tilt}"><span class="pan l"></span><span class="pan r"></span></div><div class="post"></div></div>
+    <div class="grid2" style="text-align:center">
+      <div class="stack"><span class="f12 mute">${T('बही के अनुसार','By the book')}</span><span class="f28 w7 num">₹1,650</span></div>
+      <div class="stack"><span class="f12 mute">${T('गिनती','Counted')}</span><span class="${S.day==='open'?'f16 w6 mute':'f28 w7 num'}">${right}</span></div>
+    </div>${msg}
+  </div>
+  <div class="row"><button class="iconbtn press" aria-label="${T('पिछला दिन','Previous day')}">${ic('left')}</button><span class="f14 w5">31/10/2026</span><button class="iconbtn press" aria-label="${T('अगला दिन','Next day')}">${ic('right')}</button></div>
+  <div class="grid2"><button class="btn btn-success tall press f14">${ic('plus')}${T('नकद जमा','Cash in')}</button><button class="btn btn-danger-line tall press f14">${ic('minus')}${T('नकद निकासी','Cash out')}</button></div>
+  <div class="f16 w6">${T('जमा पक्ष','Receipts')}</div>
+  <div class="card lines">${JAMA().map(([a,b])=>`<div class="row"><span>${a}</span><span class="f16 w6 num">${b}</span></div>`).join('')}</div>
+  <div class="f16 w6">${T('नामे पक्ष','Payments')}</div>
+  <div class="card lines">${NAME().map(([a,b])=>`<div class="row"><span>${a}</span><span class="f16 w6 num">${b}</span></div>`).join('')}</div>
+  <div class="row f14 w6" style="padding:0 2px"><span>${T('जोड़','Total')}</span><span class="num">₹7,000 = ₹7,000</span></div>`};
+}},
+/* ---------- C: aaj ---------- */
+c:{
+dash:()=>({head:shopHead(),tab:'dash',fab:1,body:`
+  <div class="card pad stack" style="gap:10px">
+    <div class="row"><span class="f14 w6">${T('आज','Today')} · 31 Oct 2026</span><span class="statuschip f12">${T('दिन खुला है','Day open')}</span></div>
+    <div class="stack"><span class="f14 mute">${T('बही के अनुसार नकद','Expected cash')}</span><span class="f36 w7 num">₹1,650</span></div>
+    <div class="grid2"><div class="card" style="padding:10px 12px;box-shadow:none"><div class="f12 mute">${T('कुल लेना','Receivable')}</div><div class="f16 pos num">${rupee.rec}</div></div><div class="card" style="padding:10px 12px;box-shadow:none"><div class="f12 mute">${T('कुल देना','Payable')}</div><div class="f16 neg num">${rupee.pay}</div></div></div>
+  </div>
+  <div class="story">${ENTRIES().map(e=>`<button class="story-i card pad row press" style="width:100%"><span class="node">${ic(e.i)}</span><span class="stack"><span class="f14 w6">${e.t}</span><span class="f12 mute">${e.s}</span></span><span class="f16 ${e.c} ${e.c?'':'w7'} num">${e.a}</span></button>`).join('')}</div>
+  <div class="f16 w6">${T('अब तक','All time')}</div>
+  <div class="card lines">${TOTALS().map(([a,b])=>`<div class="row"><span class="mute">${a}</span><span class="f16 w6 num">${b}</span></div>`).join('')}</div>`}),
+buy:()=>({head:buyHead(),body:`
+  <div class="card pad stack" style="position:sticky;top:0;z-index:1;gap:4px"><div class="row"><span class="f14 w6">${T('खरीद पर्ची','Purchase slip')}</span><span class="f12 mute">TEST Ramesh</span></div><div class="row"><span class="f14 mute">${T('शुद्ध देय राशि','Net payable')}</span><span class="f28 w7 num">${rupee.net}</span></div></div>
+  ${buyFields()}${slip()}${saveBtn()}`}),
+ledger:()=>({head:backHead('TEST Ramesh',T('मंडी खाता','Mandi account'),`<button class="iconbtn press" aria-label="${T('फ़ोन करें','Call')}">${ic('phone')}</button>`),body:`
+  <div class="card pad stack"><span class="f14 mute">${T('देना है','To pay')}</span><span class="f36 neg num">${rupee.pay}</span></div>
+  <div class="grid3">${[['down',T('जमा मिला','Received')],['up',T('भुगतान दिया','Paid')],['calc',T('ब्याज हिसाब','Interest')]].map(([i,l])=>`<button class="btn btn-second press f14">${ic(i)}<span>${l}</span></button>`).join('')}</div>
+  <div class="f14 w6">31 Oct 2026</div>
+  <div class="story">${LEDGER().map((r,n)=>`<div class="story-i card pad stack" style="gap:4px"><span class="node">${ic(['down','wallet','cart'][n])}</span><div class="row"><span class="f14 w6">${r.t}</span><span class="f16 ${r.c} ${r.c?'':'w7'} num">${r.a}</span></div><div class="f12 mute">${r.s}</div><div class="f12 mute num">${T('देना बाकी','To pay')} ${r.b}</div></div>`).join('')}</div>`}),
+galla:()=>{
+  const end={
+    open:`<div class="card pad stack" style="gap:10px"><div class="f16 w6">${T('दिन का आखिरी काम','Last job of the day')}</div><div class="f14 mute">${T('नोट और सिक्के गिनें','Count notes and coins')}</div><button class="btn btn-primary press" data-do="count" style="width:100%">${ic('calc')}${T('नकद गिनें','Count cash')}</button></div>`,
+    equal:`<div class="card pad stack ${anim('count','anim-rise')}" style="gap:10px;border-color:var(--ngdl-border-active)"><div class="row f20 w7" style="justify-content:flex-start;gap:8px"><span class="pos" style="display:flex">${ic('check')}</span>${T('हिसाब बिल्कुल बराबर है','Books balance exactly')}</div><div class="grid2"><div class="tile"><div class="f12 mute">${T('गिनती','Counted')}</div><div class="f20 w7 num">₹1,650</div></div><div class="tile"><div class="f12 mute">${T('एंट्री','Entries')}</div><div class="f20 w7 num">5</div></div></div><button class="btn btn-primary press" data-do="close" style="width:100%">${T('दिन बंद करें','Close day')}</button></div>`,
+    diff:`<div class="card pad stack" style="gap:10px"><div class="row f16 w6" style="justify-content:flex-start;gap:8px"><span class="statuschip" style="padding:0;background:none"><span class="warn" style="display:flex">${ic('alert')}</span></span>${T('अंतर: -₹50','Difference: -₹50')}</div><div class="row"><span class="f14 mute">${T('गिनती','Counted')}</span><span class="f16 w6 num">${counted()}</span></div><div class="f12 mute">${T('कमी या अधिक रकम दिखती रहेगी।','The shortfall stays visible.')}</div><div class="grid2"><button class="btn btn-second press" data-do="count">${T('फिर गिनें','Count again')}</button><button class="btn btn-second press" data-do="close">${T('दिन बंद करें','Close day')}</button></div></div>`
+  }[S.day];
+  return {head:shopHead(),tab:'galla',foot:cashFoot(),body:`
+  <div class="card pad stack" style="gap:4px"><span class="f14 w6">31/10/2026</span><span class="f14 mute">${T('बही के अनुसार नकद','Expected cash')}</span><span class="f36 w7 num">₹1,650</span></div>
+  ${end}
+  <div class="story">${[[T('बाकी निकाला','Opening'),'₹5,000','','wallet'],['TEST Ramesh','+₹2,000','pos','down'],['TEST Ramesh','−₹5,000','','up'],[T('खर्च: हम्माली','Expense: Hammali'),'−₹350','','receipt']].map(([a,b,c,i])=>`<div class="story-i card pad row"><span class="node">${ic(i)}</span><span class="f14 w5">${a}</span><span class="f16 ${c} ${c?'':'w7'} num">${b}</span></div>`).join('')}</div>`};
+}}
+};
+SCREENS.r={...SCREENS.a,
+  dash:()=>{const s=SCREENS.a.dash();return {...s,body:s.body.replace(/f20 (pos|neg) num/g,'f28 $1 num')}},
+  buy:()=>({head:buyHead(),foot:`<div class="row"><span class="f14 mute">${T('शुद्ध देय राशि','Net payable')}</span><span class="f28 w7 num">${rupee.net}</span></div>${saveBtn('tall f16')}`,body:`${buyFields()}<div class="f16 w6">${T('हिसाब पर्ची','Slip')}</div>${slip()}`})
+};
+const cashFoot=()=>`<div class="grid2"><button class="btn btn-success press f14">${ic('plus')}${T('नकद जमा','Cash in')}</button><button class="btn btn-danger-line press f14">${ic('minus')}${T('नकद निकासी','Cash out')}</button></div>`;
+
+const TODAY={dash:'current/76-online-again.png',buy:'current/16-buy-ready.png',ledger:'current/44-party-ledger.png',galla:'current/70-day-closed.png'};
+
+function device(dir){
+  const s=SCREENS[dir][S.screen]();
+  const sheet=S.sheet===dir?`<div class="scrim" data-do="unsheet"><div class="sheet anim-rise"><div class="f16 w6">${T('नई एंट्री','New entry')}</div><div class="grid4">${ACTIONS().map(([i,l])=>`<button class="action press f14">${ic(i)}<span>${l}</span></button>`).join('')}</div></div></div>`:'';
+  return `<article class="device ${S.t>=1.6?'big':''}" style="--t:${S.t}" data-dir="${dir}">
+    <div class="status"><span class="sample">${T('नमूना','Sample')}</span><span class="status-icons">${ic('signal')}${ic('battery')}</span></div>
+    ${s.head}
+    <div class="body" ${s.fab?'style="padding-bottom:84px"':''}>${s.body}</div>
+    ${s.foot?`<div class="foot">${s.foot}</div>`:''}
+    ${s.fab?`<button class="fab press" data-do="sheet" aria-label="${T('नई एंट्री','New entry')}">${ic('plus')}</button>`:''}
+    ${s.tab?tabs(s.tab):''}
+    ${s.over||''}${sheet}${S.toast&&S.toastDir===dir?toast():''}
+  </article>`;
+}
+const seg=(label,key,opts)=>`<div class="ctl"><span class="ctl-label">${label}</span><div class="seg" role="group" aria-label="${label}">${opts.map(([v,l])=>`<button data-k="${key}" data-v="${v}" aria-pressed="${String(S[key])===String(v)}">${l}</button>`).join('')}</div></div>`;
+
+function render(){
+  document.documentElement.dataset.theme=S.theme;
+  document.documentElement.lang=S.lang;
+  document.getElementById('rec').textContent=DECIDED;
+  const dirOpts=Object.entries(DIRS).map(([k,[c,hi]])=>[k,`${c} ${hi}`]).concat([['today','अभी का ऐप']]);
+  document.getElementById('controls').innerHTML=
+    seg('Direction','dir',dirOpts)+
+    seg('Screen','screen',[['dash','Dashboard'],['buy','Buy entry'],['ledger','Party ledger'],['galla','Galla, day close']])+
+    (S.screen==='galla'?seg('Day state','day',[['open','Open'],['equal','Balanced'],['diff','Difference']]):'')+
+    (S.screen==='buy'&&S.dir==='f'?seg('Phone state','buyState',[['found','Saved number'],['fresh','New number'],['old','Old party, no number']]):'')+
+    seg('Theme','theme',[['light','Light'],['dark','Dark']])+
+    seg('Language','lang',[['hi','हिंदी'],['en','English']])+
+    seg('Text size','t',[[1,'100%'],[1.3,'130%'],[2,'200%']])+
+    seg('View','view',[['one','One phone'],['all','All side by side']]);
+  const cap=(d)=>d==='today'?'अभी का ऐप (Phase 1 screenshot, light, Hindi only)':`${DIRS[d][0]}. ${DIRS[d][1]}`;
+  const one=(d)=>d==='today'
+    ?`<div class="cap"><div class="cap-title">${cap(d)}</div><div class="today-wrap"><img class="today" src="${TODAY[S.screen]}" alt="Current app screenshot"></div></div>`
+    :`<div class="cap"><div class="cap-title">${cap(d)}</div>${device(d)}</div>`;
+  const list=S.view==='all'?['f','b','r','a','c']:[S.dir];
+  document.getElementById('stage').innerHTML=list.map(one).join('');
+  const n=NOTES[S.dir]||NOTES.a;
+  const notesShown=S.dir==='today'?{t:'Today\'s app',n:['Real Phase 1 screenshots for comparison. The Dashboard shot comes from later in that test run, so its totals differ from the sample day.']}:n;
+  document.getElementById('dir-title').textContent=notesShown.t;
+  document.getElementById('dir-notes').innerHTML=notesShown.n.map(x=>`<li>${x}</li>`).join('');
+  S.anim=null;
+}
+let toastTimer;
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-k]');
+  if(c){const k=c.dataset.k;let v=c.dataset.v;S[k]=k==='t'?Number(v):v;if(k==='day'&&v!=='open')S.anim=v==='equal'?'count':null;if(k==='dir'&&v==='today'&&S.view==='all')S.view='one';if(k==='screen'||k==='buyState'||k==='dir'){S.buyStep='form';S.payMode='part';S.ledgerBill='';S.ledgerExtra=0}S.sheet=null;render();return}
+  const go=e.target.closest('[data-go]');
+  if(go){const g=go.dataset.go;if(g==='galla'){S.screen='galla';S.day='open';render();return}
+    S.toast=T(`खुलेगा: ${g}`,`Opens: ${g}`);S.toastDir=go.closest('.device')?.dataset.dir;render();clearTimeout(toastTimer);toastTimer=setTimeout(()=>{S.toast=null;render()},1400);return}
+  const set=e.target.closest('[data-set]');
+  if(set){const [k,v]=set.dataset.set.split(':');S[k]=v;render();return}
+  const a=e.target.closest('[data-do]');
+  if(!a)return;
+  const dir=a.closest('.device')?.dataset.dir;
+  const act=a.dataset.do;
+  if(act==='count'){S.day=S.day==='equal'?'diff':'equal';if(S.day==='equal')S.anim='count';render()}
+  if(act==='sheet'){S.sheet=dir;render()}
+  if(act==='unsheet'){S.sheet=null;render()}
+  if(act==='save'&&dir==='f'){S.buyStep='pay';S.payMode='part';render();return}
+  if(act==='paid'||act==='skip'){S.billPaid=act==='paid'?+a.dataset.amt:0;S.buyStep='bill';render();return}
+  if(act==='newbuy'){S.buyStep='form';render();return}
+  if(act==='billclose'){S.ledgerBill='';S.ledgerExtra=0;render();return}
+  if(act==='settled'&&a.dataset.amt){S.settle='';S.ledgerExtra=a.dataset.amt;S.ledgerBill='1';render();return}
+  if(act==='save'||act==='close'||act==='settled'||act==='share'){
+    S.settle='';
+    S.toast=act==='save'?T('पर्ची सहेजी गई','Slip saved'):act==='settled'?T('भुगतान दर्ज हुआ','Settlement saved'):act==='share'?T('सबसे नई पर्ची भेजी जाएगी','The latest slip will be sent'):T('दिन बंद किया','Day closed');S.toastDir=dir;render();
+    clearTimeout(toastTimer);toastTimer=setTimeout(()=>{S.toast=null;render()},1400);
+  }
+});
+window.__mock={S,render};
+render();
+</script>
+</body>
+</html>

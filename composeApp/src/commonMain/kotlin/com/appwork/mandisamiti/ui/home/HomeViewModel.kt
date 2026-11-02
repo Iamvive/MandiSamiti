@@ -75,7 +75,12 @@ data class HomeUiState(
     val pendingSyncCount: Int = 0,
     val isEnglish: Boolean = false,
     val outlierEntry: OutlierEntryInfo? = null,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val rokdiBalancePaisa: Long = 0L,
+    val buys: List<com.appwork.mandisamiti.domain.model.BuyEntry> = emptyList(),
+    val sells: List<com.appwork.mandisamiti.domain.model.SellEntry> = emptyList(),
+    val expenses: List<com.appwork.mandisamiti.domain.model.ExpenseEntry> = emptyList(),
+    val lends: List<com.appwork.mandisamiti.domain.model.LendEntry> = emptyList()
 ) {
     val isSoundEnabled: Boolean get() = shopProfile?.isSoundEnabled ?: true
     val allPartiesWithBalance: List<PartyWithBalance> get() = allParties
@@ -92,6 +97,7 @@ class HomeViewModel(
     private val sellRepository: SellRepository? = null,
     private val lendRepository: LendRepository? = null,
     private val expenseRepository: ExpenseRepository? = null,
+    private val cashRepository: com.appwork.mandisamiti.domain.repository.CashTransactionRepository? = null,
     private val stockUseCase: StockInventoryUseCase? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val onLocalWrite: () -> Unit = {},
@@ -151,10 +157,30 @@ class HomeViewModel(
         val lendsFlow = lendRepository?.getLendEntriesStream(shopId) ?: flowOf(emptyList())
         val settlementsFlow = lendRepository?.getSettlementsStream(shopId) ?: flowOf(emptyList())
         val expensesFlow = expenseRepository?.getExpensesStream(shopId) ?: flowOf(emptyList())
+        val cashFlow = cashRepository?.getTransactionsByShopStream(shopId) ?: flowOf(emptyList())
 
-        combine(buysFlow, sellsFlow, lendsFlow, expensesFlow, settlementsFlow) { buys, sells, lends, expenses, settlements ->
+        val coreFlow = combine(buysFlow, sellsFlow, lendsFlow, expensesFlow, settlementsFlow) { buys, sells, lends, expenses, settlements ->
+            CoreDashboardData(buys, sells, lends, expenses, settlements)
+        }
+
+        combine(coreFlow, cashFlow) { core, cashTxs ->
+            val buys = core.buys
+            val sells = core.sells
+            val lends = core.lends
+            val expenses = core.expenses
+            val settlements = core.settlements
+
             val computedKpis = computeKpis(buys, sells, lends, expenses, settlements)
             val lines = stockUseCase?.lines(shopId) ?: emptyList()
+            val rokdi = cashTxs.filter { !it.isVoid && it.paymentMode == com.appwork.mandisamiti.domain.model.PaymentMode.CASH }.sumOf {
+                if (it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED ||
+                    it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.INTEREST_RECEIVED
+                ) {
+                    it.amountPaisa
+                } else {
+                    -it.amountPaisa
+                }
+            }
 
             val outlierBuy = buys.firstOrNull { buy ->
                 !buy.isVoid && buy.ratePaisaPerQuintal > com.appwork.mandisamiti.domain.validation.MandiValidators.RATE_OUTLIER_THRESHOLD_PAISA
@@ -193,10 +219,19 @@ class HomeViewModel(
                 else -> null
             }
 
-            DashboardPayload(computedKpis, lines, lends, outlierInfo)
-        }.onEach { (kpis, lines, lends, outlierInfo) ->
+            DashboardPayload(
+                kpis = computedKpis,
+                lines = lines,
+                lends = lends,
+                outlier = outlierInfo,
+                rokdiBalancePaisa = rokdi,
+                buys = buys,
+                sells = sells,
+                expenses = expenses
+            )
+        }.onEach { payload ->
             val partyIds = _uiState.value.allParties.map { it.party.id }.toSet()
-            val unlinkedMoneyLends = lends.filter {
+            val unlinkedMoneyLends = payload.lends.filter {
                 !it.isVoid &&
                 it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED &&
                 it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY &&
@@ -211,12 +246,17 @@ class HomeViewModel(
             }
 
             _uiState.value = _uiState.value.copy(
-                kpis = kpis,
-                stockLines = lines,
-                outlierEntry = outlierInfo,
+                kpis = payload.kpis,
+                stockLines = payload.lines,
+                outlierEntry = payload.outlier,
                 unlinkedLendAmountPaisa = unlinkedAmount,
                 unlinkedLendCount = unlinkedCount,
-                totalMarketReceivablePaisa = partyRec + unlinkedAmount
+                totalMarketReceivablePaisa = partyRec + unlinkedAmount,
+                rokdiBalancePaisa = payload.rokdiBalancePaisa,
+                buys = payload.buys,
+                sells = payload.sells,
+                expenses = payload.expenses,
+                lends = payload.lends
             )
         }.launchIn(viewModelScope)
     }
@@ -371,11 +411,23 @@ class HomeViewModel(
     }
 }
 
+private data class CoreDashboardData(
+    val buys: List<com.appwork.mandisamiti.domain.model.BuyEntry>,
+    val sells: List<com.appwork.mandisamiti.domain.model.SellEntry>,
+    val lends: List<com.appwork.mandisamiti.domain.model.LendEntry>,
+    val expenses: List<com.appwork.mandisamiti.domain.model.ExpenseEntry>,
+    val settlements: List<com.appwork.mandisamiti.domain.model.LendSettlement>
+)
+
 private data class DashboardPayload(
     val kpis: DashboardKpis,
     val lines: List<StockLine>,
     val lends: List<com.appwork.mandisamiti.domain.model.LendEntry>,
-    val outlier: OutlierEntryInfo?
+    val outlier: OutlierEntryInfo?,
+    val rokdiBalancePaisa: Long = 0L,
+    val buys: List<com.appwork.mandisamiti.domain.model.BuyEntry> = emptyList(),
+    val sells: List<com.appwork.mandisamiti.domain.model.SellEntry> = emptyList(),
+    val expenses: List<com.appwork.mandisamiti.domain.model.ExpenseEntry> = emptyList()
 )
 
 internal fun filterList(

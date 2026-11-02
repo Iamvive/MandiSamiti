@@ -46,10 +46,10 @@ class BuyLotItemState(
     }
 
     fun validate(): LotValidation {
-        val bagsVal = MandiValidators.validatePositiveNumber(bags, "बोरी संख्या")
-        val weightVal = MandiValidators.validatePositiveNumber(weightPerBagKg, "वजन/बोरी")
-        val rateVal = MandiValidators.validatePositiveNumber(ratePerQuintal, "भाव")
-        val extraVal = MandiValidators.validateNonNegativeNumber(extraWeightKg, "अतिरिक्त वजन")
+        val bagsVal = MandiValidators.validateBags(bags)
+        val weightVal = MandiValidators.validateWeightPerBag(weightPerBagKg)
+        val rateVal = MandiValidators.validateRatePerQuintal(ratePerQuintal)
+        val extraVal = MandiValidators.validateExtraWeight(extraWeightKg, weightPerBagKg)
         return LotValidation(
             bagsError = bagsVal.errorOrNull,
             weightError = weightVal.errorOrNull,
@@ -75,7 +75,10 @@ data class AggregatedBuyPreview(
     val totalGrossPaisa: Long,
     val commissionPaisa: Long,
     val labourPaisa: Long,
+    val slipNetPaisa: Long,
     val advancePaidPaisa: Long,
+    val loanCutPaisa: Long = 0L,
+    val depositUsedPaisa: Long = 0L,
     val netPayablePaisa: Long
 )
 
@@ -91,6 +94,7 @@ class BuyEntryFormState(
         set(value) {
             _village = MandiValidators.sanitizeVillage(value)
         }
+    var isOldPartyWithoutPhone by mutableStateOf(false)
 
     val lots = mutableStateListOf<BuyLotItemState>()
 
@@ -104,6 +108,8 @@ class BuyEntryFormState(
         tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
     )
     var advancePaid by mutableStateOf("") // Optional, default blank
+    var loanCutPaid by mutableStateOf("") // Loan cut (interest first, then principal)
+    var depositUsed by mutableStateOf("") // Deposit used (adds to payout)
     var showRateOutlierConfirmation by mutableStateOf(false)
 
     fun applySettings(settings: TradeSettings) {
@@ -216,6 +222,8 @@ class BuyEntryFormState(
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
         val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
         val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
+        val loanCutPaisa = MandiMathEngine.parseRupeesToPaisa(loanCutPaid.ifBlank { "0" })
+        val depositPaisa = MandiMathEngine.parseRupeesToPaisa(depositUsed.ifBlank { "0" })
 
         // Sheet Rule 2: Extra loose weight > 5kg adds 1 billed bag for labour
         val totalExtraGrams = lotResults.sumOf { it.second.extraWeightGrams }
@@ -227,7 +235,7 @@ class BuyEntryFormState(
         val unroundedFinal = totalGross - labourPaisa - commRaw
         val roundedFinal = ((unroundedFinal + 500L) / 1000L) * 1000L
         val commissionPaisa = totalGross - labourPaisa - roundedFinal
-        val netPayable = roundedFinal - advancePaisa
+        val finalPayable = roundedFinal - advancePaisa - loanCutPaisa + depositPaisa
 
         return AggregatedBuyPreview(
             lotsCalculations = lotResults,
@@ -236,8 +244,11 @@ class BuyEntryFormState(
             totalGrossPaisa = totalGross,
             commissionPaisa = commissionPaisa,
             labourPaisa = labourPaisa,
+            slipNetPaisa = roundedFinal,
             advancePaidPaisa = advancePaisa,
-            netPayablePaisa = netPayable
+            loanCutPaisa = loanCutPaisa,
+            depositUsedPaisa = depositPaisa,
+            netPayablePaisa = finalPayable
         )
     }
 
@@ -253,12 +264,15 @@ class BuyEntryFormState(
     }
 
     fun validateFarmerName(): ValidationResult = MandiValidators.validateFarmerName(farmerName)
-    fun validatePhone(): ValidationResult = MandiValidators.validatePhone(phone, isRequired = false)
+    fun validatePhone(): ValidationResult = MandiValidators.validatePhone(phone, isRequired = true)
+    fun validateVillage(): ValidationResult = MandiValidators.validateVillage(village)
     fun validateLots(): List<LotValidation> = lots.map { it.validate() }
 
     fun canSave(): Boolean {
-        if (!validateFarmerName().isValid) return false
+        if (isOldPartyWithoutPhone) return false
         if (!validatePhone().isValid) return false
+        if (!validateFarmerName().isValid) return false
+        if (!validateVillage().isValid) return false
         val lotsVal = validateLots()
         if (lotsVal.isEmpty() || lotsVal.any { !it.isValid }) return false
         val agg = aggregatePreview()
@@ -268,19 +282,22 @@ class BuyEntryFormState(
     }
 
     fun validationReason(): String? {
-        val nameVal = validateFarmerName()
-        if (!nameVal.isValid) return nameVal.errorOrNull
+        if (isOldPartyWithoutPhone) return "इस खाते में नंबर नहीं है। सेव से पहले 10 अंकों का नंबर डालें।"
         val phoneVal = validatePhone()
         if (!phoneVal.isValid) return phoneVal.errorOrNull
+        val nameVal = validateFarmerName()
+        if (!nameVal.isValid) return nameVal.errorOrNull
+        val villageVal = validateVillage()
+        if (!villageVal.isValid) return villageVal.errorOrNull
         val lotsVal = validateLots()
         val firstInvalidIdx = lotsVal.indexOfFirst { !it.isValid }
         if (firstInvalidIdx != -1) {
             val err = lotsVal[firstInvalidIdx]
-            return "फसल #${firstInvalidIdx + 1}: ${err.bagsError ?: err.weightError ?: err.rateError ?: "विवरण सही करें"}"
+            return "फसल #${firstInvalidIdx + 1}: ${err.bagsError ?: err.weightError ?: err.rateError ?: err.extraError ?: "विवरण सही करें"}"
         }
         val agg = aggregatePreview()
         if (agg.totalGrossPaisa <= 0) return "कुल राशि शून्य से अधिक होनी चाहिए"
-        if (agg.netPayablePaisa < 0) return "चेतावनी: पेशगी राशि कुल हिसाब से अधिक है"
+        if (agg.netPayablePaisa < 0) return "चेतावनी: कटौती राशि कुल हिसाब से अधिक है"
         return null
     }
 
@@ -295,6 +312,8 @@ class BuyEntryFormState(
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
         val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
         val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
+        val loanCutPaisa = MandiMathEngine.parseRupeesToPaisa(loanCutPaid.ifBlank { "0" })
+        val depositPaisa = MandiMathEngine.parseRupeesToPaisa(depositUsed.ifBlank { "0" })
         val primaryLot = lots.firstOrNull()?.calculateLot()
 
         // Build lots domain list
@@ -304,6 +323,8 @@ class BuyEntryFormState(
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
             if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
+            if (loanCutPaisa > 0) append("उधार_कटौती: ₹${loanCutPaisa / 100} | ")
+            if (depositPaisa > 0) append("जमा_समायोजन: ₹${depositPaisa / 100} | ")
             append("DATA: $lotsJson")
         }
 

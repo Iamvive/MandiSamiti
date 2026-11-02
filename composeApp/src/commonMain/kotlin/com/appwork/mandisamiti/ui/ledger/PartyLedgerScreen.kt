@@ -150,6 +150,8 @@ fun PartyLedgerScreen(
     var editGstinInput by remember { mutableStateOf("") }
     var editMandiLicenseInput by remember { mutableStateOf("") }
 
+    var showSettlementDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             SoundboxTopBar(
@@ -262,53 +264,83 @@ fun PartyLedgerScreen(
                 }
             }
 
-            // Quick Action Buttons (No emojis, vector icons)
-            Row(
+            // Quick Action Buttons (Direction B Final Layout)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 14.dp, end = 14.dp, top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FintechActionButton(
-                    label = if (isEnglish) "Received" else "जमा मिला",
-                    icon = Icons.Default.ArrowDownward,
-                    color = MandiGreenReceivable,
-                    backgroundColor = MandiGreenLight,
-                    borderColor = MandiGreenBorder,
-                    textColor = MandiGreenText,
-                    onClick = { showCashEntryType = TransactionType.JAMA_RECEIVED },
-                    modifier = Modifier.weight(1f)
-                )
-                FintechActionButton(
-                    label = if (isEnglish) "Paid" else "भुगतान दिया",
-                    icon = Icons.Default.ArrowUpward,
-                    color = MandiRedPayable,
-                    backgroundColor = MandiRedLight,
-                    borderColor = MandiRedBorder,
-                    textColor = MandiRedText,
-                    onClick = { showCashEntryType = TransactionType.UDHAR_GIVEN },
-                    modifier = Modifier.weight(1f)
-                )
-                FintechActionButton(
-                    label = if (isEnglish) "Interest" else "ब्याज हिसाब",
-                    icon = Icons.Default.Calculate,
-                    color = MandiTextPrimary,
-                    backgroundColor = MandiSurfaceElevated,
-                    borderColor = MandiBorder,
-                    textColor = MandiTextPrimary,
-                    onClick = {
-                        val oldest = uiState.openLoans.minByOrNull { it.lend.entryDate }
-                        if (oldest != null) {
-                            val ms = Clock.System.now().toEpochMilliseconds() - oldest.lend.entryDate
-                            interestDaysInput = (ms / 86_400_000L).coerceAtLeast(1L).toString()
-                            interestRateInput = oldest.monthlyRatePercent.toString()
-                        } else {
-                            interestRateInput = (uiState.party?.monthlyInterestRate ?: uiState.defaultMonthlyRatePercent).toString()
-                        }
-                        viewModel.openInterestDialog()
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                // Primary Settle Action Button (हिसाब चुकता)
+                Button(
+                    onClick = { showSettlementDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MandiPrimaryActionText,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = if (isEnglish) "Settle (Hisab Chukta)" else "हिसाब चुकता",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiPrimaryActionText
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FintechActionButton(
+                        label = if (isEnglish) "Received" else "जमा मिला",
+                        icon = Icons.Default.ArrowDownward,
+                        color = MandiGreenReceivable,
+                        backgroundColor = MandiGreenLight,
+                        borderColor = MandiGreenBorder,
+                        textColor = MandiGreenText,
+                        onClick = { showCashEntryType = TransactionType.JAMA_RECEIVED },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FintechActionButton(
+                        label = if (isEnglish) "Paid" else "भुगतान दिया",
+                        icon = Icons.Default.ArrowUpward,
+                        color = MandiRedPayable,
+                        backgroundColor = MandiRedLight,
+                        borderColor = MandiRedBorder,
+                        textColor = MandiRedText,
+                        onClick = { showCashEntryType = TransactionType.UDHAR_GIVEN },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FintechActionButton(
+                        label = if (isEnglish) "Interest" else "ब्याज हिसाब",
+                        icon = Icons.Default.Calculate,
+                        color = MandiTextPrimary,
+                        backgroundColor = MandiSurfaceElevated,
+                        borderColor = MandiBorder,
+                        textColor = MandiTextPrimary,
+                        onClick = {
+                            val oldest = uiState.openLoans.minByOrNull { it.lend.entryDate }
+                            if (oldest != null) {
+                                val ms = Clock.System.now().toEpochMilliseconds() - oldest.lend.entryDate
+                                interestDaysInput = (ms / 86_400_000L).coerceAtLeast(1L).toString()
+                                interestRateInput = oldest.monthlyRatePercent.toString()
+                            } else {
+                                interestRateInput = (uiState.party?.monthlyInterestRate ?: uiState.defaultMonthlyRatePercent).toString()
+                            }
+                            viewModel.openInterestDialog()
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -356,10 +388,11 @@ fun PartyLedgerScreen(
                             )
                         }
                         is LedgerItem.LendItem -> {
+                            val matchingLoan = uiState.openLoans.find { it.lend.id == item.lend.id }
                             FintechLendCard(
-
                                 isEnglish = isEnglish,
                                 lend = item.lend,
+                                loanInfo = matchingLoan,
                                 onLongPress = { voidTarget = item }
                             )
                         }
@@ -870,6 +903,349 @@ fun PartyLedgerScreen(
         )
     }
 
+    // Settlement Modal (हिसाब चुकता - Direction B Final)
+    if (showSettlementDialog) {
+        val nonVoidBuys = uiState.ledgerItems.filterIsInstance<LedgerItem.BuyItem>()
+            .map { it.buy }
+            .filter { !it.isVoid && it.paidPaisa < it.netPayablePaisa }
+        val nonVoidSells = uiState.ledgerItems.filterIsInstance<LedgerItem.SellItem>()
+            .map { it.sell }
+            .filter { !it.isVoid && it.balanceDuePaisa > 0 }
+        val openLoans = uiState.openLoans.filter { it.outstandingPaisa > 0 }
+
+        var selectedTargetType by remember {
+            mutableStateOf(
+                when {
+                    nonVoidBuys.isNotEmpty() -> "BUY"
+                    openLoans.isNotEmpty() -> "LOAN"
+                    nonVoidSells.isNotEmpty() -> "SELL"
+                    else -> "NONE"
+                }
+            )
+        }
+        var selectedBuyId by remember { mutableStateOf(nonVoidBuys.firstOrNull()?.id) }
+        var selectedLoanId by remember { mutableStateOf(openLoans.firstOrNull()?.lend?.id) }
+        var selectedSellId by remember { mutableStateOf(nonVoidSells.firstOrNull()?.id) }
+        var isFullSettle by remember { mutableStateOf(true) }
+        var partialAmountInput by remember { mutableStateOf("") }
+        var settlementNote by remember { mutableStateOf("") }
+
+        val activeTargetMaxPaisa = when (selectedTargetType) {
+            "BUY" -> nonVoidBuys.find { it.id == selectedBuyId }?.let { it.netPayablePaisa - it.paidPaisa } ?: 0L
+            "LOAN" -> openLoans.find { it.lend.id == selectedLoanId }?.let { it.outstandingPaisa + it.interestDuePaisa } ?: 0L
+            "SELL" -> nonVoidSells.find { it.id == selectedSellId }?.balanceDuePaisa ?: 0L
+            else -> 0L
+        }
+
+        val settlementAmountPaisa = if (isFullSettle) {
+            activeTargetMaxPaisa
+        } else {
+            (partialAmountInput.toLongOrNull() ?: 0L) * 100L
+        }
+
+        AlertDialog(
+            onDismissRequest = { showSettlementDialog = false },
+            title = {
+                Text(
+                    text = if (isEnglish) "Settle Account (Hisab Chukta)" else "हिसाब चुकता",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (nonVoidBuys.isEmpty() && openLoans.isEmpty() && nonVoidSells.isEmpty()) {
+                        Text(
+                            text = if (isEnglish) "No pending slips or loans to settle for this party." else "इस खातेदार की कोई बकाया पर्ची या ऋण नहीं है।",
+                            color = MandiTextSecondary,
+                            fontSize = 14.sp
+                        )
+                    } else {
+                        Text(
+                            text = if (isEnglish) "Choose slip or loan to settle:" else "चुकता करने के लिए पर्ची या ऋण चुनें:",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextPrimary
+                        )
+
+                        // Target Selector
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // 1. Buy Slips
+                            nonVoidBuys.forEach { buy ->
+                                val due = buy.netPayablePaisa - buy.paidPaisa
+                                val isSelected = selectedTargetType == "BUY" && selectedBuyId == buy.id
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) MandiPrimaryAction else MandiBorder,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .background(if (isSelected) MandiSurfaceElevated else MandiSurface)
+                                        .clickable {
+                                            selectedTargetType = "BUY"
+                                            selectedBuyId = buy.id
+                                        }
+                                        .padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isEnglish) "Purchase Slip #${slipLabel(buy.slipNo, buy.id)}" else "खरीद पर्ची #${slipLabel(buy.slipNo, buy.id)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MandiTextPrimary
+                                        )
+                                        Text(
+                                            text = if (isEnglish) "Pending payment (We pay)" else "बाकी, हमें देना है",
+                                            fontSize = 11.sp,
+                                            color = MandiTextSecondary
+                                        )
+                                    }
+                                    Text(
+                                        text = "₹${MandiMathEngine.paisaToRupeesString(due)}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MandiRedPayable
+                                    )
+                                }
+                            }
+
+                            // 2. Open Loans
+                            openLoans.forEach { loan ->
+                                val totalDue = loan.outstandingPaisa + loan.interestDuePaisa
+                                val isSelected = selectedTargetType == "LOAN" && selectedLoanId == loan.lend.id
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) MandiPrimaryAction else MandiBorder,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .background(if (isSelected) MandiSurfaceElevated else MandiSurface)
+                                        .clickable {
+                                            selectedTargetType = "LOAN"
+                                            selectedLoanId = loan.lend.id
+                                        }
+                                        .padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isEnglish) "Loan #${slipLabel(loan.lend.slipNo, loan.lend.id)}" else "उधार #${slipLabel(loan.lend.slipNo, loan.lend.id)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MandiTextPrimary
+                                        )
+                                        Text(
+                                            text = if (loan.interestDuePaisa > 0) (if (isEnglish) "With interest (We receive)" else "ब्याज सहित (हमें लेना है)") else (if (isEnglish) "Principal (We receive)" else "मूलधन (हमें लेना है)"),
+                                            fontSize = 11.sp,
+                                            color = MandiTextSecondary
+                                        )
+                                    }
+                                    Text(
+                                        text = "₹${MandiMathEngine.paisaToRupeesString(totalDue)}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MandiGreenReceivable
+                                    )
+                                }
+                            }
+
+                            // 3. Sell Slips
+                            nonVoidSells.forEach { sell ->
+                                val due = sell.balanceDuePaisa
+                                val isSelected = selectedTargetType == "SELL" && selectedSellId == sell.id
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) MandiPrimaryAction else MandiBorder,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .background(if (isSelected) MandiSurfaceElevated else MandiSurface)
+                                        .clickable {
+                                            selectedTargetType = "SELL"
+                                            selectedSellId = sell.id
+                                        }
+                                        .padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isEnglish) "Sale Slip #${slipLabel(sell.slipNo, sell.id)}" else "बिक्री पर्ची #${slipLabel(sell.slipNo, sell.id)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MandiTextPrimary
+                                        )
+                                        Text(
+                                            text = if (isEnglish) "Due from buyer (We receive)" else "व्यापारी से बाकी (लेना है)",
+                                            fontSize = 11.sp,
+                                            color = MandiTextSecondary
+                                        )
+                                    }
+                                    Text(
+                                        text = "₹${MandiMathEngine.paisaToRupeesString(due)}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MandiGreenReceivable
+                                    )
+                                }
+                            }
+                        }
+
+                        // Full vs Partial Mode
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { isFullSettle = true },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isFullSettle) MandiPrimaryAction else MandiSurfaceElevated,
+                                    contentColor = if (isFullSettle) MandiPrimaryActionText else MandiTextPrimary
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(if (isEnglish) "Full" else "पूरा चुकता", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            Button(
+                                onClick = { isFullSettle = false },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (!isFullSettle) MandiPrimaryAction else MandiSurfaceElevated,
+                                    contentColor = if (!isFullSettle) MandiPrimaryActionText else MandiTextPrimary
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(if (isEnglish) "Partial" else "आंशिक", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+
+                        if (!isFullSettle) {
+                            OutlinedTextField(
+                                value = partialAmountInput,
+                                onValueChange = { partialAmountInput = it.filter(Char::isDigit) },
+                                label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = settlementNote,
+                            onValueChange = { settlementNote = it },
+                            label = { Text(if (isEnglish) "Note (optional)" else "विवरण / नोट (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Cash Impact Strip
+                        val cashDirectionText = when (selectedTargetType) {
+                            "BUY" -> if (isEnglish) "Cash goes OUT of Galla (paid to farmer)" else "गल्ले से नकद निकलेगा (किसान को भुगतान)"
+                            "LOAN" -> if (isEnglish) "Cash comes INTO Galla (loan repayment)" else "गल्ले में नकद आएगा (उधार वापसी)"
+                            "SELL" -> if (isEnglish) "Cash comes INTO Galla (received from buyer)" else "गल्ले में नकद आएगा (व्यापारी से वसूली)"
+                            else -> ""
+                        }
+                        if (settlementAmountPaisa > 0L) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MandiNeutralLight)
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "₹${MandiMathEngine.paisaToRupeesString(settlementAmountPaisa)} - $cashDirectionText",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MandiTextPrimary
+                                )
+                                if (selectedTargetType == "BUY") {
+                                    Text(
+                                        text = if (isEnglish) "Slip updates with revised payment status and revised mark." else "पर्ची संशोधित मार्क और अद्यतन भुगतान के साथ अपडेट होगी।",
+                                        fontSize = 11.sp,
+                                        color = MandiTextMuted
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                val canSave = settlementAmountPaisa > 0L && settlementAmountPaisa <= activeTargetMaxPaisa
+                Button(
+                    onClick = {
+                        when (selectedTargetType) {
+                            "BUY" -> {
+                                selectedBuyId?.let { buyId ->
+                                    viewModel.settleBuySlip(
+                                        buyId = buyId,
+                                        amountPaisa = settlementAmountPaisa,
+                                        note = settlementNote.ifBlank { null }
+                                    )
+                                }
+                            }
+                            "LOAN" -> {
+                                selectedLoanId?.let { loanId ->
+                                    val loanInfo = openLoans.find { it.lend.id == loanId }
+                                    val interestDue = loanInfo?.interestDuePaisa ?: 0L
+                                    val interestPaid = minOf(settlementAmountPaisa, interestDue)
+                                    viewModel.repayLoan(
+                                        lendId = loanId,
+                                        paymentPaisa = settlementAmountPaisa,
+                                        interestPaisa = interestPaid,
+                                        calculatedInterestPaisa = interestDue,
+                                        note = settlementNote.ifBlank { null }
+                                    )
+                                }
+                            }
+                            "SELL" -> {
+                                selectedSellId?.let { sellId ->
+                                    viewModel.settleSellSlip(
+                                        sellId = sellId,
+                                        amountPaisa = settlementAmountPaisa,
+                                        note = settlementNote.ifBlank { null }
+                                    )
+                                }
+                            }
+                        }
+                        showSettlementDialog = false
+                    },
+                    enabled = canSave,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    )
+                ) {
+                    Text(if (isEnglish) "Confirm Settlement" else "सुरक्षित करें", fontWeight = FontWeight.Bold, color = MandiPrimaryActionText)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettlementDialog = false }) {
+                    Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
+                }
+            }
+        )
+    }
+
     repayDialogLoanId?.let { loanId ->
         val loanInfo = uiState.openLoans.find { it.lend.id == loanId }
         if (loanInfo == null) {
@@ -1284,6 +1660,7 @@ private fun FintechBuyCard(
     val weightText = "${MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
     val rateText = "₹${MandiMathEngine.paisaToRupeesString(buy.ratePaisaPerQuintal)}/${if (isEnglish) "Qtl" else "क्विंटल"}"
     val netRupees = MandiMathEngine.paisaToRupeesString(buy.netPayablePaisa)
+    val balanceDuePaisa = (buy.netPayablePaisa - buy.paidPaisa).coerceAtLeast(0L)
 
     Box(
         modifier = Modifier
@@ -1322,20 +1699,78 @@ private fun FintechBuyCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    if (buy.revision > 1) {
+                        Text(
+                            text = if (isEnglish) "Revised" else "संशोधित",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiAmberDark,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MandiAmberLight)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
                 }
 
                 Text(
-                    text = formatEpochDate(buy.entryDate),
-                    fontSize = 12.sp,
-                    color = MandiTextMuted
+                    text = "₹$netRupees",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
                 )
             }
 
             Text(
                 text = "$cropName • $bagsText • $weightText (@ $rateText)",
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 color = MandiTextSecondary
             )
+
+            // Breakdown Tile (Paid & Left)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MandiSurfaceElevated)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isEnglish) "Paid" else "भुगतान हुआ",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    Text(
+                        text = "₹${MandiMathEngine.paisaToRupeesString(buy.paidPaisa)}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MandiTextPrimary
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isEnglish) "Left (To pay)" else "बाकी (देना है)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (balanceDuePaisa > 0) MandiRedPayable else MandiGreenReceivable
+                    )
+                    Text(
+                        text = "₹${MandiMathEngine.paisaToRupeesString(balanceDuePaisa)}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (balanceDuePaisa > 0) MandiRedPayable else MandiGreenReceivable
+                    )
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1343,17 +1778,15 @@ private fun FintechBuyCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isEnglish) "To pay (Payable)" else "देना है (Payable)",
-                    fontSize = 12.sp,
-                    color = MandiRedPayable,
-                    fontWeight = FontWeight.Medium
+                    text = "${if (buy.revision > 1) (if (isEnglish) "Revised · " else "संशोधित · ") else ""}${formatEpochDate(buy.entryDate)}",
+                    fontSize = 11.sp,
+                    color = MandiTextMuted
                 )
                 Text(
-                    text = "₹$netRupees",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiRedPayable,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    text = if (isEnglish) "View slip →" else "पर्ची देखें →",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MandiPrimaryAction
                 )
             }
 
@@ -1384,6 +1817,7 @@ private fun FintechSellCard(
     val weightText = "${MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
     val rateText = "₹${MandiMathEngine.paisaToRupeesString(sell.ratePaisaPerQuintal)}/${if (isEnglish) "Qtl" else "क्विंटल"}"
     val grossRupees = MandiMathEngine.paisaToRupeesString(sell.totalReceivablePaisa)
+    val balanceDuePaisa = sell.balanceDuePaisa
 
     Box(
         modifier = Modifier
@@ -1422,20 +1856,78 @@ private fun FintechSellCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    if (sell.revision > 1) {
+                        Text(
+                            text = if (isEnglish) "Revised" else "संशोधित",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiAmberDark,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MandiAmberLight)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
                 }
 
                 Text(
-                    text = formatEpochDate(sell.entryDate),
-                    fontSize = 12.sp,
-                    color = MandiTextMuted
+                    text = "₹$grossRupees",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
                 )
             }
 
             Text(
                 text = "$cropName • $bagsText • $weightText (@ $rateText)",
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 color = MandiTextSecondary
             )
+
+            // Breakdown Tile (Received & Left)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MandiSurfaceElevated)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isEnglish) "Received" else "वसूली हुई",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    Text(
+                        text = "₹${MandiMathEngine.paisaToRupeesString(sell.receivedPaisa)}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MandiTextPrimary
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isEnglish) "Left (To receive)" else "बाकी (लेना है)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (balanceDuePaisa > 0) MandiGreenReceivable else MandiTextSecondary
+                    )
+                    Text(
+                        text = "₹${MandiMathEngine.paisaToRupeesString(balanceDuePaisa)}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (balanceDuePaisa > 0) MandiGreenReceivable else MandiTextSecondary
+                    )
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1443,17 +1935,15 @@ private fun FintechSellCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isEnglish) "To receive (Receivable)" else "लेना है (Receivable)",
-                    fontSize = 12.sp,
-                    color = MandiGreenReceivable,
-                    fontWeight = FontWeight.Medium
+                    text = "${if (sell.revision > 1) (if (isEnglish) "Revised · " else "संशोधित · ") else ""}${formatEpochDate(sell.entryDate)}",
+                    fontSize = 11.sp,
+                    color = MandiTextMuted
                 )
                 Text(
-                    text = "₹$grossRupees",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiGreenReceivable,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    text = if (isEnglish) "View slip →" else "पर्ची देखें →",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MandiPrimaryAction
                 )
             }
 
@@ -1474,12 +1964,17 @@ private fun FintechSellCard(
 private fun FintechLendCard(
     isEnglish: Boolean,
     lend: com.appwork.mandisamiti.domain.model.LendEntry,
+    loanInfo: OpenLoanInfo? = null,
     onLongPress: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = lend.isVoid
     val amountRupees = MandiMathEngine.paisaToRupeesString(lend.amountPaisa)
     val isAdvanceGiven = lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY
+    val outstandingPaisa = loanInfo?.outstandingPaisa ?: lend.amountPaisa
+    val interestDuePaisa = loanInfo?.interestDuePaisa ?: 0L
+    val repaidPaisa = (lend.amountPaisa - outstandingPaisa).coerceAtLeast(0L)
+    val totalLeftPaisa = outstandingPaisa + interestDuePaisa
 
     Box(
         modifier = Modifier
@@ -1521,38 +2016,103 @@ private fun FintechLendCard(
                 }
 
                 Text(
-                    text = formatEpochDate(lend.createdAt),
-                    fontSize = 12.sp,
-                    color = MandiTextMuted
+                    text = "₹$amountRupees",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
                 )
+            }
+
+            Text(
+                text = "${if (isEnglish) "Principal · cash given · " else "मूल · नकद दिया · "}${formatEpochDate(lend.createdAt)}",
+                fontSize = 12.sp,
+                color = MandiTextSecondary
+            )
+
+            if (isAdvanceGiven) {
+                // Direction B Final Breakdown Tile
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MandiSurfaceElevated)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (interestDuePaisa > 0L) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = if (isEnglish) "Interest" else "ब्याज", fontSize = 12.sp, color = MandiTextSecondary)
+                            Text(text = "₹${MandiMathEngine.paisaToRupeesString(interestDuePaisa)}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MandiAmberDark)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = if (isEnglish) "Repaid" else "वापस मिला", fontSize = 12.sp, color = MandiTextSecondary)
+                        Text(text = "₹${MandiMathEngine.paisaToRupeesString(repaidPaisa)}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MandiTextPrimary)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = if (isEnglish) "Left" else "बाकी", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MandiGreenReceivable)
+                        Text(text = "₹${MandiMathEngine.paisaToRupeesString(totalLeftPaisa)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiGreenReceivable)
+                    }
+                    if (interestDuePaisa > 0L) {
+                        Text(
+                            text = if (isEnglish) "Principal ₹${MandiMathEngine.paisaToRupeesString(outstandingPaisa)} + Interest ₹${MandiMathEngine.paisaToRupeesString(interestDuePaisa)}" else "मूल ₹${MandiMathEngine.paisaToRupeesString(outstandingPaisa)} + ब्याज ₹${MandiMathEngine.paisaToRupeesString(interestDuePaisa)}",
+                            fontSize = 11.sp,
+                            color = MandiTextMuted
+                        )
+                    }
+                }
+
+                // Nested Repayments List if any
+                val settlements = loanInfo?.settlements ?: emptyList()
+                if (settlements.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Repayments" else "वापसी",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        settlements.forEach { s ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "${formatEpochDate(s.settledAt)} · ${if (isEnglish) "Cash" else "नकद"}",
+                                    fontSize = 11.sp,
+                                    color = MandiTextSecondary
+                                )
+                                Text(
+                                    text = "+₹${MandiMathEngine.paisaToRupeesString(s.amountPaisa)}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiGreenReceivable
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             val lendNote = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(lend.notes)
             if (lendNote != null) {
                 Text(
                     text = lendNote,
-                    fontSize = 13.sp,
-                    color = MandiTextSecondary
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isAdvanceGiven) if (isEnglish) "To receive (Receivable)" else "लेना है (Receivable)" else "बोरी वापस लेना है",
                     fontSize = 12.sp,
-                    color = if (isAdvanceGiven) MandiGreenReceivable else MandiTextSecondary,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "₹$amountRupees",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isAdvanceGiven) MandiGreenReceivable else MandiTextPrimary,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    color = MandiTextSecondary
                 )
             }
 
