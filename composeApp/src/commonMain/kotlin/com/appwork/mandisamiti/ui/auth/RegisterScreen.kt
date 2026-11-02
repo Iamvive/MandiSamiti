@@ -201,9 +201,7 @@ fun RegisterScreen(
                     ) {
                         StepDot(number = "1", label = "फ़ोन", isActive = uiState.step == AuthStep.PHONE, isDone = uiState.step != AuthStep.PHONE)
                         StepDivider()
-                        StepDot(number = "2", label = "OTP", isActive = uiState.step == AuthStep.OTP, isDone = uiState.step == AuthStep.NEW_SHOP || uiState.step == AuthStep.ENTER_MPIN)
-                        StepDivider()
-                        StepDot(number = "3", label = "MPIN", isActive = uiState.step == AuthStep.NEW_SHOP || uiState.step == AuthStep.ENTER_MPIN, isDone = false)
+                        StepDot(number = "2", label = "MPIN", isActive = uiState.step == AuthStep.NEW_SHOP || uiState.step == AuthStep.ENTER_MPIN, isDone = false)
                     }
                 }
             }
@@ -239,24 +237,10 @@ fun RegisterScreen(
                         PhoneSection(
                             phoneNumber = uiState.phoneNumber,
                             phoneError = uiState.phoneError,
-                            isValid = uiState.isStep1Valid,
+                            isValid = uiState.isPhoneValid,
                             isLoading = uiState.isLoading,
                             onPhoneChange = viewModel::onPhoneNumberChanged,
                             onSubmit = viewModel::submitPhone
-                        )
-                    }
-
-                    AuthStep.OTP -> {
-                        OtpVerificationSection(
-                            phoneNumber = uiState.phoneNumber,
-                            otp = uiState.otp,
-                            otpError = uiState.otpError,
-                            cooldownSeconds = uiState.resendCooldownSeconds,
-                            isResendEnabled = uiState.isResendEnabled,
-                            isLoading = uiState.isLoading,
-                            onOtpChange = viewModel::onOtpChanged,
-                            onSubmit = viewModel::submitOtp,
-                            onResend = viewModel::resendOtp
                         )
                     }
 
@@ -421,129 +405,6 @@ private fun PhoneSection(
         }
     }
 }
-
-@Composable
-private fun OtpVerificationSection(
-    phoneNumber: String,
-    otp: String,
-    otpError: String?,
-    cooldownSeconds: Int,
-    isResendEnabled: Boolean,
-    isLoading: Boolean,
-    onOtpChange: (String) -> Unit,
-    onSubmit: () -> Unit,
-    onResend: () -> Unit
-) {
-    val focusManager = LocalFocusManager.current
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MandiSurface),
-        border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(MandiGreenLight.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Security,
-                    contentDescription = null,
-                    tint = MandiGreenReceivable,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-
-            Text(
-                text = "सुरक्षा कोड दर्ज करें",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MandiTextPrimary
-            )
-
-            Text(
-                text = "+91 $phoneNumber पर 6-अंकों का OTP भेजा गया है",
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                color = MandiTextSecondary
-            )
-
-            OutlinedTextField(
-                value = otp,
-                onValueChange = { if (it.length <= 6) onOtpChange(it) },
-                label = { Text("6-अंकीय OTP कोड") },
-                placeholder = { Text("1 2 3 4 5 6", color = MandiTextSecondary, textAlign = TextAlign.Center) },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.NumberPassword,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus()
-                        if (otp.length == 6 && !isLoading) onSubmit()
-                    }
-                ),
-                singleLine = true,
-                isError = otpError != null,
-                supportingText = {
-                    if (otpError != null) {
-                        Text(otpError, color = MandiRedText, fontSize = 11.sp)
-                    }
-                },
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    letterSpacing = 6.sp
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                colors = textFieldColors()
-            )
-
-            AuthActionButton(
-                text = "OTP सत्यापित करें",
-                enabled = otp.length == 6,
-                isLoading = isLoading,
-                onClick = onSubmit,
-                leadingIcon = Icons.Default.Check,
-                containerColor = MandiBtnSuccessBg,
-                contentColor = MandiBtnSuccessFg
-            )
-
-            // Resend Countdown Throttler
-            if (isResendEnabled && !isLoading) {
-                Text(
-                    text = "OTP पुनः भेजें",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiAmberDark,
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .clickable { onResend() }
-                        .wrapContentHeight(Alignment.CenterVertically)
-                )
-            } else {
-                Text(
-                    text = if (isResendEnabled) "OTP पुनः भेजें" else "OTP पुनः भेजें (${cooldownSeconds}s)",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MandiTextSecondary
-                )
-            }
-        }
-    }
-}
-
 
 @Composable
 private fun NewShopSection(
