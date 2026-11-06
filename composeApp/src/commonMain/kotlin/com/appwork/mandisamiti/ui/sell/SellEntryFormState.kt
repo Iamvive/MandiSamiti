@@ -15,6 +15,7 @@ import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.domain.model.TradeSettings
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import com.appwork.mandisamiti.domain.validation.ValidationResult
+import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -271,7 +272,7 @@ class SellEntryFormState(
 
     fun toSellEntry(existingId: String? = null, shopId: String = "shop-default"): SellEntry {
         val preview = aggregatePreview()
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val lotsJson = Json.encodeToString(preview.lots)
 
         val firstLot = preview.lots.firstOrNull()

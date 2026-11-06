@@ -255,7 +255,7 @@ private fun LendCard(
 ) {
     val isMoney = entry.lendType == LendType.MONEY
     val returnDate = entry.expectedReturnDate
-    val isOverdue = returnDate != null && returnDate < System.currentTimeMillis()
+    val isOverdue = returnDate != null && returnDate < Clock.System.now().toEpochMilliseconds()
 
     Card(
         modifier = Modifier
@@ -322,7 +322,7 @@ private fun LendCard(
 
             val dueDateText = LendDateFormatter.formatDueDate(
                 returnEpochMillis = entry.expectedReturnDate,
-                currentEpochMillis = System.currentTimeMillis()
+                currentEpochMillis = Clock.System.now().toEpochMilliseconds()
             )
             if (!dueDateText.isNullOrBlank()) {
                 Text(
