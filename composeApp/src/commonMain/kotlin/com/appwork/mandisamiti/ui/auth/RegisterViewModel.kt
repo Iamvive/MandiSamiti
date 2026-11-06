@@ -226,8 +226,14 @@ class RegisterViewModel(
                 resetToPhone("इस फ़ोन पर दूसरी दुकान की प्रविष्टियाँ अभी सर्वर पर नहीं गईं — पहले उस दुकान से लॉगिन करके सिंक करें")
             is AuthError.PhoneAlreadyRegistered ->
                 resetToPhone("यह नंबर पहले से रजिस्टर है — दोबारा कोशिश करें")
+            is AuthError.Network ->
+                showError(if (error.causeMessage.startsWith("HTTP ")) {
+                    "सर्वर में समस्या है — थोड़ी देर बाद दोबारा कोशिश करें"
+                } else {
+                    "नेटवर्क नहीं है — दोबारा कोशिश करें"
+                })
             else ->
-                showError("नेटवर्क नहीं है — दोबारा कोशिश करें")
+                showError("कुछ गड़बड़ हुई — दोबारा कोशिश करें")
         }
     }
 

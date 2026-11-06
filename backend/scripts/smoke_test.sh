@@ -27,10 +27,10 @@ if [[ "$READY_RES" != *"\"status\":\"ready\""* ]]; then
   exit 1
 fi
 
-OTP_RES=$(curl -s -X POST "$TARGET_URL/api/v1/auth/otp/send" -H "Content-Type: application/json" -d '{"phone": "9876543210"}')
-echo "OTP Send Response: $OTP_RES"
-if [[ "$OTP_RES" != *"sent"* ]]; then
-  echo "❌ OTP send check failed!"
+PHONE_RES=$(curl -s -X POST "$TARGET_URL/api/v1/auth/check-phone" -H "Content-Type: application/json" -d '{"phone": "9876543210"}')
+echo "Check-phone Response: $PHONE_RES"
+if [[ "$PHONE_RES" != *"is_new_user"* ]]; then
+  echo "❌ Check-phone check failed!"
   exit 1
 fi
 

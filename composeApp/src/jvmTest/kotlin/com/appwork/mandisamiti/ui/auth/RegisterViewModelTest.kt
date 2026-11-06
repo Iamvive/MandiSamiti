@@ -195,8 +195,17 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun networkFailure_showsNoNetworkMessage() = runTest {
+    fun serverFailure_showsServerErrorMessage() = runTest {
         val f = fixture { json(HttpStatusCode.ServiceUnavailable, "{}") }
+        f.enterPhone()
+        val s = f.vm.uiState.first { it.generalErrorMessage != null }
+        assertEquals("सर्वर में समस्या है — थोड़ी देर बाद दोबारा कोशिश करें", s.generalErrorMessage)
+        assertEquals(AuthStep.PHONE, s.step)
+    }
+
+    @Test
+    fun networkFailure_showsNoNetworkMessage() = runTest {
+        val f = fixture { throw java.io.IOException("offline") }
         f.enterPhone()
         val s = f.vm.uiState.first { it.generalErrorMessage != null }
         assertEquals("नेटवर्क नहीं है — दोबारा कोशिश करें", s.generalErrorMessage)

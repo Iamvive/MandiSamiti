@@ -396,7 +396,7 @@ private fun PhoneSection(
             )
 
             AuthActionButton(
-                text = "OTP भेजें",
+                text = "आगे बढ़ें",
                 enabled = isValid,
                 isLoading = isLoading,
                 onClick = onSubmit,
