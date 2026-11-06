@@ -94,6 +94,22 @@ class BuyPartyResolverTest {
     }
 
     @Test
+    fun multiWordVillageKeepsSpacesWhileTypingAndWhenSaved() {
+        val f = BuyEntryFormState().apply { farmerName = "TEST नया"; updatePhone("9111111111") }
+        f.village = "Rampur Kalan"
+        assertEquals("Rampur Kalan", f.village)
+        assertEquals("Rampur Kalan", BuyPartyResolver.partyToSave(f, "shop", null, now = 1, newId = "n1")!!.village)
+    }
+
+    @Test
+    fun villageDigitsStayWhileTypingButAreCutAtSave() {
+        val f = BuyEntryFormState().apply { farmerName = "TEST नया"; updatePhone("9111111111") }
+        f.village = "Sector 5"
+        assertEquals("Sector 5", f.village)
+        assertEquals("Sector", BuyPartyResolver.partyToSave(f, "shop", null, now = 1, newId = "n2")!!.village)
+    }
+
+    @Test
     fun existingIsFoundByPickedIdOrExactPhone() {
         assertEquals("p1", BuyPartyResolver.existing(all, "p1", "")?.id)
         assertEquals("p1", BuyPartyResolver.existing(all, null, "9876543210")?.id)
