@@ -78,6 +78,7 @@ sealed interface Screen {
 
     // Revamp Screens (Tasks 11-15)
     data class BuyEntry(val existingId: String? = null) : Screen
+    data class BuyPayment(val entryId: String, val returnScreen: Screen? = null) : Screen
     data object BuyList : Screen
     data class BuyReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data class SellEntry(val existingId: String? = null) : Screen
@@ -92,6 +93,7 @@ sealed interface Screen {
 
 fun Screen.backTarget(): Screen = when (this) {
     is Screen.BuyEntry -> Screen.BuyList
+    is Screen.BuyPayment -> Screen.BuyReceipt(entryId, returnScreen)
     is Screen.BuyReceipt -> returnScreen ?: Screen.BuyList
     is Screen.BuyList -> Screen.Home
     is Screen.SellEntry -> Screen.SellList
@@ -228,7 +230,6 @@ fun App(
                         sellRepository = sellRepo,
                         lendRepository = lendRepo,
                         expenseRepository = expenseRepo,
-                        cashRepository = cashRepo,
                         stockUseCase = stockUseCase,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
@@ -439,29 +440,127 @@ fun App(
             is Screen.BuyEntry -> {
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val buyForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings) }
+                // Loan section: the picked or phone-matched party's oldest open money loan, with interest due as of now.
+                val loanPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, buyForm.selectedFarmerId, buyForm.phone)?.id
+                LaunchedEffect(loanPartyId, lends) {
+                    val open = lends
+                        .filter { !it.isVoid && it.partyId == loanPartyId && it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
+                        .sortedBy { it.entryDate }
+                    var found: Triple<String, Long, Long>? = null
+                    for (lend in open) {
+                        val live = lendRepo.getSettlements(lend.id).filter { !it.isVoid }
+                        val principal = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
+                        if (principal <= 0L) continue
+                        val rate = partyRepo.getPartyById(lend.partyId)?.monthlyInterestRate
+                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate ?: 1.5
+                        val interest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
+                            lend.amountPaisa, rate, lend.entryDate, live, kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                        )
+                        found = Triple(lend.id, principal, interest)
+                        break
+                    }
+                    if (found?.first != buyForm.loanLendId || found?.second != buyForm.loanPrincipalPaisa || found?.third != buyForm.loanInterestDuePaisa) {
+                        buyForm.setLoan(found?.first, found?.second ?: 0L, found?.third ?: 0L)
+                    }
+                    if (loanPartyId != null) {
+                        val partyCash = cashRepo.getTransactionsByPartyStream(loanPartyId).first()
+                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED }.sumOf { it.amountPaisa }
+                        buyForm.setDeposit(deposit)
+                    } else {
+                        buyForm.setDeposit(0L)
+                    }
+                }
                 BuyEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
                     buyRepository = buyRepo,
-                    partyRepository = partyRepo,
-                    cashRepository = cashRepo,
-                    lendRepository = lendRepo,
                     tradeSettings = tradeSettings,
+                    formState = buyForm,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     parties = parties,
                     activeLoanChecker = { farmerName ->
                         lends.any { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED && it.partyId.equals(farmerName, ignoreCase = true) }
                     },
-                    onSaved = { entry ->
+                    onSaved = { entry, party ->
                         coroutineScope.launch {
+                            if (screen.existingId == null) {
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val advance = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = entry.shopId,
+                                    partyId = entry.farmerId,
+                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                    amountPaisa = entry.advancePaidPaisa,
+                                    transactionDate = now,
+                                    createdAt = now,
+                                    updatedAt = now,
+                                )
+                                buyRepo.saveBuyCheckout(
+                                    entry, party,
+                                    if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
+                                    buyForm.buildLoanCut(entry.shopId, now),
+                                )
+                            } else {
+                                buyRepo.editBuyEntry(entry)
+                            }
                             syncScheduler.scheduleOneTimeSync()
+                            currentScreen = if (screen.existingId == null) {
+                                Screen.BuyPayment(entry.id)
+                            } else {
+                                Screen.BuyReceipt(entry.id)
+                            }
                         }
                     },
-                    onBack = { currentScreen = screen.backTarget() },
-                    onShareWhatsApp = { slipText ->
-                        whatsAppShareManager.shareText(slipText, null)
-                    }
+                    onBack = { currentScreen = screen.backTarget() }
                 )
+            }
+            is Screen.BuyPayment -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
+                var paymentParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+                LaunchedEffect(screen.entryId) {
+                    buyEntry = buyRepo.getBuyEntryById(screen.entryId)
+                    paymentParty = buyEntry?.farmerId?.let { partyRepo.getPartyById(it) }
+                }
+                buyEntry?.let { entry ->
+                    com.appwork.mandisamiti.ui.buy.BuyPaymentScreen(
+                        entry = entry,
+                        farmerName = paymentParty?.name ?: entry.farmerId,
+                        isEnglish = tradeSettings?.isEnglish ?: false,
+                        onSavePayment = { paidAmtPaisa ->
+                            coroutineScope.launch {
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = entry.shopId,
+                                    partyId = entry.farmerId,
+                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                    amountPaisa = paidAmtPaisa,
+                                    transactionDate = now,
+                                    paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                    remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
+                                    createdAt = now,
+                                    updatedAt = now,
+                                    sourceEntryType = "BUY",
+                                    sourceEntryId = entry.id,
+                                )
+                                cashRepo.recordTransaction(tx)
+                                val updated = entry.copy(
+                                    paidPaisa = entry.paidPaisa + paidAmtPaisa,
+                                    updatedAt = now,
+                                    revision = entry.revision + 1L
+                                )
+                                buyRepo.editBuyEntry(updated)
+                                syncScheduler.scheduleOneTimeSync()
+                                currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
+                            }
+                        },
+                        onSkip = {
+                            currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
+                        }
+                    )
+                }
             }
             is Screen.BuyList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
@@ -499,6 +598,8 @@ fun App(
                     partyVillage = receiptParty?.village,
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
                     onEdit = { currentScreen = Screen.BuyEntry(it) },
+                    onNewBuy = { currentScreen = Screen.BuyEntry(null) },
+                    isEnglish = tradeSettings?.isEnglish ?: false,
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }

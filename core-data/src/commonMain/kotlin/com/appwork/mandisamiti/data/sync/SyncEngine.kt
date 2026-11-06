@@ -143,6 +143,8 @@ class SyncEngine(
                 transaction_date = it.transaction_date,
                 voice_note_uri = it.voice_note_uri,
                 remarks = it.remarks,
+                source_entry_type = it.source_entry_type,
+                source_entry_id = it.source_entry_id,
                 is_void = it.is_void.toInt(),
                 void_reason = it.void_reason,
                 revision = it.revision.toInt(),
@@ -396,7 +398,9 @@ class SyncEngine(
                         sync_status = 1L,
                         revision = t.revision.toLong(),
                         is_void = t.is_void.toLong(),
-                        void_reason = t.void_reason
+                        void_reason = t.void_reason,
+                        source_entry_type = t.source_entry_type,
+                        source_entry_id = t.source_entry_id
                     )
                 }
 

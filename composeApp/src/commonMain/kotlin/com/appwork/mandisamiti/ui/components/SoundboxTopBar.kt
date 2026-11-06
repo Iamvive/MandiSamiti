@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +55,38 @@ fun SoundboxTopBar(
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     val soundBtnShape = RoundedCornerShape(20.dp)
-    val monogramInitial = shopName.trim().take(1).ifEmpty { "मं" }
+    val monogramInitial = remember(shopName) {
+        val trimmed = shopName.trim()
+        if (trimmed.isEmpty()) {
+            "मं"
+        } else {
+            val chars = trimmed.toCharArray()
+            val buf = StringBuilder()
+            var i = 0
+            while (i < chars.size) {
+                buf.append(chars[i])
+                i++
+                // Handle Devanagari virama / halant (0x094D) to keep conjuncts (e.g. क्ष for क्षितिज, श्र for श्री)
+                if (i < chars.size && chars[i] == '\u094D') {
+                    buf.append(chars[i])
+                    i++
+                    if (i < chars.size) {
+                        buf.append(chars[i])
+                        i++
+                    }
+                    continue
+                }
+                // Include nukta if present
+                if (i < chars.size && chars[i] == '\u093C') {
+                    buf.append(chars[i])
+                    i++
+                    continue
+                }
+                break
+            }
+            buf.toString()
+        }
+    }
 
     Row(
         modifier = modifier

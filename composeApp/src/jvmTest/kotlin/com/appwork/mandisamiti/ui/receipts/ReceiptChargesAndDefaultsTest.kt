@@ -23,7 +23,7 @@ class ReceiptChargesAndDefaultsTest {
 
         assertEquals("1.50", form.commissionPercent)
         assertEquals("150", form.labourPerBag)
-        assertEquals("0.35", form.tareQuintals)
+        assertEquals("", form.tareQuintals) // tare removed for new Buy slips (2026-10-31)
     }
 
     @Test
@@ -62,7 +62,7 @@ class ReceiptChargesAndDefaultsTest {
 
         assertEquals("1.50", form2.commissionPercent)
         assertEquals("150", form2.labourPerBag)
-        assertEquals("0.35", form2.tareQuintals)
+        assertEquals("", form2.tareQuintals)
 
         // Shop defaults remain completely unchanged
         assertEquals(150L, shopDefaults.farmerCommissionBps)

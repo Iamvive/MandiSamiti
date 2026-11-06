@@ -42,7 +42,7 @@ In a sunny, noisy Mathura mandi yard with a farmer waiting, the app forces exces
 | **Accessibility** | 6.0 | 9.0 | Text contrast on tertiary text fails 4.5:1; missing ContentDescriptions on several action icon buttons. |
 | **Performance** | 8.5 | 9.5 | Clean JVM test suite (362 tests pass in 12s); debug APK 20MB, release APK 13MB; minimal recomposition waste. |
 | **Architecture** | 9.0 | 9.8 | Exemplary offline-first SQLite/SQLDelight structure, clean domain/data boundary, strict Long paisa/grams. |
-| **Security & Privacy** | 6.5 | 8.8 | Plain HTTP on staging accepted for pilot; static OTP code 123456 must be hardened before commercial rollout. |
+| **Security & Privacy** | 6.5 | 8.8 | Plain HTTP on staging accepted for pilot; static OTP code must be hardened before commercial rollout. |
 | **Business & Growth** | 5.5 | 9.2 | WhatsApp bill lacks shop branding/panache; missing single-tap referral loop for peer aadhatis. |
 | **Brand & Polish** | 5.0 | 9.2 | Feels like an internal accounting tool; lacks authentic Mandi identity, logo character, and physical bahi warmth. |
 

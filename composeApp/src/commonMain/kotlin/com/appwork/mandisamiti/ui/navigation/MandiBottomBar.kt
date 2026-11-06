@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +73,7 @@ fun MandiBottomBar(
                         .background(if (isSelected) MandiSurfaceElevated else MandiSurface)
                         .clickable(
                             interactionSource = interactionSource,
-                            indication = null
+                            indication = rememberRipple()
                         ) {
                             onTabSelected(tab)
                         },
@@ -90,7 +91,7 @@ fun MandiBottomBar(
                         )
                         Text(
                             text = tab.getTitle(isEnglish),
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = contentColor
                         )

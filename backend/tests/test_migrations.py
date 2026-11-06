@@ -64,6 +64,9 @@ def test_alembic_upgrade_and_downgrade():
             lend_cols = {col["name"] for col in inspector.get_columns("lend_entries")}
             assert "slip_no" in lend_cols
 
+            tx_cols = {col["name"] for col in inspector.get_columns("cash_transactions")}
+            assert {"source_entry_type", "source_entry_id"} <= tx_cols
+
             party_cols = {col["name"] for col in inspector.get_columns("parties")}
             assert {"gstin", "mandi_license"} <= party_cols
         finally:

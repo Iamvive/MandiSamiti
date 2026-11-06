@@ -13,7 +13,7 @@ Evidence Folder: `docs/testing/evidence/pilot-rehearsal-2026-10-31/`
 The full end-to-end Task D1 physical device rehearsal was conducted on the physical Redmi Note running the exact `20,890,987`-byte exported APK (`exports/mandisamiti-pilot-debug.apk`). All test flows, math calculations, UI screens, double-entry ledgers, offline resilience, and staging database sync round-trips **PASSED** with zero blockers.
 
 - **APK Verification**: Tested exact exported build (`20,890,987` bytes), not a local recompilation.
-- **Login & Shop Setup**: Phone `9876543210` authenticated with the 6-digit staging OTP (`826620`), shop profile created as `TEST Kisan Traders` (Mathura Mandi) with MPIN `1234`.
+- **Login & Shop Setup**: Phone `9876543210` authenticated with the 6-digit staging OTP (value removed), shop profile created as `TEST Kisan Traders` (Mathura Mandi) with an MPIN (value removed).
 - **Buy Entry (खरीद आवक #1)**: Farmer `TEST Ramesh`, Wheat (गेहूं), 10 bags, 4.65 Qtl @ ₹2,500/Qtl. Gross ₹11,625, deductions calculated accurately, net payable ₹9,950.62. Slip `#1` generated cleanly (`06_buy_receipt_parchi.png`).
 - **Sell Entry (बिक्री जावक #1)**: Buyer `TEST Suresh Traders`, Wheat (गेहूं), 10 bags, 4.65 Qtl @ ₹2,600/Qtl. Total receivable ₹13,771.35. Buyer slip `#1` generated cleanly (`07_sell_receipt_parchi.png`).
 - **Lend & Repayment (उधार व वापसी)**: Loan of ₹10,000 recorded to `TEST Ramesh` with 30-day due date (`08_lend_screen.png`). Repayments with principal and interest recorded (`18_repay_with_interest_saved.png`).
@@ -38,7 +38,7 @@ The full end-to-end Task D1 physical device rehearsal was conducted on the physi
 |---|---|---|---|---|
 | **APK Identity** | Exact 20,890,987 bytes | 20,890,987 bytes | **PASS** | `ls -la exports/mandisamiti-pilot-debug.apk` |
 | **Clean Install Launch** | Clean onboarding screen | Hindi welcome screen shown | **PASS** | `02_clean_launch_screen.png` |
-| **6-Digit Static OTP** | Verify OTP against VPS | Accepted OTP `826620` | **PASS** | `03_phone_entered.png` |
+| **6-Digit Static OTP** | Verify OTP against VPS | Accepted OTP (value removed) | **PASS** | `03_phone_entered.png` |
 | **Shop Setup & MPIN** | Create shop with 4-digit PIN | `TEST Kisan Traders` created | **PASS** | `04_dashboard_fresh.png` |
 | **Farmer Buy Slip #1** | Wheat 10 bags @ ₹2500, net ₹9,950.62 | Generated slip #1 | **PASS** | `06_buy_receipt_parchi.png` |
 | **Buyer Sell Slip #1** | Wheat 10 bags @ ₹2600, rec ₹13,771.35 | Generated slip #1 | **PASS** | `07_sell_receipt_parchi.png` |

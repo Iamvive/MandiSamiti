@@ -70,7 +70,7 @@ class OfflineFirstExpenseRepository(
                     deal_id = null, transaction_type = TransactionType.UDHAR_GIVEN.name, amount_paisa = edited.amountPaisa,
                     payment_mode = PaymentMode.CASH.name, transaction_date = edited.entryDate, voice_note_uri = null,
                     remarks = "$cashRemarks $tag", created_at = now, updated_at = now, is_deleted = 0L,
-                    sync_status = 0L, revision = 1L, is_void = 0L, void_reason = null,
+                    sync_status = 0L, revision = 1L, is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null
                 )
             } else {
                 linked.forEach { tx ->
@@ -90,7 +90,7 @@ class OfflineFirstExpenseRepository(
             transaction_date = tx.transaction_date, voice_note_uri = tx.voice_note_uri, remarks = remarks,
             created_at = tx.created_at, updated_at = now, is_deleted = tx.is_deleted, sync_status = 0L,
             revision = tx.revision + 1L, is_void = if (void) 1L else 0L,
-            void_reason = if (void) VoidReason.WRONG_ENTRY.name else null,
+            void_reason = if (void) VoidReason.WRONG_ENTRY.name else null, source_entry_type = null, source_entry_id = null
         )
         queries.insertRevision(
             id = IdGenerator.newId(), shop_id = tx.shop_id, entry_id = tx.id, entry_kind = "CASH",
@@ -136,7 +136,7 @@ class OfflineFirstExpenseRepository(
                 sync_status = 0L,
                 revision = txEntity.revision + 1L,
                 is_void = 1L,
-                void_reason = reason.name
+                void_reason = reason.name, source_entry_type = null, source_entry_id = null
             )
             queries.insertRevision(
                 id = IdGenerator.newId(),

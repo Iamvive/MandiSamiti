@@ -18,6 +18,8 @@ class CashTransaction(Base):
     voice_note_uri = Column(String, nullable=True)
     remarks = Column(String, nullable=True)
     category = Column(String(50), default="TRADE_PAYMENT")  # TRADE_PAYMENT, EXPENSE, CASH_DEPOSIT, DRAWING
+    source_entry_type = Column(String(20), nullable=True)  # BUY | SELL: slip this payment belongs to
+    source_entry_id = Column(String, nullable=True)
     soundbox_broadcasted = Column(Integer, default=0)
     
     is_void = Column(Integer, default=0)

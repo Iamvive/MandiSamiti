@@ -12,6 +12,8 @@ class CashTransactionBase(BaseModel):
     transaction_date: Optional[int] = None
     voice_note_uri: Optional[str] = None
     remarks: Optional[str] = None
+    source_entry_type: Optional[str] = None
+    source_entry_id: Optional[str] = None
     
     is_void: int = 0
     void_reason: Optional[str] = None

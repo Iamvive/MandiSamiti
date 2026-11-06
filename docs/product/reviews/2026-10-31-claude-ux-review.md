@@ -190,4 +190,4 @@ Answered by Vivek on 2026-11-01:
 These four are drawn in B final, published to the same artifact link (version `1793472977-e1bf`) and approved by Vivek on 2026-11-01, along with these mockup choices:
 - The ledger's देना है stays ₹20,560 (slip left ₹23,560 − loan principal ₹3,000) and says the ₹200 interest is not included. The running बाकी is dropped from B final.
 
-Open question for the Phase 3 plan: the sample पूरा amounts on the payment screens are larger than the ₹1,580 in Rokdi. What happens when a cash payment exceeds Rokdi is not decided.
+Answered 2026-11-01 (D1): Vivek says a cash payment larger than Rokdi will never happen, so no warning or block is built. The sample पूरा amounts on the payment screens being larger than the ₹1,580 in Rokdi is only mock data.
