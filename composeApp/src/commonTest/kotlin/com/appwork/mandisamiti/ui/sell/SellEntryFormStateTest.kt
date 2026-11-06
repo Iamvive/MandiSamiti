@@ -30,6 +30,8 @@ class SellEntryFormStateTest {
     fun normalCustomerSingleLotCalculation() {
         val state = SellEntryFormState()
         state.buyerName = "Ramesh Kumar"
+        state.updatePhone("9876543210")
+        state.village = "सीहोर"
         state.setParty(SellPartyKind.CUSTOMER)
         state.commissionPercent = "2"
         state.labourPerBag = "5"
@@ -64,6 +66,8 @@ class SellEntryFormStateTest {
     fun normalMerchantMultiLotCalculation() {
         val state = SellEntryFormState()
         state.buyerName = "Shree Agro Traders"
+        state.updatePhone("9876543210")
+        state.village = "सीहोर"
         state.setParty(SellPartyKind.MERCHANT)
         state.setMode(BillMode.NORMAL)
         state.commissionPercent = "1.5"
@@ -102,6 +106,8 @@ class SellEntryFormStateTest {
     fun billOfSupplyMerchantRequiresGstinAndStateCode() {
         val state = SellEntryFormState()
         state.buyerName = "Kisan Seeds Corp"
+        state.updatePhone("9876543210")
+        state.village = "सीहोर"
         state.setParty(SellPartyKind.MERCHANT)
         state.setMode(BillMode.BILL_OF_SUPPLY)
 
@@ -147,6 +153,20 @@ class SellEntryFormStateTest {
         assertEquals("ग्राहक का नाम दर्ज करें", state.validationReason())
 
         state.buyerName = "Sita Ram"
+        // Empty phone
+        assertFalse(state.canSave())
+        assertEquals("मोबाइल नंबर दर्ज करें", state.validationReason())
+
+        state.updatePhone("98765")
+        assertFalse(state.canSave())
+        assertTrue(state.validationReason()?.contains("10 अंकों") == true)
+
+        state.updatePhone("9876543210")
+        // Empty village
+        assertFalse(state.canSave())
+        assertEquals("गाँव / शहर का नाम दर्ज करें", state.validationReason())
+
+        state.village = "सीहोर"
         // Empty bags
         assertFalse(state.canSave())
         assertEquals("फसल #1: बोरी संख्या दर्ज करें", state.validationReason())

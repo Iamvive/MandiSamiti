@@ -39,7 +39,7 @@ class ReceiptChargesAndDefaultsTest {
 
         assertEquals("2.50", form.commissionPercent)
         assertEquals("180", form.labourPerBag)
-        assertEquals("0.2", form.tareQuintals)
+        assertEquals("", form.tareQuintals) // tare removed for new Sell slips (2026-10-31)
     }
 
     @Test
