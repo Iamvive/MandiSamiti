@@ -1,31 +1,48 @@
-# MandiSamiti Revamp — Flow 02: Sell Flow (बिक्री सौदा)
+# MandiSamiti Revamp — Flow 02: Sell Flow (बिक्री सौदा — Direction B)
 
 ## 1. Flow Overview & Scope
-The Sell Flow handles retail sales to direct consumers (Customer) and wholesale distribution to grain merchants (Merchant). Invoicing, tax liabilities, and mandatory fields depend strictly on the actor category and invoice mode.
+The Sell Flow handles retail sales to direct consumers (Customer / ग्राहक) and wholesale distribution to grain merchants (Merchant / व्यापारी). Direction B unifies the Sell entry experience with the approved Buy entry design: phone-first party autocomplete, required name and village, 3-column lot rows (Bags | Weight/bag | Extra), tare removed from new slips, and an advance/balance section after the slip calculations.
 
 ---
 
 ## 2. Actor & Mode Rules Matrix
 
-| Actor / Category | Allowed Mode | GSTIN & State Code | Mandi Tax (1.5%) & Cess (0.5%) | Commission % & Labour (₹/bag) | Multiple Crop Lots | Prapt Rashi (Received) |
+| Actor / Category | Allowed Mode | Phone & Village | Mandi Tax (1.5%) & Cess (0.5%) | Commission % & Labour (₹/bag) | Multiple Crop Lots | Advance Received (अग्रिम) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Customer (ग्राहक)** | **Normal Slip only** | Not Allowed | Not Applied (0%) | Commission % + Labour (₹/bag) | Yes (multiple variants at diff rates) | **Removed / Not Required** |
-| **Merchant (व्यापारी)** | **Normal Slip** | Not Required | Not Applied (0%) | Commission % + Labour (₹/bag) | Yes (multiple variants at diff rates) | **Removed / Not Required** |
-| **Merchant (व्यापारी)** | **Bill of Supply** | **Mandatory** (15-char GSTIN, 2-digit StateCode) | **Mandatory** (Mandi 1.5% + Cess 0.5%) | Labour (₹/bag) + Tulak | Yes (multiple variants at diff rates) | **Removed / Not Required** |
+| **Customer (ग्राहक)** | **Normal Slip only** | **Mandatory** (10-digit phone, village) | Not Applied (0%) | Commission % + Labour (₹/bag) | Yes (multiple variants at diff rates) | Optional (reduces balance due) |
+| **Merchant (व्यापारी)** | **Normal Slip** | **Mandatory** (10-digit phone, village) | Not Applied (0%) | Commission % + Labour (₹/bag) | Yes (multiple variants at diff rates) | Optional (reduces balance due) |
+| **Merchant (व्यापारी)** | **Bill of Supply** | **Mandatory** (+ GSTIN & State Code) | **Mandatory** (Mandi 1.5% + Cess 0%) | Labour (₹/bag) + Tulak | Yes (multiple variants at diff rates) | Optional (reduces balance due) |
 
-### Key Business Guardrails
-1. **Bill of Supply Restriction:** Bill of Supply is strictly for **Merchants**, never for retail Customers. When "ग्राहक" (Customer) is selected, Bill of Supply is disabled/hidden.
-2. **Normal + Customer:** Includes Customer Name/Mobile, Crop Name, Bags, Weight/bag, Extra weight, Rate, Commission %, and Labour charges. No GST or Mandi Tax.
-3. **Normal + Merchant:** Same calculation and fields as Customer, categorized under Merchant ledger. No GST or Mandi Tax.
-4. **Bill of Supply + Merchant:** Formal mandi invoice requiring Buyer GSTIN, State Code, Calendar Invoice Date, and multiple itemized crop variants with Mandi Fee (1.5%), Krishak Kalyan Cess (0.5%), and Labour/Tulak.
-5. **No "Prapt Rashi":** Removed from deal entry screen. All transactions default to ledger debit / credit for subsequent passbook reconciliation.
+### Key Business & Direction B Guardrails
+1. **Phone-First Party Block:**
+   - Field 1: "मोबाइल नंबर या नाम" (Mobile number or name). Required 10-digit Indian phone.
+   - Matching saved party autofills Name and Village with badge: "सहेजे गए नंबर से भरा गया। बदलने पर यह खाता हर जगह अपडेट होगा।"
+   - New number creates the buyer party once.
+   - Old party with no phone prompts for 10-digit mobile before Save.
+   - Name and Village are editable and required. Edits update the party everywhere.
+   - Save is disabled until phone (10 digits), name, and village are filled.
+2. **Lot Grid (Direction B):**
+   - Line 1 (3 columns): Bags (whole number, max 9,999) | Weight per bag (whole kg, max 999) | Extra weight (kg, decimals allowed, strictly `< bag weight`).
+   - Line 2: Rate (whole rupees per quintal, max 1,00,000).
+   - Multi-lot additions supported.
+3. **Tare / Bardana Removed on New Slips:**
+   - New Sell entries do not deduct tare. The entered weight is the billed weight.
+   - Editing an old slip with stored tare displays tare read-only without modifying stored totals.
+4. **Slip Summary (हिसाब पर्ची):**
+   - मजदूरी कटौती sits above कमीशन कटौती.
+   - Keeps Sell's trader bill arithmetic (Cash Memo whole rupee cut with tulak absorption vs Bill of Supply 1.5% Mandi Tax + Tulak).
+5. **Separate Advance & Balance Section:**
+   - Positioned below the slip calculations.
+   - Shows party's existing loan debt and deposit balance as read-only cards. Sell slips never adjust loan or deposit.
+   - Advance received now (अग्रिम / प्राप्त राशि) reduces `balanceDuePaisa` (`totalReceivable - advanceReceived`).
+   - Dashboard "Vyapari receivable" tracks remaining balance due. Cash received is recorded to Galla via `JAMA_RECEIVED`.
 
 ---
 
 ## 3. Math Engine Specifications & Formulae
 
 ### Multi-Lot Aggregation
-Each sale can contain $N \ge 1$ crop lots (e.g. Lokwan 20 bags @ ₹2600 + Sharbati 10 bags @ ₹3100).
+Each sale can contain $N \ge 1$ crop lots:
 - **Lot Weight (grams):** $W_i = (\text{bags}_i \times \text{weightPerBag}_i) + \text{extraWeight}_i$
 - **Lot Gross (paisa):** $G_i = \text{round}\left(\frac{W_i \times \text{ratePaisaPerQuintal}_i}{100,000}\right)$
 - **Total Weight (grams):** $W_{\text{total}} = \sum_{i=1}^N W_i$
@@ -33,18 +50,19 @@ Each sale can contain $N \ge 1$ crop lots (e.g. Lokwan 20 bags @ ₹2600 + Sharb
 - **Total Bags:** $B_{\text{total}} = \sum_{i=1}^N \text{bags}_i$
 
 ### Mode Calculations
-1. **Normal Slip (Customer or Merchant):**
-   - **Commission Paisa:** $\text{round}\left(\frac{G_{\text{total}} \times \text{commissionBps}}{10,000}\right)$
-   - **Labour Paisa:** $B_{\text{total}} \times \text{labourPerBagPaisa}$
-   - **Mandi Tax / Cess:** ₹0
-   - **Total Receivable (देय राशि):** $G_{\text{total}} + \text{commissionPaisa} + \text{labourPaisa}$
+1. **Normal Slip (Customer or Merchant Cash Memo):**
+   - Commission Paisa: $\text{round}\left(\frac{G_{\text{total}} \times \text{commissionBps}}{10,000}\right)$
+   - Nominal Tulak: $W_{\text{total}} \times 1\text{ Rs/Qtl}$
+   - Total Receivable cut to whole rupee: $\lfloor (G_{\text{total}} + \text{commissionPaisa} + \text{nominalTulak}) / 100 \rfloor \times 100$
+   - Tulak absorbs rounding: $\text{totalReceivable} - G_{\text{total}} - \text{commissionPaisa}$
+   - Balance Due: $\text{totalReceivable} - \text{advanceReceived}$
 
 2. **Bill of Supply (Merchant only):**
-   - **Mandi Shulk (1.5%):** $\text{round}\left(\frac{G_{\text{total}} \times 150}{10,000}\right)$
-   - **Krishak Kalyan Cess (0.5%):** $\text{round}\left(\frac{G_{\text{total}} \times 50}{10,000}\right)$
-   - **Labour Paisa:** $B_{\text{total}} \times \text{labourPerBagPaisa}$
-   - **Tulak Paisa:** $\text{tulakOverride} \mathbin{?} \text{defaultTulak}(W_{\text{total}})$
-   - **Total Receivable (कुल देय):** $G_{\text{total}} + \text{mandiShulk} + \text{cess} + \text{labourPaisa} + \text{tulakPaisa}$
+   - Mandi Shulk (1.5%): $\text{round}\left(\frac{G_{\text{total}} \times 150}{10,000}\right)$
+   - Tulak: $W_{\text{total}} \times \text{tulakRate}$
+   - Arat / Commission: $\text{round}\left(\frac{G_{\text{total}} \times \text{commissionBps}}{10,000}\right)$
+   - Total Receivable: $G_{\text{total}} + \text{mandiShulk} + \text{tulakPaisa} + \text{commissionPaisa}$
+   - Balance Due: $\text{totalReceivable} - \text{advanceReceived}$
 
 ---
 
@@ -52,89 +70,21 @@ Each sale can contain $N \ge 1$ crop lots (e.g. Lokwan 20 bags @ ₹2600 + Sharb
 
 | Case ID | Scenario | Input Data | Expected Output | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **TC-SELL-01** | Normal + Customer (Single Lot) | Customer "Ramesh Kumar", 10 bags @ 50kg, ₹2600/Qtl, 2% comm, ₹5/bag labour | Gross: ₹13,000, Comm: +₹260, Labour: +₹50, Total: ₹13,310 | **PASS on Device** |
-| **TC-SELL-02** | Normal + Customer (Multi-Lot) | Lot 1: 10 bags @ ₹2600, Lot 2: 10 bags @ ₹2800, 2% comm, ₹5/bag labour | Gross: ₹27,000, Comm: +₹540, Labour: +₹100, Total: ₹27,640 | **PASS (JVM Unit)** |
-| **TC-SELL-03** | Normal + Merchant | Merchant "Shree Balaji Traders", 20 bags @ ₹2500, 1.5% comm, ₹4/bag labour | Gross: ₹25,000, Comm: +₹375, Labour: +₹80, Total: ₹25,455, Category: Merchant | **PASS on Device** |
-| **TC-SELL-04** | Customer BOS Disabled | Party = Customer | "सप्लाई बिल (Bill of Supply)" chip is disabled ("सप्लाई बिल केवल व्यापारियों हेतु") | **PASS on Device** |
-| **TC-SELL-05** | BOS + Merchant (Full Mandi Tax) | Merchant "Vijay Traders", GSTIN `23AAAAA0000A1Z5`, StateCode `23`, 20 bags @ ₹2600 (10 Qtl), Tulak ₹1/qtl, Labour ₹5/bag | Gross: ₹26,000, Mandi (1.5%): ₹390, Cess (0.5%): ₹130, Labour: ₹100, Tulak: ₹10, Total: ₹26,630 | **PASS (JVM Unit)** |
-| **TC-SELL-06** | BOS Multi-Item Lots | Merchant "Shree Ganesh Traders", GSTIN `23AAAAA0000A1Z5`, StateCode `23`, Lot 1: 20 bags Sharbati @ ₹2600, Lot 2: 10 bags Chana @ ₹5200 | Gross: ₹52,000, Mandi (1.5%): ₹780, Cess (0.5%): ₹260, Labour: ₹150, Tulak: ₹15, Total: ₹53,205 | **PASS on Device** |
-| **TC-SELL-07** | Validation Guardrails | Empty Buyer Name, Bags = 0, or (BOS without GSTIN / StateCode) | "सुरक्षित करें" disabled with explicit banner explaining why | **PASS on Device & JVM** |
-| **TC-SELL-08** | No Prapt Rashi | Any Sell mode | No "प्राप्त राशि" input field; deal saves directly to ledger | **PASS on Device** |
-| **TC-SELL-09** | Overselling Stock Warning | Total sale weight > available godown stock | Prominent warning banner displayed, transaction allowed with caution | **PASS on Device** |
-| **TC-SELL-10** | Receipt & WhatsApp Formatting | Completed deal | S6 Receipt formats either Normal Slip or GST Bill of Supply with multi-lot breakdown | **PASS on Device** |
+| **TC-SELL-01** | Phone & Village Gating | Missing phone or village | Save disabled; explanatory text on button | **PASS (JVM & Device)** |
+| **TC-SELL-02** | Party Autocomplete | Type 10-digit saved phone | Autocompletes name + village, shows saved party badge | **PASS on Device** |
+| **TC-SELL-03** | Extra Weight Boundary | Extra weight >= bag weight (e.g. 50kg on 50kg bag) | Red error under field; Save blocked | **PASS (JVM & Device)** |
+| **TC-SELL-04** | Tare Removed on New Slips | New slip entry | Tare is blank and not deducted from billed weight | **PASS (JVM & Device)** |
+| **TC-SELL-05** | Old Slip Tare Preserved | Edit slip with stored tare | Tare shows read-only; totals intact | **PASS (JVM)** |
+| **TC-SELL-06** | Advance & Balance Due | Receivable ₹10,155, advance ₹3,000 | Balance due ₹7,155; cash recorded to Galla | **PASS (JVM & Device)** |
+| **TC-SELL-07** | Read-Only Loan & Deposit | Party with ₹5,250 loan and ₹1,500 deposit | Cards display balances; slip total unchanged | **PASS (JVM & Device)** |
+| **TC-SELL-08** | BOS Merchant Gating | Merchant + BOS mode | Requires 15-char GSTIN and 2-digit State Code | **PASS (JVM & Device)** |
 
 ---
 
-## 5. Screen Sequence & Navigation
-1. **S4 (SellEntryScreen):**
-   - Category Selector: `[ग्राहक (Customer)]` vs `[व्यापारी (Merchant)]`
-   - Invoice Mode: `[सामान्य बिल (Normal)]` vs `[सप्लाई बिल (Bill of Supply)]` (BOS disabled if Customer)
-   - Buyer Details Card: Name (Required), Phone (Optional 10-digit), GSTIN & State Code (Mandatory if BOS), Invoice Date (Calendar)
-   - Multi-Crop Lots: itemized cards with crop quick-chips, bags, weight/bag, rate/quintal, and add/delete lot actions
-   - Deductions / Charges: Commission % & Labour (Normal) or Mandi Tax + Cess + Labour + Tulak (BOS)
-   - Live Math Summary Card & Validation Banner
-2. **S5 (SellTransactionsListScreen):** Chronological log of all sales, searchable and filterable by Customer vs Merchant.
-3. **S6 (SellTransactionReceiptScreen):** Printable GST Bill of Supply or Normal Buyer Slip with WhatsApp share.
-
----
-
-## 6. Physical Device Test Evidence (Redmi Note 7, Serial: `d93c743`)
-
-### Scenario A: Merchant + Bill of Supply Multi-Item Lot
-- **Merchant Details:** Shree Ganesh Traders (`9826012345`), GSTIN `23AAAAA0000A1Z5`, State Code `23`.
-- **Item 1:** गेहूं शरबती (20 बोरी @ 50 किग्रा = 10.0 क्विंटल @ ₹2,600/क्विंटल) = सकल ₹26,000.
-- **Item 2:** चना (10 बोरी @ 50 किग्रा = 5.0 क्विंटल @ ₹5,200/क्विंटल) = सकल ₹26,000.
-- **Live Calculations:**
-  - कुल सकल राशि (Gross): ₹52,000
-  - मंडी शुल्क (1.5%): + ₹780
-  - कृषक कल्याण उपकर (0.5%): + ₹260
-  - हमाली / मजदूरी (30 बोरी @ ₹5): + ₹150
-  - तुलाई (15 क्विंटल @ ₹1): + ₹15
-  - **कुल देय राशि (Total Receivable): ₹53,205**
-- **Receipt Bill Number:** `#BOS-52034`
-- **Screenshots:**
-  - Form & Details: `docs/testing/evidence/sell/02d_merchant_info_filled.png`
-  - Multi-Lot 1: `docs/testing/evidence/sell/02e_lot1_filled.png`
-  - Multi-Lot 2: `docs/testing/evidence/sell/02f_lot2_filled.png`
-  - Live Math Preview: `docs/testing/evidence/sell/02g_math_preview.png`
-  - S6 Receipt Screen: `docs/testing/evidence/sell/03_sell_receipt_screen.png`
-  - S5 Transaction List: `docs/testing/evidence/sell/04_sell_list_screen.png`
-
-### Scenario B: Customer + Normal Slip Single Lot
-- **Customer Details:** Ramesh Kumar (`9876543210`), Category: `ग्राहक (Customer)`.
-- **Bill Mode Restriction:** `सप्लाई बिल` disabled ("सप्लाई बिल केवल व्यापारियों हेतु").
-- **Item 1:** गेहूं लोकवान (10 बोरी @ 50 किग्रा = 5.0 क्विंटल @ ₹2,600/क्विंटल) = सकल ₹13,000.
-- **Live Calculations:**
-  - कुल सकल राशि (Gross): ₹13,000
-  - कमीशन जोड़ (+ 2%): + ₹260
-  - मजदूरी जोड़ (+ ₹5/बोरी): + ₹50
-  - मंडी कर / उपकर: ₹0 (Not Applied)
-  - प्राप्त राशि: Not Required / Removed
-  - **कुल देय राशि (Total Receivable): ₹13,310**
-- **Receipt Bill Number:** `#cdfb6a`
-- **Screenshots:**
-  - Customer Gating & Form: `docs/testing/evidence/sell/07_customer_sell_opened.png`
-  - Customer Lot Filled: `docs/testing/evidence/sell/08_customer_lot_filled.png`
-  - Live Math Preview: `docs/testing/evidence/sell/09_customer_math_preview.png`
-  - S6 Receipt Screen: `docs/testing/evidence/sell/10_customer_receipt_screen.png`
-  - S5 Transaction List (Both Cards): `docs/testing/evidence/sell/11_sell_list_both_transactions.png`
-
-### Scenario C: Merchant + Normal Slip Single Lot
-- **Merchant Details:** Shree Balaji Traders (`9425012345`), Category: `व्यापारी (Merchant)`, Mode: `सामान्य बिल (Normal)`.
-- **Fields Gating:** GSTIN, StateCode, and Calendar Date are NOT required or shown; Commission % and Labour are active.
-- **Item 1:** गेहूं शरबती (20 बोरी @ 50 किग्रा = 10.0 क्विंटल @ ₹2,500/क्विंटल) = सकल ₹25,000.
-- **Live Calculations:**
-  - कुल सकल राशि (Gross): ₹25,000
-  - कमीशन जोड़ (+ 1.5%): + ₹375
-  - मजदूरी जोड़ (+ ₹4/बोरी): + ₹80
-  - मंडी कर / उपकर: ₹0 (Not Applied)
-  - प्राप्त राशि: Not Required / Removed
-  - **कुल देय राशि (Total Receivable): ₹25,455**
-- **Receipt Bill Number:** `#7dfc61`
-- **Screenshots:**
-  - Merchant Normal Form: `docs/testing/evidence/sell/12_merchant_normal_form.png`
-  - Live Math Preview: `docs/testing/evidence/sell/13_merchant_normal_preview.png`
-  - S6 Receipt Screen: `docs/testing/evidence/sell/14_merchant_normal_receipt.png`
-  - S5 Transaction List (All 3 Cards): `docs/testing/evidence/sell/15_all_three_cards_list.png`
-
-
+## 5. Physical Device Test Evidence (Redmi Note 7, Serial: `d93c743`)
+Screenshots captured and stored in `docs/testing/evidence/sell-direction-b/`:
+- `01_sell_entry_empty.png`: Phone-first layout, disabled Save button with explanation.
+- `02_sell_entry_phone_party_autocomplete.png`: Autocomplete party by phone, source badge, name & village filled.
+- `03_sell_entry_lot_validation.png`: 3-column lot layout, limits and extra weight validation.
+- `04_sell_entry_advance_and_slip.png`: हिसाब पर्ची + पर्ची के बाद का हिसाब (Advance + read-only loan balance).
+- `05_sell_saved_receipt_s6.png`: Saved Sell slip receipt.
