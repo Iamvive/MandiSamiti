@@ -19,6 +19,18 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+const val MAX_BAGS = 9_999L
+const val MAX_BAG_WEIGHT_KG = 999L
+const val MAX_RATE_RUPEES = 100_000L
+
+data class SellLotValidation(
+    val bagsError: String?,
+    val weightError: String?,
+    val rateError: String?,
+    val extraError: String?,
+    val isValid: Boolean,
+)
+
 class SellLotItemState(
     val id: String = IdGenerator.newId(),
     initialCropName: String = "गेहूं",
@@ -42,6 +54,33 @@ class SellLotItemState(
     val rateValidation: ValidationResult
         get() = MandiValidators.validatePositiveNumber(ratePerQuintal, "भाव")
 
+    fun validate(): SellLotValidation {
+        val bagsVal = MandiValidators.validatePositiveNumber(bags, "बोरी संख्या")
+        val weightVal = MandiValidators.validatePositiveNumber(weightPerBagKg, "वजन/बोरी")
+        val rateVal = MandiValidators.validatePositiveNumber(ratePerQuintal, "भाव")
+        val extraVal = MandiValidators.validateNonNegativeNumber(extraWeightKg, "अतिरिक्त वजन")
+        val bagGrams = MandiMathEngine.parseKgToGrams(weightPerBagKg.ifBlank { "0" })
+        val extraGrams = MandiMathEngine.parseKgToGrams(extraWeightKg.ifBlank { "0" })
+        val ratePaisa = MandiMathEngine.parseRupeesToPaisa(ratePerQuintal.ifBlank { "0" })
+
+        val bagsError = bagsVal.errorOrNull
+            ?: if ((bags.toLongOrNull() ?: 0L) > MAX_BAGS) "बोरी संख्या अधिकतम $MAX_BAGS" else null
+        val weightError = weightVal.errorOrNull
+            ?: if (bagGrams % 1000L != 0L || bagGrams > MAX_BAG_WEIGHT_KG * 1000L) "वजन/बोरी पूरे किलो में, अधिकतम $MAX_BAG_WEIGHT_KG" else null
+        val rateError = rateVal.errorOrNull
+            ?: if (ratePaisa % 100L != 0L || ratePaisa > MAX_RATE_RUPEES * 100L) "भाव पूरे रुपये में, अधिकतम $MAX_RATE_RUPEES" else null
+        val extraError = extraVal.errorOrNull
+            ?: if (bagGrams > 0L && extraGrams >= bagGrams) "अतिरिक्त वजन बोरी के वजन से कम होना चाहिए" else null
+
+        return SellLotValidation(
+            bagsError = bagsError,
+            weightError = weightError,
+            rateError = rateError,
+            extraError = extraError,
+            isValid = bagsError == null && weightError == null && rateError == null && extraError == null
+        )
+    }
+
     fun toCropLot(): SellCropLot {
         val bagsCount = bags.toLongOrNull() ?: 0L
         val weightGrams = MandiMathEngine.parseKgToGrams(weightPerBagKg.ifBlank { "0" })
@@ -49,7 +88,7 @@ class SellLotItemState(
         val ratePaisa = MandiMathEngine.parseRupeesToPaisa(ratePerQuintal.ifBlank { "0" })
         return SellCropLot.create(
             id = id,
-            cropName = cropName,
+            cropName = cropName.ifBlank { "गेहूं" },
             bags = bagsCount,
             weightPerBagGrams = weightGrams,
             extraWeightGrams = extraGrams,
@@ -68,6 +107,8 @@ data class SellAggregateResult(
     val krishakCessPaisa: Long,
     val tulakPaisa: Long,
     val totalReceivablePaisa: Long,
+    val advanceReceivedPaisa: Long,
+    val balanceDuePaisa: Long,
     val lots: List<SellCropLot>,
 )
 
@@ -77,6 +118,14 @@ class SellEntryFormState(
     var buyerName by mutableStateOf("")
     var selectedBuyerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
+
+    private var _village by mutableStateOf("")
+    var village: String
+        get() = _village
+        set(value) {
+            _village = MandiValidators.sanitizeVillage(value)
+        }
+
     var partyKind by mutableStateOf(SellPartyKind.CUSTOMER)
     var billMode by mutableStateOf(BillMode.NORMAL)
 
@@ -92,15 +141,34 @@ class SellEntryFormState(
     var labourPerBag by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
-    var tareQuintals by mutableStateOf(
-        tradeSettings?.let { MandiMathEngine.gramsToQuintalsInputString(it.defaultTareGrams) } ?: ""
-    )
+    // Tare is gone for new slips (Vivek, 2026-10-31). Only populateFrom() fills it for saved slips.
+    var tareQuintals by mutableStateOf("")
     var tulakPerQuintal by mutableStateOf("1")
+
+    // Advance received now (अग्रिम / प्राप्त राशि)
+    var advanceReceived by mutableStateOf("")
+
+    // Read-only balances (existing debt / deposit)
+    var loanDebtPaisa by mutableStateOf(0L)
+        private set
+    var depositPaisa by mutableStateOf(0L)
+        private set
+
+    fun setLoan(debtPaisa: Long) {
+        loanDebtPaisa = debtPaisa
+    }
+
+    fun setDeposit(paisa: Long) {
+        depositPaisa = paisa
+    }
+
+    fun updatePhone(input: String) {
+        phone = input.filter { it.isDigit() }.take(10)
+    }
 
     fun applySettings(settings: TradeSettings) {
         commissionPercent = MandiMathEngine.paisaToInputString(settings.buyerCommissionBps)
         labourPerBag = MandiMathEngine.paisaToRupeesString(settings.defaultLabourPaisa)
-        tareQuintals = MandiMathEngine.gramsToQuintalsInputString(settings.defaultTareGrams)
     }
 
     val lots: SnapshotStateList<SellLotItemState> = mutableStateListOf(
@@ -109,14 +177,13 @@ class SellEntryFormState(
 
     fun setParty(newParty: SellPartyKind) {
         partyKind = newParty
-        // Guardrail: Bill of Supply will not have Customer!
+        // Guardrail: Bill of Supply is strictly for Merchants
         if (newParty == SellPartyKind.CUSTOMER && billMode == BillMode.BILL_OF_SUPPLY) {
             billMode = BillMode.NORMAL
         }
     }
 
     fun setMode(newMode: BillMode) {
-        // Customer cannot select Bill of Supply
         if (partyKind == SellPartyKind.CUSTOMER && newMode == BillMode.BILL_OF_SUPPLY) {
             return
         }
@@ -208,6 +275,9 @@ class SellEntryFormState(
             tulakPaisa = totalReceivable - gross - commissionPaisa
         }
 
+        val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advanceReceived.ifBlank { "0" })
+        val balanceDue = (totalReceivable - advancePaisa).coerceAtLeast(0L)
+
         return SellAggregateResult(
             totalBags = totalBags,
             totalWeightGrams = totalWeight,
@@ -218,6 +288,8 @@ class SellEntryFormState(
             krishakCessPaisa = krishakCessPaisa,
             tulakPaisa = tulakPaisa,
             totalReceivablePaisa = totalReceivable,
+            advanceReceivedPaisa = advancePaisa,
+            balanceDuePaisa = balanceDue,
             lots = calculatedLots,
         )
     }
@@ -226,7 +298,14 @@ class SellEntryFormState(
         get() = MandiValidators.validateBuyerName(buyerName, partyKind == SellPartyKind.MERCHANT)
 
     val phoneValidation: ValidationResult
-        get() = MandiValidators.validatePhone(phone, isRequired = false)
+        get() = MandiValidators.validatePhone(phone, isRequired = true)
+
+    val villageValidation: ValidationResult
+        get() = if (MandiValidators.sanitizeVillage(village).isBlank()) {
+            ValidationResult.Invalid("गाँव / शहर का नाम दर्ज करें")
+        } else {
+            ValidationResult.Valid
+        }
 
     val gstinValidation: ValidationResult
         get() = MandiValidators.validateGstin(
@@ -240,12 +319,17 @@ class SellEntryFormState(
             isRequired = (billMode == BillMode.BILL_OF_SUPPLY && partyKind == SellPartyKind.MERCHANT)
         )
 
+    fun validateLots(): List<SellLotValidation> = lots.map { it.validate() }
+
     fun validationReason(): String? {
         val nameErr = buyerNameValidation.errorOrNull
         if (nameErr != null) return nameErr
 
         val phoneErr = phoneValidation.errorOrNull
         if (phoneErr != null) return phoneErr
+
+        val villageErr = villageValidation.errorOrNull
+        if (villageErr != null) return villageErr
 
         if (billMode == BillMode.BILL_OF_SUPPLY && partyKind == SellPartyKind.MERCHANT) {
             val gstinErr = gstinValidation.errorOrNull
@@ -255,11 +339,11 @@ class SellEntryFormState(
             if (stateErr != null) return stateErr
         }
 
-        lots.forEachIndexed { i, lot ->
-            val num = i + 1
-            if (!lot.bagsValidation.isValid) return "फसल #$num: बोरी संख्या दर्ज करें"
-            if (!lot.weightValidation.isValid) return "फसल #$num: वजन/बोरी दर्ज करें"
-            if (!lot.rateValidation.isValid) return "फसल #$num: भाव दर्ज करें"
+        val lotsVal = validateLots()
+        val firstInvalidIdx = lotsVal.indexOfFirst { !it.isValid }
+        if (firstInvalidIdx != -1) {
+            val err = lotsVal[firstInvalidIdx]
+            return "फसल #${firstInvalidIdx + 1}: ${err.bagsError ?: err.weightError ?: err.extraError ?: err.rateError ?: "विवरण सही करें"}"
         }
 
         val preview = aggregatePreview()
@@ -284,6 +368,13 @@ class SellEntryFormState(
             firstLot?.ratePaisaPerQuintal ?: 0L
         }
 
+        val cleanVillage = MandiValidators.sanitizeVillage(village)
+        val combinedRemarks = buildString {
+            if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
+            if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
+            append("DATA: $lotsJson")
+        }
+
         return SellEntry(
             id = existingId ?: "sell-${IdGenerator.newId()}",
             shopId = shopId,
@@ -303,18 +394,15 @@ class SellEntryFormState(
             aratPaisa = preview.commissionPaisa,
             mandiShulkPaisa = preview.mandiShulkPaisa + preview.krishakCessPaisa,
             totalReceivablePaisa = preview.totalReceivablePaisa,
-            receivedPaisa = 0L, // Prapt Rashi removed from entry
-            balanceDuePaisa = preview.totalReceivablePaisa,
-            vehicleNumber = if (phone.isNotBlank()) phone.trim() else null,
+            receivedPaisa = preview.advanceReceivedPaisa,
+            balanceDuePaisa = preview.balanceDuePaisa,
+            vehicleNumber = phone.trim().ifBlank { null },
             invoiceNumber = if (billMode == BillMode.BILL_OF_SUPPLY) {
                 "BOS-${(now % 100000).toString().padStart(5, '0')}"
             } else {
                 null
             },
-            remarks = buildString {
-                if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
-                append("DATA: $lotsJson")
-            },
+            remarks = combinedRemarks,
             createdAt = now,
             updatedAt = now,
             revision = 1L
@@ -332,10 +420,14 @@ class SellEntryFormState(
 
         val rem = entry.remarks
         if (rem != null) {
+            extractVillage(rem)?.let { village = it }
             if (rem.contains("काट: ")) {
                 val tareQ = rem.substringAfter("काट: ").substringBefore("Q").trim()
                 if (tareQ.isNotBlank()) tareQuintals = tareQ
             }
+        }
+        if (entry.receivedPaisa > 0L) {
+            advanceReceived = MandiMathEngine.paisaToRupeesString(entry.receivedPaisa)
         }
 
         lots.clear()
@@ -379,6 +471,8 @@ class SellEntryFormState(
         if (originalEntry == null) {
             return buyerName.isNotBlank() ||
                 phone.isNotBlank() ||
+                village.isNotBlank() ||
+                advanceReceived.isNotBlank() ||
                 gstin.isNotBlank() ||
                 invoiceDate.isNotBlank() ||
                 lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() }
@@ -387,4 +481,9 @@ class SellEntryFormState(
             phone != (originalEntry.vehicleNumber ?: "") ||
             aggregatePreview().grossPaisa != originalEntry.grossPaisa
     }
+}
+
+fun extractVillage(remarks: String?): String? {
+    if (remarks == null || !remarks.contains("गाँव: ")) return null
+    return remarks.substringAfter("गाँव: ").substringBefore(" |").trim().ifBlank { null }
 }

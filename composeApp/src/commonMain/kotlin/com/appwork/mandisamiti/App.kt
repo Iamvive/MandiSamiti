@@ -606,6 +606,35 @@ fun App(
             is Screen.SellEntry -> {
                 var stockLines by remember(shopId) { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val sellForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.sell.SellEntryFormState(tradeSettings) }
+                val buyerPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, sellForm.selectedBuyerId, sellForm.phone)?.id
+                LaunchedEffect(buyerPartyId, lends) {
+                    val open = lends
+                        .filter { !it.isVoid && it.partyId == buyerPartyId && it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
+                        .sortedBy { it.entryDate }
+                    var totalDebt = 0L
+                    for (lend in open) {
+                        val live = lendRepo.getSettlements(lend.id).filter { !it.isVoid }
+                        val principal = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
+                        if (principal <= 0L) continue
+                        val rate = partyRepo.getPartyById(lend.partyId)?.monthlyInterestRate
+                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate ?: 1.5
+                        val interest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
+                            lend.amountPaisa, rate, lend.entryDate, live, kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                        )
+                        totalDebt += (principal + interest)
+                    }
+                    sellForm.setLoan(totalDebt)
+
+                    if (buyerPartyId != null) {
+                        val partyCash = cashRepo.getTransactionsByPartyStream(buyerPartyId).first()
+                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED }.sumOf { it.amountPaisa }
+                        sellForm.setDeposit(deposit)
+                    } else {
+                        sellForm.setDeposit(0L)
+                    }
+                }
                 LaunchedEffect(shopId) {
                     if (shopId != null) {
                         stockLines = stockUseCase.lines(shopId)
@@ -616,13 +645,35 @@ fun App(
                     existingId = screen.existingId,
                     sellRepository = sellRepo,
                     tradeSettings = tradeSettings,
+                    formState = sellForm,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     stockLines = stockLines,
                     parties = parties,
-                    onSaved = { entry ->
+                    onSaved = { entry, party ->
                         coroutineScope.launch {
+                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            if (party != null) {
+                                partyRepo.saveParty(party)
+                            }
                             if (screen.existingId == null) {
                                 sellRepo.saveSellEntry(entry)
+                                if (entry.receivedPaisa > 0L) {
+                                    val advanceTx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = entry.shopId,
+                                        partyId = entry.buyerId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = entry.receivedPaisa,
+                                        transactionDate = now,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        remarks = "बिक्री अग्रिम: पर्ची #${entry.slipNo ?: ""}",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryType = "SELL",
+                                        sourceEntryId = entry.id,
+                                    )
+                                    cashRepo.recordTransaction(advanceTx)
+                                }
                             } else {
                                 sellRepo.editSellEntry(entry)
                             }

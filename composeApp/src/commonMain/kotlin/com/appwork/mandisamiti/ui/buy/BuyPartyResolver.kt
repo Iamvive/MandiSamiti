@@ -3,6 +3,7 @@ package com.appwork.mandisamiti.ui.buy
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.validation.MandiValidators
 
 /**
  * Phone-first party rules for the Buy form. Slips point at the party id and show the party's
@@ -55,7 +56,7 @@ object BuyPartyResolver {
     ): Party? {
         val name = form.farmerName.trim()
         val phone = form.phone.ifBlank { null }
-        val village = form.village.ifBlank { null }
+        val village = MandiValidators.sanitizeVillage(form.village).ifBlank { null }
         if (existing == null) {
             return Party(
                 id = newId, shopId = shopId, name = name, phone = phone, village = village,

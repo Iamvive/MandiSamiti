@@ -106,12 +106,8 @@ class BuyEntryFormState(
     var farmerName by mutableStateOf("")
     var selectedFarmerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
-    private var _village by mutableStateOf("")
-    var village: String
-        get() = _village
-        set(value) {
-            _village = MandiValidators.sanitizeVillage(value)
-        }
+    // Raw text while typing so spaces survive; sanitizeVillage runs on validate/save.
+    var village by mutableStateOf("")
 
     val lots = mutableStateListOf<BuyLotItemState>()
 
