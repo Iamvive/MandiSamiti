@@ -730,8 +730,11 @@ fun App(
                     parties = parties,
                     lendRepository = lendRepo,
                     isEnglish = tradeSettings?.isEnglish ?: false,
-                    onSaved = { entry ->
+                    onSaved = { entry, party ->
                         coroutineScope.launch {
+                            if (party != null) {
+                                partyRepo.saveParty(party)
+                            }
                             lendRepo.saveLendEntry(entry)
                             if (entry.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY && entry.amountPaisa > 0L) {
                                 val noteText = entry.notes?.trim()

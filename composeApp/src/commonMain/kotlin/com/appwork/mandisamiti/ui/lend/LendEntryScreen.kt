@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -32,15 +34,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.appwork.mandisamiti.domain.id.IdGenerator
+import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
-import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.repository.LendRepository
@@ -48,48 +50,40 @@ import com.appwork.mandisamiti.domain.util.LendDateFormatter
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
-import com.appwork.mandisamiti.ui.components.PartyAutocompleteField
+import com.appwork.mandisamiti.ui.components.MandiFlatTextField
+import com.appwork.mandisamiti.ui.components.MandiPartyLookupField
 import com.appwork.mandisamiti.ui.components.NewPartyConfirmDialog
 import com.appwork.mandisamiti.ui.components.TypedPartyCheck
 import com.appwork.mandisamiti.ui.components.checkTypedParty
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
+import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 import kotlinx.datetime.Clock
+
+private fun String.errorIfFilled(error: String?): String? = if (isBlank()) null else error
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LendEntryScreen(
     shopId: String = "",
-    onSaved: (LendEntry) -> Unit,
+    onSaved: (LendEntry, Party?) -> Unit,
     onBack: () -> Unit,
     parties: List<Party> = emptyList(),
     lendRepository: LendRepository? = null,
     isEnglish: Boolean = false,
+    formState: LendEntryFormState = remember { LendEntryFormState() },
     modifier: Modifier = Modifier
 ) {
-    var lendType by remember { mutableStateOf(LendType.MONEY) }
-    var partyPhoneOrName by remember { mutableStateOf("") }
-    var selectedPartyId by remember { mutableStateOf<String?>(null) }
-    var amountRupees by remember { mutableStateOf("") }
-    var commodityName by remember { mutableStateOf("") }
-    var bagsCount by remember { mutableStateOf("") }
-    var weightKg by remember { mutableStateOf("") }
-    var selectedDaysChip by remember { mutableStateOf<Int?>(null) }
-    var expectedReturnMillis by remember { mutableStateOf<Long?>(null) }
     var showCustomDatePicker by remember { mutableStateOf(false) }
-    var notes by remember { mutableStateOf("") }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
     var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
     var pendingEntryToSave by remember { mutableStateOf<LendEntry?>(null) }
+    var pendingPartyToSave by remember { mutableStateOf<Party?>(null) }
 
     val recentLends by (lendRepository?.getLendEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
 
-    val isDirty = partyPhoneOrName.isNotBlank() ||
-        amountRupees.isNotBlank() ||
-        commodityName.isNotBlank() ||
-        bagsCount.isNotBlank() ||
-        weightKg.isNotBlank() ||
-        expectedReturnMillis != null ||
-        notes.isNotBlank()
+    val isDirty = formState.isDirty
 
     MandiBackHandler(enabled = true) {
         if (isDirty) {
@@ -99,12 +93,9 @@ fun LendEntryScreen(
         }
     }
 
-    val isMoney = lendType == LendType.MONEY
-    val canSave = partyPhoneOrName.isNotBlank() && if (isMoney) {
-        amountRupees.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amountRupees) > 0L
-    } else {
-        commodityName.isNotBlank() && MandiMathEngine.parseKgToGrams(weightKg) > 0L
-    }
+    val isMoney = formState.lendType == LendType.MONEY
+    val canSave = formState.canSave()
+    val disabledReason = formState.validationReason(isEnglish)
 
     Scaffold(
         topBar = {
@@ -138,59 +129,124 @@ fun LendEntryScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = isMoney,
-                    onClick = { lendType = LendType.MONEY },
+                    onClick = { formState.lendType = LendType.MONEY },
                     label = { Text(if (isEnglish) "Cash / Money" else "रुपये / नकद (Money)") }
                 )
                 FilterChip(
                     selected = !isMoney,
-                    onClick = { lendType = LendType.GRAIN },
+                    onClick = { formState.lendType = LendType.GRAIN },
                     label = { Text(if (isEnglish) "Grain / Commodity" else "अनाज (Grain)") }
                 )
             }
 
-            PartyAutocompleteField(
-                value = partyPhoneOrName,
-                onValueChange = {
-                    partyPhoneOrName = it
-                    selectedPartyId = null
+            // Phone-first party block
+            val existingParty = LendPartyResolver.existing(parties, formState.selectedPartyId, formState.phone)
+            val isOldPartyWithoutPhone = formState.selectedPartyId != null && formState.phone.isBlank()
+
+            MandiPartyLookupField(
+                phoneValue = formState.phone,
+                onPhoneChange = { formState.updatePhone(it) },
+                onPartySelected = { party ->
+                    LendPartyResolver.pick(formState, party)
                 },
-                label = if (isEnglish) "Farmer / Person Name or Phone *" else "किसान / व्यक्ति का नाम या फोन *",
                 parties = parties,
-                onPartySelected = { selected ->
-                    selectedPartyId = selected.id
-                    partyPhoneOrName = selected.name
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                label = if (isEnglish) "Mobile number or name" else "मोबाइल नंबर या नाम",
+                placeholder = if (isOldPartyWithoutPhone) (if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें") else null,
+                isError = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull) != null,
+                errorMessage = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull)
+            )
+
+            MandiFlatTextField(
+                value = formState.partyName,
+                onValueChange = { formState.partyName = it },
+                label = if (isEnglish) "Farmer / Person Name" else "किसान / व्यक्ति का नाम",
+                placeholder = if (isEnglish) "Type name" else "नाम लिखें",
+                isError = formState.partyName.errorIfFilled(formState.nameValidation.errorOrNull) != null,
+                errorMessage = formState.partyName.errorIfFilled(formState.nameValidation.errorOrNull),
+                isTall = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
+            MandiFlatTextField(
+                value = formState.village,
+                onValueChange = { formState.village = it },
+                label = if (isEnglish) "Village" else "गांव",
+                placeholder = if (isEnglish) "Type village" else "गांव लिखें",
+                isError = formState.village.errorIfFilled(formState.villageValidation.errorOrNull) != null,
+                errorMessage = formState.village.errorIfFilled(formState.villageValidation.errorOrNull),
+                isTall = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Hint line
+            if (isOldPartyWithoutPhone) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MandiAmberDark,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (isEnglish) "10-digit mobile number required before saving" else "सुरक्षित करने से पहले 10 अंकों का नंबर दर्ज करें",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiTextPrimary
+                    )
+                }
+            } else if (existingParty != null && formState.phone.isNotBlank()) {
+                Text(
+                    text = if (isEnglish) {
+                        "Filled from the saved number. Changing them updates this account everywhere."
+                    } else {
+                        "सेव नंबर से नाम और गांव भरे। बदलने पर यह खाते में हर जगह बदलेगा।"
+                    },
+                    fontSize = 12.sp,
+                    color = MandiTextSecondary
+                )
+            } else if (existingParty == null && formState.phone.isNotBlank()) {
+                Text(
+                    text = if (isEnglish) {
+                        "New number. The account is created when the entry is saved."
+                    } else {
+                        "नया नंबर। एंट्री सेव होते ही खाता बन जाएगा।"
+                    },
+                    fontSize = 12.sp,
+                    color = MandiTextSecondary
+                )
+            }
+
             if (isMoney) {
                 OutlinedTextField(
-                    value = amountRupees,
-                    onValueChange = { amountRupees = it },
+                    value = formState.amountRupees,
+                    onValueChange = { formState.amountRupees = it },
                     label = { Text(if (isEnglish) "Loan Amount (₹) *" else "उधार राशि (रु) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
                 OutlinedTextField(
-                    value = commodityName,
-                    onValueChange = { commodityName = it },
+                    value = formState.commodityName,
+                    onValueChange = { formState.commodityName = it },
                     label = { Text(if (isEnglish) "Crop / Commodity Name (e.g. Wheat, Gram) *" else "जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = bagsCount,
-                        onValueChange = { bagsCount = it },
+                        value = formState.bagsCount,
+                        onValueChange = { formState.bagsCount = it },
                         label = { Text(if (isEnglish) "Bags Count" else "बोरी संख्या") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = weightKg,
-                        onValueChange = { weightKg = it },
+                        value = formState.weightKg,
+                        onValueChange = { formState.weightKg = it },
                         label = { Text(if (isEnglish) "Total Weight (kg) *" else "कुल वजन (किग्रा) *") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f)
@@ -216,28 +272,28 @@ fun LendEntryScreen(
                     }
                     quickOptions.forEach { (days, label) ->
                         FilterChip(
-                            selected = selectedDaysChip == days,
+                            selected = formState.selectedDaysChip == days,
                             onClick = {
                                 val now = Clock.System.now().toEpochMilliseconds()
-                                if (selectedDaysChip == days) {
-                                    selectedDaysChip = null
-                                    expectedReturnMillis = null
+                                if (formState.selectedDaysChip == days) {
+                                    formState.selectedDaysChip = null
+                                    formState.expectedReturnMillis = null
                                 } else {
-                                    selectedDaysChip = days
-                                    expectedReturnMillis = now + days * 24 * 3600 * 1000L
+                                    formState.selectedDaysChip = days
+                                    formState.expectedReturnMillis = now + days * 24 * 3600 * 1000L
                                 }
                             },
                             label = { Text(label) }
                         )
                     }
                     FilterChip(
-                        selected = selectedDaysChip == -1,
+                        selected = formState.selectedDaysChip == -1,
                         onClick = {
                             showCustomDatePicker = true
                         },
                         label = {
                             Text(
-                                if (selectedDaysChip == -1 && expectedReturnMillis != null) {
+                                if (formState.selectedDaysChip == -1 && formState.expectedReturnMillis != null) {
                                     if (isEnglish) "Custom Picked" else "कस्टम चुना"
                                 } else {
                                     if (isEnglish) "Custom Date" else "कस्टम तारीख"
@@ -247,9 +303,9 @@ fun LendEntryScreen(
                     )
                 }
 
-                if (expectedReturnMillis != null) {
+                if (formState.expectedReturnMillis != null) {
                     val formatted = LendDateFormatter.formatDueDate(
-                        returnEpochMillis = expectedReturnMillis,
+                        returnEpochMillis = formState.expectedReturnMillis,
                         currentEpochMillis = Clock.System.now().toEpochMilliseconds()
                     )
                     if (!formatted.isNullOrBlank()) {
@@ -264,67 +320,68 @@ fun LendEntryScreen(
             }
 
             OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
+                value = formState.notes,
+                onValueChange = { formState.notes = it },
                 label = { Text(if (isEnglish) "Notes / Details (Optional)" else "टिप्पणी / विवरण (वैकल्पिक)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             val performSave: () -> Unit = {
-                        val now = Clock.System.now().toEpochMilliseconds()
-                        val entryAmount = if (isMoney) MandiMathEngine.parseRupeesToPaisa(amountRupees) else 0L
-                        val entry = LendEntry(
-                            id = IdGenerator.newId(),
-                            shopId = shopId,
-                            partyId = selectedPartyId ?: partyPhoneOrName.trim(),
-                            lendType = lendType,
-                            entryDate = now,
-                            amountPaisa = entryAmount,
-                            commodityId = if (!isMoney) commodityName.trim() else null,
-                            bagsCount = if (!isMoney) bagsCount.trim().toLongOrNull() ?: 0L else 0L,
-                            weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightKg) else 0L,
-                            expectedReturnDate = expectedReturnMillis,
-                            notes = notes.trim().ifEmpty { null },
-                            status = LendStatus.OPEN,
-                            createdAt = now,
-                            updatedAt = now,
-                        )
+                val now = Clock.System.now().toEpochMilliseconds()
+                val existing = LendPartyResolver.existing(parties, formState.selectedPartyId, formState.phone)
+                val party = LendPartyResolver.partyToSave(formState, shopId, existing, now)
+                val partyId = existing?.id ?: party?.id ?: formState.partyName.trim()
+                val entry = formState.toLendEntry(
+                    shopId = shopId,
+                    partyId = partyId,
+                    now = now
+                )
 
-                        val isDuplicate = recentLends.any { prev ->
-                            !prev.isVoid &&
-                            prev.partyId.trim().equals(entry.partyId.trim(), ignoreCase = true) &&
-                            prev.lendType == entry.lendType &&
-                            (if (isMoney) prev.amountPaisa == entry.amountPaisa else (prev.commodityId == entry.commodityId && prev.weightGrams == entry.weightGrams)) &&
-                            kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
-                        }
+                val isDuplicate = recentLends.any { prev ->
+                    !prev.isVoid &&
+                    prev.partyId.trim().equals(entry.partyId.trim(), ignoreCase = true) &&
+                    prev.lendType == entry.lendType &&
+                    (if (isMoney) prev.amountPaisa == entry.amountPaisa else (prev.commodityId == entry.commodityId && prev.weightGrams == entry.weightGrams)) &&
+                    kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
+                }
 
-                        if (isDuplicate) {
-                            pendingEntryToSave = entry
-                            showDuplicateDialog = true
-                        } else {
-                            onSaved(entry)
-                        }
+                if (isDuplicate) {
+                    pendingEntryToSave = entry
+                    pendingPartyToSave = party
+                    showDuplicateDialog = true
+                } else {
+                    onSaved(entry, party)
+                }
             }
+
             Button(
                 onClick = {
-                    when (val check = checkTypedParty(partyPhoneOrName, selectedPartyId, parties)) {
-                        is TypedPartyCheck.ExactMatch -> { selectedPartyId = check.party.id; performSave() }
-                        is TypedPartyCheck.NeedsConfirm -> { newPartyCheck = check }
+                    when (val check = checkTypedParty(formState.partyName, formState.selectedPartyId, parties)) {
+                        is TypedPartyCheck.ExactMatch -> {
+                            formState.selectedPartyId = check.party.id
+                            performSave()
+                        }
+                        is TypedPartyCheck.NeedsConfirm -> {
+                            newPartyCheck = check
+                        }
                         else -> performSave()
                     }
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
-                Text(if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें")
+                Text(if (canSave) (if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें") else disabledReason)
             }
 
             newPartyCheck?.let { check ->
                 NewPartyConfirmDialog(
                     check = check,
                     isEnglish = isEnglish,
-                    onCreate = { newPartyCheck = null; performSave() },
-                    onDismiss = { newPartyCheck = null },
+                    onCreate = {
+                        newPartyCheck = null
+                        performSave()
+                    },
+                    onDismiss = { newPartyCheck = null }
                 )
             }
 
@@ -341,26 +398,28 @@ fun LendEntryScreen(
                     details = detailStr,
                     onConfirm = {
                         showDuplicateDialog = false
-                        onSaved(pending)
+                        onSaved(pending, pendingPartyToSave)
                         pendingEntryToSave = null
+                        pendingPartyToSave = null
                     },
                     onDismiss = {
                         showDuplicateDialog = false
                         pendingEntryToSave = null
+                        pendingPartyToSave = null
                     }
                 )
             }
 
             if (showCustomDatePicker) {
                 val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = expectedReturnMillis ?: Clock.System.now().toEpochMilliseconds()
+                    initialSelectedDateMillis = formState.expectedReturnMillis ?: Clock.System.now().toEpochMilliseconds()
                 )
                 DatePickerDialog(
                     onDismissRequest = { showCustomDatePicker = false },
                     confirmButton = {
                         TextButton(onClick = {
-                            expectedReturnMillis = datePickerState.selectedDateMillis
-                            selectedDaysChip = -1
+                            formState.expectedReturnMillis = datePickerState.selectedDateMillis
+                            formState.selectedDaysChip = -1
                             showCustomDatePicker = false
                         }) {
                             Text(if (isEnglish) "Select Date" else "तारीख चुनें")
@@ -384,6 +443,7 @@ fun LendEntryScreen(
                     dismissText = if (isEnglish) "Continue Editing" else "भरना जारी रखें",
                     onConfirmDiscard = {
                         showDiscardDialog = false
+                        formState.reset()
                         onBack()
                     },
                     onDismiss = {
