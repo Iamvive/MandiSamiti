@@ -15,8 +15,8 @@
 
 ## Security gaps accepted for the pilot
 - No phone allow-list on login: anyone with the static code and a phone number can log in. Keep the code private.
-- Static OTP code length: client UI (`RegisterViewModel.kt`) and backend Pydantic schema (`VerifyOtpRequest`) enforce exactly 6 digits. Staging env code must be 6 digits, not 8.
-- `config.py` defaults `OTP_STATIC_CODE` to `123456` if the env var is unset. Staging sets it; any new environment must too.
+- OTP is gone from the app and from the auth routes (2026-11-02). `OTP_STATIC_ENABLED` / `OTP_STATIC_CODE` in `backend/app/config.py` and `core/otp_sender.py` are dead code to delete.
+- Login is phone + 4-digit MPIN with no second factor. Anyone who knows a registered phone can try MPINs (5 failures lock it for 24h, so they can also lock the owner out). Decide on a real verification step before real shop data.
 - Old secrets stay in public git history (rotated, history not rewritten).
 
 ## Technical debt

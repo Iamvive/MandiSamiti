@@ -16,7 +16,7 @@ All must be true before the first pilot shop enters real data.
 
 | Gate | Why |
 | :--- | :--- |
-| Static OTP off; WhatsApp OTP live | With static OTP anyone can log in as any phone, or lock it out for 24h |
+| Phone ownership verified (WhatsApp OTP or an allow-list) | Login is phone + MPIN only, so anyone can sign up a phone they do not own, or lock the owner out for 24h |
 | Old `SECRET_KEY` and DB password rotated, `APP_ENV=prod` | Both are in git history |
 | Prod deployed behind HTTPS at `mandi-api.appworx.co.in` | No plain HTTP for shop data |
 | Daily backups, off-site `pg_dump`, **one restore drill done** | The server is the book of record |

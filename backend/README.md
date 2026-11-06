@@ -6,17 +6,17 @@ Scalable, asynchronous cloud backend for MandiSamiti (Indian Mandi Agri-Trade Le
 - **Framework:** FastAPI (Python 3.11+)
 - **Database:** PostgreSQL 16 (Async SQLAlchemy 2.0 + asyncpg)
 - **Cache & Rate-Limiting:** Redis 7
-- **Authentication:** Mobile Phone OTP + Signed JWTs + Fast 4-Digit MPIN
+- **Authentication:** Phone number + 4-digit MPIN + signed JWTs (no OTP since 2026-11-02)
 - **Deployment:** Docker & Docker Compose (Ready for VPS deployment)
 
 ## API Endpoints Overview
 
 ### Authentication (`/api/v1/auth`)
-- `POST /api/v1/auth/otp/send` — Request 6-digit OTP for 10-digit mobile number
-- `POST /api/v1/auth/otp/verify` — Verify OTP, register/login user, and issue access/refresh tokens
-- `POST /api/v1/auth/mpin/setup` — Configure local 4-digit MPIN for fast daily login
-- `POST /api/v1/auth/mpin/verify` — Fast MPIN authentication
+- `POST /api/v1/auth/check-phone` — Is this 10-digit number new? (app then shows signup or MPIN login)
+- `POST /api/v1/auth/signup` — Register a shop (phone, shop, owner, mandi, 4-digit MPIN) and issue access/refresh tokens
+- `POST /api/v1/auth/login` — Phone + MPIN login (attempts-left reply, 24h lockout after repeated failures)
 - `POST /api/v1/auth/refresh` — Refresh expired JWT access token
+- `POST /api/v1/auth/logout` — Revoke the refresh token
 
 ### Offline-to-Cloud Sync (`/api/v1/sync`)
 - `POST /api/v1/sync/push` — Ingests batches of offline Parties, Deals, and Cash Transactions from mobile app

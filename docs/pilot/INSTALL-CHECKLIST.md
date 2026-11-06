@@ -1,7 +1,7 @@
 # Pilot install checklist (shop, by cable)
 
 APK: `exports/mandisamiti-pilot-debug.apk` (Vivek-K repo root). Built from MandiSamiti `ea045fc` (shop-sheet math, buyer GSTIN and licence fields). Server: staging, `http://64.227.142.180:8060`.
-The login code (static OTP) is in the private env file on the VPS. Ask Claude to show it in that message; it is not written here.
+There is no login code. Since 2026-11-02 (`ddeba9f`) the app uses the shop phone number plus a 4-digit MPIN. A new number goes to signup and sets an MPIN; a known number asks for its MPIN.
 
 ## Before you leave
 - [ ] USB debugging on, phone connected, `adb devices` lists it
@@ -9,7 +9,7 @@ The login code (static OTP) is in the private env file on the VPS. Ask Claude to
 
 ## Install
 - [ ] `adb install -r exports/mandisamiti-pilot-debug.apk` (if upgrading over a pre-pilot build, run `adb shell pm clear com.appwork.mandisamiti` to prevent SQLite duplicate column error)
-- [ ] Open the app, log in with the shop phone number and the private 6-digit code, set MPIN
+- [ ] Open the app, enter the shop phone number; new shop: fill shop details and set a 4-digit MPIN; existing shop: enter its MPIN
 
 ## Smoke test (use names containing TEST)
 - [ ] Create party "TEST Party"
