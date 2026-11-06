@@ -45,56 +45,24 @@ class AuthApiTest {
     private fun <T> Result<T>.error(): AuthError = exceptionOrNull() as AuthError
 
     @Test
-    fun sendOtp_postsPhone_andSucceeds() = runTest {
+    fun checkPhone_parsesIsNewUser() = runTest {
         val reqs = mutableListOf<HttpRequestData>()
-        val r = api(reqs) { json(HttpStatusCode.OK, """{"sent":true,"cooldown_s":30}""") }.sendOtp("9876543210")
-        assertTrue(r.isSuccess)
-        assertEquals("$base/api/v1/auth/otp/send", reqs.single().url.toString())
-        assertEquals(HttpMethod.Post, reqs.single().method)
+        val r = api(reqs) { json(HttpStatusCode.OK, """{"is_new_user":true}""") }.checkPhone("9876543210")
+        assertTrue(r.getOrThrow())
+        assertEquals("$base/api/v1/auth/check-phone", reqs.single().url.toString())
         assertEquals(setOf("phone"), reqs.single().bodyJson().keys)
-    }
-
-    @Test
-    fun sendOtp_429_isRateLimited() = runTest {
-        val r = api { json(HttpStatusCode.TooManyRequests, """{"detail":"slow"}""") }.sendOtp("1")
-        assertEquals(AuthError.RateLimited, r.error())
-    }
-
-    @Test
-    fun sendOtp_503_isNetworkOtpUnavailable_and400_isInvalid() = runTest {
-        val r503 = api { json(HttpStatusCode.ServiceUnavailable, "{}") }.sendOtp("1")
-        assertEquals(AuthError.Network("OTP service unavailable"), r503.error())
-        val r400 = api { json(HttpStatusCode.BadRequest, """{"detail":"INVALID_PHONE"}""") }.sendOtp("1")
-        assertEquals(AuthError.Invalid, r400.error())
-    }
-
-    @Test
-    fun verifyOtp_new_and_existing() = runTest {
-        val reqs = mutableListOf<HttpRequestData>()
-        val n = api(reqs) { json(HttpStatusCode.OK, """{"status":"NEW","signup_pass":"p"}""") }.verifyOtp("9", "123456")
-        assertEquals(OtpVerifyResult.NewShop("p"), n.getOrThrow())
-        assertEquals("$base/api/v1/auth/otp/verify", reqs.single().url.toString())
-        assertEquals(setOf("phone", "otp"), reqs.single().bodyJson().keys)
-        val e = api { json(HttpStatusCode.OK, """{"status":"EXISTING","login_pass":"l"}""") }.verifyOtp("9", "1")
-        assertEquals(OtpVerifyResult.ExistingShop("l"), e.getOrThrow())
-    }
-
-    @Test
-    fun verifyOtp_400_isOtpInvalid() = runTest {
-        val r = api { json(HttpStatusCode.BadRequest, """{"detail":"OTP_INVALID"}""") }.verifyOtp("9", "0")
-        assertEquals(AuthError.OtpInvalid, r.error())
     }
 
     @Test
     fun signup_postsSnakeCaseBody_andParsesSession() = runTest {
         val reqs = mutableListOf<HttpRequestData>()
-        val r = api(reqs) { json(HttpStatusCode.OK, sessionJson) }.signup("sp", "Shop", "Owner", "Mandi", "1234")
+        val r = api(reqs) { json(HttpStatusCode.OK, sessionJson) }.signup("9876543210", "Shop", "Owner", "Mandi", "1234")
         assertEquals("s1", r.getOrThrow().shop.id)
         assertEquals("a", r.getOrThrow().accessToken)
         val req = reqs.single()
         assertEquals("$base/api/v1/auth/signup", req.url.toString())
         assertEquals(HttpMethod.Post, req.method)
-        assertEquals(setOf("signup_pass", "shop_name", "owner_name", "mandi_name", "mpin"), req.bodyJson().keys)
+        assertEquals(setOf("phone", "shop_name", "owner_name", "mandi_name", "mpin"), req.bodyJson().keys)
     }
 
     @Test
@@ -104,44 +72,28 @@ class AuthApiTest {
             api { json(HttpStatusCode.Conflict, "{}") }.signup("p", "s", "o", "m", "1").error(),
         )
         assertEquals(
-            AuthError.PassExpired,
-            api { json(HttpStatusCode.Unauthorized, """{"detail":"INVALID_PASS"}""") }.signup("p", "s", "o", "m", "1").error(),
+            AuthError.AccountDisabled,
+            api { json(HttpStatusCode.Unauthorized, "{}") }.signup("p", "s", "o", "m", "1").error(),
         )
     }
 
     @Test
-    fun login_mpinInvalid_and_passBurned() = runTest {
+    fun login_mpinInvalid_and_unknown401IsNetwork() = runTest {
         val reqs = mutableListOf<HttpRequestData>()
         val r = api(reqs) {
             json(HttpStatusCode.Unauthorized, """{"detail":{"code":"MPIN_INVALID","attempts_left":3}}""")
         }.login("lp", "0000")
         assertEquals(AuthError.MpinInvalid(3), r.error())
         assertEquals("$base/api/v1/auth/login", reqs.single().url.toString())
-        assertEquals(setOf("login_pass", "mpin"), reqs.single().bodyJson().keys)
-        val b = api { json(HttpStatusCode.Unauthorized, """{"detail":{"code":"PASS_BURNED"}}""") }.login("lp", "0")
-        assertEquals(AuthError.PassBurned, b.error())
-    }
-
-    @Test
-    fun login_deadPass_variants_mapToPassExpired() = runTest {
-        for (body in listOf("""{"detail":"INVALID_PASS"}""", """{"detail":{"code":"WHATEVER"}}""", "not json")) {
-            val r = api { json(HttpStatusCode.Unauthorized, body) }.login("lp", "1")
-            assertEquals(AuthError.PassExpired, r.error(), body)
-        }
-    }
-
-    @Test
-    fun verifyOtp_429_isRateLimited() = runTest {
-        val r = api { json(HttpStatusCode.TooManyRequests, "{}") }.verifyOtp("9", "1")
-        assertEquals(AuthError.RateLimited, r.error())
+        assertEquals(setOf("phone", "mpin"), reqs.single().bodyJson().keys)
+        val u = api { json(HttpStatusCode.Unauthorized, "not json") }.login("lp", "0")
+        assertEquals(AuthError.Network("HTTP 401"), u.error())
     }
 
     @Test
     fun malformed2xxBody_isNetwork() = runTest {
         val r = api { json(HttpStatusCode.OK, """{"unexpected":1}""") }.login("lp", "1")
         assertIs<AuthError.Network>(r.error())
-        val v = api { json(HttpStatusCode.OK, """{"status":"NEW"}""") }.verifyOtp("9", "1")
-        assertEquals(AuthError.Network("Malformed response"), v.error())
     }
 
     @Test
@@ -191,18 +143,17 @@ class AuthApiTest {
     }
 
     @Test
-    fun signup_422_isInvalid_and_verify400NonOtp_isInvalid() = runTest {
+    fun signup_422_isInvalid_and_checkPhone400_isInvalid() = runTest {
         val r = api { json(HttpStatusCode.UnprocessableEntity, """{"detail":[{"loc":["body","mandi_name"]}]}""") }
             .signup("p", "s", "o", "", "1234")
         assertEquals(AuthError.Invalid, r.error())
-        val v = api { json(HttpStatusCode.BadRequest, """{"detail":"INVALID_PHONE"}""") }.verifyOtp("1", "123456")
-        assertEquals(AuthError.Invalid, v.error())
+        val c = api { json(HttpStatusCode.BadRequest, """{"detail":"INVALID_PHONE"}""") }.checkPhone("1")
+        assertEquals(AuthError.Invalid, c.error())
     }
 
     @Test
-    fun accountDisabled_onVerifySignupAndLogin_isAccountDisabled() = runTest {
+    fun accountDisabled_onSignupAndLogin_isAccountDisabled() = runTest {
         val body = """{"detail":{"code":"ACCOUNT_DISABLED"}}"""
-        assertEquals(AuthError.AccountDisabled, api { json(HttpStatusCode.Unauthorized, body) }.verifyOtp("9", "123456").error())
         assertEquals(AuthError.AccountDisabled, api { json(HttpStatusCode.Unauthorized, body) }.signup("p", "s", "o", "m", "1234").error())
         assertEquals(AuthError.AccountDisabled, api { json(HttpStatusCode.Unauthorized, body) }.login("lp", "1234").error())
     }

@@ -74,174 +74,17 @@ class RegisterViewModelTest {
         clock.tap(); vm.submitPhone()
     }
 
-    private suspend fun Fixture.toOtpStep() {
-        enterPhone()
-        vm.uiState.first { it.step == AuthStep.OTP && !it.isLoading }
-    }
-
-    private fun MockRequestHandleScope.verifyBody(path: String, status: String) = when {
-        path.endsWith("otp/send") -> json(HttpStatusCode.OK, """{"sent":true,"cooldown_s":30}""")
-        path.endsWith("otp/verify") && status == "NEW" -> json(HttpStatusCode.OK, """{"status":"NEW","signup_pass":"sp"}""")
-        path.endsWith("otp/verify") -> json(HttpStatusCode.OK, """{"status":"EXISTING","login_pass":"lp"}""")
-        else -> json(HttpStatusCode.NotFound, "{}")
-    }
-
-    @Test
-    fun newShop_phoneToOtpToNewShopToComplete() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("signup")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "NEW")
-        }
-        f.toOtpStep()
-        assertEquals(30, f.vm.uiState.value.resendCooldownSeconds)
-        assertEquals(false, f.vm.uiState.value.isResendEnabled)
-
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-        f.vm.uiState.first { it.step == AuthStep.NEW_SHOP }
-
-        f.vm.onShopNameChanged("राम आढ़त")
-        f.vm.onOwnerNameChanged("राम")
-        f.vm.onMandiNameChanged("मथुरा मंडी")
-        f.vm.onMpinChanged("1234")
-        f.vm.onConfirmMpinChanged("1234")
-        f.clock.tap(); f.vm.submitNewShop()
-
-        assertEquals(true, f.vm.uiState.first { it.isRegistrationComplete }.isRegistrationComplete)
-    }
-
-    @Test
-    fun existingShop_wrongMpin_showsAttemptsLeft() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) {
-                json(HttpStatusCode.Unauthorized, """{"detail":{"code":"MPIN_INVALID","attempts_left":2}}""")
-            } else verifyBody(p, "EXISTING")
-        }
-        f.toOtpStep()
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-        f.vm.uiState.first { it.step == AuthStep.ENTER_MPIN }
-
-        f.vm.onMpinChanged("0000")
-        f.clock.tap(); f.vm.submitMpin()
-
-        val s = f.vm.uiState.first { it.generalErrorMessage != null }
-        assertEquals("MPIN गलत है — 2 कोशिश बाकी", s.generalErrorMessage)
-        assertEquals(AuthStep.ENTER_MPIN, s.step)
-    }
-
-    @Test
-    fun passBurned_returnsToPhone() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) {
-                json(HttpStatusCode.Unauthorized, """{"detail":{"code":"PASS_BURNED"}}""")
-            } else verifyBody(p, "EXISTING")
-        }
-        f.toOtpStep()
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-        f.vm.uiState.first { it.step == AuthStep.ENTER_MPIN }
-        f.vm.onMpinChanged("0000")
-        f.clock.tap(); f.vm.submitMpin()
-
-        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
-        assertEquals("बहुत गलत MPIN — दोबारा OTP लें", s.generalErrorMessage)
-    }
-
-    @Test
-    fun signup_passBurned_returnsToPhone() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("signup")) json(HttpStatusCode.Unauthorized, "{}") else verifyBody(p, "NEW")
-        }
-        f.toOtpStep()
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-        f.vm.uiState.first { it.step == AuthStep.NEW_SHOP }
-        f.vm.onShopNameChanged("राम आढ़त"); f.vm.onOwnerNameChanged("राम"); f.vm.onMandiNameChanged("मथुरा")
-        f.vm.onMpinChanged("1234"); f.vm.onConfirmMpinChanged("1234")
-        f.clock.tap(); f.vm.submitNewShop()
-
-        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
-        assertEquals("समय समाप्त — दोबारा OTP लें", s.generalErrorMessage)
-    }
-
-    @Test
-    fun signup_phoneAlreadyRegistered_returnsToPhone() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("signup")) json(HttpStatusCode.Conflict, "{}") else verifyBody(p, "NEW")
-        }
-        f.toOtpStep()
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-        f.vm.uiState.first { it.step == AuthStep.NEW_SHOP }
-        f.vm.onShopNameChanged("राम आढ़त"); f.vm.onOwnerNameChanged("राम"); f.vm.onMandiNameChanged("मथुरा")
-        f.vm.onMpinChanged("1234"); f.vm.onConfirmMpinChanged("1234")
-        f.clock.tap(); f.vm.submitNewShop()
-
-        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
-        assertEquals("यह नंबर पहले से रजिस्टर है — दोबारा OTP लेकर लॉगिन करें", s.generalErrorMessage)
-    }
-
-    @Test
-    fun rateLimited_showsFiveMinuteMessage() = runTest {
-        val f = fixture { json(HttpStatusCode.TooManyRequests, "{}") }
-        f.enterPhone()
-
-        val s = f.vm.uiState.first { it.generalErrorMessage != null }
-        assertEquals("बहुत बार OTP माँगा गया, 5 मिनट बाद कोशिश करें", s.generalErrorMessage)
-        assertEquals(AuthStep.PHONE, s.step)
-    }
-
-    @Test
-    fun wrongOtp_showsMessage_andStaysOnOtp() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("otp/verify")) json(HttpStatusCode.BadRequest, """{"detail":"OTP_INVALID"}""") else verifyBody(p, "NEW")
-        }
-        f.toOtpStep()
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-
-        val s = f.vm.uiState.first { it.generalErrorMessage != null }
-        assertEquals("OTP गलत है", s.generalErrorMessage)
-        assertEquals(AuthStep.OTP, s.step)
-    }
-
-    @Test
-    fun networkFailure_showsNoNetworkMessage() = runTest {
-        val f = fixture { json(HttpStatusCode.ServiceUnavailable, "{}") }
-        f.enterPhone()
-
-        val s = f.vm.uiState.first { it.generalErrorMessage != null }
-        assertEquals("नेटवर्क नहीं है — दोबारा कोशिश करें", s.generalErrorMessage)
-    }
-
-    @Test
-    fun rapidSecondTap_isThrottled() = runTest {
-        var sends = 0
-        val f = fixture { sends++; json(HttpStatusCode.OK, """{"sent":true,"cooldown_s":30}""") }
-        f.vm.onPhoneNumberChanged("9837123456")
-        f.clock.tap(); f.vm.submitPhone()
-        f.vm.submitPhone() // same instant: throttled
-        f.vm.uiState.first { it.step == AuthStep.OTP && !it.isLoading }
-        assertEquals(1, sends)
-        assertNull(f.vm.uiState.value.generalErrorMessage)
-    }
-
-    // ---- helpers for the added coverage ----
-    private val signupOk: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData = { req ->
-        val p = req.url.encodedPath
-        if (p.endsWith("signup")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "NEW")
-    }
+    private fun MockRequestHandleScope.checkPhone(isNew: Boolean) =
+        json(HttpStatusCode.OK, """{"is_new_user":$isNew}""")
 
     private suspend fun Fixture.toNewShop() {
-        toOtpStep()
-        clock.tap(); vm.onOtpChanged("123456")
-        vm.uiState.first { it.step == AuthStep.NEW_SHOP }
+        enterPhone()
+        vm.uiState.first { it.step == AuthStep.NEW_SHOP && !it.isLoading }
     }
 
     private suspend fun Fixture.toEnterMpin() {
-        toOtpStep()
-        clock.tap(); vm.onOtpChanged("123456")
-        vm.uiState.first { it.step == AuthStep.ENTER_MPIN }
+        enterPhone()
+        vm.uiState.first { it.step == AuthStep.ENTER_MPIN && !it.isLoading }
     }
 
     private fun Fixture.fillShop(shop: String = "राम आढ़त", owner: String = "राम", mpin: String = "1234", confirm: String = "1234", mandi: String = "मथुरा") {
@@ -249,36 +92,126 @@ class RegisterViewModelTest {
         vm.onMpinChanged(mpin); vm.onConfirmMpinChanged(confirm)
     }
 
+    private val signupOk: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData = { req ->
+        if (req.url.encodedPath.endsWith("signup")) json(HttpStatusCode.OK, sessionJson) else checkPhone(true)
+    }
+
+    private fun loginHandler(loginResponse: MockRequestHandleScope.() -> HttpResponseData): MockRequestHandleScope.(HttpRequestData) -> HttpResponseData = { req ->
+        if (req.url.encodedPath.endsWith("login")) loginResponse() else checkPhone(false)
+    }
+
     @Test
-    fun signup_sendsSignupPassAndShopFields() = runTest {
+    fun newPhone_goesToNewShop_thenSignupCompletes() = runTest {
+        val f = fixture(signupOk)
+        f.toNewShop()
+        f.fillShop()
+        f.clock.tap(); f.vm.submitNewShop()
+        assertTrue(f.vm.uiState.first { it.isRegistrationComplete }.isRegistrationComplete)
+        assertEquals(1, f.count("check-phone"))
+    }
+
+    @Test
+    fun existingPhone_goesToEnterMpin_thenLoginCompletes() = runTest {
+        val f = fixture(loginHandler { json(HttpStatusCode.OK, sessionJson) })
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4321")
+        f.clock.tap(); f.vm.submitMpin()
+        f.vm.uiState.first { it.isRegistrationComplete }
+        val body = f.bodyOf("login").single()
+        assertTrue("\"phone\":\"9837123456\"" in body, body)
+        assertTrue("\"mpin\":\"4321\"" in body, body)
+    }
+
+    @Test
+    fun wrongMpin_showsAttemptsLeft_andStaysOnEnterMpin() = runTest {
+        val f = fixture(loginHandler {
+            json(HttpStatusCode.Unauthorized, """{"detail":{"code":"MPIN_INVALID","attempts_left":2}}""")
+        })
+        f.toEnterMpin()
+        f.vm.onMpinChanged("0000")
+        f.clock.tap(); f.vm.submitMpin()
+        val s = f.vm.uiState.first { it.generalErrorMessage != null }
+        assertEquals("MPIN गलत है — 2 कोशिश बाकी", s.generalErrorMessage)
+        assertEquals(AuthStep.ENTER_MPIN, s.step)
+        assertEquals("", s.mpin)
+    }
+
+    @Test
+    fun accountLocked_returnsToPhone_with24hMessage() = runTest {
+        val f = fixture(loginHandler { json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_LOCKED"}}""") })
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4826")
+        f.clock.tap(); f.vm.submitMpin()
+        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें", s.generalErrorMessage)
+    }
+
+    @Test
+    fun accountDisabled_returnsToPhone_withContactOwnerMessage() = runTest {
+        val f = fixture(loginHandler { json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_DISABLED"}}""") })
+        f.toEnterMpin()
+        f.vm.onMpinChanged("4826")
+        f.clock.tap(); f.vm.submitMpin()
+        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals("यह खाता बंद है — दुकान मालिक से संपर्क करें", s.generalErrorMessage)
+    }
+
+    @Test
+    fun signup_phoneAlreadyRegistered_returnsToPhone() = runTest {
+        val f = fixture { req ->
+            if (req.url.encodedPath.endsWith("signup")) json(HttpStatusCode.Conflict, "{}") else checkPhone(true)
+        }
+        f.toNewShop()
+        f.fillShop()
+        f.clock.tap(); f.vm.submitNewShop()
+        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
+        assertEquals("यह नंबर पहले से रजिस्टर है — दोबारा कोशिश करें", s.generalErrorMessage)
+    }
+
+    @Test
+    fun signup_sendsShopFieldsAndMpin() = runTest {
         val f = fixture(signupOk)
         f.toNewShop()
         f.fillShop()
         f.clock.tap(); f.vm.submitNewShop()
         f.vm.uiState.first { it.isRegistrationComplete }
-
         val body = f.bodyOf("signup").single()
-        assertTrue("\"signup_pass\":\"sp\"" in body, body)
-        assertTrue("\"shop_name\":\"राम आढ़त\"" in body || "\"shop_name\":\"\\u" in body, body)
-        assertTrue("owner_name" in body && "mandi_name" in body, body)
+        assertTrue("\"phone\":\"9837123456\"" in body, body)
+        assertTrue("owner_name" in body && "mandi_name" in body && "shop_name" in body, body)
         assertTrue("\"mpin\":\"1234\"" in body, body)
     }
 
     @Test
-    fun login_sendsLoginPassNotSignupPass() = runTest {
+    fun signup_422_showsCheckDetailsMessage() = runTest {
         val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+            if (req.url.encodedPath.endsWith("signup")) json(HttpStatusCode.UnprocessableEntity, """{"detail":[]}""") else checkPhone(true)
         }
-        f.toEnterMpin()
-        f.vm.onMpinChanged("4321")
-        f.clock.tap(); f.vm.submitMpin()
-        f.vm.uiState.first { it.isRegistrationComplete }
+        f.toNewShop()
+        f.fillShop()
+        f.clock.tap(); f.vm.submitNewShop()
+        val s = f.vm.uiState.first { it.generalErrorMessage != null }
+        assertEquals("जानकारी जाँचें और दोबारा कोशिश करें", s.generalErrorMessage)
+        assertEquals(AuthStep.NEW_SHOP, s.step)
+    }
 
-        val body = f.bodyOf("login").single()
-        assertTrue("\"login_pass\":\"lp\"" in body, body)
-        assertTrue("sp" !in body.replace("login_pass", ""), body)
-        assertTrue("\"mpin\":\"4321\"" in body, body)
+    @Test
+    fun networkFailure_showsNoNetworkMessage() = runTest {
+        val f = fixture { json(HttpStatusCode.ServiceUnavailable, "{}") }
+        f.enterPhone()
+        val s = f.vm.uiState.first { it.generalErrorMessage != null }
+        assertEquals("नेटवर्क नहीं है — दोबारा कोशिश करें", s.generalErrorMessage)
+        assertEquals(AuthStep.PHONE, s.step)
+    }
+
+    @Test
+    fun rapidSecondTap_isThrottled() = runTest {
+        val f = fixture { checkPhone(true) }
+        f.vm.onPhoneNumberChanged("9837123456")
+        f.clock.tap(); f.vm.submitPhone()
+        f.vm.submitPhone() // same instant: throttled
+        f.vm.uiState.first { it.step == AuthStep.NEW_SHOP && !it.isLoading }
+        assertEquals(1, f.count("check-phone"))
+        assertNull(f.vm.uiState.value.generalErrorMessage)
     }
 
     @Test
@@ -288,32 +221,8 @@ class RegisterViewModelTest {
         f.fillShop()
         f.vm.goBackToPhone()
         f.clock.tap(); f.vm.submitNewShop()
-
         advanceUntilIdle()
         assertEquals(0, f.count("signup"))
-        assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
-        assertEquals("समय समाप्त — दोबारा OTP लें", f.vm.uiState.value.generalErrorMessage)
-    }
-
-    @Test
-    fun afterPassBurned_submitMpin_doesNotReuseBurnedPass() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.Unauthorized, """{"detail":{"code":"PASS_BURNED"}}""") else verifyBody(p, "EXISTING")
-        }
-        f.toEnterMpin()
-        f.vm.onMpinChanged("0000")
-        f.clock.tap(); f.vm.submitMpin()
-        f.vm.uiState.first { it.step == AuthStep.PHONE }
-        assertEquals(1, f.count("login"))
-
-        f.vm.onMpinChanged("0000")
-        f.clock.tap(); f.vm.submitMpin()
-
-        advanceUntilIdle()
-        assertEquals(1, f.count("login"))
-        assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
-        assertEquals("बहुत गलत MPIN — दोबारा OTP लें", f.vm.uiState.value.generalErrorMessage)
     }
 
     private fun newShopCase(shop: String, owner: String, mpin: String, confirm: String) = runTest {
@@ -321,7 +230,6 @@ class RegisterViewModelTest {
         f.toNewShop()
         f.fillShop(shop, owner, mpin, confirm)
         f.clock.tap(); f.vm.submitNewShop()
-
         advanceUntilIdle()
         assertEquals(0, f.count("signup"))
         assertEquals(AuthStep.NEW_SHOP, f.vm.uiState.value.step)
@@ -334,13 +242,23 @@ class RegisterViewModelTest {
     @Test fun newShop_mpinMismatch_rejected() = newShopCase("राम आढ़त", "राम", "1234", "1235")
     @Test fun newShop_mpinNotFourDigits_rejected() = newShopCase("राम आढ़त", "राम", "123", "123")
 
+    @Test
+    fun newShop_blankMandiName_rejectedWithFieldError_noNetwork() = runTest {
+        val f = fixture(signupOk)
+        f.toNewShop()
+        f.fillShop(mandi = "   ")
+        f.clock.tap(); f.vm.submitNewShop()
+        advanceUntilIdle()
+        assertEquals(0, f.count("signup"))
+        assertEquals("मंडी का नाम लिखें", f.vm.uiState.value.mandiNameError)
+    }
+
     private fun phoneCase(number: String) = runTest {
-        val f = fixture { json(HttpStatusCode.OK, """{"sent":true,"cooldown_s":30}""") }
+        val f = fixture { checkPhone(true) }
         f.vm.onPhoneNumberChanged(number)
         f.clock.tap(); f.vm.submitPhone()
-
         advanceUntilIdle()
-        assertEquals(0, f.count("otp/send"))
+        assertEquals(0, f.count("check-phone"))
         assertEquals(AuthStep.PHONE, f.vm.uiState.value.step)
         assertTrue(f.vm.uiState.value.generalErrorMessage != null)
     }
@@ -350,14 +268,10 @@ class RegisterViewModelTest {
 
     @Test
     fun enterMpin_threeDigits_rejected() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
-        }
+        val f = fixture(loginHandler { json(HttpStatusCode.OK, sessionJson) })
         f.toEnterMpin()
         f.vm.onMpinChanged("123")
         f.clock.tap(); f.vm.submitMpin()
-
         advanceUntilIdle()
         assertEquals(0, f.count("login"))
         assertEquals(AuthStep.ENTER_MPIN, f.vm.uiState.value.step)
@@ -365,65 +279,10 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun submitOtp_twiceBackToBack_sendsOneVerifyRequest() = runTest {
-        val f = fixture { req -> verifyBody(req.url.encodedPath, "NEW") }
-        f.toOtpStep()
-        f.vm.onOtpChanged("123456")
-        f.clock.tap(); f.vm.submitOtp()
-        f.clock.tap(); f.vm.submitOtp()
-        advanceUntilIdle()
-        f.vm.uiState.first { it.step == AuthStep.NEW_SHOP && !it.isLoading }
-        advanceUntilIdle()
-        assertEquals(1, f.count("otp/verify"))
-    }
-
-    @Test
-    fun accountLocked_returnsToPhone_with24hMessage() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_LOCKED"}}""") else verifyBody(p, "EXISTING")
-        }
-        f.toEnterMpin()
-        f.vm.onMpinChanged("4826")
-        f.clock.tap(); f.vm.submitMpin()
-
-        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
-        assertEquals("बहुत ज़्यादा गलत MPIN — 24 घंटे बाद कोशिश करें", s.generalErrorMessage)
-    }
-
-    @Test
-    fun newShop_blankMandiName_rejectedWithFieldError_noNetwork() = runTest {
-        val f = fixture(signupOk)
-        f.toNewShop()
-        f.fillShop(mandi = "   ")
-        f.clock.tap(); f.vm.submitNewShop()
-
-        advanceUntilIdle()
-        assertEquals(0, f.count("signup"))
-        assertEquals(AuthStep.NEW_SHOP, f.vm.uiState.value.step)
-        assertEquals("मंडी का नाम लिखें", f.vm.uiState.value.mandiNameError)
-    }
-
-    @Test
-    fun signup_422_showsCheckDetailsMessage() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("signup")) json(HttpStatusCode.UnprocessableEntity, """{"detail":[]}""") else verifyBody(p, "NEW")
-        }
-        f.toNewShop()
-        f.fillShop()
-        f.clock.tap(); f.vm.submitNewShop()
-
-        val s = f.vm.uiState.first { it.generalErrorMessage != null }
-        assertEquals("जानकारी जाँचें और दोबारा कोशिश करें", s.generalErrorMessage)
-        assertEquals(AuthStep.NEW_SHOP, s.step)
-    }
-
-    @Test
     fun login_otherShopUnsynced_returnsToPhone_withSyncFirstMessage_andKeepsData() = runTest {
         val f = fixture { req ->
             val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else checkPhone(false)
         }
         val io = StandardTestDispatcher(testScheduler)
         com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository(f.db, io).saveShopProfile(
@@ -452,24 +311,10 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun login_expiredPass_showsTimeUpMessage_notWrongMpin() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.Unauthorized, """{"detail":"INVALID_PASS"}""") else verifyBody(p, "EXISTING")
-        }
-        f.toEnterMpin()
-        f.vm.onMpinChanged("4826")
-        f.clock.tap(); f.vm.submitMpin()
-
-        val s = f.vm.uiState.first { it.step == AuthStep.PHONE }
-        assertEquals("समय समाप्त — दोबारा OTP लें", s.generalErrorMessage)
-    }
-
-    @Test
     fun login_success_exposesSessionFromRepository() = runTest {
         val f = fixture { req ->
             val p = req.url.encodedPath
-            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else verifyBody(p, "EXISTING")
+            if (p.endsWith("login")) json(HttpStatusCode.OK, sessionJson) else checkPhone(false)
         }
         f.toEnterMpin()
         f.vm.onMpinChanged("4826")
@@ -477,20 +322,6 @@ class RegisterViewModelTest {
 
         val s = f.vm.uiState.first { it.isRegistrationComplete }
         assertEquals(com.appwork.mandisamiti.data.auth.Session("s1", "a", "r"), s.completedSession)
-    }
-
-    @Test
-    fun verify_accountDisabled_returnsToPhone_withContactOwnerMessage() = runTest {
-        val f = fixture { req ->
-            val p = req.url.encodedPath
-            if (p.endsWith("otp/verify")) json(HttpStatusCode.Unauthorized, """{"detail":{"code":"ACCOUNT_DISABLED"}}""") else verifyBody(p, "NEW")
-        }
-        f.toOtpStep()
-        f.clock.tap(); f.vm.onOtpChanged("123456")
-
-        val s = f.vm.uiState.first { it.generalErrorMessage != null }
-        assertEquals("यह खाता बंद है — दुकान मालिक से संपर्क करें", s.generalErrorMessage)
-        assertEquals(AuthStep.PHONE, s.step)
     }
 
     @Test
