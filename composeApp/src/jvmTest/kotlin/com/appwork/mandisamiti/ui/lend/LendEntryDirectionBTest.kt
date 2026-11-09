@@ -196,3 +196,4 @@ class LendEntryDirectionBTest {
         assertEquals("बीज के लिए", entry.notes)
     }
 }
+
