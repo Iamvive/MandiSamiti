@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
@@ -194,11 +195,13 @@ fun MandiPartyLookupField(
     Column(modifier = modifier.fillMaxWidth()) {
         MandiFlatTextField(
             value = if (searchQuery.isNotEmpty()) searchQuery else phoneValue,
-            onValueChange = { input ->
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            onValueChange = { raw ->
+                val input = raw.filter { it.isDigit() }.take(10)
                 searchQuery = input
                 expanded = true
                 onPhoneChange(input)
-                val digits = input.filter { it.isDigit() }
+                val digits = input
                 if (digits.length == 10) {
                     val exact = parties.firstOrNull { it.phone == digits }
                     if (exact != null) {

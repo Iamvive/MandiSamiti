@@ -332,7 +332,7 @@ fun SellEntryScreen(
                     SellPartyResolver.pick(formState, party)
                 },
                 parties = parties,
-                label = if (isEnglish) "Mobile number or name" else "मोबाइल नंबर या नाम",
+                label = if (isEnglish) "Mobile number" else "मोबाइल नंबर",
                 placeholder = if (isOldPartyWithoutPhone) (if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें") else null,
                 isError = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull) != null,
                 errorMessage = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull)
