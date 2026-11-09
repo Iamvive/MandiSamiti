@@ -172,16 +172,21 @@ fun BuyTransactionReceiptScreen(
                 if (lots.isNotEmpty()) {
                     lots.forEachIndexed { idx, lot ->
                         Line(
-                            label = if (isEnglish) "Lot #${idx + 1}: ${lot.cropName}, ${lot.bags} bags" else "फसल #${idx + 1}: ${lot.cropName}, ${lot.bags} बोरी",
+                            label = if (isEnglish) "Lot #${idx + 1}: ${lot.cropName}, ${lot.bags} bags, ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} Qtl @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}" else "फसल #${idx + 1}: ${lot.cropName}, ${lot.bags} बोरी, ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}",
                             amountText = MandiMathEngine.formatRupees(lot.grossPaisa)
                         )
                     }
                 } else {
                     Line(
-                        label = if (isEnglish) "Crop: ${entry.commodityId}, ${entry.bagsCount} bags" else "फसल: ${entry.commodityId}, ${entry.bagsCount} बोरी",
+                        label = if (isEnglish) "Crop: ${entry.commodityId}, ${entry.bagsCount} bags, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} Qtl @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}" else "फसल: ${entry.commodityId}, ${entry.bagsCount} बोरी, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}",
                         amountText = MandiMathEngine.formatRupees(entry.grossPaisa)
                     )
                 }
+
+                Line(
+                    label = if (isEnglish) "Total weight" else "कुल वजन",
+                    amountText = "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
+                )
 
                 // Labour strictly above Commission
                 Line(
