@@ -95,7 +95,8 @@ class TradeSettingsFormDefaultsF05Test {
         // Update settings in repository
         val updated = TradeSettings(
             farmerCommissionBps = 250L,  // 2.5%
-            buyerCommissionBps = 175L,   // 1.75%
+            buyerCommissionBps = 190L,   // merchant 1.9%
+            customerCommissionBps = 175L, // customer 1.75%, the default Sell party
             defaultLabourPaisa = 1200L,  // ₹12 / bag
             defaultTareGrams = 50000L    // 0.50 Qtl
         )

@@ -30,7 +30,8 @@ class ReceiptChargesAndDefaultsTest {
     fun sellForm_seedsFromSavedShopTradeSettings() {
         val settings = TradeSettings(
             farmerCommissionBps = 150L,
-            buyerCommissionBps = 250L,    // 2.5%
+            buyerCommissionBps = 300L,    // merchant 3.0%
+            customerCommissionBps = 250L, // customer 2.5%, the default Sell party
             defaultLabourPaisa = 18000L,  // ₹180
             defaultTareGrams = 20000L     // 0.2 qtl
         )

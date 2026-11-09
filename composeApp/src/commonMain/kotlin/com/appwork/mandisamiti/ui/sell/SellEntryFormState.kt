@@ -135,9 +135,14 @@ class SellEntryFormState(
     var invoiceDate by mutableStateOf("")
 
     // Deductions & charges
-    var commissionPercent by mutableStateOf(
-        tradeSettings?.let { MandiMathEngine.paisaToInputString(it.buyerCommissionBps) } ?: "1.5"
-    )
+    private var settings: TradeSettings? = tradeSettings
+
+    private fun defaultCommissionFor(kind: SellPartyKind): String = when (kind) {
+        SellPartyKind.MERCHANT -> settings?.let { MandiMathEngine.paisaToInputString(it.buyerCommissionBps) } ?: "1.5"
+        SellPartyKind.CUSTOMER -> settings?.let { MandiMathEngine.paisaToInputString(it.customerCommissionBps) } ?: "1.5"
+    }
+
+    var commissionPercent by mutableStateOf(defaultCommissionFor(SellPartyKind.CUSTOMER))
     var labourPerBag by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
@@ -167,7 +172,8 @@ class SellEntryFormState(
     }
 
     fun applySettings(settings: TradeSettings) {
-        commissionPercent = MandiMathEngine.paisaToInputString(settings.buyerCommissionBps)
+        this.settings = settings
+        commissionPercent = defaultCommissionFor(partyKind)
         labourPerBag = MandiMathEngine.paisaToRupeesString(settings.defaultLabourPaisa)
     }
 
@@ -176,6 +182,10 @@ class SellEntryFormState(
     )
 
     fun setParty(newParty: SellPartyKind) {
+        // Move to the new party's default rate, unless the owner typed a custom one.
+        if (newParty != partyKind && commissionPercent == defaultCommissionFor(partyKind)) {
+            commissionPercent = defaultCommissionFor(newParty)
+        }
         partyKind = newParty
         // Guardrail: Bill of Supply is strictly for Merchants
         if (newParty == SellPartyKind.CUSTOMER && billMode == BillMode.BILL_OF_SUPPLY) {

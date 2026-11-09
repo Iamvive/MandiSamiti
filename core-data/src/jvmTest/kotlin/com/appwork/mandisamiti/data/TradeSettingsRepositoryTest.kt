@@ -22,6 +22,7 @@ class TradeSettingsRepositoryTest {
         val initial = repo.getTradeSettings()
         assertEquals(70L, initial.farmerCommissionBps)
         assertEquals(150L, initial.buyerCommissionBps)
+        assertEquals(150L, initial.customerCommissionBps)
         assertEquals(1000L, initial.defaultLabourPaisa)
         assertEquals(35000L, initial.defaultTareGrams)
         assertEquals(false, initial.isEnglish)
@@ -30,6 +31,7 @@ class TradeSettingsRepositoryTest {
         val custom = TradeSettings(
             farmerCommissionBps = 200L,   // 2.0%
             buyerCommissionBps = 100L,    // 1.0%
+            customerCommissionBps = 120L,
             defaultLabourPaisa = 18000L,  // ₹180
             defaultTareGrams = 40000L,    // 0.40 qtl
             isEnglish = true
@@ -39,6 +41,7 @@ class TradeSettingsRepositoryTest {
         val retrieved = repo.getTradeSettings()
         assertEquals(200L, retrieved.farmerCommissionBps)
         assertEquals(100L, retrieved.buyerCommissionBps)
+        assertEquals(120L, retrieved.customerCommissionBps)
         assertEquals(18000L, retrieved.defaultLabourPaisa)
         assertEquals(40000L, retrieved.defaultTareGrams)
         assertEquals(true, retrieved.isEnglish)
