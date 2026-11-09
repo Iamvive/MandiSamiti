@@ -32,6 +32,10 @@ object CashDrawer {
         )
     }
 
+    /** All-time drawer balance by the book: same rules as [summarize], no day window. */
+    fun balancePaisa(transactions: List<CashTransaction>): Long =
+        summarize(transactions, DayWindow(startMs = Long.MAX_VALUE, endMs = Long.MAX_VALUE)).openingPaisa
+
     fun summarize(transactions: List<CashTransaction>, window: DayWindow): DrawerSummary {
         var opening = 0L
         var cashIn = 0L

@@ -172,15 +172,7 @@ class HomeViewModel(
 
             val computedKpis = computeKpis(buys, sells, lends, expenses, settlements)
             val lines = stockUseCase?.lines(shopId) ?: emptyList()
-            val rokdi = cashTxs.filter { !it.isVoid && it.paymentMode == com.appwork.mandisamiti.domain.model.PaymentMode.CASH }.sumOf {
-                if (it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED ||
-                    it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.INTEREST_RECEIVED
-                ) {
-                    it.amountPaisa
-                } else {
-                    -it.amountPaisa
-                }
-            }
+            val rokdi = com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(cashTxs)
 
             val outlierBuy = buys.firstOrNull { buy ->
                 !buy.isVoid && buy.ratePaisaPerQuintal > com.appwork.mandisamiti.domain.validation.MandiValidators.RATE_OUTLIER_THRESHOLD_PAISA

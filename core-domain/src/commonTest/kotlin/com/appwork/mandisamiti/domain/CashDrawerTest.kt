@@ -49,4 +49,20 @@ class CashDrawerTest {
         assertEquals(500_000L, summary.cashOutPaisa)
         assertEquals(2_300_000L, summary.closingPaisa)
     }
+
+    @Test
+    fun balanceIgnoresBookEntriesDeletedRowsAndNonCash() {
+        val balance = CashDrawer.balancePaisa(
+            listOf(
+                tx(TransactionType.JAMA_RECEIVED, 10_000, at = 1),
+                tx(TransactionType.UDHAR_GIVEN, 2_000, at = 2),
+                tx(TransactionType.INTEREST_ADDED, 500, at = 3),   // book entry, moves no cash
+                tx(TransactionType.DISCOUNT_GIVEN, 300, at = 4),   // book entry, moves no cash
+                tx(TransactionType.JAMA_RECEIVED, 700, at = 5, mode = PaymentMode.UPI),
+                tx(TransactionType.JAMA_RECEIVED, 900, at = 6, void = true),
+                tx(TransactionType.JAMA_RECEIVED, 100, at = 7).copy(isDeleted = true)
+            )
+        )
+        assertEquals(800_000L, balance)
+    }
 }
