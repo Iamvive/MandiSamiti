@@ -291,7 +291,9 @@ class BuyEntryFormState(
         // Sheet Rule 3 & 4: Final rounded to nearest Rs 10, commission absorbs rounding
         val commRaw = MandiMathEngine.percentageOf(totalGross, commBps)
         val unroundedFinal = totalGross - labourPaisa - commRaw
-        val roundedFinal = ((unroundedFinal + 500L) / 1000L) * 1000L
+        var roundedFinal = ((unroundedFinal + 500L) / 1000L) * 1000L
+        // Rounding up must never turn commission negative (blank or 0% rate): round down instead.
+        if (totalGross - labourPaisa - roundedFinal < 0L) roundedFinal = (unroundedFinal / 1000L) * 1000L
         val commissionPaisa = totalGross - labourPaisa - roundedFinal
         // Net is the commodity value only (Vivek's sheet, 2026-11-01). Advance is money already paid, tracked in paid.
         val netPayable = roundedFinal

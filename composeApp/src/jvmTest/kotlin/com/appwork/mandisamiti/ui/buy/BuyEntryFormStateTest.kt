@@ -151,4 +151,17 @@ class BuyEntryFormStateTest {
         assertEquals(null, extractVillage(""))
         assertEquals(null, extractVillage(null))
     }
+
+    @Test
+    fun blankCommissionNeverGoesNegativeFromRounding() {
+        val f = BuyEntryFormState().apply {
+            farmerName = "रमेश किसान"
+            bags = "1"; weightPerBagKg = "50"; ratePerQuintal = "2512"
+            commissionPercent = ""; labourPerBag = ""
+        }
+        // Gross Rs 1,256 would round UP to Rs 1,260 and make commission -Rs 4. It must round down to Rs 1,250 instead.
+        val agg = f.aggregatePreview()
+        assertTrue(agg.commissionPaisa >= 0, "commission was ${agg.commissionPaisa}")
+        assertEquals(125_000L, agg.netPayablePaisa)
+    }
 }
