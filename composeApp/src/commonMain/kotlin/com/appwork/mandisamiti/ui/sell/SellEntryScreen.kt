@@ -201,7 +201,10 @@ fun SellEntryScreen(
                 color = MandiSurface,
                 border = BorderStroke(1.dp, MandiBorder),
                 shadowElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .imePadding()
+                    .navigationBarsPadding()
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
