@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app draws its own light and dark NGDL themes in Compose. Opt out of the
+         system's algorithmic force-dark so it does not recolor text a second time. -->
+    <style name="Theme.MandiSamiti" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>
