@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,7 +67,7 @@ fun MandiFlatTextField(
     isTall: Boolean = true,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     trailingIcon: (@Composable () -> Unit)? = null
 ) {

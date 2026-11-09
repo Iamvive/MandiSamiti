@@ -1,6 +1,8 @@
 package com.appwork.mandisamiti.ui.sell
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -104,6 +106,7 @@ fun SellTransactionsListScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     label = { Text("खरीदार या बिल नंबर खोजें") },

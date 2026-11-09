@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.appwork.mandisamiti.data.auth.Session
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -445,7 +446,7 @@ private fun NewShopSection(
                         Text(uiState.shopNameError!!, color = MandiRedText, fontSize = 11.sp)
                     }
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -464,7 +465,7 @@ private fun NewShopSection(
                         Text(uiState.ownerNameError!!, color = MandiRedText, fontSize = 11.sp)
                     }
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -482,7 +483,7 @@ private fun NewShopSection(
                         Text(uiState.mandiNameError!!, color = MandiRedText, fontSize = 11.sp)
                     }
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),

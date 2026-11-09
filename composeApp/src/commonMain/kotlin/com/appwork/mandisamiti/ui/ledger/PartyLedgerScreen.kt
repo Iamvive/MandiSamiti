@@ -456,6 +456,7 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = editNameInput,
                         onValueChange = { editNameInput = it },
                         label = { Text(if (isEnglish) "Party Name *" else "नांव / नाम *") },
@@ -463,6 +464,7 @@ fun PartyLedgerScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = editVillageInput,
                         onValueChange = { editVillageInput = it },
                         label = { Text(if (isEnglish) "Village / Location" else "गांव / पता (वैकल्पिक)") },
@@ -492,6 +494,7 @@ fun PartyLedgerScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                             value = editMandiLicenseInput,
                             onValueChange = { if (it.length <= 50) editMandiLicenseInput = it },
                             label = { Text(if (isEnglish) "Mandi Licence No. (Optional)" else "मंडी लाइसेंस नंबर (वैकल्पिक)") },
@@ -608,6 +611,7 @@ fun PartyLedgerScreen(
                         )
                     }
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = cashEditRemarks,
                         onValueChange = { cashEditRemarks = it },
                         label = { Text(if (isEnglish) "Note" else "नोट") },
@@ -649,6 +653,7 @@ fun PartyLedgerScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = cashEditRemarks,
                         onValueChange = { cashEditRemarks = it },
                         label = { Text(if (isEnglish) "Note" else "नोट") },
@@ -698,6 +703,7 @@ fun PartyLedgerScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = cashRemarksInput,
                         onValueChange = { cashRemarksInput = it },
                         label = { Text(if (isEnglish) "Note (optional)" else "विवरण / नोट (वैकल्पिक)") },
@@ -1148,6 +1154,7 @@ fun PartyLedgerScreen(
                         }
 
                         OutlinedTextField(
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                             value = settlementNote,
                             onValueChange = { settlementNote = it },
                             label = { Text(if (isEnglish) "Note (optional)" else "विवरण / नोट (वैकल्पिक)") },

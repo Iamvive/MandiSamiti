@@ -139,6 +139,7 @@ fun KhataLedgerTabScreen(
             // 1. Full-Width Search Input
             item {
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     value = uiState.searchQuery,
                     onValueChange = onSearchQueryChanged,
                     placeholder = {
@@ -370,6 +371,7 @@ fun KhataLedgerTabScreen(
                     }
 
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = partyNameInput,
                         onValueChange = { partyNameInput = it },
                         label = { Text(if (isEnglish) "Party Name *" else "नांव / नाम *") },
@@ -378,6 +380,7 @@ fun KhataLedgerTabScreen(
                     )
 
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = partyVillageInput,
                         onValueChange = { partyVillageInput = it },
                         label = { Text(if (isEnglish) "Village / Location" else "गांव / पता (वैकल्पिक)") },
@@ -421,6 +424,7 @@ fun KhataLedgerTabScreen(
                         )
 
                         OutlinedTextField(
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                             value = partyMandiLicenseInput,
                             onValueChange = {
                                 if (it.length <= 50) partyMandiLicenseInput = it

@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.register
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
@@ -1047,6 +1048,7 @@ fun DailyCashRegisterScreen(
                     )
 
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = physicalCashReason,
                         onValueChange = { physicalCashReason = it },
                         label = { Text(if (isEnglish) "Reason (optional)" else "कारण (वैकल्पिक)") },
@@ -1266,6 +1268,7 @@ fun DailyCashRegisterScreen(
                         }
                     }
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = directRemarksInput,
                         onValueChange = { directRemarksInput = it },
                         label = { Text(if (isEnglish) "Remarks / Note (Optional)" else "विवरण / नोट (वैकल्पिक)") },
@@ -1341,6 +1344,7 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = openingBalanceRemarks,
                         onValueChange = { openingBalanceRemarks = it },
                         label = { Text(if (isEnglish) "Note / Reason (Optional)" else "कारण / नोट (वैकल्पिक)") },
@@ -1409,6 +1413,7 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = cashHomeRemarks,
                         onValueChange = { cashHomeRemarks = it },
                         label = { Text(if (isEnglish) "Note (Optional)" else "विवरण / नोट (वैकल्पिक)") },

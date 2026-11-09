@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.lend
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -295,7 +296,7 @@ fun LendEntryScreen(
                     value = formState.commodityName,
                     onValueChange = { formState.commodityName = it },
                     label = { Text(if (isEnglish) "Crop / Commodity Name (e.g. Wheat, Gram) *" else "जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -382,6 +383,7 @@ fun LendEntryScreen(
             }
 
             OutlinedTextField(
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 value = formState.notes,
                 onValueChange = { formState.notes = it },
                 label = { Text(if (isEnglish) "Notes / Details (Optional)" else "टिप्पणी / विवरण (वैकल्पिक)") },
