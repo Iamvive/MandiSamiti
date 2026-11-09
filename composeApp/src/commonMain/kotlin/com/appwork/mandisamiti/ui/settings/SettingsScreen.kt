@@ -1,5 +1,7 @@
 package com.appwork.mandisamiti.ui.settings
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -135,6 +137,7 @@ fun SettingsScreen(
                         color = MandiTextSecondary
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = editFarmerCommInput,
                         onValueChange = { editFarmerCommInput = it },
                         label = { Text(if (isEnglish) "Farmer Commission (%)" else "किसान आढ़त (%)") },
@@ -142,6 +145,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = editBuyerCommInput,
                         onValueChange = { editBuyerCommInput = it },
                         label = { Text(if (isEnglish) "Merchant Commission (%)" else "व्यापारी आढ़त (%)") },
@@ -149,6 +153,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = editCustomerCommInput,
                         onValueChange = { editCustomerCommInput = it },
                         label = { Text(if (isEnglish) "Customer Commission (%)" else "ग्राहक आढ़त (%)") },
@@ -156,6 +161,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = editLabourInput,
                         onValueChange = { editLabourInput = it },
                         label = { Text(if (isEnglish) "Labour Charge (₹ per bag)" else "हम्माली / पल्लेदारी (₹ प्रति बोरी)") },

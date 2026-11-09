@@ -696,6 +696,7 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = cashAmountInput,
                         onValueChange = { cashAmountInput = it },
                         label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
@@ -1309,12 +1310,14 @@ fun PartyLedgerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             value = interestRateInput,
                             onValueChange = { interestRateInput = it },
                             label = { Text(if (isEnglish) "Rate (% per month)" else "दर (% प्रति माह)") },
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             value = interestDaysInput,
                             onValueChange = { interestDaysInput = it },
                             label = { Text(if (isEnglish) "Days" else "दिन") },

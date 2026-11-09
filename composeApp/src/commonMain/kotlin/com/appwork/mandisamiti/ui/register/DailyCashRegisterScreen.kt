@@ -1242,6 +1242,7 @@ fun DailyCashRegisterScreen(
                     }
 
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = directAmountInput,
                         onValueChange = { directAmountInput = it },
                         label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
@@ -1337,6 +1338,7 @@ fun DailyCashRegisterScreen(
                         color = MandiTextSecondary
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = openingBalanceInput,
                         onValueChange = { openingBalanceInput = it },
                         label = { Text(if (isEnglish) "Opening Cash Float ₹" else "प्रारंभिक रोकड़ शेष ₹") },
@@ -1406,6 +1408,7 @@ fun DailyCashRegisterScreen(
                         color = MandiTextSecondary
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = cashHomeInput,
                         onValueChange = { cashHomeInput = it },
                         label = { Text(if (isEnglish) "Amount ₹" else "निकासी राशि ₹") },
