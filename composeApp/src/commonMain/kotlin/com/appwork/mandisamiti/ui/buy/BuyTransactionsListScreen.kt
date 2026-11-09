@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.buy
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.clickable
@@ -108,7 +109,8 @@ fun BuyTransactionsListScreen(
                 .padding(paddingValues)
         ) {
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                singleLine = true,
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 label = { Text("किसान, गाँव या पर्चा नंबर खोजें") },

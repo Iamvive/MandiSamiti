@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.stock
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.background
@@ -153,7 +154,7 @@ fun StockRegisterScreen(
         // 2. Search Field
         item(key = "godown_search_bar") {
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
                 value = query,
                 onValueChange = { query = it },
                 leadingIcon = {

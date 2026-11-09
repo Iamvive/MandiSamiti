@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
@@ -155,7 +156,10 @@ fun LendEntryScreen(
                 color = MandiSurface,
                 border = BorderStroke(1.dp, MandiBorder),
                 shadowElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .imePadding()
+                    .navigationBarsPadding()
             ) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
                     Button(
@@ -297,6 +301,7 @@ fun LendEntryScreen(
                     onValueChange = { formState.commodityName = it },
                     label = { Text(if (isEnglish) "Crop / Commodity Name (e.g. Wheat, Gram) *" else "जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

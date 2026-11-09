@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.lend
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -130,7 +131,8 @@ fun LendTransactionsListScreen(
                 .padding(paddingValues)
         ) {
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                singleLine = true,
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 label = { Text("किसान या जिंस खोजें") },

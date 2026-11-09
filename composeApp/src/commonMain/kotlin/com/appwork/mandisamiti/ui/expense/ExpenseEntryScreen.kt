@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.expense
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -155,7 +156,8 @@ fun ExpenseEntryScreen(
             )
 
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                singleLine = true,
                 value = paidTo,
                 onValueChange = { paidTo = it },
                 label = { Text(if (isEnglish) "Paid To (Name / Description)" else "किसे दिया (नाम / विवरण)") },
