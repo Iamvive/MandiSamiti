@@ -21,7 +21,6 @@ data class Deal(
     // Weight parameters (Stored in Grams)
     val bagsCount: Int,
     val grossWeightGrams: Long,
-    val cutWeightGrams: Long = 0L,
     val netWeightGrams: Long,
 
     // Pricing & Deductions (Stored in Paisa)

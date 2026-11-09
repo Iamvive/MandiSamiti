@@ -90,12 +90,10 @@ object DemoSimulator {
 
         val bagCount = 45
         val grossGrams = (23L * 100_000L) + (50L * 1_000L) // 23 Qtl 50 Kg = 2,350,000 g
-        val bagDeductionGrams = 1_000L * bagCount // 1 kg bardana per bag = 45,000 g
-        val netGrams = grossGrams - bagDeductionGrams // 2,305,000 g = 23.05 Qtl
+        val netGrams = grossGrams
 
         println("  • कुल बोरी: $bagCount बोरी")
-        println("  • सकल वजन (Gross Weight): 23 क्विंटल 50 किलो")
-        println("  • बारदाना काट (-1kg/बोरी): 45 किलो")
+        println("  • कुल वजन: 23 क्विंटल 50 किलो")
         println("  • शुद्ध वजन (Net Weight): ${MandiMathEngine.gramsToQuintals(netGrams)} क्विंटल ($netGrams ग्राम)")
 
         val deal1 = Deal(
@@ -108,7 +106,6 @@ object DemoSimulator {
             dealDate = currentTime,
             bagsCount = bagCount,
             grossWeightGrams = grossGrams,
-            cutWeightGrams = bagDeductionGrams,
             netWeightGrams = netGrams,
             remarks = "गोवर्धन से आवक - तौल पर्ची सं. 104",
             createdAt = currentTime,
@@ -134,7 +131,6 @@ object DemoSimulator {
 
         val settlement = MandiMathEngine.calculateSettlement(
             grossWeightGrams = grossGrams,
-            cutWeightGrams = bagDeductionGrams,
             ratePaisaPerQuintal = ratePaisaPerQtl,
             deductions = DeductionsInput(
                 farmerCommissionPaisa = farmerCommissionPaisa,
@@ -251,8 +247,7 @@ object DemoSimulator {
             ║  जिंस (फसल): गेहूं (Sharbati)            ║
             ║  बोरी: 45 बोरी                           ║
             ║  कुल वजन: 23 क्विंटल 50 किलो            ║
-            ║  काट (बारदाना): -45 किलो (1kg/बोरी)      ║
-            ║  शुद्ध वजन: 23.05 क्विंटल                ║
+            ║  शुद्ध वजन: 23.50 क्विंटल                ║
             ║  नीलामी भाव: ₹2,275.00 / क्विंटल         ║
             ║  सकल मूल्य: ₹52,438.75                   ║
             ╠══════════════════════════════════════════╣

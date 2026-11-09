@@ -621,18 +621,6 @@ fun SellEntryScreen(
                 )
             }
 
-            // For editing existing slips with stored tare only
-            if (existingId != null && formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
-                MandiFlatTextField(
-                    value = formState.tareQuintals,
-                    onValueChange = { formState.tareQuintals = it },
-                    label = if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)",
-                    readOnly = true,
-                    isTall = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
             // Section 4: हिसाब पर्ची (Slip summary card with lines)
             Text(
                 text = if (isEnglish) "Slip" else "हिसाब पर्ची",
@@ -648,12 +636,6 @@ fun SellEntryScreen(
                     Line(
                         label = if (isEnglish) "Lot #${i + 1}: ${lot.cropName}, ${lot.bags} bags" else "फसल #${i + 1}: ${lot.cropName}, ${lot.bags} बोरी",
                         amountText = MandiMathEngine.formatRupees(lotCrop.grossPaisa)
-                    )
-                }
-                if (existingId != null && formState.tareQuintals.isNotBlank() && formState.tareQuintals != "0") {
-                    Line(
-                        label = if (isEnglish) "Tare / Bardana" else "काट / बारदाना",
-                        amountText = "− ${formState.tareQuintals} ${if (isEnglish) "qtl" else "क्विंटल"}"
                     )
                 }
                 if (!isBos) {

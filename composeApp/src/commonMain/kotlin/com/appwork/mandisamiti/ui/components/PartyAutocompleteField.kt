@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +50,7 @@ fun PartyAutocompleteField(
     partyType: PartyType? = null,
     onPartySelected: (Party) -> Unit,
     modifier: Modifier = Modifier,
-    keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+    keyboardOptions: KeyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null

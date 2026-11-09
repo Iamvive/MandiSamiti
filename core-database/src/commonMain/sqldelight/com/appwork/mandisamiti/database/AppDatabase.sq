@@ -65,7 +65,6 @@ CREATE TABLE dealEntity (
     -- Weight details (Grams)
     bags_count INTEGER NOT NULL,
     gross_weight_grams INTEGER NOT NULL,
-    cut_weight_grams INTEGER NOT NULL DEFAULT 0,
     net_weight_grams INTEGER NOT NULL,
 
     -- Pricing details (Paisa)
@@ -381,14 +380,14 @@ SELECT * FROM dealEntity WHERE shop_id = ? AND deal_status = 'PENDING_SETTLEMENT
 insertDeal:
 INSERT OR REPLACE INTO dealEntity(
     id, shop_id, farmer_id, buyer_id, commodity_id, deal_status, deal_date,
-    bags_count, gross_weight_grams, cut_weight_grams, net_weight_grams,
+    bags_count, gross_weight_grams, net_weight_grams,
     rate_paisa_per_unit, gross_amount_paisa,
     farmer_commission_paisa, buyer_commission_paisa, labour_charge_paisa, weighing_charge_paisa, other_deductions_paisa,
     net_farmer_payable_paisa, net_buyer_receivable_paisa,
     receipt_photo_uri, voice_note_uri, remarks,
     created_at, updated_at, is_deleted, sync_status,
     farmer_commission_bps, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- Cash Transaction Queries
 getCashTransactionsByParty:
@@ -499,14 +498,14 @@ DELETE FROM dealEntity WHERE id = ? AND sync_status = 1;
 insertDealIfAbsent:
 INSERT OR IGNORE INTO dealEntity(
     id, shop_id, farmer_id, buyer_id, commodity_id, deal_status, deal_date,
-    bags_count, gross_weight_grams, cut_weight_grams, net_weight_grams,
+    bags_count, gross_weight_grams, net_weight_grams,
     rate_paisa_per_unit, gross_amount_paisa,
     farmer_commission_paisa, buyer_commission_paisa, labour_charge_paisa, weighing_charge_paisa, other_deductions_paisa,
     net_farmer_payable_paisa, net_buyer_receivable_paisa,
     receipt_photo_uri, voice_note_uri, remarks,
     created_at, updated_at, is_deleted, sync_status,
     farmer_commission_bps, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteSyncedCashTransaction:
 DELETE FROM cashTransactionEntity WHERE id = ? AND sync_status = 1;

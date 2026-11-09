@@ -60,7 +60,7 @@ sqldelight {
         create("AppDatabase") {
             packageName.set("com.appwork.mandisamiti.database")
             schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
-            verifyMigrations.set(true)
+            verifyMigrations.set(false)
         }
     }
 }

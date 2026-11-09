@@ -146,8 +146,6 @@ class SellEntryFormState(
     var labourPerBag by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
-    // Tare is gone for new slips (Vivek, 2026-10-31). Only populateFrom() fills it for saved slips.
-    var tareQuintals by mutableStateOf("")
     var tulakPerQuintal by mutableStateOf("1")
 
     // Advance received now (अग्रिम / प्राप्त राशि)
@@ -245,18 +243,8 @@ class SellEntryFormState(
         val calculatedLots = lots.map { it.toCropLot() }
         val totalBags = calculatedLots.sumOf { it.bags }
         val totalGrossWeight = calculatedLots.sumOf { it.totalWeightGrams }
-        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(tareQuintals.ifBlank { "0" })
-        val totalWeight = (totalGrossWeight - tareGrams).coerceAtLeast(0L)
-
-        val gross = if (totalGrossWeight <= 0L || tareGrams == 0L) {
-            calculatedLots.sumOf { it.grossPaisa }
-        } else {
-            calculatedLots.sumOf { lot ->
-                val lotWeight = lot.totalWeightGrams
-                val lotNetWeight = (lotWeight - (tareGrams * lotWeight / totalGrossWeight)).coerceAtLeast(0L)
-                MandiMathEngine.grossAmountPaisa(lotNetWeight, lot.ratePaisaPerQuintal)
-            }
-        }
+        val totalWeight = totalGrossWeight
+        val gross = calculatedLots.sumOf { it.grossPaisa }
 
         val isBos = (billMode == BillMode.BILL_OF_SUPPLY && partyKind == SellPartyKind.MERCHANT)
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
@@ -381,7 +369,6 @@ class SellEntryFormState(
         val cleanVillage = MandiValidators.sanitizeVillage(village)
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
-            if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
             append("DATA: $lotsJson")
         }
 
@@ -431,10 +418,6 @@ class SellEntryFormState(
         val rem = entry.remarks
         if (rem != null) {
             extractVillage(rem)?.let { village = it }
-            if (rem.contains("काट: ")) {
-                val tareQ = rem.substringAfter("काट: ").substringBefore("Q").trim()
-                if (tareQ.isNotBlank()) tareQuintals = tareQ
-            }
         }
         if (entry.receivedPaisa > 0L) {
             advanceReceived = MandiMathEngine.paisaToRupeesString(entry.receivedPaisa)

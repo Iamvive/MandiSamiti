@@ -193,8 +193,6 @@ fun BuyEntryScreen(
         state = uiState,
         actions = actions,
         existingId = existingId,
-        tareQuintals = formState.tareQuintals,
-        onTareChange = { formState.tareQuintals = it },
         parties = parties,
         isEnglish = isEnglish,
         isDirty = isDirty,
@@ -293,8 +291,6 @@ fun BuyEntryScreenContent(
     state: BuyEntryUiState,
     actions: BuyEntryActions,
     existingId: String?,
-    tareQuintals: String,
-    onTareChange: (String) -> Unit,
     parties: List<Party>,
     isEnglish: Boolean,
     isDirty: Boolean,
@@ -639,18 +635,6 @@ fun BuyEntryScreenContent(
                 )
             }
 
-            // For editing existing slips with stored tare only
-            if (existingId != null && tareQuintals.isNotBlank() && tareQuintals != "0") {
-                MandiFlatTextField(
-                    value = tareQuintals,
-                    onValueChange = onTareChange,
-                    label = if (isEnglish) "Tare / Bardana (qtl)" else "काट / बारदाना (कुंतल)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                    isTall = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
             // Section 3: हिसाब पर्ची (Slip summary card with lines)
             Text(
                 text = if (isEnglish) "Slip" else "हिसाब पर्ची",
@@ -665,12 +649,6 @@ fun BuyEntryScreenContent(
                     Line(
                         label = if (isEnglish) "Lot #${i + 1}: ${lot.cropName}, ${lot.bags} bags" else "फसल #${i + 1}: ${lot.cropName}, ${lot.bags} बोरी",
                         amountText = MandiMathEngine.formatRupees(lot.grossPaisa)
-                    )
-                }
-                if (existingId != null && tareQuintals.isNotBlank() && tareQuintals != "0") {
-                    Line(
-                        label = if (isEnglish) "Tare / Bardana" else "काट / बारदाना",
-                        amountText = "− $tareQuintals ${if (isEnglish) "qtl" else "क्विंटल"}"
                     )
                 }
                 Line(

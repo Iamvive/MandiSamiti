@@ -61,17 +61,14 @@ class BuyNewSlipRulesTest {
     }
 
     @Test
-    fun newFormNeverSeedsTareFromSettingsSoNewSlipsUseTheEnteredWeight() {
-        val settings = TradeSettings(farmerCommissionBps = 150L, buyerCommissionBps = 200L, defaultLabourPaisa = 15000L, defaultTareGrams = 35000L)
+    fun newFormSeedsFromSettingsAndUsesEnteredWeight() {
+        val settings = TradeSettings(farmerCommissionBps = 150L, buyerCommissionBps = 200L, defaultLabourPaisa = 15000L)
         val f = BuyEntryFormState(settings)
-        assertEquals("", f.tareQuintals)
-        f.applySettings(settings)
-        assertEquals("", f.tareQuintals)
+        assertEquals("1.50", f.commissionPercent)
+        assertEquals("150", f.labourPerBag)
 
-        val withTare = valid().apply { tareQuintals = "0.5" }.preview()
-        val noTare = valid().preview()
-        assertEquals(noTare.grossPaisa, valid().also { it.applySettings(settings) }.preview().grossPaisa)
-        assertTrue(withTare.grossPaisa < noTare.grossPaisa, "an old slip's own tare still applies when it is loaded")
+        val preview = valid().preview()
+        assertEquals(preview.grossPaisa, valid().also { it.applySettings(settings) }.preview().grossPaisa)
     }
 
     @Test

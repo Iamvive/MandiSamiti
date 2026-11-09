@@ -80,7 +80,6 @@ fun SettingsScreen(
     var editBuyerCommInput by remember { mutableStateOf("") }
     var editCustomerCommInput by remember { mutableStateOf("") }
     var editLabourInput by remember { mutableStateOf("") }
-    var editTareInput by remember { mutableStateOf("") }
 
     if (showSignOutConfirmDialog) {
         AlertDialog(
@@ -163,13 +162,6 @@ fun SettingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
-                        value = editTareInput,
-                        onValueChange = { editTareInput = it },
-                        label = { Text(if (isEnglish) "Default Tare Weight (Qtl)" else "डिफ़ॉल्ट काट / बारदाना (कुंतल)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             },
             confirmButton = {
@@ -179,15 +171,13 @@ fun SettingsScreen(
                         val buyerBps = MandiMathEngine.parsePercentToBasisPoints(editBuyerCommInput).takeIf { it > 0L } ?: uiState.tradeSettings.buyerCommissionBps
                         val customerBps = MandiMathEngine.parsePercentToBasisPoints(editCustomerCommInput).takeIf { it > 0L } ?: uiState.tradeSettings.customerCommissionBps
                         val labourPaisa = MandiMathEngine.parseRupeesToPaisa(editLabourInput).takeIf { it > 0L } ?: uiState.tradeSettings.defaultLabourPaisa
-                        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(editTareInput).takeIf { it > 0L } ?: uiState.tradeSettings.defaultTareGrams
 
                         onUpdateTradeSettings(
                             TradeSettings(
                                 farmerCommissionBps = farmerBps,
                                 buyerCommissionBps = buyerBps,
                                 customerCommissionBps = customerBps,
-                                defaultLabourPaisa = labourPaisa,
-                                defaultTareGrams = tareGrams
+                                defaultLabourPaisa = labourPaisa
                             )
                         )
                         showEditTradeSettingsDialog = false
@@ -363,24 +353,6 @@ fun SettingsScreen(
                         )
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isEnglish) "Default Tare Weight:" else "डिफ़ॉल्ट काट / बारदाना:",
-                            fontSize = 14.sp,
-                            color = MandiTextSecondary
-                        )
-                        Text(
-                            text = "${MandiMathEngine.gramsToQuintalsInputString(uiState.tradeSettings.defaultTareGrams)} Qtl",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Box(
@@ -394,7 +366,6 @@ fun SettingsScreen(
                                 editBuyerCommInput = MandiMathEngine.paisaToInputString(uiState.tradeSettings.buyerCommissionBps)
                                 editCustomerCommInput = MandiMathEngine.paisaToInputString(uiState.tradeSettings.customerCommissionBps)
                                 editLabourInput = MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.defaultLabourPaisa)
-                                editTareInput = MandiMathEngine.gramsToQuintalsInputString(uiState.tradeSettings.defaultTareGrams)
                                 showEditTradeSettingsDialog = true
                             }
                             .padding(vertical = 10.dp),

@@ -117,8 +117,6 @@ class BuyEntryFormState(
     var labourPerBag by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
-    // Tare is gone for new slips (Vivek, 2026-10-31). Only populateFrom() fills it, so a saved slip keeps its own tare.
-    var tareQuintals by mutableStateOf("")
     var advancePaid by mutableStateOf("") // Optional, default blank
     var showRateOutlierConfirmation by mutableStateOf(false)
 
@@ -265,19 +263,8 @@ class BuyEntryFormState(
         val lotResults = lots.map { it to it.calculateLot() }
         val totalBags = lotResults.sumOf { it.second.bags }
         val totalGrossWeight = lotResults.sumOf { it.second.totalWeightGrams }
-        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(tareQuintals.ifBlank { "0" })
-        val totalWeight = (totalGrossWeight - tareGrams).coerceAtLeast(0L)
-
-        val totalGross = if (totalGrossWeight <= 0L || tareGrams == 0L) {
-            lotResults.sumOf { it.second.grossPaisa }
-        } else {
-            lotResults.sumOf { pair ->
-                val lotWeight = pair.second.totalWeightGrams
-                val lotNetWeight = (lotWeight - (tareGrams * lotWeight / totalGrossWeight)).coerceAtLeast(0L)
-                val exactPaisa = (lotNetWeight * pair.second.ratePaisaPerQuintal) / MandiMathEngine.GRAMS_PER_QUINTAL
-                (exactPaisa / 100L) * 100L
-            }
-        }
+        val totalWeight = totalGrossWeight
+        val totalGross = lotResults.sumOf { it.second.grossPaisa }
 
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
         val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
@@ -381,7 +368,6 @@ class BuyEntryFormState(
         val cutPaisa = if (agg.loanCutPaisa > 0) agg.loanCutPaisa else extractLoanCut(existingEntry?.remarks)
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
-            if (tareQuintals.isNotBlank() && tareQuintals != "0") append("काट: ${tareQuintals}Q | ")
             if (cutPaisa > 0) append("उधार कटौती: $cutPaisa | ")
             append("DATA: $lotsJson")
         }
@@ -425,13 +411,9 @@ class BuyEntryFormState(
         labourPerBag = if (entry.labourPerBagPaisa > 0) MandiMathEngine.paisaToRupeesString(entry.labourPerBagPaisa) else "0"
         advancePaid = if (entry.advancePaidPaisa > 0) MandiMathEngine.paisaToInputString(entry.advancePaidPaisa) else ""
 
-        // Try extracting village, tare, and lots from remarks
+        // Try extracting village and lots from remarks
         entry.remarks?.let { rem ->
             extractVillage(rem)?.let { village = it }
-            if (rem.contains("काट: ")) {
-                val tareQ = rem.substringAfter("काट: ").substringBefore("Q").trim()
-                if (tareQ.isNotBlank()) tareQuintals = tareQ
-            }
             if (rem.contains("DATA: ")) {
                 val jsonPart = rem.substringAfter("DATA: ").trim()
                 try {
@@ -493,15 +475,6 @@ fun extractVillage(remarks: String?): String? {
     if (remarks.contains("गाँव:")) {
         val v = remarks.substringAfter("गाँव:").substringBefore("|").trim()
         if (v.isNotBlank()) return v
-    }
-    return null
-}
-
-fun extractTare(remarks: String?): String? {
-    if (remarks.isNullOrBlank()) return null
-    if (remarks.contains("काट: ")) {
-        val tare = remarks.substringAfter("काट: ").substringBefore("Q").substringBefore("|").trim()
-        if (tare.isNotBlank()) return tare
     }
     return null
 }

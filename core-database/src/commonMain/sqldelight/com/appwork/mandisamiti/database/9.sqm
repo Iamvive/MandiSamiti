@@ -1,0 +1,65 @@
+CREATE TABLE dealEntity_temp (
+    id TEXT PRIMARY KEY NOT NULL,
+    shop_id TEXT NOT NULL,
+    farmer_id TEXT NOT NULL,
+    buyer_id TEXT,
+    commodity_id TEXT NOT NULL,
+    deal_status TEXT NOT NULL,
+    deal_date INTEGER NOT NULL,
+
+    -- Weight details (Grams)
+    bags_count INTEGER NOT NULL,
+    gross_weight_grams INTEGER NOT NULL,
+    net_weight_grams INTEGER NOT NULL,
+
+    -- Pricing details (Paisa)
+    rate_paisa_per_unit INTEGER,
+    gross_amount_paisa INTEGER NOT NULL DEFAULT 0,
+
+    -- Manual Deductions (Paisa)
+    farmer_commission_paisa INTEGER NOT NULL DEFAULT 0,
+    buyer_commission_paisa INTEGER NOT NULL DEFAULT 0,
+    labour_charge_paisa INTEGER NOT NULL DEFAULT 0,
+    weighing_charge_paisa INTEGER NOT NULL DEFAULT 0,
+    other_deductions_paisa INTEGER NOT NULL DEFAULT 0,
+
+    -- Final Settlements (Paisa)
+    net_farmer_payable_paisa INTEGER NOT NULL DEFAULT 0,
+    net_buyer_receivable_paisa INTEGER NOT NULL DEFAULT 0,
+
+    receipt_photo_uri TEXT,
+    voice_note_uri TEXT,
+    remarks TEXT,
+
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    farmer_commission_bps INTEGER NOT NULL DEFAULT 0,
+    revision INTEGER NOT NULL DEFAULT 1,
+    is_void INTEGER NOT NULL DEFAULT 0,
+    void_reason TEXT,
+    FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
+    FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
+);
+
+INSERT INTO dealEntity_temp SELECT
+    id, shop_id, farmer_id, buyer_id, commodity_id, deal_status, deal_date,
+    bags_count, gross_weight_grams, net_weight_grams,
+    rate_paisa_per_unit, gross_amount_paisa,
+    farmer_commission_paisa, buyer_commission_paisa, labour_charge_paisa, weighing_charge_paisa, other_deductions_paisa,
+    net_farmer_payable_paisa, net_buyer_receivable_paisa,
+    receipt_photo_uri, voice_note_uri, remarks,
+    created_at, updated_at, is_deleted, sync_status,
+    farmer_commission_bps, revision, is_void, void_reason
+FROM dealEntity;
+
+DROP TABLE dealEntity;
+
+ALTER TABLE dealEntity_temp RENAME TO dealEntity;
+
+CREATE INDEX idx_deal_farmer ON dealEntity(farmer_id, is_deleted);
+CREATE INDEX idx_deal_buyer ON dealEntity(buyer_id, is_deleted);
+CREATE INDEX idx_deal_date ON dealEntity(deal_date);
+

@@ -14,12 +14,11 @@ import kotlin.test.assertEquals
 class TradeSettingsFormDefaultsF05Test {
 
     @Test
-    fun buyForm_seedsFromTradeSettings_andNewSlipsSkipTare() {
+    fun buyForm_seedsFromTradeSettings() {
         val settings = TradeSettings(
             farmerCommissionBps = 150L, // 1.5%
             buyerCommissionBps = 150L,  // 1.5%
-            defaultLabourPaisa = 1000L,  // ₹10 / bag
-            defaultTareGrams = 35000L   // 0.35 Qtl (35 kg)
+            defaultLabourPaisa = 1000L  // ₹10 / bag
         )
 
         val form = BuyEntryFormState(settings).apply {
@@ -32,9 +31,8 @@ class TradeSettingsFormDefaultsF05Test {
         // 1. Defaults seeded correctly from TradeSettings
         assertEquals("1.50", form.commissionPercent)
         assertEquals("10", form.labourPerBag)
-        assertEquals("", form.tareQuintals) // tare removed for new Buy slips (2026-10-31)
 
-        // 2. No tare: the entered weight is the billed weight.
+        // 2. The entered weight is the billed weight.
         // Weight 10 * 50 = 500 kg (5.00 Qtl); gross = 5 Qtl * 2500 = 12,500 Rs = 1,250,000 paisa
         val preview = form.aggregatePreview()
         assertEquals(500_000L, preview.totalWeightGrams)
@@ -48,12 +46,11 @@ class TradeSettingsFormDefaultsF05Test {
     }
 
     @Test
-    fun sellForm_seedsFromTradeSettings_andNewSlipsSkipTare() {
+    fun sellForm_seedsFromTradeSettings() {
         val settings = TradeSettings(
             farmerCommissionBps = 200L, // 2%
             buyerCommissionBps = 150L,  // 1.5%
-            defaultLabourPaisa = 800L,   // ₹8 / bag
-            defaultTareGrams = 20000L   // 0.20 Qtl (20 kg)
+            defaultLabourPaisa = 800L   // ₹8 / bag
         )
 
         val form = SellEntryFormState(settings).apply {
@@ -63,12 +60,11 @@ class TradeSettingsFormDefaultsF05Test {
             lots[0].ratePerQuintal = "3000"
         }
 
-        // 1. Defaults seeded correctly; tare is removed for new Sell slips
+        // 1. Defaults seeded correctly
         assertEquals("1.50", form.commissionPercent)
         assertEquals("8", form.labourPerBag)
-        assertEquals("", form.tareQuintals)
 
-        // 2. No tare: the entered weight is the billed weight
+        // 2. Entered weight is the billed weight
         // Gross: 20 * 50 = 1000 kg = 1,000,000 grams (10.00 Qtl)
         val preview = form.aggregatePreview()
         assertEquals(1_000_000L, preview.totalWeightGrams)
@@ -90,15 +86,13 @@ class TradeSettingsFormDefaultsF05Test {
         val form1 = BuyEntryFormState(initial)
         assertEquals("0.70", form1.commissionPercent)
         assertEquals("10", form1.labourPerBag)
-        assertEquals("", form1.tareQuintals)
 
         // Update settings in repository
         val updated = TradeSettings(
             farmerCommissionBps = 250L,  // 2.5%
             buyerCommissionBps = 190L,   // merchant 1.9%
             customerCommissionBps = 175L, // customer 1.75%, the default Sell party
-            defaultLabourPaisa = 1200L,  // ₹12 / bag
-            defaultTareGrams = 50000L    // 0.50 Qtl
+            defaultLabourPaisa = 1200L   // ₹12 / bag
         )
         repo.saveTradeSettings(updated)
 
@@ -107,11 +101,9 @@ class TradeSettingsFormDefaultsF05Test {
         val form2 = BuyEntryFormState(latest)
         assertEquals("2.50", form2.commissionPercent)
         assertEquals("12", form2.labourPerBag)
-        assertEquals("", form2.tareQuintals)
 
         val sellForm = SellEntryFormState(latest)
         assertEquals("1.75", sellForm.commissionPercent)
         assertEquals("12", sellForm.labourPerBag)
-        assertEquals("", sellForm.tareQuintals)
     }
 }

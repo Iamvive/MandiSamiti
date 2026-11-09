@@ -12,7 +12,6 @@ data class DeductionsInput(
 
 data class SettlementCalculation(
     val grossWeightGrams: Long,
-    val cutWeightGrams: Long,
     val netWeightGrams: Long,
     val grossAmountPaisa: Long,
     val farmerCommissionPaisa: Long,
@@ -107,11 +106,10 @@ object MandiMathEngine {
      */
     fun calculateSettlement(
         grossWeightGrams: Long,
-        cutWeightGrams: Long,
         ratePaisaPerQuintal: Long,
         deductions: DeductionsInput
     ): SettlementCalculation {
-        val netWeightGrams = (grossWeightGrams - cutWeightGrams).coerceAtLeast(0L)
+        val netWeightGrams = grossWeightGrams
 
         val grossAmountPaisa = grossAmountPaisa(netWeightGrams, ratePaisaPerQuintal)
 
@@ -126,7 +124,6 @@ object MandiMathEngine {
 
         return SettlementCalculation(
             grossWeightGrams = grossWeightGrams,
-            cutWeightGrams = cutWeightGrams,
             netWeightGrams = netWeightGrams,
             grossAmountPaisa = grossAmountPaisa,
             farmerCommissionPaisa = deductions.farmerCommissionPaisa,

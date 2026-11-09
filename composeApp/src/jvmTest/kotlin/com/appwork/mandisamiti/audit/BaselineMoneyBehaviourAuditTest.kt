@@ -17,25 +17,20 @@ import kotlin.test.assertEquals
 class BaselineMoneyBehaviourAuditTest {
 
     @Test
-    fun reviewBuyExampleKeepsTheTareReductionVisibleInCommodityAmount() {
-        val beforeTare = reviewBuyForm(tareQuintals = "0")
-        val afterTare = reviewBuyForm(tareQuintals = "0.35")
+    fun reviewBuyExampleComputesCommodityGrossFromEnteredWeight() {
+        val form = reviewBuyForm()
+        val preview = form.aggregatePreview()
 
-        assertEquals(2_400_000L, beforeTare.aggregatePreview().totalGrossPaisa)
-        assertEquals(2_316_000L, afterTare.aggregatePreview().totalGrossPaisa)
-        assertEquals(
-            84_000L,
-            beforeTare.aggregatePreview().totalGrossPaisa - afterTare.aggregatePreview().totalGrossPaisa,
-        )
-        assertEquals(965_000L, afterTare.aggregatePreview().totalWeightGrams)
+        assertEquals(2_400_000L, preview.totalGrossPaisa)
+        assertEquals(1_000_000L, preview.totalWeightGrams)
     }
 
     @Test
     fun commissionRoundsToNearestTenRupeesInTheReviewBuyExample() {
         val preview = reviewBuyForm().aggregatePreview()
 
-        assertEquals(16_000L, preview.commissionPaisa)
-        assertEquals(2_280_000L, preview.netPayablePaisa)
+        assertEquals(17_000L, preview.commissionPaisa)
+        assertEquals(2_363_000L, preview.netPayablePaisa)
     }
 
     @Test
@@ -43,7 +38,7 @@ class BaselineMoneyBehaviourAuditTest {
         val preview = reviewBuyForm(commissionPercent = "0.72").aggregatePreview()
 
         assertEquals(17_000L, preview.commissionPaisa)
-        assertEquals(2_279_000L, preview.netPayablePaisa)
+        assertEquals(2_363_000L, preview.netPayablePaisa)
     }
 
     @Test
@@ -63,12 +58,12 @@ class BaselineMoneyBehaviourAuditTest {
 
         assertEquals(withoutAdvance.netPayablePaisa, withAdvance.netPayablePaisa)
         assertEquals(100_000L, withoutAdvance.payoutPaisa - withAdvance.payoutPaisa)
-        assertEquals(2_280_000L, withAdvance.netPayablePaisa)
-        assertEquals(2_180_000L, withAdvance.payoutPaisa)
+        assertEquals(2_363_000L, withAdvance.netPayablePaisa)
+        assertEquals(2_263_000L, withAdvance.payoutPaisa)
     }
 
     @Test
-    fun savedBuySlipReadsBackStoredTotalsAndHistoricalTareUnchanged() = runTest {
+    fun savedBuySlipReadsBackStoredTotalsUnchanged() = runTest {
         val database = createTestDatabase()
         val repository = OfflineFirstBuyRepository(database)
         val entry = reviewBuyForm().toBuyEntry(shopId = "TEST-shop").copy(
@@ -81,16 +76,15 @@ class BaselineMoneyBehaviourAuditTest {
         repository.saveBuyEntry(entry)
 
         val saved = requireNotNull(repository.getBuyEntryById("TEST-saved-buy"))
-        assertEquals(965_000L, saved.totalWeightGrams)
-        assertEquals(2_316_000L, saved.grossPaisa)
-        assertEquals(16_000L, saved.commissionPaisa)
+        assertEquals(1_000_000L, saved.totalWeightGrams)
+        assertEquals(2_400_000L, saved.grossPaisa)
+        assertEquals(17_000L, saved.commissionPaisa)
         assertEquals(20_000L, saved.labourPaisa)
         assertEquals(100_000L, saved.advancePaidPaisa)
-        assertEquals(2_280_000L, saved.netPayablePaisa)
+        assertEquals(2_363_000L, saved.netPayablePaisa)
 
         val restored = BuyEntryFormState().apply { populateFrom(saved) }
-        assertEquals("0.35", restored.tareQuintals)
-        assertEquals(2_280_000L, restored.aggregatePreview().netPayablePaisa)
+        assertEquals(2_363_000L, restored.aggregatePreview().netPayablePaisa)
     }
 
     @Test
@@ -106,7 +100,6 @@ class BaselineMoneyBehaviourAuditTest {
     }
 
     private fun reviewBuyForm(
-        tareQuintals: String = "0.35",
         commissionPercent: String = "0.70",
         labourPerBag: String = "10",
         advancePaid: String = "1000",
@@ -115,7 +108,6 @@ class BaselineMoneyBehaviourAuditTest {
         bags = "20"
         weightPerBagKg = "50"
         ratePerQuintal = "2400"
-        this.tareQuintals = tareQuintals
         this.commissionPercent = commissionPercent
         this.labourPerBag = labourPerBag
         this.advancePaid = advancePaid

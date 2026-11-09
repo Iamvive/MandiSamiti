@@ -120,7 +120,7 @@ class LedgerAuditTest {
             id = d.id, shop_id = d.shopId, farmer_id = d.farmerId, buyer_id = d.buyerId,
             commodity_id = d.commodityId, deal_status = d.dealStatus.name, deal_date = d.dealDate,
             bags_count = d.bagsCount.toLong(), gross_weight_grams = d.grossWeightGrams,
-            cut_weight_grams = d.cutWeightGrams, net_weight_grams = d.netWeightGrams,
+            net_weight_grams = d.netWeightGrams,
             rate_paisa_per_unit = d.ratePaisaPerUnit, gross_amount_paisa = d.grossAmountPaisa,
             farmer_commission_paisa = d.farmerCommissionPaisa, buyer_commission_paisa = d.buyerCommissionPaisa,
             labour_charge_paisa = d.labourChargePaisa, weighing_charge_paisa = d.weighingChargePaisa,

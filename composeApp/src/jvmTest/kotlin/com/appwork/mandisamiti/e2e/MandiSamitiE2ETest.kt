@@ -132,14 +132,12 @@ class MandiSamitiE2ETest {
         dealViewModel.toggleSettlementStage(true)
 
         // High-Precision Mandi Math Calculation Check
-        val grossGrams = 1_840_000L // 18.40 Q
-        val cutGrams = 35_000L     // 0.35 Q
-        val netGrams = 1_805_000L    // 18.05 Q
+        val grossGrams = 1_805_000L // 18.05 Q
+        val netGrams = 1_805_000L   // 18.05 Q
         val ratePaisa = 245_000L    // ₹2,450 / Quintal
 
         val settlement = MandiMathEngine.calculateSettlement(
             grossWeightGrams = grossGrams,
-            cutWeightGrams = cutGrams,
             ratePaisaPerQuintal = ratePaisa,
             deductions = DeductionsInput(
                 farmerCommissionPaisa = 66_333L, // ~1.5%
@@ -157,7 +155,6 @@ class MandiSamitiE2ETest {
             dealDate = 2000L,
             bagsCount = 35,
             grossWeightGrams = grossGrams,
-            cutWeightGrams = cutGrams,
             netWeightGrams = netGrams,
             ratePaisaPerUnit = ratePaisa,
             grossAmountPaisa = settlement.grossAmountPaisa,

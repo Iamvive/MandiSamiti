@@ -67,10 +67,8 @@ class SellEntryDirectionBTest {
     }
 
     @Test
-    fun newSlipsHaveEmptyTare_savedSlipsKeepTareOnPopulateFrom() {
-        // 1. New slip form has empty tare and does not deduct tare
+    fun newSlipsCalculateGrossWeightAndPopulateFromRemarks() {
         val form = SellEntryFormState()
-        assertEquals("", form.tareQuintals)
 
         form.buyerName = "राजेन्द्र"
         form.updatePhone("9876543210")
@@ -84,7 +82,6 @@ class SellEntryDirectionBTest {
         assertEquals(1_000_000L, preview.totalWeightGrams)
         assertEquals(3_000_000L, preview.grossPaisa)
 
-        // 2. Saved slip with tare in remarks restores tare read-only
         val oldEntry = SellEntry(
             id = "sell-old-1",
             shopId = "shop-1",
@@ -95,25 +92,24 @@ class SellEntryDirectionBTest {
             partyKind = SellPartyKind.CUSTOMER,
             bagsCount = 20,
             weightPerBagGrams = 50_000L,
-            totalWeightGrams = 980_000L,
+            totalWeightGrams = 1_000_000L,
             ratePaisaPerQuintal = 300_000L,
             aratBps = 150L,
             tulakPaisa = 1000L,
-            grossPaisa = 2_940_000L,
-            aratPaisa = 44_100L,
+            grossPaisa = 3_000_000L,
+            aratPaisa = 45_000L,
             mandiShulkPaisa = 0L,
-            totalReceivablePaisa = 2_985_100L,
+            totalReceivablePaisa = 3_046_000L,
             receivedPaisa = 0L,
-            balanceDuePaisa = 2_985_100L,
+            balanceDuePaisa = 3_046_000L,
             vehicleNumber = "9876543210",
-            remarks = "गाँव: सीहोर | काट: 0.20Q | पुराना हिसाब",
+            remarks = "गाँव: सीहोर | पुराना हिसाब",
             createdAt = 1700000000000L,
             updatedAt = 1700000000000L
         )
 
         val restoredForm = SellEntryFormState()
         restoredForm.populateFrom(oldEntry)
-        assertEquals("0.20", restoredForm.tareQuintals)
         assertEquals("9876543210", restoredForm.phone)
         assertEquals("सीहोर", restoredForm.village)
     }

@@ -106,7 +106,7 @@ class DealEntryViewModelTest {
         viewModel.onKeypadAction(KeypadAction.DIGIT_0)
 
         val state = viewModel.uiState.value
-        assertEquals("18.05", state.netWeightQuintals) // 18.40 - 0.35 = 18.05 Q
+        assertEquals("18.4", state.netWeightQuintals)
         assertTrue(state.netFarmerPayablePaisa > 0L)
 
         // Save Deal & verify Event
@@ -135,13 +135,12 @@ class DealEntryViewModelTest {
 
         seedShopAndParties(shopRepo, partyRepo)
 
-        // Save customized trade settings: 2.0% farmer comm, 1.0% buyer comm, ₹200 labour, 0.40 qtl tare
+        // Save customized trade settings: 2.0% farmer comm, 1.0% buyer comm, ₹200 labour
         tradeRepo.saveTradeSettings(
             com.appwork.mandisamiti.domain.model.TradeSettings(
                 farmerCommissionBps = 200L,
                 buyerCommissionBps = 100L,
-                defaultLabourPaisa = 20000L,
-                defaultTareGrams = 40000L
+                defaultLabourPaisa = 20000L
             )
         )
 
@@ -166,14 +165,13 @@ class DealEntryViewModelTest {
         assertEquals("2", initialUi.commissionPercentText)
         assertEquals("1", initialUi.buyerCommissionPercentText)
         assertEquals("200", initialUi.labourChargesText)
-        assertEquals("0.4", initialUi.tareWeightText)
 
-        // Enter weight: 20.40 qtl (net = 20.00 qtl)
+        // Enter weight: 20.00 qtl
         viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT)
         viewModel.onKeypadAction(KeypadAction.DIGIT_2)
         viewModel.onKeypadAction(KeypadAction.DIGIT_0)
         viewModel.onKeypadAction(KeypadAction.DECIMAL)
-        viewModel.onKeypadAction(KeypadAction.DIGIT_4)
+        viewModel.onKeypadAction(KeypadAction.DIGIT_0)
         viewModel.onKeypadAction(KeypadAction.DIGIT_0)
 
         viewModel.toggleSettlementStage(true)
@@ -219,7 +217,7 @@ class DealEntryViewModelTest {
     private fun existingDeal() = Deal(
         id = "deal-old", shopId = "shop-1", farmerId = "farmer-1", buyerId = "buyer-1", commodityId = "comm_wheat",
         dealStatus = DealStatus.SETTLED, dealDate = 1_000L, bagsCount = 35,
-        grossWeightGrams = 1_840_000L, cutWeightGrams = 35_000L, netWeightGrams = 1_805_000L,
+        grossWeightGrams = 1_840_000L, netWeightGrams = 1_840_000L,
         ratePaisaPerUnit = 227_550L, labourChargePaisa = 15_050L, farmerCommissionBps = 150L,
         createdAt = 1_000L, updatedAt = 1_000L
     )
@@ -295,7 +293,7 @@ class DealEntryViewModelTest {
         viewModel.uiState.first { it.selectedFarmer != null }
 
         viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT)
-        listOf(KeypadAction.DIGIT_1, KeypadAction.DIGIT_8, KeypadAction.DECIMAL, KeypadAction.DIGIT_4)
+        listOf(KeypadAction.DIGIT_1, KeypadAction.DIGIT_8, KeypadAction.DECIMAL, KeypadAction.DIGIT_0, KeypadAction.DIGIT_5)
             .forEach(viewModel::onKeypadAction)
         viewModel.toggleSettlementStage(true)
         viewModel.onFocusField(ActiveInputField.RATE_PER_QUINTAL)
@@ -404,7 +402,7 @@ class DealEntryViewModelTest {
         assertEquals(7_000L, saved.buyerCommissionPaisa)
         assertEquals(5_000L, saved.weighingChargePaisa)
         assertEquals(3_000L, saved.otherDeductionsPaisa)
-        assertEquals(4_107_278L - (61_609L + 15_050L + 5_000L + 3_000L), saved.netFarmerPayablePaisa)
+        assertEquals(4_101_066L, saved.netFarmerPayablePaisa)
     }
 
     @Test
@@ -445,7 +443,7 @@ class DealEntryViewModelTest {
     }
 
     @Test
-    fun nextOnTareWeightAdvancesToStage2Pricing() = runTest {
+    fun nextOnGrossWeightAdvancesToStage2Pricing() = runTest {
         val database = createTestDatabase()
         val ioDispatcher = StandardTestDispatcher(testScheduler)
         val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
@@ -459,8 +457,8 @@ class DealEntryViewModelTest {
         )
         viewModel.uiState.first { it.selectedFarmer != null }
 
-        // Stage 1: fill weighing fields and press NEXT on the last field (TARE_WEIGHT)
-        viewModel.onFocusField(ActiveInputField.TARE_WEIGHT)
+        // Stage 1: fill weighing fields and press NEXT on GROSS_WEIGHT
+        viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT)
         viewModel.onKeypadAction(KeypadAction.DIGIT_1)
         assertEquals(false, viewModel.uiState.value.isSettledStage)
 

@@ -11,8 +11,7 @@ class MandiMathEngineTest {
 
     @Test
     fun testStandardSettlementCalculation() {
-        val grossWeightGrams = 1_840_000L
-        val cutWeightGrams = 35_000L
+        val grossWeightGrams = 1_805_000L
         val ratePaisaPerQuintal = 542_000L
 
         val deductions = DeductionsInput(
@@ -25,7 +24,6 @@ class MandiMathEngineTest {
 
         val result = MandiMathEngine.calculateSettlement(
             grossWeightGrams = grossWeightGrams,
-            cutWeightGrams = cutWeightGrams,
             ratePaisaPerQuintal = ratePaisaPerQuintal,
             deductions = deductions
         )
@@ -114,7 +112,6 @@ class MandiMathEngineTest {
     fun farmerPayableGoesNegativeWhenDeductionsExceedGross() {
         val calc = MandiMathEngine.calculateSettlement(
             grossWeightGrams = 100_000L,          // 1 qtl
-            cutWeightGrams = 0L,
             ratePaisaPerQuintal = 100_000L,       // ₹1,000/qtl
             deductions = DeductionsInput(labourChargePaisa = 150_000L) // ₹1,500
         )

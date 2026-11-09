@@ -24,7 +24,6 @@ class TradeSettingsRepositoryTest {
         assertEquals(150L, initial.buyerCommissionBps)
         assertEquals(150L, initial.customerCommissionBps)
         assertEquals(1000L, initial.defaultLabourPaisa)
-        assertEquals(35000L, initial.defaultTareGrams)
         assertEquals(false, initial.isEnglish)
 
         // Save customized settings
@@ -33,7 +32,6 @@ class TradeSettingsRepositoryTest {
             buyerCommissionBps = 100L,    // 1.0%
             customerCommissionBps = 120L,
             defaultLabourPaisa = 18000L,  // ₹180
-            defaultTareGrams = 40000L,    // 0.40 qtl
             isEnglish = true
         )
         repo.saveTradeSettings(custom)
@@ -43,7 +41,6 @@ class TradeSettingsRepositoryTest {
         assertEquals(100L, retrieved.buyerCommissionBps)
         assertEquals(120L, retrieved.customerCommissionBps)
         assertEquals(18000L, retrieved.defaultLabourPaisa)
-        assertEquals(40000L, retrieved.defaultTareGrams)
         assertEquals(true, retrieved.isEnglish)
 
         // Verify fresh repository instance sees persisted values from SQLite
@@ -52,7 +49,6 @@ class TradeSettingsRepositoryTest {
         assertEquals(200L, fromDb.farmerCommissionBps)
         assertEquals(100L, fromDb.buyerCommissionBps)
         assertEquals(18000L, fromDb.defaultLabourPaisa)
-        assertEquals(40000L, fromDb.defaultTareGrams)
         assertEquals(true, fromDb.isEnglish)
     }
 
@@ -66,7 +62,7 @@ class TradeSettingsRepositoryTest {
             val first = awaitItem()
             assertEquals(70L, first.farmerCommissionBps)
 
-            val updated = TradeSettings(farmerCommissionBps = 250L, buyerCommissionBps = 200L, defaultLabourPaisa = 20000L, defaultTareGrams = 30000L)
+            val updated = TradeSettings(farmerCommissionBps = 250L, buyerCommissionBps = 200L, defaultLabourPaisa = 20000L)
             repo.saveTradeSettings(updated)
 
             val second = awaitItem()

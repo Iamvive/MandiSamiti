@@ -314,17 +314,10 @@ fun DealEntryScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             FintechInputField(
-                                label = "सकल वजन (Qtl)",
+                                label = "कुल वजन (Qtl)",
                                 value = uiState.grossWeightText,
                                 isFocused = uiState.activeField == ActiveInputField.GROSS_WEIGHT,
                                 onClick = { viewModel.onFocusField(ActiveInputField.GROSS_WEIGHT) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            FintechInputField(
-                                label = "काट (Qtl)",
-                                value = uiState.tareWeightText,
-                                isFocused = uiState.activeField == ActiveInputField.TARE_WEIGHT,
-                                onClick = { viewModel.onFocusField(ActiveInputField.TARE_WEIGHT) },
                                 modifier = Modifier.weight(1f)
                             )
                         }

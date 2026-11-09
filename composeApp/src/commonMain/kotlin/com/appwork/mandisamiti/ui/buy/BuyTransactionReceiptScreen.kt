@@ -128,7 +128,6 @@ fun BuyTransactionReceiptScreen(
             return@Scaffold
         }
 
-        val tareQ = extractTare(entry.remarks)
         val isRevised = entry.revision > 1 || entry.paidPaisa > 0
         val revisionText = if (isRevised) {
             if (isEnglish) "Revised · ${receiptDateTime(entry.updatedAt)}" else "संशोधित · ${receiptDateTime(entry.updatedAt)}"
@@ -181,13 +180,6 @@ fun BuyTransactionReceiptScreen(
                     Line(
                         label = if (isEnglish) "Crop: ${entry.commodityId}, ${entry.bagsCount} bags" else "फसल: ${entry.commodityId}, ${entry.bagsCount} बोरी",
                         amountText = MandiMathEngine.formatRupees(entry.grossPaisa)
-                    )
-                }
-
-                if (!tareQ.isNullOrBlank() && tareQ != "0") {
-                    Line(
-                        label = if (isEnglish) "Tare / Bardana" else "काट / बारदाना",
-                        amountText = "− $tareQ ${if (isEnglish) "qtl" else "क्विंटल"}"
                     )
                 }
 
@@ -275,7 +267,6 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
         appendLine("मोबाइल: ${entry.vehicleNumber}")
     }
     appendLine("--------------------")
-    val tareQ = extractTare(entry.remarks)
     if (lots.isNotEmpty()) {
         lots.forEachIndexed { i, lot ->
             appendLine("फसल ${i + 1}: ${lot.cropName}")
@@ -290,9 +281,6 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
         appendLine("--------------------")
     }
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-    if (!tareQ.isNullOrBlank() && tareQ != "0") {
-        appendLine("काट / बारदाना: -$tareQ क्विंटल")
-    }
     appendLine("मजदूरी: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa)}")
     appendLine("कमीशन: -₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
     if (entry.advancePaidPaisa > 0) {

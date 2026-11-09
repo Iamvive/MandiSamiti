@@ -30,7 +30,6 @@ import kotlinx.datetime.Clock
 enum class ActiveInputField {
     BAGS_COUNT,
     GROSS_WEIGHT,
-    TARE_WEIGHT,
     RATE_PER_QUINTAL,
     COMMISSION_PERCENT,
     BUYER_COMMISSION_PERCENT,
@@ -52,7 +51,6 @@ data class DealEntryUiState(
     // Field strings for calculator keypad
     val bagsCountText: String = "",
     val grossWeightText: String = "", // in Quintals, e.g. "18.40"
-    val tareWeightText: String = "0.35",  // in Quintals, e.g. "0.35"
     val ratePerQuintalText: String = "", // in Rs/Quintal, e.g. "2450"
     val labourChargesText: String = "150", // in Rs
     val commissionPercentText: String = "1.5", // %
@@ -114,8 +112,7 @@ class DealEntryViewModel(
                         _uiState.value = _uiState.value.copy(
                             commissionPercentText = MandiMathEngine.paisaToInputString(settings.farmerCommissionBps),
                             buyerCommissionPercentText = MandiMathEngine.paisaToInputString(settings.buyerCommissionBps),
-                            labourChargesText = MandiMathEngine.paisaToInputString(settings.defaultLabourPaisa),
-                            tareWeightText = MandiMathEngine.gramsToQuintalsInputString(settings.defaultTareGrams)
+                            labourChargesText = MandiMathEngine.paisaToInputString(settings.defaultLabourPaisa)
                         )
                         recalculate()
                     }
@@ -155,7 +152,6 @@ class DealEntryViewModel(
 
                 originalDeal = deal
                 val grossQ = MandiMathEngine.gramsToQuintalsInputString(deal.grossWeightGrams)
-                val tareQ = MandiMathEngine.gramsToQuintalsInputString(deal.cutWeightGrams)
                 val rate = deal.ratePaisaPerUnit?.let { MandiMathEngine.paisaToInputString(it) } ?: ""
 
                 val buyerCommPercent = if (deal.grossAmountPaisa > 0L && deal.buyerCommissionPaisa > 0L) {
@@ -170,7 +166,6 @@ class DealEntryViewModel(
                     selectedBuyer = buyer,
                     bagsCountText = deal.bagsCount.toString(),
                     grossWeightText = grossQ,
-                    tareWeightText = tareQ,
                     ratePerQuintalText = rate,
                     labourChargesText = MandiMathEngine.paisaToInputString(deal.labourChargePaisa),
                     commissionPercentText = MandiMathEngine.paisaToInputString(deal.farmerCommissionBps),
@@ -227,15 +222,14 @@ class DealEntryViewModel(
     }
 
     private fun moveToNextField() {
-        if (_uiState.value.activeField == ActiveInputField.TARE_WEIGHT && !_uiState.value.isSettledStage) {
+        if (_uiState.value.activeField == ActiveInputField.GROSS_WEIGHT && !_uiState.value.isSettledStage) {
             toggleSettlementStage(true)
             _uiState.value = _uiState.value.copy(activeField = ActiveInputField.RATE_PER_QUINTAL)
             return
         }
         val next = when (_uiState.value.activeField) {
             ActiveInputField.BAGS_COUNT -> ActiveInputField.GROSS_WEIGHT
-            ActiveInputField.GROSS_WEIGHT -> ActiveInputField.TARE_WEIGHT
-            ActiveInputField.TARE_WEIGHT -> ActiveInputField.RATE_PER_QUINTAL
+            ActiveInputField.GROSS_WEIGHT -> ActiveInputField.RATE_PER_QUINTAL
             ActiveInputField.RATE_PER_QUINTAL -> ActiveInputField.COMMISSION_PERCENT
             ActiveInputField.COMMISSION_PERCENT -> ActiveInputField.BUYER_COMMISSION_PERCENT
             ActiveInputField.BUYER_COMMISSION_PERCENT -> ActiveInputField.LABOUR_CHARGES
@@ -249,7 +243,6 @@ class DealEntryViewModel(
         val updatedText = when (current.activeField) {
             ActiveInputField.BAGS_COUNT -> applyKeypad(current.bagsCountText, key, maxDecimals = 0)
             ActiveInputField.GROSS_WEIGHT -> applyKeypad(current.grossWeightText, key, maxDecimals = 5)
-            ActiveInputField.TARE_WEIGHT -> applyKeypad(current.tareWeightText, key, maxDecimals = 5)
             ActiveInputField.RATE_PER_QUINTAL -> applyKeypad(current.ratePerQuintalText, key, maxDecimals = 2)
             ActiveInputField.LABOUR_CHARGES -> applyKeypad(current.labourChargesText, key, maxDecimals = 2)
             ActiveInputField.COMMISSION_PERCENT -> applyKeypad(current.commissionPercentText, key, maxDecimals = 2)
@@ -259,7 +252,6 @@ class DealEntryViewModel(
         _uiState.value = when (current.activeField) {
             ActiveInputField.BAGS_COUNT -> current.copy(bagsCountText = updatedText)
             ActiveInputField.GROSS_WEIGHT -> current.copy(grossWeightText = updatedText)
-            ActiveInputField.TARE_WEIGHT -> current.copy(tareWeightText = updatedText)
             ActiveInputField.RATE_PER_QUINTAL -> current.copy(ratePerQuintalText = updatedText)
             ActiveInputField.LABOUR_CHARGES -> current.copy(labourChargesText = updatedText)
             ActiveInputField.COMMISSION_PERCENT -> current.copy(commissionPercentText = updatedText)
@@ -273,7 +265,6 @@ class DealEntryViewModel(
         val updatedText = when (current.activeField) {
             ActiveInputField.BAGS_COUNT -> current.bagsCountText.dropLast(1)
             ActiveInputField.GROSS_WEIGHT -> current.grossWeightText.dropLast(1)
-            ActiveInputField.TARE_WEIGHT -> current.tareWeightText.dropLast(1)
             ActiveInputField.RATE_PER_QUINTAL -> current.ratePerQuintalText.dropLast(1)
             ActiveInputField.LABOUR_CHARGES -> current.labourChargesText.dropLast(1)
             ActiveInputField.COMMISSION_PERCENT -> current.commissionPercentText.dropLast(1)
@@ -283,7 +274,6 @@ class DealEntryViewModel(
         _uiState.value = when (current.activeField) {
             ActiveInputField.BAGS_COUNT -> current.copy(bagsCountText = updatedText)
             ActiveInputField.GROSS_WEIGHT -> current.copy(grossWeightText = updatedText)
-            ActiveInputField.TARE_WEIGHT -> current.copy(tareWeightText = updatedText)
             ActiveInputField.RATE_PER_QUINTAL -> current.copy(ratePerQuintalText = updatedText)
             ActiveInputField.LABOUR_CHARGES -> current.copy(labourChargesText = updatedText)
             ActiveInputField.COMMISSION_PERCENT -> current.copy(commissionPercentText = updatedText)
@@ -297,7 +287,6 @@ class DealEntryViewModel(
         _uiState.value = when (current.activeField) {
             ActiveInputField.BAGS_COUNT -> current.copy(bagsCountText = "")
             ActiveInputField.GROSS_WEIGHT -> current.copy(grossWeightText = "")
-            ActiveInputField.TARE_WEIGHT -> current.copy(tareWeightText = "")
             ActiveInputField.RATE_PER_QUINTAL -> current.copy(ratePerQuintalText = "")
             ActiveInputField.LABOUR_CHARGES -> current.copy(labourChargesText = "")
             ActiveInputField.COMMISSION_PERCENT -> current.copy(commissionPercentText = "")
@@ -326,13 +315,9 @@ class DealEntryViewModel(
     private fun recalculate() {
         val state = _uiState.value
         val grossGrams = MandiMathEngine.parseQuintalsStringToGrams(state.grossWeightText)
-        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(state.tareWeightText)
-        val netGrams = (grossGrams - tareGrams).coerceAtLeast(0L)
+        val netGrams = grossGrams
 
-        val netQuintalsStr = (netGrams.toDouble() / MandiMathEngine.GRAMS_PER_QUINTAL).let {
-            val rounded = ((it * 100).toLong() / 100.0).toString()
-            rounded
-        }
+        val netQuintalsStr = MandiMathEngine.gramsToQuintalsInputString(netGrams)
 
         val calc = computeSettlement(state)
         _uiState.value = _uiState.value.copy(
@@ -346,8 +331,7 @@ class DealEntryViewModel(
 
     private fun computeSettlement(state: DealEntryUiState): SettlementCalculation? {
         val grossGrams = MandiMathEngine.parseQuintalsStringToGrams(state.grossWeightText)
-        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(state.tareWeightText)
-        val netGrams = (grossGrams - tareGrams).coerceAtLeast(0L)
+        val netGrams = grossGrams
         val ratePaisa = MandiMathEngine.parseRupeesToPaisa(state.ratePerQuintalText)
         if (ratePaisa <= 0L || netGrams <= 0L) return null
         val commissionBps = MandiMathEngine.parsePercentToBasisPoints(state.commissionPercentText)
@@ -363,7 +347,6 @@ class DealEntryViewModel(
         }
         return MandiMathEngine.calculateSettlement(
             grossWeightGrams = grossGrams,
-            cutWeightGrams = tareGrams,
             ratePaisaPerQuintal = ratePaisa,
             deductions = DeductionsInput(
                 farmerCommissionPaisa = MandiMathEngine.percentageOf(grossAmt, commissionBps),
@@ -386,8 +369,7 @@ class DealEntryViewModel(
         }
 
         val grossGrams = MandiMathEngine.parseQuintalsStringToGrams(state.grossWeightText)
-        val tareGrams = MandiMathEngine.parseQuintalsStringToGrams(state.tareWeightText)
-        val netGrams = (grossGrams - tareGrams).coerceAtLeast(0L)
+        val netGrams = grossGrams
         val bags = state.bagsCountText.toIntOrNull() ?: 0
 
         if (grossGrams <= 0L) {
@@ -414,7 +396,6 @@ class DealEntryViewModel(
                 dealStatus = dealStatus,
                 bagsCount = bags,
                 grossWeightGrams = grossGrams,
-                cutWeightGrams = tareGrams,
                 netWeightGrams = netGrams,
                 ratePaisaPerUnit = ratePaisa,
                 grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
@@ -438,7 +419,6 @@ class DealEntryViewModel(
                 dealDate = now,
                 bagsCount = bags,
                 grossWeightGrams = grossGrams,
-                cutWeightGrams = tareGrams,
                 netWeightGrams = netGrams,
                 ratePaisaPerUnit = ratePaisa,
                 grossAmountPaisa = if (isSettled) calc!!.grossAmountPaisa else 0L,
