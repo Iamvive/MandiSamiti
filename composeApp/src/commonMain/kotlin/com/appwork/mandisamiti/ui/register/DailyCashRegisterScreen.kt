@@ -1117,14 +1117,6 @@ fun DailyCashRegisterScreen(
                         }
                     }
 
-                    // Soundbox Speech Action
-                    OutlinedButton(
-                        onClick = { viewModel.announceDayClosingSummary() },
-                        modifier = Modifier.fillMaxWidth().height(42.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(if (isEnglish) "Announce on Soundbox" else "साउंडबॉक्स पर सुनें", color = MandiTextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
                 }
             },
             confirmButton = {

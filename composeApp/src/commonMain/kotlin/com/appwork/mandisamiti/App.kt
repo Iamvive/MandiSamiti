@@ -501,6 +501,12 @@ fun App(
                                     if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
                                     buyForm.buildLoanCut(entry.shopId, now),
                                 )
+
+                                val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
+                                val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
+                                val amountRs = com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)
+                                val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
+                                ttsManager.speak(speech, isSound)
                             } else {
                                 buyRepo.editBuyEntry(entry)
                             }
@@ -674,6 +680,12 @@ fun App(
                                     )
                                     cashRepo.recordTransaction(advanceTx)
                                 }
+
+                                val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
+                                val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
+                                val amountRs = com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)
+                                val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
+                                ttsManager.speak(speech, isSound)
                             } else {
                                 sellRepo.editSellEntry(entry)
                             }

@@ -504,9 +504,6 @@ class GallaFlowTest {
         )
 
         vm.uiState.first { it.inHandCashDrawerPaisa == 180_000L && it.isSoundEnabled }
-
-        val spokenText = vm.announceDayClosingSummary()
-        assertEquals("आज का दिन समाप्त। गल्ले में कुल नकदी ₹1,800 है।", spokenText)
     }
 
     @Test

@@ -132,7 +132,7 @@ data class DailyRegisterUiState(
 }
 
 sealed interface DailyRegisterEvent {
-    data class EntryRecorded(val speechText: String) : DailyRegisterEvent
+    data object EntryRecorded : DailyRegisterEvent
 }
 
 enum class CashReconciliationStatus { MATCH, SURPLUS, SHORTAGE }
@@ -451,13 +451,6 @@ class DailyRegisterViewModel(
         """.trimIndent()
     }
 
-    fun announceDayClosingSummary(): String {
-        val closing = MandiMathEngine.paisaToRupeesString(_uiState.value.inHandCashDrawerPaisa)
-        val speech = "आज का दिन समाप्त। गल्ले में कुल नकदी ₹$closing है।"
-        ttsManager.speak(speech, _uiState.value.isSoundEnabled)
-        return speech
-    }
-
     fun recordDailyEntry(
         partyId: String,
         transactionType: TransactionType,
@@ -497,11 +490,8 @@ class DailyRegisterViewModel(
                 else -> "विविध निकासी"
             }
             val typeHindi = if (transactionType == TransactionType.JAMA_RECEIVED) "जमा मिला" else "उधार दिया"
-            val speechText = "$partyName, ₹${MandiMathEngine.paisaToRupeesString(amountPaisa)} $typeHindi, गल्ला हिसाब में दर्ज।"
-
-            ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
             _uiState.value = _uiState.value.copy(isSaving = false, isAddEntryDialogOpen = false)
-            _events.emit(DailyRegisterEvent.EntryRecorded(speechText))
+            _events.emit(DailyRegisterEvent.EntryRecorded)
         }
     }
 
@@ -541,10 +531,8 @@ class DailyRegisterViewModel(
             _uiState.value = _uiState.value.copy(isSaving = true)
             cashRepository.recordTransaction(tx)
             onLocalWrite()
-            val speech = "प्रारंभिक रोकड़ शेष ₹$targetOpeningRs निर्धारित किया गया।"
-            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
             _uiState.value = _uiState.value.copy(isSaving = false)
-            _events.emit(DailyRegisterEvent.EntryRecorded(speech))
+            _events.emit(DailyRegisterEvent.EntryRecorded)
         }
     }
 
@@ -571,10 +559,8 @@ class DailyRegisterViewModel(
             _uiState.value = _uiState.value.copy(isSaving = true)
             cashRepository.recordTransaction(tx)
             onLocalWrite()
-            val speech = "गल्ले से ₹$amountRs घर निकासी दर्ज।"
-            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
             _uiState.value = _uiState.value.copy(isSaving = false)
-            _events.emit(DailyRegisterEvent.EntryRecorded(speech))
+            _events.emit(DailyRegisterEvent.EntryRecorded)
         }
     }
 
@@ -604,11 +590,8 @@ class DailyRegisterViewModel(
             _uiState.value = _uiState.value.copy(isSaving = true)
             cashRepository.recordTransaction(tx)
             onLocalWrite()
-            val diffRs = MandiMathEngine.paisaToRupeesString(amountPaisa)
-            val speech = if (isSurplus) "गल्ला बचत ₹$diffRs समायोजित की गई।" else "गल्ला कमी ₹$diffRs समायोजित की गई।"
-            ttsManager.speak(speech, _uiState.value.isSoundEnabled)
             _uiState.value = _uiState.value.copy(isSaving = false)
-            _events.emit(DailyRegisterEvent.EntryRecorded(speech))
+            _events.emit(DailyRegisterEvent.EntryRecorded)
         }
     }
 }
