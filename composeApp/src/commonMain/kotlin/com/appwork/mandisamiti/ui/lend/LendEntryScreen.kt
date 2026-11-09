@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import com.appwork.mandisamiti.ui.theme.MandiSurface
+import com.appwork.mandisamiti.ui.theme.MandiBorder
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
@@ -97,6 +102,34 @@ fun LendEntryScreen(
     val canSave = formState.canSave()
     val disabledReason = formState.validationReason(isEnglish)
 
+    val performSave: () -> Unit = {
+        val now = Clock.System.now().toEpochMilliseconds()
+        val existing = LendPartyResolver.existing(parties, formState.selectedPartyId, formState.phone)
+        val party = LendPartyResolver.partyToSave(formState, shopId, existing, now)
+        val partyId = existing?.id ?: party?.id ?: formState.partyName.trim()
+        val entry = formState.toLendEntry(
+            shopId = shopId,
+            partyId = partyId,
+            now = now
+        )
+
+        val isDuplicate = recentLends.any { prev ->
+            !prev.isVoid &&
+            prev.partyId.trim().equals(entry.partyId.trim(), ignoreCase = true) &&
+            prev.lendType == entry.lendType &&
+            (if (isMoney) prev.amountPaisa == entry.amountPaisa else (prev.commodityId == entry.commodityId && prev.weightGrams == entry.weightGrams)) &&
+            kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
+        }
+
+        if (isDuplicate) {
+            pendingEntryToSave = entry
+            pendingPartyToSave = party
+            showDuplicateDialog = true
+        } else {
+            onSaved(entry, party)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -115,6 +148,35 @@ fun LendEntryScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            Surface(
+                color = MandiSurface,
+                border = BorderStroke(1.dp, MandiBorder),
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Button(
+                        onClick = {
+                            when (val check = checkTypedParty(formState.partyName, formState.selectedPartyId, parties)) {
+                                is TypedPartyCheck.ExactMatch -> {
+                                    formState.selectedPartyId = check.party.id
+                                    performSave()
+                                }
+                                is TypedPartyCheck.NeedsConfirm -> {
+                                    newPartyCheck = check
+                                }
+                                else -> performSave()
+                            }
+                        },
+                        enabled = canSave,
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text(if (canSave) (if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें") else disabledReason)
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -325,53 +387,6 @@ fun LendEntryScreen(
                 label = { Text(if (isEnglish) "Notes / Details (Optional)" else "टिप्पणी / विवरण (वैकल्पिक)") },
                 modifier = Modifier.fillMaxWidth()
             )
-
-            val performSave: () -> Unit = {
-                val now = Clock.System.now().toEpochMilliseconds()
-                val existing = LendPartyResolver.existing(parties, formState.selectedPartyId, formState.phone)
-                val party = LendPartyResolver.partyToSave(formState, shopId, existing, now)
-                val partyId = existing?.id ?: party?.id ?: formState.partyName.trim()
-                val entry = formState.toLendEntry(
-                    shopId = shopId,
-                    partyId = partyId,
-                    now = now
-                )
-
-                val isDuplicate = recentLends.any { prev ->
-                    !prev.isVoid &&
-                    prev.partyId.trim().equals(entry.partyId.trim(), ignoreCase = true) &&
-                    prev.lendType == entry.lendType &&
-                    (if (isMoney) prev.amountPaisa == entry.amountPaisa else (prev.commodityId == entry.commodityId && prev.weightGrams == entry.weightGrams)) &&
-                    kotlin.math.abs(now - prev.createdAt) <= 2 * 60 * 1000L
-                }
-
-                if (isDuplicate) {
-                    pendingEntryToSave = entry
-                    pendingPartyToSave = party
-                    showDuplicateDialog = true
-                } else {
-                    onSaved(entry, party)
-                }
-            }
-
-            Button(
-                onClick = {
-                    when (val check = checkTypedParty(formState.partyName, formState.selectedPartyId, parties)) {
-                        is TypedPartyCheck.ExactMatch -> {
-                            formState.selectedPartyId = check.party.id
-                            performSave()
-                        }
-                        is TypedPartyCheck.NeedsConfirm -> {
-                            newPartyCheck = check
-                        }
-                        else -> performSave()
-                    }
-                },
-                enabled = canSave,
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Text(if (canSave) (if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें") else disabledReason)
-            }
 
             newPartyCheck?.let { check ->
                 NewPartyConfirmDialog(
