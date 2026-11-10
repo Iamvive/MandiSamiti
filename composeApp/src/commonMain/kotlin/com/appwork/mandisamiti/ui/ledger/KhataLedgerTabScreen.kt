@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -128,7 +129,9 @@ fun KhataLedgerTabScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         },
-        containerColor = MandiBackground
+        containerColor = MandiBackground,
+        // The Home Scaffold already applies system-bar insets; applying them again leaves a gap under the top bar.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         LazyColumn(
             modifier = modifier
