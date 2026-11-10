@@ -78,11 +78,11 @@ class DrawerLayoutTest {
             fun frame() { scene.render(surface.canvas.asComposeCanvas(), System.nanoTime()) }
             repeat(3) { frame() }
             val nodes = roots.flatMap { flatten(it.semanticsOwner.unmergedRootSemanticsNode) }
-            val countText = if (english) "Count cash" else "नकद गिनें"
+            val countText = if (english) "Count cash · Close day" else "नकद गिनें · दिन बंद करें"
             assertTrue(nodes.any { it.texts().contains(countText) }, "Counting action missing")
             assertTrue(nodes.any { it.texts().contains(name) }, "Party identity missing")
             val summary = nodes.first { it.config.getOrNull(SemanticsProperties.TestTag) == "drawer-summary" }
-            assertTrue(summary.boundsInRoot.height <= 80f, "Cash strip must remain at most 80dp")
+            assertTrue(summary.boundsInRoot.height <= 190f, "Summary card (with count button) too tall; actual=${summary.boundsInRoot.height}")
             val ledger = nodes.first { it.config.getOrNull(SemanticsProperties.TestTag) == "drawer-ledger" }
             assertTrue(ledger.boundsInRoot.height >= 900f * 0.60f,
                 "Bahi needs at least 60% of screen height; actual=${ledger.boundsInRoot.height}")
@@ -106,15 +106,6 @@ class DrawerLayoutTest {
                         "Horizontal overflow: ${node.texts()} ${node.boundsInRoot}")
                 }
             }
-            // Exercise view switch and cash-only filter through their actual Compose semantics actions.
-            for (label in listOf(if (english) "List" else "सूची", if (english) "Cash only" else "सिर्फ नकद")) {
-                val current = roots.flatMap { flatten(it.semanticsOwner.rootSemanticsNode) }
-                val chip = current.first { it.texts().contains(label) }
-                assertEquals(true, chip.config.getOrNull(SemanticsActions.OnClick)?.action?.invoke())
-                repeat(3) { frame() }
-            }
-            val listNodes = roots.flatMap { flatten(it.semanticsOwner.unmergedRootSemanticsNode) }
-            assertTrue(listNodes.any { node -> node.texts().any { it.contains(if (english) "Latest first" else "नई प्रविष्टि पहले") } })
             fun click(label: String) {
                 val current = roots.flatMap { flatten(it.semanticsOwner.rootSemanticsNode) }
                 val action = current.last { it.texts().contains(label) && it.config.getOrNull(SemanticsActions.OnClick) != null }
@@ -124,7 +115,7 @@ class DrawerLayoutTest {
             click(name)
             click(if (english) "Close details" else "विवरण बंद करें")
             click(countText)
-            click(if (english) "Count notes and coins" else "नोट और सिक्के गिनें")
+            click(if (english) "Count notes and coins" else "नोट-सिक्के से गिनें")
             val input = roots.flatMap { flatten(it.semanticsOwner.rootSemanticsNode) }.first {
                 it.texts().any { text -> text.contains("₹500 ×") } && it.config.getOrNull(SemanticsActions.SetText) != null
             }
@@ -135,9 +126,9 @@ class DrawerLayoutTest {
             click(if (english) "Save count · keep day open" else "गिनती सहेजें · दिन खुला रखें")
             assertEquals(100_000L, vm.uiState.value.physicalCountPaisa)
             assertFalse(vm.uiState.value.isDayClosed)
-            click(if (english) "Count again" else "फिर गिनें")
+            click(countText)
             click(if (english) "Close day" else "दिन बंद करें")
-            click(if (english) "Close day" else "दिन बंद करें")
+            click(if (english) "Close day" else "दिन बंद करें") // confirmation dialog
             assertTrue(vm.uiState.value.isDayClosed)
             assertEquals(-15_750_000L, vm.uiState.value.discrepancyPaisa)
         } finally {

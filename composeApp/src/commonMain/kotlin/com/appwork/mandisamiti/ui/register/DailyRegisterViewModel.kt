@@ -310,26 +310,6 @@ class DailyRegisterViewModel(
         selectDate(instant.toLocalDateTime(timeZone).date)
     }
 
-    fun navigateDay(deltaDays: Int) {
-        if (deltaDays < 0) {
-            repeat(-deltaDays) { navigateToPreviousDay() }
-        } else if (deltaDays > 0) {
-            repeat(deltaDays) { navigateToNextDay() }
-        }
-    }
-
-    fun navigateToPreviousDay() {
-        _selectedDate.value = _selectedDate.value.minus(1, DateTimeUnit.DAY)
-    }
-
-    fun navigateToNextDay() {
-        val currentToday = todayDate
-        val nextDate = _selectedDate.value.plus(1, DateTimeUnit.DAY)
-        if (nextDate <= currentToday) {
-            _selectedDate.value = nextDate
-        }
-    }
-
     fun navigateToToday() {
         _selectedDate.value = todayDate
     }

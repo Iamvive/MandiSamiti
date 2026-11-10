@@ -19,9 +19,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
@@ -390,5 +395,31 @@ class DailyRegisterViewModelTest {
         val item = state.todayTransactions.first()
         assertEquals("हम्माली खर्च", item.partyName)
         assertTrue(item.partyName != "खाता")
+    }
+
+    @Test
+    fun selectDate_ignores_future_and_older_than_three_months() = runTest {
+        val database = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val vm = DailyRegisterViewModel(
+            shopId = "shop-1", cashRepository = OfflineFirstCashTransactionRepository(database, ioDispatcher = io),
+            partyRepository = OfflineFirstPartyRepository(database, ioDispatcher = io),
+            shopProfileRepository = OfflineFirstShopProfileRepository(database, ioDispatcher = io),
+            ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope,
+            clock = object : Clock { override fun now() = Instant.parse("2026-10-31T10:00:00Z") }, timeZone = TimeZone.UTC
+        )
+        backgroundScope.launch { vm.uiState.collect { } }
+        runCurrent()
+        val today = vm.latestSelectableDate
+        val earliest = vm.earliestSelectableDate
+        vm.selectDate(today.plus(1, DateTimeUnit.DAY))
+        runCurrent()
+        assertEquals(today, vm.uiState.value.selectedDate)
+        vm.selectDate(earliest.minus(1, DateTimeUnit.DAY))
+        runCurrent()
+        assertEquals(today, vm.uiState.value.selectedDate)
+        vm.selectDate(earliest)
+        runCurrent()
+        assertEquals(earliest, vm.uiState.value.selectedDate)
     }
 }

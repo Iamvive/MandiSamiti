@@ -86,7 +86,7 @@ class DrawerReviewTest {
         assertTrue(vm.uiState.value.needsRecount)
         assertFalse(vm.uiState.value.isDayClosed)
         assertEquals(BahiReconciliationStatus.RECOUNT_REQUIRED, vm.uiState.value.reconciliationStatus)
-        vm.navigateToPreviousDay()
+        vm.selectDate(vm.latestSelectableDate.minus(1, DateTimeUnit.DAY))
         runCurrent()
         assertNull(vm.uiState.value.physicalCountPaisa)
         vm.navigateToToday()
