@@ -162,6 +162,7 @@ fun DailyCashRegisterScreen(
     var useDenominations by remember(uiState.selectedDate, uiState.isDayClosingSummaryOpen) { mutableStateOf(false) }
     var denominationQuantities by remember(uiState.selectedDate, uiState.isDayClosingSummaryOpen) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var showCloseConfirmation by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
     val visibleTransactions = uiState.todayTransactions.filter {
         it.transaction.transactionType in drawerMovementTypes &&
             (!cashOnly || it.transaction.paymentMode == PaymentMode.CASH)
@@ -303,6 +304,10 @@ fun DailyCashRegisterScreen(
         ) {
             DrawerSummaryCard(
                 state = uiState, isEnglish = isEnglish,
+                onDateClick = { showDatePicker = true },
+                onWhatsApp = {
+                    onShareWhatsApp?.invoke(viewModel.generateDayClosingReportText(uiState.physicalCountPaisa?.let { it / 100L }))
+                },
                 onCount = {
                     physicalCashInput = uiState.physicalCountPaisa?.let { (it / 100L).toString() }.orEmpty()
                     physicalCashReason = uiState.physicalCountReason.orEmpty()
@@ -885,6 +890,17 @@ fun DailyCashRegisterScreen(
         }
     }
 
+
+    if (showDatePicker) {
+        DrawerDatePickerSheet(
+            selected = uiState.selectedDate,
+            earliest = viewModel.earliestSelectableDate,
+            latest = viewModel.latestSelectableDate,
+            isEnglish = isEnglish,
+            onPick = { viewModel.selectDate(it) },
+            onDismiss = { showDatePicker = false },
+        )
+    }
 
     // Day Closing Summary & Reconciliation Modal
     if (uiState.isDayClosingSummaryOpen) {
