@@ -66,8 +66,33 @@ class QuotaRepository(
 ) {
     private val queries = database.appDatabaseQueries
 
+    private fun resolveShopId(shopId: String?): String {
+        return shopId ?: sessionStore.current()?.shopId
+            ?: throw IllegalStateException("Active shop ID required for quota tracking")
+    }
+
+    suspend fun canCreateBill(shopId: String? = null): Boolean {
+        val targetShopId = resolveShopId(shopId)
+        val entity = queries.getShopQuota(targetShopId).executeAsOneOrNull()
+        return if (entity != null) {
+            entity.toDomain().canCreateBill
+        } else {
+            true // default FREE tier with 0 bills allows creation
+        }
+    }
+
+    suspend fun canClaimEmergencyExtension(shopId: String? = null): Boolean {
+        val targetShopId = resolveShopId(shopId)
+        val entity = queries.getShopQuota(targetShopId).executeAsOneOrNull()
+        return if (entity != null) {
+            entity.toDomain().canClaimEmergencyExtension
+        } else {
+            true // default 0 extensions used
+        }
+    }
+
     fun getQuotaStatus(shopId: String? = null): Flow<ShopQuota> {
-        val targetShopId = shopId ?: sessionStore.current()?.shopId ?: "shop_default"
+        val targetShopId = resolveShopId(shopId)
         return queries.getShopQuota(targetShopId)
             .asFlow()
             .mapToOneOrNull(ioDispatcher)
@@ -89,7 +114,7 @@ class QuotaRepository(
     }
 
     suspend fun incrementLocalBillCount(shopId: String? = null) = withContext(ioDispatcher) {
-        val targetShopId = shopId ?: sessionStore.current()?.shopId ?: "shop_default"
+        val targetShopId = resolveShopId(shopId)
         database.transaction {
             val existing = queries.getShopQuota(targetShopId).executeAsOneOrNull()
             if (existing == null) {
@@ -112,7 +137,7 @@ class QuotaRepository(
         val client = httpClient ?: return@withContext Result.failure(IllegalStateException("No HttpClient configured"))
         val currentSession = sessionStore.current()
         val token = currentSession?.accessToken
-        val targetShopId = shopId ?: currentSession?.shopId ?: "shop_default"
+        val targetShopId = resolveShopId(shopId)
 
         try {
             val response = client.get("$baseUrl/api/v1/billing/quota") {
@@ -157,7 +182,7 @@ class QuotaRepository(
         val client = httpClient ?: return@withContext Result.failure(IllegalStateException("No HttpClient configured"))
         val currentSession = sessionStore.current()
         val token = currentSession?.accessToken
-        val targetShopId = shopId ?: currentSession?.shopId ?: "shop_default"
+        val targetShopId = resolveShopId(shopId)
 
         try {
             val response = client.post("$baseUrl/api/v1/billing/claim-emergency-extension") {

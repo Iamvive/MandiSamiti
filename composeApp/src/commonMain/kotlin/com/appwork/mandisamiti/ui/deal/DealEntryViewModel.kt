@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -67,7 +68,8 @@ data class DealEntryUiState(
     val netBuyerReceivablePaisa: Long = 0L,
     val isSettledStage: Boolean = false, // false = Stage 1 arrival, true = Stage 2 rate entry
     val isSaving: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val saveState: DealSaveState = DealSaveState.Idle
 )
 
 sealed interface DealEntryEvent {
@@ -84,6 +86,7 @@ class DealEntryViewModel(
     private val partyRepository: PartyRepository,
     private val shopProfileRepository: ShopProfileRepository,
     private val tradeSettingsRepository: com.appwork.mandisamiti.domain.repository.TradeSettingsRepository? = null,
+    private val quotaRepository: com.appwork.mandisamiti.data.repository.QuotaRepository? = null,
     private val ttsManager: SoundboxTtsManager,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
@@ -434,10 +437,69 @@ class DealEntryViewModel(
             )
         }
 
+        val quotaRepo = quotaRepository
+        if (original == null && quotaRepo != null) {
+            viewModelScope.launch {
+                try {
+                    val quota = quotaRepo.getQuotaStatus(state.shopId).first()
+                    if (!quota.canCreateBill) {
+                        if (quota.canClaimEmergencyExtension) {
+                            _uiState.value = state.copy(saveState = DealSaveState.EmergencyExtensionPrompt(quota))
+                        } else {
+                            _uiState.value = state.copy(saveState = DealSaveState.QuotaExhaustedUpgradeRequired(quota))
+                        }
+                        return@launch
+                    }
+                    executeSave(deal, farmer, bags, state, isSettled)
+                } catch (e: Throwable) {
+                    _uiState.value = _uiState.value.copy(error = e.message ?: "सौदा सहेजने में विफल")
+                }
+            }
+        } else {
+            executeSave(deal, farmer, bags, state, isSettled)
+        }
+    }
+
+    fun claimEmergencyAndSave() {
+        val state = _uiState.value
+        val quotaRepo = quotaRepository ?: return
+        _uiState.value = state.copy(isSaving = true)
+        viewModelScope.launch {
+            try {
+                val claimResult = quotaRepo.claimEmergencyExtension(state.shopId)
+                if (claimResult.isSuccess) {
+                    saveDeal()
+                } else {
+                    val err = claimResult.exceptionOrNull()?.message ?: "Emergency extension failed"
+                    _uiState.value = _uiState.value.copy(isSaving = false, error = err)
+                }
+            } catch (e: Throwable) {
+                _uiState.value = _uiState.value.copy(isSaving = false, error = e.message ?: "Emergency extension failed")
+            }
+        }
+    }
+
+    fun dismissQuotaSheet() {
+        _uiState.value = _uiState.value.copy(saveState = DealSaveState.Idle)
+    }
+
+    private fun executeSave(
+        deal: Deal,
+        farmer: Party,
+        bags: Int,
+        state: DealEntryUiState,
+        isSettled: Boolean
+    ) {
+        val original = originalDeal
         _uiState.value = _uiState.value.copy(isSaving = true)
         viewModelScope.launch {
             try {
-                if (original == null) dealRepository.saveDeal(deal) else dealRepository.editDeal(deal)
+                if (original == null) {
+                    dealRepository.saveDeal(deal)
+                    quotaRepository?.incrementLocalBillCount(state.shopId)
+                } else {
+                    dealRepository.editDeal(deal)
+                }
 
                 // Hindi Soundbox Voice Announcement Text
                 val hindiVoiceText = if (isSettled) {
@@ -454,6 +516,7 @@ class DealEntryViewModel(
                 }
 
                 ttsManager.speak(hindiVoiceText, state.isSoundEnabled)
+                _uiState.value = _uiState.value.copy(saveState = DealSaveState.Success(deal.id))
                 _events.emit(DealEntryEvent.DealSavedSuccess(deal, hindiVoiceText))
             } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(error = e.message ?: "सौदा सहेजने में विफल")

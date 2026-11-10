@@ -74,7 +74,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun DealEntryScreen(
     viewModel: DealEntryViewModel,
     onNavigateBack: () -> Unit,
-    onDealSavedSuccess: (String) -> Unit
+    onDealSavedSuccess: (String) -> Unit,
+    onNavigateToUpgrade: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val cameraPicker = rememberCameraSlipPicker()
@@ -528,6 +529,36 @@ fun DealEntryScreen(
             isEnglish = false,
             onDismissRequest = { showTutorialSheet = false }
         )
+    }
+
+    when (val saveState = uiState.saveState) {
+        is DealSaveState.EmergencyExtensionPrompt -> {
+            com.appwork.mandisamiti.ui.billing.EmergencyExtensionSheet(
+                quota = saveState.quota,
+                isLoading = uiState.isSaving,
+                errorMessage = uiState.error,
+                onClaimExtension = { viewModel.claimEmergencyAndSave() },
+                onViewUpgradePlans = {
+                    viewModel.dismissQuotaSheet()
+                    onNavigateToUpgrade?.invoke()
+                },
+                onDismissRequest = { viewModel.dismissQuotaSheet() }
+            )
+        }
+        is DealSaveState.QuotaExhaustedUpgradeRequired -> {
+            com.appwork.mandisamiti.ui.billing.EmergencyExtensionSheet(
+                quota = saveState.quota,
+                isLoading = false,
+                errorMessage = "Emergency extensions exhausted. Please upgrade your plan.",
+                onClaimExtension = {},
+                onViewUpgradePlans = {
+                    viewModel.dismissQuotaSheet()
+                    onNavigateToUpgrade?.invoke()
+                },
+                onDismissRequest = { viewModel.dismissQuotaSheet() }
+            )
+        }
+        else -> Unit
     }
 }
 

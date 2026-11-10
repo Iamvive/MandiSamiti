@@ -329,6 +329,7 @@ fun App(
                         partyRepository = partyRepo,
                         shopProfileRepository = shopRepo,
                         tradeSettingsRepository = tradeSettingsRepo,
+                        quotaRepository = quotaRepo,
                         ttsManager = ttsManager,
                         viewModelScope = coroutineScope
                     )
