@@ -297,9 +297,11 @@ class DailyRegisterViewModel(
             .launchIn(viewModelScope)
     }
 
+    val earliestSelectableDate: LocalDate get() = todayDate.minus(3, DateTimeUnit.MONTH)
+    val latestSelectableDate: LocalDate get() = todayDate
+
     fun selectDate(date: LocalDate) {
-        val currentToday = todayDate
-        if (date <= currentToday) {
+        if (date <= todayDate && date >= earliestSelectableDate) {
             _selectedDate.value = date
         }
     }
