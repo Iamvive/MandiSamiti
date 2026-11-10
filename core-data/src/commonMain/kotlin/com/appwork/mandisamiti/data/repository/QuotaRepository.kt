@@ -64,6 +64,15 @@ class QuotaRepository(
     private val baseUrl: String = "https://api.mandisamiti.appwork.co.in",
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
+    companion object {
+        val INTERNAL_UNLIMITED_PHONES = setOf(
+            "9058666306",
+            "9058389891",
+            "9997661012",
+            "9410617691"
+        )
+    }
+
     private val queries = database.appDatabaseQueries
 
     private fun resolveShopId(shopId: String?): String {
@@ -242,10 +251,21 @@ class QuotaRepository(
         )
     }
 
+    private fun isInternalUnlimitedUser(): Boolean {
+        val profile = queries.getShopProfile().executeAsOneOrNull()
+        val phone = (profile?.phone_number ?: "")
+            .replace("+91", "")
+            .replace(" ", "")
+            .trim()
+        return phone in INTERNAL_UNLIMITED_PHONES
+    }
+
     private fun ShopQuotaEntity.toDomain(): ShopQuota {
+        val isVip = isInternalUnlimitedUser()
+        val effectiveTier = if (isVip) "PRO" else plan_tier
         return ShopQuota(
             shopId = shop_id,
-            planTier = plan_tier,
+            planTier = effectiveTier,
             monthlyLimit = monthly_limit,
             emergencyExtensionsUsed = emergency_extensions_used,
             emergencyBillsAdded = emergency_bills_added,

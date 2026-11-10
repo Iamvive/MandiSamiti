@@ -11,6 +11,14 @@ from app.models.sell_entry import SellEntry
 MAX_EMERGENCY_EXTENSIONS = 2
 BILLS_PER_EXTENSION = 10
 
+# Internal whitelist numbers with permanent unlimited PRO access
+INTERNAL_UNLIMITED_PHONES = {
+    "9058666306",
+    "9058389891",
+    "9997661012",
+    "9410617691",
+}
+
 def get_current_month_range_ms() -> tuple[int, int]:
     now = datetime.now(timezone.utc)
     start_of_month = datetime(now.year, now.month, 1, 0, 0, 0, tzinfo=timezone.utc)
@@ -68,7 +76,9 @@ async def get_shop_quota(db: AsyncSession, shop_id: str) -> dict:
 
     bills_used = await count_monthly_bills_for_shop(db, shop_id)
     effective_limit = shop.monthly_bill_limit + shop.emergency_extension_bills
-    plan_tier = shop.plan_tier or "FREE"
+    raw_phone = (shop.phone_number or "").replace("+91", "").replace(" ", "").strip()
+    is_internal_vip = raw_phone in INTERNAL_UNLIMITED_PHONES
+    plan_tier = "PRO" if is_internal_vip else (shop.plan_tier or "FREE")
     can_create = (plan_tier.upper() == "PRO") or (bills_used < effective_limit)
     is_extension_available = shop.emergency_extensions_used < MAX_EMERGENCY_EXTENSIONS
 

@@ -45,14 +45,14 @@ class SubscriptionContactScreenTest {
     @Test
     fun testContactSupportHandlerUriBuilders() {
         val phoneUri = ContactSupportHandler.buildDialerUri(MANDI_SUPPORT_PHONE)
-        assertEquals("tel:+919876543210", phoneUri)
+        assertEquals("tel:+919368299074", phoneUri)
 
         val whatsAppUri = ContactSupportHandler.buildWhatsAppUri(
             MANDI_SUPPORT_WHATSAPP,
             DEFAULT_WHATSAPP_UPGRADE_MESSAGE
         )
         assertEquals(
-            "https://wa.me/919876543210?text=Hello%20MandiSamiti%20Support,%20I%20want%20to%20upgrade%20my%20shop%20account.",
+            "https://wa.me/919368299074?text=Hello%20MandiSamiti%20Support,%20I%20want%20to%20upgrade%20my%20shop%20account.",
             whatsAppUri
         )
     }

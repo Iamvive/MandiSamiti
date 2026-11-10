@@ -62,8 +62,9 @@ import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
-const val MANDI_SUPPORT_PHONE = "+919876543210"
-const val MANDI_SUPPORT_WHATSAPP = "919876543210"
+const val MANDI_SUPPORT_PHONE = "+919368299074"
+const val MANDI_SUPPORT_WHATSAPP = "919368299074"
+const val MANDI_SUPPORT_EMAIL = "appworkd@gmail.com"
 const val DEFAULT_WHATSAPP_UPGRADE_MESSAGE = "Hello MandiSamiti Support, I want to upgrade my shop account."
 const val DEFAULT_WHATSAPP_UPGRADE_MESSAGE_HI = "नमस्ते मंडीसमिति सहायता, मैं अपनी दुकान का खाता अपग्रेड कराना चाहता हूँ।"
 const val REASSURANCE_FOOTER_TEXT = "All existing data, ledgers, and slips remain permanently saved and readable."
@@ -401,13 +402,13 @@ fun SubscriptionContactScreen(
                 }
             }
 
-            // Google Play Compliance Note
+            // Google Play Compliance Note & Support Info
             item {
                 Text(
                     text = if (isEnglish) {
-                        "All plans are managed directly via MandiSamiti business advisory. We do not process direct consumer in-app purchases."
+                        "Support email: $MANDI_SUPPORT_EMAIL\nAll plans are managed directly via MandiSamiti business advisory. We do not process direct consumer in-app purchases."
                     } else {
-                        "सभी प्लान मंडीसमिति व्यापार सलाहकार द्वारा सक्रिय किए जाते हैं।"
+                        "सहायता ईमेल: $MANDI_SUPPORT_EMAIL\nसभी प्लान मंडीसमिति व्यापार सलाहकार द्वारा सक्रिय किए जाते हैं।"
                     },
                     fontSize = 12.sp,
                     color = MandiTextMuted,
