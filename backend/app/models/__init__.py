@@ -1,4 +1,4 @@
-from app.models.user import User, ShopProfile
+from app.models.user import User, ShopProfile, Shop
 from app.models.party import Party
 from app.models.deal import Deal
 from app.models.transaction import CashTransaction
@@ -11,7 +11,7 @@ from app.models.lend_entry import LendEntry, LendSettlement
 from app.models.expense_entry import ExpenseEntry
 
 __all__ = [
-    "User", "ShopProfile", "Party", "Deal", "CashTransaction", "EntryRevision", "RefreshToken", "SyncConflict",
+    "User", "ShopProfile", "Shop", "Party", "Deal", "CashTransaction", "EntryRevision", "RefreshToken", "SyncConflict",
     "BuyEntry", "SellEntry", "LendEntry", "LendSettlement", "ExpenseEntry",
 ]
 

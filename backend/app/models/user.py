@@ -1,6 +1,6 @@
 import uuid
 import time
-from sqlalchemy import Column, String, Integer, Float, Boolean, BigInteger, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, Boolean, BigInteger, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -22,10 +22,20 @@ class ShopProfile(Base):
     # Per-shop change counter. Every row a push accepts takes the next value as its server_seq.
     last_seq = Column(BigInteger, nullable=False, default=0, server_default="0")
 
+    # Quota & Monetization
+    monthly_bill_limit = Column(Integer, default=50, nullable=False)
+    emergency_extensions_used = Column(Integer, default=0, nullable=False)
+    emergency_extension_bills = Column(Integer, default=0, nullable=False)
+    plan_tier = Column(String(32), default="FREE", nullable=False)
+    plan_valid_until = Column(DateTime(timezone=True), nullable=True)
+
     users = relationship("User", back_populates="shop")
     parties = relationship("Party", back_populates="shop")
     deals = relationship("Deal", back_populates="shop")
     transactions = relationship("CashTransaction", back_populates="shop")
+
+# Alias Shop to ShopProfile for compatibility
+Shop = ShopProfile
 
 class User(Base):
     __tablename__ = "users"
