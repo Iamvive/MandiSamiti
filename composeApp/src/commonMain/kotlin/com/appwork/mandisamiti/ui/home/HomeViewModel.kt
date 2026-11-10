@@ -19,6 +19,7 @@ import com.appwork.mandisamiti.domain.repository.TradeSettingsRepository
 import com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase
 import com.appwork.mandisamiti.ui.dashboard.DashboardKpis
 import com.appwork.mandisamiti.ui.dashboard.computeKpis
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -104,6 +106,7 @@ class HomeViewModel(
     private val quotaRepository: QuotaRepository? = null,
     private val stockUseCase: StockInventoryUseCase? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val onLocalWrite: () -> Unit = {},
     /** Entries saved on this phone that have not reached the server yet; null in tests and previews. */
     private val pendingSyncCountProvider: (suspend () -> Int)? = null
@@ -267,6 +270,7 @@ class HomeViewModel(
     }
 
     private var partyBalanceJobs = mutableListOf<kotlinx.coroutines.Job>()
+    private var pendingFilterJob: kotlinx.coroutines.Job? = null
 
     private fun observeParties(shopId: String) {
         partyRepository.getPartiesStream(shopId)
@@ -288,7 +292,7 @@ class HomeViewModel(
                 )
 
                 parties.forEach { party ->
-                    val job = viewModelScope.launch {
+                    val job = viewModelScope.launch(backgroundDispatcher) {
                         partyRepository.getPartyBalanceStream(party.id).collect { balance ->
                             if (balance != null) {
                                 val currentList = _uiState.value.allParties.toMutableList()
@@ -307,11 +311,13 @@ class HomeViewModel(
                                     if (it.balancePaisa < 0) pay += -it.balancePaisa
                                 }
 
+                                val filtered = filterList(currentList, _uiState.value.searchQuery, _uiState.value.activeFilter, _uiState.value.activeTypeFilter)
+
                                 _uiState.value = _uiState.value.copy(
                                     allParties = currentList,
                                     totalMarketReceivablePaisa = rec + _uiState.value.unlinkedLendAmountPaisa,
                                     totalFarmerPayablePaisa = pay,
-                                    filteredParties = filterList(currentList, _uiState.value.searchQuery, _uiState.value.activeFilter, _uiState.value.activeTypeFilter),
+                                    filteredParties = filtered,
                                     isLoading = false
                                 )
                             }
@@ -324,23 +330,35 @@ class HomeViewModel(
     }
 
     fun onSearchQueryChanged(query: String) {
+        val currentParties = _uiState.value.allParties
+        val currentFilter = _uiState.value.activeFilter
+        val currentType = _uiState.value.activeTypeFilter
+
         _uiState.value = _uiState.value.copy(
             searchQuery = query,
-            filteredParties = filterList(_uiState.value.allParties, query, _uiState.value.activeFilter, _uiState.value.activeTypeFilter)
+            filteredParties = filterList(currentParties, query, currentFilter, currentType)
         )
     }
 
     fun onFilterSelected(filter: PartyFilter) {
+        val currentParties = _uiState.value.allParties
+        val query = _uiState.value.searchQuery
+        val currentType = _uiState.value.activeTypeFilter
+
         _uiState.value = _uiState.value.copy(
             activeFilter = filter,
-            filteredParties = filterList(_uiState.value.allParties, _uiState.value.searchQuery, filter, _uiState.value.activeTypeFilter)
+            filteredParties = filterList(currentParties, query, filter, currentType)
         )
     }
 
     fun onTypeFilterSelected(typeFilter: PartyTypeFilter) {
+        val currentParties = _uiState.value.allParties
+        val query = _uiState.value.searchQuery
+        val currentFilter = _uiState.value.activeFilter
+
         _uiState.value = _uiState.value.copy(
             activeTypeFilter = typeFilter,
-            filteredParties = filterList(_uiState.value.allParties, _uiState.value.searchQuery, _uiState.value.activeFilter, typeFilter)
+            filteredParties = filterList(currentParties, query, currentFilter, typeFilter)
         )
     }
 
@@ -443,28 +461,34 @@ internal fun filterList(
 ): List<PartyWithBalance> {
     val cleanQuery = query.trim()
     val phoneQuery = cleanQuery.filter { it.isDigit() }
+    val isQueryEmpty = cleanQuery.isEmpty()
+
     return list.filter { item ->
-        val matchesQuery = cleanQuery.isEmpty() ||
-                (phoneQuery.length >= 4 && item.party.phone?.contains(phoneQuery) == true) ||
-                BilingualSearchEngine.matchesAny(
-                    cleanQuery,
-                    item.party.name,
-                    item.party.village,
-                    item.party.phone
-                )
+        val matchesType = when (typeFilter) {
+            PartyTypeFilter.ALL -> true
+            PartyTypeFilter.KISAAN -> item.party.partyType == PartyType.FARMER
+            PartyTypeFilter.VYAPARI -> item.party.partyType == PartyType.BUYER
+        }
+        if (!matchesType) return@filter false
 
         val matchesFilter = when (filter) {
             PartyFilter.ALL -> true
             PartyFilter.RECEIVABLE -> item.balancePaisa > 0
             PartyFilter.PAYABLE -> item.balancePaisa < 0
         }
+        if (!matchesFilter) return@filter false
 
-        val matchesType = when (typeFilter) {
-            PartyTypeFilter.ALL -> true
-            PartyTypeFilter.KISAAN -> item.party.partyType == PartyType.FARMER
-            PartyTypeFilter.VYAPARI -> item.party.partyType == PartyType.BUYER
+        if (isQueryEmpty) return@filter true
+
+        if (phoneQuery.length >= 4 && item.party.phone?.contains(phoneQuery) == true) {
+            return@filter true
         }
 
-        matchesQuery && matchesFilter && matchesType
+        BilingualSearchEngine.matchesAny(
+            cleanQuery,
+            item.party.name,
+            item.party.village,
+            item.party.phone
+        )
     }
 }
