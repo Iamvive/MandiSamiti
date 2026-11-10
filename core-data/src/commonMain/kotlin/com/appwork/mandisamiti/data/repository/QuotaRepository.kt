@@ -80,20 +80,20 @@ class QuotaRepository(
             ?: throw IllegalStateException("Active shop ID required for quota tracking")
     }
 
-    suspend fun canCreateBill(shopId: String? = null): Boolean {
+    suspend fun canCreateBill(shopId: String? = null): Boolean = withContext(ioDispatcher) {
         val targetShopId = resolveShopId(shopId)
         val entity = queries.getShopQuota(targetShopId).executeAsOneOrNull()
-        return if (entity != null) {
+        if (entity != null) {
             entity.toDomain().canCreateBill
         } else {
             true // default FREE tier with 0 bills allows creation
         }
     }
 
-    suspend fun canClaimEmergencyExtension(shopId: String? = null): Boolean {
+    suspend fun canClaimEmergencyExtension(shopId: String? = null): Boolean = withContext(ioDispatcher) {
         val targetShopId = resolveShopId(shopId)
         val entity = queries.getShopQuota(targetShopId).executeAsOneOrNull()
-        return if (entity != null) {
+        if (entity != null) {
             entity.toDomain().canClaimEmergencyExtension
         } else {
             true // default 0 extensions used
