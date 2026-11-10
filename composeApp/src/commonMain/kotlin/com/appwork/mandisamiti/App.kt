@@ -89,6 +89,7 @@ sealed interface Screen {
     data class ExpenseEntry(val existingId: String? = null) : Screen
     data object ExpenseList : Screen
     data object StockSheet : Screen
+    data object SubscriptionContact : Screen
 }
 
 fun Screen.backTarget(): Screen = when (this) {
@@ -104,6 +105,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.ExpenseEntry -> if (existingId != null) Screen.ExpenseList else Screen.Home
     is Screen.ExpenseList -> Screen.ExpenseEntry()
     is Screen.StockSheet -> Screen.Home
+    is Screen.SubscriptionContact -> Screen.Home
     is Screen.DealEntry -> Screen.Home
     is Screen.PartyLedger -> returnScreen ?: Screen.Home
     is Screen.ReceiptPreview -> Screen.Home
@@ -292,6 +294,7 @@ fun App(
                     onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
                     onNavigateToBuyReceipt = { id -> currentScreen = Screen.BuyReceipt(id, Screen.Home) },
                     onNavigateToSellReceipt = { id -> currentScreen = Screen.SellReceipt(id, Screen.Home) },
+                    onNavigateToQuotaPlans = { currentScreen = Screen.SubscriptionContact },
                     onSignOut = {
                         // Ignore a second tap while a sign-out is already running.
                         if (!signOutInFlight) {
@@ -337,6 +340,7 @@ fun App(
                 DealEntryScreen(
                     viewModel = dealViewModel,
                     onNavigateBack = { currentScreen = Screen.Home },
+                    onNavigateToUpgrade = { currentScreen = Screen.SubscriptionContact },
                     onDealSavedSuccess = { dealId ->
                         syncScheduler.scheduleOneTimeSync()
                         coroutineScope.launch {
@@ -886,6 +890,17 @@ fun App(
                 StockBreakdownSheet(
                     stockLines = stockLines,
                     onDismiss = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.SubscriptionContact -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val quota by quotaRepo.getQuotaStatus(shopId).collectAsState(initial = null)
+                val shopProfile by shopRepo.getShopProfileStream().collectAsState(initial = null)
+                com.appwork.mandisamiti.ui.billing.SubscriptionContactScreen(
+                    quota = quota,
+                    shopName = shopProfile?.shopName,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
+                    onBack = { currentScreen = Screen.Home }
                 )
             }
         }
