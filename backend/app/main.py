@@ -8,6 +8,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base, get_db
 from app.api.v1.api import api_router
+from app.routers.billing import router as billing_router
 from app.core.redis_client import get_redis
 from app.core.observability import RequestContextMiddleware, init_sentry, setup_logging
 
@@ -50,6 +51,8 @@ if settings.BACKEND_CORS_ORIGINS:
 app.add_middleware(RequestContextMiddleware)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+# Explicit mounting of billing router at /api/v1/billing
+app.include_router(billing_router, prefix=f"{settings.API_V1_STR}/billing", tags=["Billing & Quota"])
 
 @app.get("/health", tags=["Health"])
 async def health_check():
