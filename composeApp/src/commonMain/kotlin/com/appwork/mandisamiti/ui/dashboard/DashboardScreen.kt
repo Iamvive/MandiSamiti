@@ -59,6 +59,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.components.QuotaProgressBanner
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.OutlierEntryInfo
 import com.appwork.mandisamiti.ui.theme.MandiBackground
@@ -98,6 +99,7 @@ fun DashboardScreen(
     onNavigateToBuyReceipt: (String) -> Unit = {},
     onNavigateToSellReceipt: (String) -> Unit = {},
     onNavigateToNewEntry: () -> Unit = onNavigateToBuy,
+    onNavigateToQuotaPlans: () -> Unit = {},
     onPhoneNeeded: (onAdd: () -> Unit) -> Unit = {},
     needsLogin: Boolean = false,
     isEnglish: Boolean = false,
@@ -253,6 +255,17 @@ fun DashboardScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // 0. Quota 80% Warning Banner (when applicable)
+            uiState.shopQuota?.let { quota ->
+                item(key = "quota_banner") {
+                    QuotaProgressBanner(
+                        quota = quota,
+                        isEnglish = isEnglish,
+                        onClick = onNavigateToQuotaPlans
+                    )
+                }
+            }
+
             // 1. Rokdi Balance Hero Card
             item {
                 Card(

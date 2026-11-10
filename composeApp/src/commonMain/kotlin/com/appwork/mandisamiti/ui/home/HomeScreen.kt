@@ -88,6 +88,7 @@ fun HomeScreen(
     stockPartyNames: Map<String, String> = emptyMap(),
     onNavigateToBuyReceipt: (String) -> Unit = {},
     onNavigateToSellReceipt: (String) -> Unit = {},
+    onNavigateToQuotaPlans: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -180,6 +181,7 @@ fun HomeScreen(
                             onNavigateToBuyReceipt = onNavigateToBuyReceipt,
                             onNavigateToSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewEntry = onNavigateToNewEntry,
+                            onNavigateToQuotaPlans = onNavigateToQuotaPlans,
                             onPhoneNeeded = promptAddPhone,
                             needsLogin = needsLogin,
                             isEnglish = uiState.isEnglish

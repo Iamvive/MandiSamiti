@@ -137,6 +137,7 @@ fun App(
         )
     }
     val expenseRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database) }
+    val quotaRepo = remember { com.appwork.mandisamiti.data.repository.QuotaRepository(database, sessionStore, baseUrl = apiBaseUrl) }
     val stockUseCase = remember { com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo) }
     val wiper = remember { LocalDataWiper(database) }
     val authRepo = remember {
@@ -230,6 +231,7 @@ fun App(
                         sellRepository = sellRepo,
                         lendRepository = lendRepo,
                         expenseRepository = expenseRepo,
+                        quotaRepository = quotaRepo,
                         stockUseCase = stockUseCase,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },

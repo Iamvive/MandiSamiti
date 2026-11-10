@@ -1,5 +1,7 @@
 package com.appwork.mandisamiti.ui.home
 
+import com.appwork.mandisamiti.data.repository.QuotaRepository
+import com.appwork.mandisamiti.data.repository.ShopQuota
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.domain.model.Party
@@ -80,7 +82,8 @@ data class HomeUiState(
     val buys: List<com.appwork.mandisamiti.domain.model.BuyEntry> = emptyList(),
     val sells: List<com.appwork.mandisamiti.domain.model.SellEntry> = emptyList(),
     val expenses: List<com.appwork.mandisamiti.domain.model.ExpenseEntry> = emptyList(),
-    val lends: List<com.appwork.mandisamiti.domain.model.LendEntry> = emptyList()
+    val lends: List<com.appwork.mandisamiti.domain.model.LendEntry> = emptyList(),
+    val shopQuota: ShopQuota? = null
 ) {
     val isSoundEnabled: Boolean get() = shopProfile?.isSoundEnabled ?: true
     val allPartiesWithBalance: List<PartyWithBalance> get() = allParties
@@ -98,6 +101,7 @@ class HomeViewModel(
     private val lendRepository: LendRepository? = null,
     private val expenseRepository: ExpenseRepository? = null,
     private val cashRepository: com.appwork.mandisamiti.domain.repository.CashTransactionRepository? = null,
+    private val quotaRepository: QuotaRepository? = null,
     private val stockUseCase: StockInventoryUseCase? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val onLocalWrite: () -> Unit = {},
@@ -111,7 +115,16 @@ class HomeViewModel(
     init {
         loadShopProfileAndParties()
         observeDashboardData()
+        observeQuota()
         observePendingSyncCount()
+    }
+
+    private fun observeQuota() {
+        quotaRepository?.getQuotaStatus(shopId)
+            ?.onEach { quota ->
+                _uiState.value = _uiState.value.copy(shopQuota = quota)
+            }
+            ?.launchIn(viewModelScope)
     }
 
     /** A cheap count query every few seconds, so the "waiting to upload" line clears soon after a sync lands. */
