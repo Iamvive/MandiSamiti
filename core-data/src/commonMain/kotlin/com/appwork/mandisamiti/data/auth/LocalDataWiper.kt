@@ -19,6 +19,7 @@ class LocalDataWiper(private val database: AppDatabase) {
             q.wipeCommodities()
             q.wipeParties()
             q.wipeShopProfiles()
+            q.wipeShopQuota()
         }
     }
 

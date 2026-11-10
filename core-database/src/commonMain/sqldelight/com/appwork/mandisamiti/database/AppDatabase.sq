@@ -835,3 +835,43 @@ wipeSellEntries:
 DELETE FROM sellEntryEntity;
 wipeExpenses:
 DELETE FROM expenseEntryEntity;
+
+-- Shop Quota (Monetization & Free Limit)
+CREATE TABLE shopQuotaEntity (
+    shop_id TEXT PRIMARY KEY NOT NULL,
+    plan_tier TEXT NOT NULL DEFAULT 'FREE',
+    monthly_limit INTEGER NOT NULL DEFAULT 50,
+    emergency_extensions_used INTEGER NOT NULL DEFAULT 0,
+    emergency_bills_added INTEGER NOT NULL DEFAULT 0,
+    bills_created_this_month INTEGER NOT NULL DEFAULT 0,
+    last_synced_at INTEGER NOT NULL DEFAULT 0
+);
+
+getShopQuota:
+SELECT * FROM shopQuotaEntity WHERE shop_id = ?;
+
+upsertShopQuota:
+INSERT OR REPLACE INTO shopQuotaEntity (
+    shop_id,
+    plan_tier,
+    monthly_limit,
+    emergency_extensions_used,
+    emergency_bills_added,
+    bills_created_this_month,
+    last_synced_at
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+incrementBillCount:
+UPDATE shopQuotaEntity
+SET bills_created_this_month = bills_created_this_month + 1
+WHERE shop_id = ?;
+
+applyEmergencyExtension:
+UPDATE shopQuotaEntity
+SET emergency_extensions_used = emergency_extensions_used + 1,
+    emergency_bills_added = emergency_bills_added + 10
+WHERE shop_id = ?;
+
+wipeShopQuota:
+DELETE FROM shopQuotaEntity;
+
