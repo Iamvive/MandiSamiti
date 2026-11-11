@@ -114,6 +114,7 @@ fun ParchiListScreen(
     onNavigateToNewBuy: () -> Unit,
     onNavigateToNewSell: () -> Unit,
     onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
+    onSettleSellSlipCash: ((sellId: String, amountPaisa: Long) -> Unit)? = null,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -221,7 +222,9 @@ fun ParchiListScreen(
                     1 -> VyapariParchiView(
                         sells = sells,
                         partyNamesById = partyNamesById,
+                        gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenSellReceipt,
+                        onSettleSellSlipCash = onSettleSellSlipCash,
                         isEnglish = isEnglish
                     )
                 }
@@ -341,9 +344,12 @@ private fun KisaanParchiView(
 private fun VyapariParchiView(
     sells: List<SellEntry>,
     partyNamesById: Map<String, String>,
+    gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
+    onSettleSellSlipCash: ((sellId: String, amountPaisa: Long) -> Unit)? = null,
     isEnglish: Boolean
 ) {
+    var settlingSell by remember { mutableStateOf<SellEntry?>(null) }
     val nonVoidSells = remember(sells) { sells.filter { !it.isVoid } }
 
     // Metrics calculation:
@@ -417,11 +423,26 @@ private fun VyapariParchiView(
                         sell = sell,
                         buyerName = partyNamesById[sell.buyerId] ?: sell.buyerId,
                         onOpenReceipt = { onOpenReceipt(sell.id) },
+                        onSettleCash = if (onSettleSellSlipCash != null) { { settlingSell = sell } } else null,
                         isEnglish = isEnglish
                     )
                 }
             }
         }
+    }
+
+    settlingSell?.let { sell ->
+        TraderSlipCashSettlementSheet(
+            sell = sell,
+            traderName = partyNamesById[sell.buyerId] ?: sell.buyerId,
+            gallaCashPaisa = gallaCashPaisa,
+            onDismiss = { settlingSell = null },
+            onConfirmReceipt = { amountPaisa ->
+                onSettleSellSlipCash?.invoke(sell.id, amountPaisa)
+                settlingSell = null
+            },
+            isEnglish = isEnglish
+        )
     }
 }
 
@@ -660,8 +681,12 @@ private fun VyapariSlipCard(
     sell: SellEntry,
     buyerName: String,
     onOpenReceipt: () -> Unit,
+    onSettleCash: (() -> Unit)? = null,
     isEnglish: Boolean
 ) {
+    val isFullyReceived = sell.receivedPaisa >= sell.totalReceivablePaisa
+    val remainingPaisa = (sell.totalReceivablePaisa - sell.receivedPaisa).coerceAtLeast(0L)
+    val remainingRupees = remainingPaisa / 100
     // Slip amount WITHOUT majdoori and commission:
     // This is grossPaisa (base weight x rate), excluding arat, mandi shulk and tulak
     val baseValueWithoutChargesPaisa = sell.grossPaisa
@@ -739,6 +764,74 @@ private fun VyapariSlipCard(
                     fontWeight = FontWeight.Medium,
                     color = MandiTextMuted
                 )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (sell.receivedPaisa > 0L) {
+                        if (isEnglish) "Received: ₹${MandiMathEngine.formatIndianGrouping(sell.receivedPaisa / 100)}" else "पूर्व प्राप्त: ₹${MandiMathEngine.formatIndianGrouping(sell.receivedPaisa / 100)}"
+                    } else {
+                        if (isEnglish) "Total ₹${MandiMathEngine.formatIndianGrouping(sell.totalReceivablePaisa / 100)}" else "कुल ₹${MandiMathEngine.formatIndianGrouping(sell.totalReceivablePaisa / 100)}"
+                    },
+                    fontSize = 11.sp,
+                    color = MandiTextSecondary
+                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = when {
+                        isFullyReceived -> MandiGreenLight
+                        sell.receivedPaisa > 0 -> MandiAmberLight
+                        else -> MandiRedLight
+                    },
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        when {
+                            isFullyReceived -> MandiGreenBorder
+                            sell.receivedPaisa > 0 -> MandiAmberBorder
+                            else -> MandiRedBorder
+                        }
+                    )
+                ) {
+                    Text(
+                        text = when {
+                            isFullyReceived -> if (isEnglish) "✓ Received" else "✓ चुक्ता"
+                            else -> if (isEnglish) "Due ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}" else "बाकी ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            isFullyReceived -> MandiGreenText
+                            sell.receivedPaisa > 0 -> MandiAmberDark
+                            else -> MandiRedText
+                        },
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            if (!isFullyReceived && onSettleCash != null) {
+                HorizontalDivider(color = MandiBorder, thickness = 1.dp)
+                Button(
+                    onClick = onSettleCash,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiNavy,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .height(34.dp)
+                ) {
+                    Text(
+                        text = if (isEnglish) "Receive Cash →" else "नकद लें →",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

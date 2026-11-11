@@ -509,6 +509,55 @@ class HomeViewModel(
             onComplete?.invoke()
         }
     }
+
+    fun settleSellSlipCash(
+        sellId: String,
+        cashAmountPaisa: Long,
+        onComplete: (() -> Unit)? = null
+    ) {
+        if (cashAmountPaisa <= 0L) return
+        val currentShopId = shopId
+        val sellRepo = sellRepository ?: return
+        val cashRepo = cashRepository ?: return
+
+        viewModelScope.launch {
+            val currentSell = sellRepo.getSellEntryById(sellId) ?: return@launch
+            if (currentSell.isVoid) return@launch
+            // Never take more than what is still due on the slip.
+            val applied = minOf(cashAmountPaisa, currentSell.balanceDuePaisa)
+            if (applied <= 0L) return@launch
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            sellRepo.editSellEntry(
+                currentSell.copy(
+                    receivedPaisa = currentSell.receivedPaisa + applied,
+                    balanceDuePaisa = currentSell.balanceDuePaisa - applied,
+                    updatedAt = now,
+                    revision = currentSell.revision + 1
+                )
+            )
+
+            val slipRef = currentSell.slipNo?.let { "#$it" } ?: sellId.takeLast(5)
+            cashRepo.recordTransaction(
+                CashTransaction(
+                    id = IdGenerator.newId(),
+                    shopId = currentShopId,
+                    partyId = currentSell.buyerId,
+                    transactionType = TransactionType.JAMA_RECEIVED,
+                    amountPaisa = applied,
+                    paymentMode = PaymentMode.CASH,
+                    transactionDate = now,
+                    remarks = "बिक्री पर्ची $slipRef नकद प्राप्त",
+                    createdAt = now,
+                    updatedAt = now,
+                    sourceEntryType = "SELL",
+                    sourceEntryId = sellId
+                )
+            )
+            onLocalWrite()
+            onComplete?.invoke()
+        }
+    }
 }
 
 private data class CoreDashboardData(

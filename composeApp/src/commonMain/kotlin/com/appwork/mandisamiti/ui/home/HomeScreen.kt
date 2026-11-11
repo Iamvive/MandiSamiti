@@ -225,6 +225,9 @@ fun HomeScreen(
                             onSettleBuySlipCash = { buyId, cashAmountPaisa ->
                                 viewModel.settleBuySlipCash(buyId, cashAmountPaisa)
                             },
+                            onSettleSellSlipCash = { sellId, cashAmountPaisa ->
+                                viewModel.settleSellSlipCash(sellId, cashAmountPaisa)
+                            },
                             onOpenBuyReceipt = onNavigateToBuyReceipt,
                             onOpenSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewBuy = onNavigateToBuy,
