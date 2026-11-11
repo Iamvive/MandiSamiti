@@ -143,9 +143,10 @@ internal fun DayClosingSheet(
                                     OutlinedTextField(
                                         value = countStr,
                                         onValueChange = { onDenominationChange(denomination, it) },
+                                        label = { Text("₹$denomination × " + if (isEnglish) "qty" else "संख्या", fontSize = 9.sp) },
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.width(64.dp).heightIn(min = 40.dp),
+                                        modifier = Modifier.width(82.dp).heightIn(min = 40.dp),
                                         textStyle = androidx.compose.ui.text.TextStyle(
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                             fontWeight = FontWeight.Bold,

@@ -484,11 +484,12 @@ fun DailyCashRegisterScreen(
                                 fontSize = 10.sp,
                                 color = MandiTextSecondary
                             )
+                            val totalJamaRupees = MandiMathEngine.paisaToRupeesString(kotlin.math.abs(totalJamaSidePaisa))
                             Text(
-                                text = "+₹${MandiMathEngine.paisaToRupeesString(totalJamaSidePaisa)}",
+                                text = if (totalJamaSidePaisa >= 0) "+₹$totalJamaRupees" else "−₹$totalJamaRupees",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiGreenReceivable
+                                color = if (totalJamaSidePaisa >= 0) MandiGreenReceivable else MandiRedPayable
                             )
                         }
 
