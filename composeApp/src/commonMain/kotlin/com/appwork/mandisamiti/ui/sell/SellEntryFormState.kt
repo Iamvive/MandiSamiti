@@ -468,7 +468,7 @@ class SellEntryFormState(
                 advanceReceived.isNotBlank() ||
                 gstin.isNotBlank() ||
                 invoiceDate.isNotBlank() ||
-                lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() }
+                lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() || it.cropName != "गेहूं" }
         }
         return buyerName != originalEntry.buyerId ||
             phone != (originalEntry.vehicleNumber ?: "") ||

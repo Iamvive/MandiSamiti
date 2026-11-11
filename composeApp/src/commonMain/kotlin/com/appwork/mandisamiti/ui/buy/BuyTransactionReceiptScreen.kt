@@ -197,6 +197,10 @@ fun BuyTransactionReceiptScreen(
                     label = if (isEnglish) "Commission" else "कमीशन कटौती",
                     amountText = "− ₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}"
                 )
+                Line(
+                    label = if (isEnglish) "Total charges" else "कुल खर्चा",
+                    amountText = "− ₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa + entry.commissionPaisa)}"
+                )
 
                 TotalLine(
                     label = if (isEnglish) "Slip value" else "पर्ची राशि",
@@ -286,8 +290,8 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
         appendLine("--------------------")
     }
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-    appendLine("मजदूरी: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa)}")
-    appendLine("कमीशन: -₹${MandiMathEngine.paisaToRupeesString(entry.commissionPaisa)}")
+    // The farmer sees only the sum; labour and commission stay private to the trader.
+    appendLine("कुल खर्चा: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa + entry.commissionPaisa)}")
     if (entry.advancePaidPaisa > 0) {
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }

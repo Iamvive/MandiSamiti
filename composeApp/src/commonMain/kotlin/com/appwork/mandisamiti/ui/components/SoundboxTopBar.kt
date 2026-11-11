@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,11 +21,15 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +54,8 @@ fun SoundboxTopBar(
     onToggleSound: () -> Unit,
     modifier: Modifier = Modifier,
     pendingSyncCount: Int = 0,
+    onSyncClick: (() -> Unit)? = null,
+    isSyncing: Boolean = false,
     isEnglish: Boolean = false,
     onOpenHelp: (() -> Unit)? = null,
     navigationIcon: (@Composable () -> Unit)? = null,
@@ -146,34 +153,6 @@ fun SoundboxTopBar(
         ) {
             if (actions != null) {
                 actions()
-            }
-            if (pendingSyncCount > 0) {
-                Row(
-                    modifier = Modifier
-                        .clip(soundBtnShape)
-                        .background(com.appwork.mandisamiti.ui.theme.MandiAmberLight)
-                        .border(
-                            width = 1.dp,
-                            color = com.appwork.mandisamiti.ui.theme.MandiAmberPrimary.copy(alpha = 0.5f),
-                            shape = soundBtnShape
-                        )
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Sync,
-                        contentDescription = "Pending Sync",
-                        tint = com.appwork.mandisamiti.ui.theme.MandiAmberDark,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = "$pendingSyncCount",
-                        color = com.appwork.mandisamiti.ui.theme.MandiAmberDark,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
 
             // Clean Minimal Soundbox Status Pill

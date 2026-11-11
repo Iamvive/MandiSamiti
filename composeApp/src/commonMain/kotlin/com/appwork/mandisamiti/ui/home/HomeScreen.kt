@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
@@ -68,6 +69,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     shopId: String,
     onNavigateToNewEntry: () -> Unit,
+    onSyncNow: suspend () -> Result<Int>,
     onNavigateToPartyKhata: (Party) -> Unit,
     onNavigateToDayClosing: () -> Unit = {},
     onSignOut: () -> Unit,
@@ -95,6 +97,33 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     var activeTutorial by remember { mutableStateOf<MandiTutorial?>(null) }
+    var isSyncing by remember { mutableStateOf(false) }
+
+    val onSyncClick = {
+        if (!isSyncing) {
+            isSyncing = true
+            coroutineScope.launch {
+                val succeeded = try {
+                    onSyncNow().isSuccess
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    false
+                } finally {
+                    isSyncing = false
+                }
+                snackbarHostState.showSnackbar(
+                    message = when {
+                        succeeded && uiState.isEnglish -> "Sync complete"
+                        succeeded -> "सिंक पूरा हुआ"
+                        uiState.isEnglish -> "Sync failed. Check your connection and try again."
+                        else -> "सिंक नहीं हुआ। इंटरनेट जांचकर फिर कोशिश करें।"
+                    },
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
 
     // Shown when the user taps the no-phone icon on a party card; "Add" runs the screen's own add-phone step.
     val promptAddPhone: (() -> Unit) -> Unit = { onAdd ->
@@ -121,7 +150,6 @@ fun HomeScreen(
                 mandiLocation = uiState.shopProfile?.mandiName ?: "",
                 isSoundEnabled = uiState.isSoundEnabled,
                 onToggleSound = { viewModel.toggleSoundSetting() },
-                pendingSyncCount = uiState.pendingSyncCount,
                 isEnglish = uiState.isEnglish,
                 onOpenHelp = {
                     activeTutorial = when (uiState.currentTab) {
@@ -211,7 +239,10 @@ fun HomeScreen(
                             sells = stockSells,
                             partyNames = stockPartyNames,
                             onOpenBuy = onNavigateToBuyReceipt,
-                            onOpenSell = onNavigateToSellReceipt
+                            onOpenSell = onNavigateToSellReceipt,
+                            onSaveStockAudit = { commodityId, physicalBags, bagKg, reason, farmerCustodyBags ->
+                                viewModel.saveStockAudit(commodityId, physicalBags, bagKg, reason, farmerCustodyBags)
+                            }
                         )
                     }
 
@@ -234,7 +265,9 @@ fun HomeScreen(
                             onLanguageToggle = { viewModel.setLanguage(it) },
                             onToggleSound = { viewModel.toggleSoundSetting() },
                             onSignOutClick = onSignOut,
-                            onUpdateTradeSettings = { viewModel.updateTradeSettings(it) }
+                            onUpdateTradeSettings = { viewModel.updateTradeSettings(it) },
+                            onSyncClick = onSyncClick,
+                            isSyncing = isSyncing
                         )
                     }
                 }

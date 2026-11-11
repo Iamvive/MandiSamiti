@@ -2,7 +2,6 @@ package com.appwork.mandisamiti.ui.buy
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,7 +52,6 @@ import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.MandiCard
-import com.appwork.mandisamiti.ui.components.MandiChip
 import com.appwork.mandisamiti.ui.components.MandiFlatTextField
 import com.appwork.mandisamiti.ui.components.MandiLinesCard
 import com.appwork.mandisamiti.ui.components.MandiPartyLookupField
@@ -469,40 +467,6 @@ fun BuyEntryScreenContent(
                 )
             }
 
-            // Section 2: Crop Lots / Varieties (Flat layout)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = if (isEnglish) "Crop / variety" else "जिंस / फसल वैरायटी",
-                    fontSize = 12.sp,
-                    color = MandiTextSecondary
-                )
-
-                val commonCrops = if (isEnglish) {
-                    listOf("Wheat", "Wheat Sharbati", "Gram", "Mustard", "Soybean")
-                } else {
-                    listOf("गेहूं", "गेहूं शरबती", "चना", "सरसों", "सोयाबीन")
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                ) {
-                    val currentLot = state.lots.firstOrNull()
-                    commonCrops.forEach { crop ->
-                        MandiChip(
-                            label = crop,
-                            selected = currentLot?.cropName == crop,
-                            onClick = {
-                                currentLot?.let { actions.onLotChange(it.id, BuyLotField.Crop, crop) }
-                            }
-                        )
-                    }
-                }
-            }
-
             // Crop input lines
             state.lots.forEachIndexed { index, lot ->
                 Column(
@@ -534,6 +498,13 @@ fun BuyEntryScreenContent(
                             }
                         }
                     }
+
+                    MandiFlatTextField(
+                        value = lot.cropName,
+                        onValueChange = { actions.onLotChange(lot.id, BuyLotField.Crop, it) },
+                        label = if (isEnglish) "Crop / variety${if (state.lots.size > 1) " #${index + 1}" else ""}" else "जिंस / फसल वैरायटी${if (state.lots.size > 1) " #${index + 1}" else ""}",
+                        placeholder = if (isEnglish) "Enter crop name" else "फसल का नाम लिखें",
+                    )
 
                     // B final Line 1: Bags, Weight/Bag, Extra weight in a 3-column row
                     Row(

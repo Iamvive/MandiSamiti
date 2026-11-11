@@ -506,6 +506,23 @@ fun SellEntryScreen(
                         }
                     }
 
+                    MandiFlatTextField(
+                        value = lot.cropName,
+                        onValueChange = { lot.cropName = it },
+                        label = if (isEnglish) {
+                            "Crop / variety${if (formState.lots.size > 1) " #${index + 1}" else ""}"
+                        } else {
+                            "जिंस / फसल वैरायटी${if (formState.lots.size > 1) " #${index + 1}" else ""}"
+                        },
+                        placeholder = if (isEnglish) "Enter crop name" else "फसल का नाम लिखें",
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Words,
+                            imeAction = ImeAction.Next
+                        ),
+                        isTall = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     // Line 1: Bags, Weight/Bag, Extra weight in a 3-column row
                     Row(
                         modifier = Modifier.fillMaxWidth(),

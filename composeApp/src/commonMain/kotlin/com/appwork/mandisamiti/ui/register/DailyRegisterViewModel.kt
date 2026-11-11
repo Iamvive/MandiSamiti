@@ -161,6 +161,7 @@ class DailyRegisterViewModel(
     private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
     private val onLocalWrite: () -> Unit = {},
     private val drawerCountRepository: DrawerCountRepository? = null,
+    private val onDayClosed: () -> Unit = {},
 ) {
 
     private val todayDate: LocalDate get() = clock.now().toLocalDateTime(timeZone).date
@@ -267,7 +268,8 @@ class DailyRegisterViewModel(
                         if (settlement.interestPaisa > 0L) add(BahiDayEntry("${settlement.id}:interest", BahiEntryKind.LOAN_INTEREST, "Loan interest received", settlement.interestPaisa, occurredAt = settlement.settledAt, isVoid = settlement.isVoid))
                     }
                     inputs.expenses.filter { it.entryDate in window.startMs until window.endMs }.forEach { expense ->
-                        add(BahiDayEntry(expense.id, BahiEntryKind.EXPENSE, expense.remarks ?: expense.category.name, expense.amountPaisa, expense.paymentMode.name.toBahiMode(), expense.entryDate, expense.isVoid))
+                        val label = expense.remarks?.substringBefore('\n')?.takeIf { it.isNotBlank() } ?: expense.category.name
+                        add(BahiDayEntry(expense.id, BahiEntryKind.EXPENSE, label, expense.amountPaisa, expense.paymentMode.name.toBahiMode(), expense.entryDate, expense.isVoid))
                     }
                 }
                 val page = BahiDayPageBuilder.build(
@@ -360,6 +362,10 @@ class DailyRegisterViewModel(
                         drawerCount = count,
                         isDayClosingSummaryOpen = false,
                     )
+                }
+                onLocalWrite()
+                if (close) {
+                    onDayClosed()
                 }
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled

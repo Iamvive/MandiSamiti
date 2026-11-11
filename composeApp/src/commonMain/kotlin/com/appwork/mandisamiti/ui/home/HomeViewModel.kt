@@ -8,7 +8,10 @@ import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.StockAudit
 import com.appwork.mandisamiti.domain.model.StockLine
+import com.appwork.mandisamiti.domain.repository.StockAuditRepository
+import kotlinx.datetime.Clock
 import com.appwork.mandisamiti.domain.repository.BuyRepository
 import com.appwork.mandisamiti.domain.repository.ExpenseRepository
 import com.appwork.mandisamiti.domain.repository.LendRepository
@@ -33,7 +36,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 
 import com.appwork.mandisamiti.ui.navigation.NavigationTab
 
@@ -105,6 +107,7 @@ class HomeViewModel(
     private val cashRepository: com.appwork.mandisamiti.domain.repository.CashTransactionRepository? = null,
     private val quotaRepository: QuotaRepository? = null,
     private val stockUseCase: StockInventoryUseCase? = null,
+    private val stockAuditRepository: StockAuditRepository? = null,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val onLocalWrite: () -> Unit = {},
@@ -112,6 +115,7 @@ class HomeViewModel(
     private val pendingSyncCountProvider: (suspend () -> Int)? = null
 ) {
 
+    private val stockRevision = MutableStateFlow(0L)
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
@@ -179,7 +183,7 @@ class HomeViewModel(
             CoreDashboardData(buys, sells, lends, expenses, settlements)
         }
 
-        combine(coreFlow, cashFlow) { core, cashTxs ->
+        combine(coreFlow, cashFlow, stockRevision) { core, cashTxs, _ ->
             val buys = core.buys
             val sells = core.sells
             val lends = core.lends
@@ -431,6 +435,37 @@ class HomeViewModel(
         partyRepository.saveParty(updated)
         onLocalWrite()
         return updated
+    }
+
+    fun saveStockAudit(
+        commodityId: String,
+        physicalBags: Long,
+        bagKg: Double,
+        reason: String,
+        farmerCustodyBags: Long
+    ) {
+        viewModelScope.launch {
+            val bagWeightGrams = (bagKg * 1000.0).toLong()
+            val physicalGrams = physicalBags * bagWeightGrams
+            val currentLine = _uiState.value.stockLines.firstOrNull { it.commodityId == commodityId }
+            val bookGrams = currentLine?.bookOnHandGrams ?: 0L
+            val diffGrams = physicalGrams - bookGrams
+
+            val audit = StockAudit(
+                commodityId = commodityId,
+                physicalBags = physicalBags,
+                bagWeightKg = bagKg,
+                physicalGrams = physicalGrams,
+                diffGrams = diffGrams,
+                reason = reason,
+                auditedAt = Clock.System.now().toEpochMilliseconds(),
+                farmerCustodyBags = farmerCustodyBags
+            )
+
+            stockAuditRepository?.saveAudit(shopId, audit)
+            onLocalWrite()
+            stockRevision.value += 1
+        }
     }
 }
 

@@ -422,4 +422,37 @@ class DailyRegisterViewModelTest {
         runCurrent()
         assertEquals(earliest, vm.uiState.value.selectedDate)
     }
+
+    @Test
+    fun closeDayInvokesOnDayClosedCallback() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val drawerRepo = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database, ioDispatcher = ioDispatcher)
+        val ttsManager = SoundboxTtsManager()
+
+        var dayClosedCalled = false
+        var localWriteCalled = false
+
+        val vm = DailyRegisterViewModel(
+            shopId = "test-shop",
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = ttsManager,
+            viewModelScope = backgroundScope,
+            drawerCountRepository = drawerRepo,
+            onLocalWrite = { localWriteCalled = true },
+            onDayClosed = { dayClosedCalled = true }
+        )
+        runCurrent()
+
+        vm.closeDay(5000L, "Verified cash")
+        runCurrent()
+
+        assertTrue(dayClosedCalled)
+        assertTrue(localWriteCalled)
+    }
 }

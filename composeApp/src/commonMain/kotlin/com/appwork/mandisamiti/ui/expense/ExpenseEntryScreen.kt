@@ -1,12 +1,7 @@
 package com.appwork.mandisamiti.ui.expense
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,12 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -65,7 +61,7 @@ fun ExpenseCategory.labelEn(): String = when (this) {
 
 fun ExpenseCategory.label(isEnglish: Boolean): String = if (isEnglish) labelEn() else labelHi()
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseEntryScreen(
     shopId: String = "",
@@ -76,17 +72,16 @@ fun ExpenseEntryScreen(
     onOpenList: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var selectedCategory by remember { mutableStateOf(existing?.category ?: ExpenseCategory.HAMMALI) }
+    var description by remember { mutableStateOf(existing?.remarks?.substringBefore('\n').orEmpty()) }
+    var note by remember { mutableStateOf(existing?.remarks?.substringAfter('\n', "").orEmpty()) }
     var amount by remember { mutableStateOf(existing?.let { MandiMathEngine.paisaToInputString(it.amountPaisa) } ?: "") }
-    var paidTo by remember { mutableStateOf(existing?.paidTo.orEmpty()) }
-    var paymentMode by remember { mutableStateOf(existing?.paymentMode ?: ExpensePaymentMode.CASH) }
-    var remarks by remember { mutableStateOf(existing?.remarks.orEmpty()) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
     val isDirty = if (existing != null) {
-        amount != MandiMathEngine.paisaToInputString(existing.amountPaisa) || selectedCategory != existing.category ||
-            paidTo != existing.paidTo.orEmpty() || remarks != existing.remarks.orEmpty() || paymentMode != existing.paymentMode
-    } else amount.isNotBlank() || paidTo.isNotBlank() || remarks.isNotBlank()
+        amount != MandiMathEngine.paisaToInputString(existing.amountPaisa) ||
+            description != existing.remarks?.substringBefore('\n').orEmpty() ||
+            note != existing.remarks?.substringAfter('\n', "").orEmpty()
+    } else amount.isNotBlank() || description.isNotBlank() || note.isNotBlank()
 
     MandiBackHandler(enabled = true) {
         if (isDirty) {
@@ -96,7 +91,8 @@ fun ExpenseEntryScreen(
         }
     }
 
-    val canSave = amount.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amount) > 0L
+    val parsedAmount = MandiMathEngine.parseRupeesToPaisa(amount)
+    val canSave = description.isNotBlank() && amount.isNotBlank() && parsedAmount > 0L
 
     Scaffold(
         topBar = {
@@ -133,59 +129,35 @@ fun ExpenseEntryScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(if (isEnglish) "Expense Category" else "खर्च श्रेणी (Category)")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ExpenseCategory.entries.forEach { cat ->
-                    FilterChip(
-                        selected = selectedCategory == cat,
-                        onClick = { selectedCategory = cat },
-                        label = { Text(cat.label(isEnglish)) }
-                    )
-                }
-            }
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text(if (isEnglish) "Expense Description *" else "खर्च का विवरण *") },
+                singleLine = true,
+                isError = description.isBlank() && amount.isNotBlank(),
+                supportingText = {
+                    Text(if (isEnglish) "This label will appear in Galla Rokad." else "यह नाम गल्ला रोकड़ में दिखेगा।")
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
                 label = { Text(if (isEnglish) "Expense Amount (₹) *" else "खर्च राशि (रु) *") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = amount.isNotBlank() && parsedAmount <= 0L,
+                supportingText = if (amount.isNotBlank() && parsedAmount <= 0L) {
+                    { Text(if (isEnglish) "Enter an amount greater than zero." else "राशि शून्य से अधिक दर्ज करें।") }
+                } else null,
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
-                singleLine = true,
-                value = paidTo,
-                onValueChange = { paidTo = it },
-                label = { Text(if (isEnglish) "Paid To (Name / Description)" else "किसे दिया (नाम / विवरण)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(if (isEnglish) "Payment Mode" else "भुगतान का माध्यम (Payment Mode)")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    ExpensePaymentMode.CASH to (if (isEnglish) "Cash" else "नकद"),
-                    ExpensePaymentMode.RTGS to "RTGS",
-                    ExpensePaymentMode.NEFT to "NEFT",
-                    ExpensePaymentMode.CHEQUE to (if (isEnglish) "Cheque" else "चेक"),
-                    ExpensePaymentMode.UPI to "UPI",
-                ).forEach { (mode, label) ->
-                    FilterChip(
-                        selected = paymentMode == mode,
-                        onClick = { paymentMode = mode },
-                        label = { Text(label) }
-                    )
-                }
-            }
-
-            OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                value = remarks,
-                onValueChange = { remarks = it },
-                label = { Text(if (isEnglish) "Remarks / Note (Optional)" else "विवरण / टिप्पणी (वैकल्पिक)") },
+                value = note,
+                onValueChange = { note = it },
+                label = { Text(if (isEnglish) "Note (Optional)" else "विवरण / टिप्पणी (वैकल्पिक)") },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -197,11 +169,11 @@ fun ExpenseEntryScreen(
                             id = existing?.id ?: IdGenerator.newId(),
                             shopId = shopId,
                             entryDate = existing?.entryDate ?: now,
-                            category = selectedCategory,
-                            amountPaisa = MandiMathEngine.parseRupeesToPaisa(amount),
-                            paidTo = paidTo.trim().ifEmpty { null },
-                            paymentMode = paymentMode,
-                            remarks = remarks.trim().ifEmpty { null },
+                            category = existing?.category ?: ExpenseCategory.OTHER,
+                            amountPaisa = parsedAmount,
+                            paidTo = existing?.paidTo,
+                            paymentMode = existing?.paymentMode ?: ExpensePaymentMode.CASH,
+                            remarks = listOf(description.trim(), note.trim()).filter { it.isNotEmpty() }.joinToString("\n"),
                             createdAt = existing?.createdAt ?: now,
                             updatedAt = now,
                         )

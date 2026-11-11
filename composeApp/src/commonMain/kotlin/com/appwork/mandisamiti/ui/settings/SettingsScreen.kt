@@ -74,6 +74,8 @@ fun SettingsScreen(
     onToggleSound: () -> Unit,
     onSignOutClick: () -> Unit,
     onUpdateTradeSettings: (TradeSettings) -> Unit = {},
+    onSyncClick: (() -> Unit)? = null,
+    isSyncing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
@@ -436,33 +438,83 @@ fun SettingsScreen(
         // 4. Data & Sync Info
         item {
             SettingsGroupCard(title = if (isEnglish) "Data Storage & Backup" else "डाटा सुरक्षा एवं बैकअप") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDone,
-                            contentDescription = null,
-                            tint = MandiGreenReceivable,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Column {
-                            Text(
-                                text = if (isEnglish) "Local Offline Storage" else "लोकल ऑफलाइन बहीखाता",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MandiTextPrimary
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDone,
+                                contentDescription = null,
+                                tint = MandiGreenReceivable,
+                                modifier = Modifier.size(20.dp)
                             )
-                            Text(
-                                text = if (isEnglish) "Data stored securely on device" else "डेटा इस फ़ोन में सुरक्षित है",
-                                fontSize = 12.sp,
-                                color = MandiTextSecondary
-                            )
+                            Column {
+                                Text(
+                                    text = if (isEnglish) "Offline First + Cloud Backup" else "ऑफलाइन बहीखाता + ऑनलाइन बैकअप",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MandiTextPrimary
+                                )
+                                Text(
+                                    text = when {
+                                        uiState.pendingSyncCount > 0 -> if (isEnglish)
+                                            "${uiState.pendingSyncCount} entries pending cloud backup"
+                                        else
+                                            "${uiState.pendingSyncCount} प्रविष्टियां ऑनलाइन सुरक्षित होना बाकी"
+                                        else -> if (isEnglish)
+                                            "All data safely backed up to cloud"
+                                        else
+                                            "सभी प्रविष्टियां ऑनलाइन सुरक्षित हैं"
+                                    },
+                                    fontSize = 12.sp,
+                                    color = if (uiState.pendingSyncCount > 0) MandiTextSecondary else MandiGreenReceivable
+                                )
+                            }
+                        }
+                    }
+
+                    if (onSyncClick != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MandiSurfaceElevated)
+                                .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+                                .clickable(enabled = !isSyncing) { onSyncClick() }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSyncing) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = MandiPrimaryAction,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Text(
+                                        text = if (isEnglish) "Syncing..." else "बैकअप हो रहा है...",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MandiPrimaryAction
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = if (isEnglish) "Backup Now" else "अभी बैकअप लें",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiPrimaryAction
+                                )
+                            }
                         }
                     }
                 }

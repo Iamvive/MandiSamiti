@@ -143,7 +143,8 @@ fun App(
     }
     val expenseRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database) }
     val quotaRepo = remember { com.appwork.mandisamiti.data.repository.QuotaRepository(database, sessionStore, baseUrl = apiBaseUrl) }
-    val stockUseCase = remember { com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo) }
+    val stockAuditRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstStockAuditRepository(database) }
+    val stockUseCase = remember { com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(expenseRepo, stockAuditRepo) }
     val wiper = remember { LocalDataWiper(database) }
     val authRepo = remember {
         AuthRepository(
@@ -236,8 +237,10 @@ fun App(
                         sellRepository = sellRepo,
                         lendRepository = lendRepo,
                         expenseRepository = expenseRepo,
+                        cashRepository = cashRepo,
                         quotaRepository = quotaRepo,
                         stockUseCase = stockUseCase,
+                        stockAuditRepository = stockAuditRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
                         pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() }
@@ -256,7 +259,15 @@ fun App(
                         expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         drawerCountRepository = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database),
-                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
+                        onDayClosed = {
+                            syncScheduler.scheduleOneTimeSync()
+                            coroutineScope.launch {
+                                try {
+                                    if (!shopId.isNullOrBlank()) syncEngine.pushThenPull(shopId!!)
+                                } catch (_: Exception) {}
+                            }
+                        }
                     )
                 }
                 val needsLogin by produceState(false, shopId) { value = syncEngine.needsLogin() }
@@ -270,6 +281,7 @@ fun App(
                     viewModel = homeViewModel,
                     registerViewModel = registerViewModel,
                     shopId = shopId!!,
+                    onSyncNow = { syncEngine.pushThenPull(shopId!!) },
                     needsLogin = needsLogin,
                     onReLogin = {
                         currentScreen = Screen.Register(isReLogin = true)
@@ -433,7 +445,15 @@ fun App(
                         expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         drawerCountRepository = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database),
-                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() }
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
+                        onDayClosed = {
+                            syncScheduler.scheduleOneTimeSync()
+                            coroutineScope.launch {
+                                try {
+                                    if (!shopId.isNullOrBlank()) syncEngine.pushThenPull(shopId!!)
+                                } catch (_: Exception) {}
+                            }
+                        }
                     )
                 }
                 DailyCashRegisterScreen(
@@ -868,11 +888,10 @@ fun App(
                     onOpenList = { currentScreen = Screen.ExpenseList },
                     onSaved = { entry ->
                         coroutineScope.launch {
-                            val payee = entry.paidTo?.trim()
-                            val payeeNote = if (payee.isNullOrBlank()) "" else " ($payee)"
-                            val expRemarks = entry.remarks?.trim()
-                            val detailRem = if (expRemarks.isNullOrBlank()) "" else " - $expRemarks"
-                            val baseRem = "खर्च: ${entry.category.labelHi()}$payeeNote$detailRem"
+                            val expenseDetails = entry.remarks?.trim().orEmpty()
+                            val expenseLabel = expenseDetails.substringBefore('\n').ifBlank { entry.category.labelHi() }
+                            val note = expenseDetails.substringAfter('\n', "").trim()
+                            val baseRem = "खर्च: $expenseLabel${if (note.isBlank()) "" else " - $note"}"
                             if (screen.existingId != null) {
                                 expenseRepo.editExpense(entry, baseRem)
                             } else {

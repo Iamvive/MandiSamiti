@@ -111,7 +111,8 @@ fun BuyPaymentScreen(
                     },
                     height = 56.dp,
                     fontSize = 16.sp,
-                    enabled = finalPayablePaisa > 0L && amountToPayPaisa > 0L,
+                    // Paying nothing is allowed: a zero amount just moves on to the receipt.
+                    enabled = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 

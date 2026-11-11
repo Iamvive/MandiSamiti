@@ -77,8 +77,9 @@ fun ExpenseListScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(e.category.label(isEnglish), fontWeight = FontWeight.SemiBold)
-                                val sub = listOfNotNull(e.paidTo, e.remarks).joinToString(" · ")
+                                val remarks = e.remarks.orEmpty()
+                                Text(remarks.substringBefore('\n').ifBlank { e.category.label(isEnglish) }, fontWeight = FontWeight.SemiBold)
+                                val sub = listOfNotNull(e.paidTo, remarks.substringAfter('\n', "").takeIf { it.isNotBlank() }).joinToString(" · ")
                                 if (sub.isNotBlank()) Text(sub, style = MaterialTheme.typography.bodySmall)
                             }
                             Text(MandiMathEngine.formatRupees(e.amountPaisa), fontWeight = FontWeight.Bold)
