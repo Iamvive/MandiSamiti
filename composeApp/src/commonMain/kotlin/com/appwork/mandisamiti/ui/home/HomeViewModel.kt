@@ -4,8 +4,11 @@ import com.appwork.mandisamiti.data.repository.QuotaRepository
 import com.appwork.mandisamiti.data.repository.ShopQuota
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.StockAudit
@@ -465,6 +468,45 @@ class HomeViewModel(
             stockAuditRepository?.saveAudit(shopId, audit)
             onLocalWrite()
             stockRevision.value += 1
+        }
+    }
+
+    fun settleBuySlipCash(
+        buyId: String,
+        cashAmountPaisa: Long,
+        onComplete: (() -> Unit)? = null
+    ) {
+        if (cashAmountPaisa <= 0L) return
+        val currentShopId = shopId
+        val buyRepo = buyRepository ?: return
+        val cashRepo = cashRepository ?: return
+
+        viewModelScope.launch {
+            val currentBuy = buyRepo.getBuyEntryById(buyId) ?: return@launch
+            if (currentBuy.isVoid) return@launch
+
+            val newPaidPaisa = currentBuy.paidPaisa + cashAmountPaisa
+            buyRepo.editBuyEntry(currentBuy.copy(paidPaisa = newPaidPaisa))
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            val slipRef = currentBuy.slipNo?.let { "#$it" } ?: buyId.takeLast(5)
+            val tx = CashTransaction(
+                id = IdGenerator.newId(),
+                shopId = currentShopId,
+                partyId = currentBuy.farmerId,
+                transactionType = TransactionType.UDHAR_GIVEN,
+                amountPaisa = cashAmountPaisa,
+                paymentMode = PaymentMode.CASH,
+                transactionDate = now,
+                remarks = "खरीद पर्ची $slipRef भुगतान",
+                createdAt = now,
+                updatedAt = now,
+                sourceEntryType = "BUY",
+                sourceEntryId = buyId
+            )
+            cashRepo.recordTransaction(tx)
+            onLocalWrite()
+            onComplete?.invoke()
         }
     }
 }
