@@ -20,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +50,7 @@ internal fun DrawerSummaryCard(
     onWhatsApp: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    var showNegativeCashDialog by remember { mutableStateOf(false) }
     val countActionSemantics = if (isEnglish) "Count cash · Close day" else "नकद गिनें · दिन बंद करें"
 
     val isMatched = state.reconciliationStatus == BahiReconciliationStatus.BALANCED
@@ -134,12 +137,13 @@ internal fun DrawerSummaryCard(
                 }
             }
 
-            // COMPACT HERO ROW: Cash in Drawer + Balance + Status Pill ON LEFT | Fast CTA Button ON RIGHT
+            // VARIANT 1 ROW: LEFT (LABEL + CTA BUTTON) | RIGHT (AMOUNT + INDICATOR)
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // LEFT SIDE: Label + Reconcile Button
                 Column(Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -159,88 +163,170 @@ internal fun DrawerSummaryCard(
                             letterSpacing = 0.5.sp
                         )
                     }
-                    Spacer(Modifier.height(2.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa),
-                            color = MandiTextPrimary,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 20.sp,
-                            lineHeight = 24.sp
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = if (isMatched) MandiGreenLight else MandiSurfaceElevated,
-                            border = BorderStroke(1.dp, if (isMatched) MandiGreenBorder else MandiBorder),
-                            modifier = Modifier.testTag("drawer-status-chip")
+                    Spacer(Modifier.height(4.dp))
+                    if (!state.isReadOnly) {
+                        Button(
+                            onClick = onCount,
+                            enabled = !state.isSaving,
+                            modifier = Modifier
+                                .heightIn(min = 32.dp)
+                                .testTag("drawer-count-button")
+                                .semantics { contentDescription = countActionSemantics },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiSurfaceElevated,
+                                contentColor = MandiTextPrimary
+                            ),
+                            border = BorderStroke(1.dp, MandiBorder),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = drawerCountStatus(state, isEnglish),
-                                color = if (isMatched) MandiGreenText else MandiTextSecondary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text = if (isEnglish) "Count cash →" else "हिसाब मिलाएँ →",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                softWrap = false,
+                                color = MandiTextPrimary
                             )
                         }
                     }
                 }
 
-                if (!state.isReadOnly) {
-                    Button(
-                        onClick = onCount,
-                        enabled = !state.isSaving,
-                        modifier = Modifier
-                            .height(34.dp)
-                            .testTag("drawer-count-button")
-                            .semantics { contentDescription = countActionSemantics },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MandiSurfaceElevated,
-                            contentColor = MandiTextPrimary
-                        ),
-                        border = BorderStroke(1.dp, MandiBorder),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                // RIGHT SIDE: Amount + Indicator / Status Pill
+                Column(horizontalAlignment = Alignment.End) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        if (state.isNegativeCash) {
+                            Surface(
+                                onClick = { showNegativeCashDialog = true },
+                                shape = RoundedCornerShape(6.dp),
+                                color = MandiSurfaceElevated,
+                                border = BorderStroke(1.dp, MandiBorder),
+                                modifier = Modifier.testTag("drawer-negative-cash")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = MandiTextPrimary,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = if (isEnglish) "Negative" else "माइनस",
+                                        color = MandiTextPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textDecoration = TextDecoration.Underline
+                                    )
+                                }
+                            }
+                        } else if (isMatched) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MandiGreenLight,
+                                border = BorderStroke(1.dp, MandiGreenBorder),
+                                modifier = Modifier.testTag("drawer-status-chip")
+                            ) {
+                                Text(
+                                    text = if (isEnglish) "✓ Matched" else "✓ हिसाब बराबर",
+                                    color = MandiGreenText,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
                         Text(
-                            text = if (isEnglish) "Count cash →" else "हिसाब मिलाएँ →",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            color = MandiTextPrimary
+                            text = MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa),
+                            color = if (state.inHandCashDrawerPaisa >= 0) MandiTextPrimary else MandiRedPayable,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 21.sp,
+                            lineHeight = 24.sp
                         )
                     }
-                }
-            }
-
-            // SUBTLE 1-LINE WARNING (ONLY IF CASH IS BELOW ZERO)
-            if (state.isNegativeCash) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !state.isReadOnly, onClick = onOpening)
-                        .padding(top = 1.dp)
-                        .testTag("drawer-negative-cash"),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MandiAmberDark,
-                        modifier = Modifier.size(12.dp)
-                    )
                     Text(
-                        text = if (isEnglish) "Negative balance · set opening cash" else "रकम माइनस है · शुरुआती रोकड़ दर्ज करें",
-                        color = MandiAmberDark,
+                        text = if (state.isNegativeCash) {
+                            if (isEnglish) "Tap ⚠️ to resolve" else "ठीक करने के लिए ⚠️ दबाएं"
+                        } else {
+                            drawerCountStatus(state, isEnglish)
+                        },
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium
+                        color = if (state.isNegativeCash) MandiAmberDark else MandiTextMuted,
+                        modifier = Modifier.padding(top = 1.dp).testTag("drawer-status-chip")
                     )
                 }
             }
         }
+    }
+
+    // CONTEXTUAL EXPLANATION POPUP (ON TAP OF INDICATOR)
+    if (showNegativeCashDialog) {
+        AlertDialog(
+            onDismissRequest = { showNegativeCashDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MandiAmberDark,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = if (isEnglish) "Cash is Below Zero" else "गल्ले में रकम माइनस में है",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = if (isEnglish)
+                        "Morning opening cash (Bohani) has not been entered for today. Recording opening cash will balance your drawer."
+                    else
+                        "सुबह की शुरुआती रोकड़ (बाकी निकाला) आज दर्ज नहीं हुई है, इसलिए निकासी से बैलेंस माइनस दिख रहा है। शुरुआती रोकड़ दर्ज करें।",
+                    fontSize = 13.sp,
+                    color = MandiTextSecondary,
+                    lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showNegativeCashDialog = false
+                        onOpening()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (isEnglish) "+ Set Opening Cash" else "+ शुरुआती रोकड़ दर्ज करें",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNegativeCashDialog = false }) {
+                    Text(
+                        text = if (isEnglish) "Dismiss" else "समझ गया",
+                        color = MandiTextSecondary,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            containerColor = MandiSurfaceElevated,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
