@@ -1,10 +1,8 @@
 package com.appwork.mandisamiti.ui.stock
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,43 +10,54 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +66,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -71,6 +84,11 @@ import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.StockLine
 import com.appwork.mandisamiti.domain.model.StockVarietyLine
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
+import com.appwork.mandisamiti.ui.theme.MandiAmberPrimary
+import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBlueSell
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
@@ -78,6 +96,8 @@ import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiNavy
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
+import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedBorder
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
 import com.appwork.mandisamiti.ui.theme.MandiRedPayable
@@ -93,11 +113,19 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
 
-private enum class StockSort { ON_HAND_DESC, NAME }
+enum class StockViewMode {
+    BALANCE,
+    MOVEMENT
+}
 
 /**
- * Dedicated Godown Stock Register Tab (गोदाम स्टॉक रजिस्टर).
- * Conforms strictly to NGDL v1.2 Design Tokens and Warehouse Ledger Ergonomics.
+ * 10/10 Godown Stock Register Tab (गोदाम स्टॉक रजिस्टर).
+ * Designed according to CRED / Figma craft:
+ * - Direct physical bag counting (बोरी / कट्टा) with quintal ledger grounding
+ * - Separation of Shop Stock vs Farmer Custody Stock (अमानत / रोकड़)
+ * - Single-tap Stock Reconciliation (स्टॉक मिलान / घट-बढ़ / शुरुआती स्टॉक)
+ * - Replaced misleading progress bar with 3-way In-Out-Available ledger
+ * - Zero filter clutter with clean 2-way mode switch
  */
 @Composable
 fun StockRegisterScreen(
@@ -108,269 +136,318 @@ fun StockRegisterScreen(
     partyNames: Map<String, String> = emptyMap(),
     onOpenBuy: (String) -> Unit = {},
     onOpenSell: (String) -> Unit = {},
+    onSaveStockAudit: ((commodityId: String, physicalBags: Long, bagKg: Double, reason: String, farmerCustodyBags: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val bills = remember(buys, sells, partyNames) { buildBills(buys, sells, partyNames) }
-    var query by remember { mutableStateOf("") }
-    var grain by remember { mutableStateOf<String?>(null) }
-    var sort by remember { mutableStateOf(StockSort.ON_HAND_DESC) }
+    var viewMode by remember { mutableStateOf(StockViewMode.BALANCE) }
+    var selectedGrain by remember { mutableStateOf<String?>(null) }
+    var showAuditSheet by remember { mutableStateOf(false) }
+    var auditTargetCrop by remember { mutableStateOf("") }
 
-    val visible = stockLines
-        .filter { grain == null || it.commodityId == grain }
-        .filter {
-            query.isBlank() ||
-                it.commodityId.contains(query.trim(), ignoreCase = true) ||
-                it.varieties.any { v -> v.varietyName.contains(query.trim(), ignoreCase = true) }
-        }
-        .let { list ->
-            when (sort) {
-                StockSort.ON_HAND_DESC -> list.sortedByDescending { it.onHandGrams }
-                StockSort.NAME -> list.sortedBy { it.commodityId.lowercase() }
+    val visibleLines = stockLines.filter { selectedGrain == null || it.commodityId == selectedGrain }
+    val totalBags = stockLines.sumOf { it.onHandBags }
+    val totalGrams = stockLines.sumOf { it.onHandGrams }
+    val totalOwnBags = stockLines.sumOf { it.ownStockBags }
+    val totalFarmerCustodyBags = stockLines.sumOf { it.farmerCustodyBags }
+
+    val recentMovementBills = remember(bills, selectedGrain) {
+        val all = if (selectedGrain == null) bills.values.flatten() else bills[selectedGrain].orEmpty()
+        all.sortedByDescending { it.at }
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MandiBackground),
+        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 64.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // 1. Top Bar / Screen Header
+        item(key = "godown_header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Godown Inventory" else "गोदाम बहीखाता",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MandiGreenLight,
+                            border = BorderStroke(1.dp, MandiGreenBorder)
+                        ) {
+                            Text(
+                                text = if (isEnglish) "● LIVE" else "● लाइव",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiGreenText,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = if (isEnglish) "Live stock & physical shed ledger" else "लाइव स्टॉक एवं गोदाम आवक-निकासी",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MandiTextSecondary
+                    )
+                }
+
+                if (onSaveStockAudit != null) {
+                    Button(
+                        onClick = {
+                            auditTargetCrop = stockLines.firstOrNull()?.commodityId ?: "गेहूं"
+                            showAuditSheet = true
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiNavy,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (isEnglish) "Audit Stock" else "स्टॉक मिलाएँ",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
 
-    val totalBought = stockLines.sumOf { it.boughtGrams }
-    val totalSold = stockLines.sumOf { it.soldGrams }
-    val totalOnHand = totalBought - totalSold
-    val oversoldGrains = stockLines.count { it.onHandGrams < 0 }
+        // 2. View Mode Segmented Bar (Zero Clutter Navigation)
+        item(key = "godown_view_mode") {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MandiSurfaceElevated,
+                border = BorderStroke(1.dp, MandiBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val isBal = viewMode == StockViewMode.BALANCE
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isBal) MandiSurface else Color.Transparent,
+                        border = if (isBal) BorderStroke(1.dp, MandiBorder) else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { viewMode = StockViewMode.BALANCE }
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Stock Balance" else "उपलब्ध स्टॉक (Balance)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isBal) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isBal) MandiTextPrimary else MandiTextSecondary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // 1. Warehouse KPI Summary Card
-        item(key = "godown_kpi_hero") {
-            WarehouseKpiCard(
-                totalOnHand = totalOnHand,
-                totalBought = totalBought,
-                totalSold = totalSold,
-                commodityCount = stockLines.size,
-                oversoldGrains = oversoldGrains,
+                    val isMov = viewMode == StockViewMode.MOVEMENT
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isMov) MandiSurface else Color.Transparent,
+                        border = if (isMov) BorderStroke(1.dp, MandiBorder) else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { viewMode = StockViewMode.MOVEMENT }
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Daily Movement" else "आज की आवक-जावक (${recentMovementBills.size})",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isMov) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isMov) MandiTextPrimary else MandiTextSecondary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 3. Hero Card: Physical Bags & Custody Split
+        item(key = "godown_hero") {
+            GodownHeroCard(
+                totalBags = totalBags,
+                totalGrams = totalGrams,
+                totalOwnBags = totalOwnBags,
+                totalFarmerCustodyBags = totalFarmerCustodyBags,
+                lastAuditedAt = stockLines.mapNotNull { it.lastAuditedAt }.maxOrNull(),
                 isEnglish = isEnglish
             )
         }
 
-        // 2. Search Field
-        item(key = "godown_search_bar") {
-            OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
-                value = query,
-                onValueChange = { query = it },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = MandiTextSecondary
-                    )
-                },
-                trailingIcon = {
-                    if (query.isNotBlank()) {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = if (isEnglish) "Clear search" else "खोज हटाएं",
-                                tint = MandiTextSecondary
-                            )
+        // 4. Quick Crop Filter Pills
+        if (stockLines.isNotEmpty()) {
+            item(key = "godown_crop_pills") {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedGrain == null,
+                            onClick = { selectedGrain = null },
+                            label = {
+                                Text(
+                                    if (isEnglish) "All (${stockLines.size})" else "सभी (${stockLines.size})",
+                                    fontWeight = if (selectedGrain == null) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MandiNavy,
+                                selectedLabelColor = Color.White,
+                                containerColor = MandiSurfaceElevated,
+                                labelColor = MandiTextSecondary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selectedGrain == null,
+                                borderColor = MandiBorder,
+                                selectedBorderColor = MandiNavy
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    }
+
+                    items(stockLines, key = { it.commodityId }) { line ->
+                        val isSelected = selectedGrain == line.commodityId
+                        val unitLabel = if (line.commodityId.contains("सरसों") || line.commodityId.contains("mustard", ignoreCase = true)) {
+                            if (isEnglish) "bags" else "कट्टे"
+                        } else {
+                            if (isEnglish) "bags" else "बोरी"
                         }
-                    }
-                },
-                placeholder = {
-                    Text(
-                        if (isEnglish) "Search commodity or variety..." else "जिंस या किस्म खोजें...",
-                        color = MandiTextMuted
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MandiSurface,
-                    unfocusedContainerColor = MandiSurface,
-                    focusedBorderColor = MandiNavy,
-                    unfocusedBorderColor = MandiBorder,
-                    focusedTextColor = MandiTextPrimary,
-                    unfocusedTextColor = MandiTextPrimary
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
 
-        // 3. Horizontal Commodity Quick Filter
-        item(key = "godown_quick_filter") {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                item {
-                    FilterChip(
-                        selected = grain == null,
-                        onClick = { grain = null },
-                        label = {
-                            Text(
-                                if (isEnglish) "All (${stockLines.size})" else "सभी (${stockLines.size})",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (grain == null) FontWeight.Bold else FontWeight.Medium
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MandiNavy,
-                            selectedLabelColor = MandiSurface,
-                            containerColor = MandiSurfaceElevated,
-                            labelColor = MandiTextSecondary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = grain == null,
-                            borderColor = MandiBorder,
-                            selectedBorderColor = MandiNavy
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                }
-
-                items(stockLines, key = { it.commodityId }) { line ->
-                    val isSelected = grain == line.commodityId
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { grain = if (isSelected) null else line.commodityId },
-                        label = {
-                            Text(
-                                "${line.commodityId} (${formatQuintals(line.onHandGrams)} Q)",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MandiNavy,
-                            selectedLabelColor = MandiSurface,
-                            containerColor = MandiSurfaceElevated,
-                            labelColor = MandiTextSecondary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
+                        FilterChip(
                             selected = isSelected,
-                            borderColor = MandiBorder,
-                            selectedBorderColor = MandiNavy
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                }
-            }
-        }
-
-        // 4. Sort and Results Count Header
-        item(key = "godown_sort_row") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Sort,
-                    contentDescription = null,
-                    tint = MandiTextSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    if (isEnglish) "Sort:" else "क्रम:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MandiTextSecondary
-                )
-                FilterChip(
-                    selected = sort == StockSort.ON_HAND_DESC,
-                    onClick = { sort = StockSort.ON_HAND_DESC },
-                    label = {
-                        Text(
-                            if (isEnglish) "Stock (High-Low)" else "ज्यादा स्टॉक",
-                            style = MaterialTheme.typography.labelSmall
+                            onClick = { selectedGrain = if (isSelected) null else line.commodityId },
+                            label = {
+                                Text(
+                                    "${line.commodityId} (${line.onHandBags} $unitLabel)",
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MandiNavy,
+                                selectedLabelColor = Color.White,
+                                containerColor = MandiSurfaceElevated,
+                                labelColor = MandiTextSecondary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isSelected,
+                                borderColor = MandiBorder,
+                                selectedBorderColor = MandiNavy
+                            ),
+                            shape = RoundedCornerShape(8.dp)
                         )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MandiSurfaceElevated,
-                        selectedLabelColor = MandiTextPrimary,
-                        containerColor = MandiSurface,
-                        labelColor = MandiTextSecondary
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = sort == StockSort.ON_HAND_DESC,
-                        borderColor = MandiBorder,
-                        selectedBorderColor = MandiNavy
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                FilterChip(
-                    selected = sort == StockSort.NAME,
-                    onClick = { sort = StockSort.NAME },
-                    label = {
-                        Text(
-                            if (isEnglish) "Name (A-Z)" else "नाम (A-Z)",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MandiSurfaceElevated,
-                        selectedLabelColor = MandiTextPrimary,
-                        containerColor = MandiSurface,
-                        labelColor = MandiTextSecondary
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = sort == StockSort.NAME,
-                        borderColor = MandiBorder,
-                        selectedBorderColor = MandiNavy
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                if (visible.size < stockLines.size) {
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        if (isEnglish) "${visible.size} of ${stockLines.size}" else "${visible.size}/${stockLines.size}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MandiTextMuted
-                    )
-                }
-            }
-        }
-
-        // 5. Commodity Cards or Empty State
-        if (visible.isEmpty()) {
-            item(key = "godown_empty_state") {
-                StockEmptyState(
-                    hasStockInStore = stockLines.isNotEmpty(),
-                    query = query,
-                    isEnglish = isEnglish,
-                    onResetFilter = {
-                        query = ""
-                        grain = null
                     }
-                )
+                }
+            }
+        }
+
+        // 5. Main Body depending on ViewMode
+        if (viewMode == StockViewMode.BALANCE) {
+            if (visibleLines.isEmpty()) {
+                item(key = "godown_empty") {
+                    StockEmptyState(
+                        hasStockInStore = stockLines.isNotEmpty(),
+                        query = selectedGrain.orEmpty(),
+                        isEnglish = isEnglish,
+                        onResetFilter = { selectedGrain = null }
+                    )
+                }
+            } else {
+                items(visibleLines, key = { it.commodityId }) { line ->
+                    GodownCommodityLedgerCard(
+                        line = line,
+                        isEnglish = isEnglish,
+                        bills = bills[line.commodityId].orEmpty(),
+                        onOpenBuy = onOpenBuy,
+                        onOpenSell = onOpenSell,
+                        onReconcile = {
+                            auditTargetCrop = line.commodityId
+                            showAuditSheet = true
+                        }
+                    )
+                }
             }
         } else {
-            items(visible, key = { it.commodityId }) { line ->
-                StockRegisterCard(
-                    line = line,
-                    isEnglish = isEnglish,
-                    bills = bills[line.commodityId].orEmpty(),
-                    onOpenBuy = onOpenBuy,
-                    onOpenSell = onOpenSell
-                )
+            // MOVEMENT View
+            if (recentMovementBills.isEmpty()) {
+                item(key = "godown_movement_empty") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isEnglish) "No grain transactions found" else "कोई आवक या निकासी पर्चा नहीं मिला",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MandiTextMuted
+                        )
+                    }
+                }
+            } else {
+                items(recentMovementBills, key = { "${it.id}_${it.grams}_${it.isBuy}" }) { bill ->
+                    StockBillItemRow(
+                        bill = bill,
+                        isEnglish = isEnglish,
+                        onClick = { if (bill.isBuy) onOpenBuy(bill.id) else onOpenSell(bill.id) }
+                    )
+                }
             }
         }
+    }
+
+    // Interactive Stock Reconciliation Modal Bottom Sheet
+    if (showAuditSheet && onSaveStockAudit != null) {
+        StockReconciliationSheet(
+            stockLines = stockLines,
+            initialCrop = auditTargetCrop.ifBlank { stockLines.firstOrNull()?.commodityId ?: "गेहूं" },
+            isEnglish = isEnglish,
+            onDismiss = { showAuditSheet = false },
+            onSave = { crop, physicalBags, bagKg, reason, custodyBags ->
+                onSaveStockAudit(crop, physicalBags, bagKg, reason, custodyBags)
+                showAuditSheet = false
+            }
+        )
     }
 }
 
 /**
- * Top Warehouse Inventory KPI card with high contrast, split bought/sold tiles, and bag estimation.
+ * Hero Card: Real Physical Stock in Shed with Custody Split
  */
 @Composable
-private fun WarehouseKpiCard(
-    totalOnHand: Long,
-    totalBought: Long,
-    totalSold: Long,
-    commodityCount: Int,
-    oversoldGrains: Int,
+private fun GodownHeroCard(
+    totalBags: Long,
+    totalGrams: Long,
+    totalOwnBags: Long,
+    totalFarmerCustodyBags: Long,
+    lastAuditedAt: Long?,
     isEnglish: Boolean
 ) {
     Card(
@@ -382,225 +459,122 @@ private fun WarehouseKpiCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header Row: Warehouse Icon + Title + Tracked Count
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MandiSurfaceElevated),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Inventory2,
-                            contentDescription = null,
-                            tint = MandiNavy,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            if (isEnglish) "Godown Stock Register" else "गोदाम स्टॉक रजिस्टर",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary
-                        )
-                        Text(
-                            if (isEnglish) "Live stock & inventory balance" else "लाइव स्टॉक एवं आवक-बिक्री ऑडिट",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MandiTextSecondary
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MandiSurfaceElevated
-                ) {
-                    Text(
-                        if (isEnglish) "$commodityCount Commodities" else "$commodityCount जिंस दर्ज",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiTextSecondary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // Total On-Hand Metric Banner
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    if (isEnglish) "TOTAL ON-HAND STOCK" else "कुल उपलब्ध स्टॉक (शेष)",
+                    text = if (isEnglish) "TOTAL PHYSICAL SHED STOCK" else "गोदाम में कुल उपलब्ध माल (शेष)",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MandiTextSecondary,
                     letterSpacing = 0.5.sp
                 )
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "${formatQuintals(totalOnHand)} Qtl",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (totalOnHand < 0) MandiRedPayable else MandiNavy
-                    )
+                if (lastAuditedAt != null && lastAuditedAt > 0L) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = if (totalOnHand < 0) MandiRedLight else MandiSurfaceElevated,
-                        border = if (totalOnHand < 0) BorderStroke(1.dp, MandiRedBorder) else null,
-                        modifier = Modifier.padding(bottom = 2.dp)
+                        color = MandiGreenLight,
+                        border = BorderStroke(1.dp, MandiGreenBorder)
                     ) {
                         Text(
-                            text = formatBags(totalOnHand, isEnglish),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (totalOnHand < 0) MandiRedText else MandiTextSecondary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            text = if (isEnglish) "✓ Audited" else "✓ सत्यापित",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiGreenText,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
             }
 
-            // Split Inflow vs Outflow Tiles
+            // Big Numbers: Bags + Quintals
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "${MandiMathEngine.formatIndianGrouping(totalBags)}",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MandiTextPrimary
+                )
+                Text(
+                    text = if (isEnglish) "Bags" else "बोरी / कट्टा",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextSecondary,
+                    modifier = Modifier.padding(bottom = 3.dp)
+                )
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Text(
+                        text = "${formatQuintals(totalGrams)} Qtl",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiNavy,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // Custody Split: Own Stock vs Farmer Custody
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Total Bought (In)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MandiSurfaceElevated)
-                        .padding(12.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(CircleShape)
-                                    .background(MandiGreenLight),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.ArrowDownward,
-                                    contentDescription = null,
-                                    tint = MandiGreenReceivable,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                            Text(
-                                if (isEnglish) "Total Bought" else "कुल आवक",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MandiTextSecondary
-                            )
-                        }
-                        Text(
-                            "${formatQuintals(totalBought)} Qtl",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiGreenText
-                        )
-                        Text(
-                            formatBags(totalBought, isEnglish),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MandiTextMuted
-                        )
-                    }
-                }
-
-                // Total Sold (Out)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MandiSurfaceElevated)
-                        .padding(12.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(CircleShape)
-                                    .background(MandiRedLight),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.ArrowUpward,
-                                    contentDescription = null,
-                                    tint = MandiRedPayable,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                            Text(
-                                if (isEnglish) "Total Sold" else "कुल बिक्री",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MandiTextSecondary
-                            )
-                        }
-                        Text(
-                            "${formatQuintals(totalSold)} Qtl",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiRedText
-                        )
-                        Text(
-                            formatBags(totalSold, isEnglish),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MandiTextMuted
-                        )
-                    }
-                }
-            }
-
-            // Oversold Warning Banner (if any grain sold > bought)
-            if (oversoldGrains > 0) {
+                // Shop Owned Stock
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MandiRedLight,
-                    border = BorderStroke(1.dp, MandiRedBorder),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(10.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MandiRedPayable,
-                            modifier = Modifier.size(16.dp)
+                        Text(
+                            text = if (isEnglish) "Shop's Own Stock" else "दुकान का खुद का माल",
+                            fontSize = 10.sp,
+                            color = MandiTextSecondary
                         )
                         Text(
-                            text = if (isEnglish) {
-                                "$oversoldGrains commodity has negative stock (sales exceed bought)"
-                            } else {
-                                "$oversoldGrains जिंस में स्टॉक से ज्यादा बिक्री दर्ज है (पर्चे जांचें)"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MandiRedText,
-                            fontWeight = FontWeight.SemiBold
+                            text = "${MandiMathEngine.formatIndianGrouping(totalOwnBags)} ${if (isEnglish) "Bags" else "बोरी"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+                }
+
+                // Farmer Custody
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (totalFarmerCustodyBags > 0) MandiAmberLight else MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, if (totalFarmerCustodyBags > 0) MandiAmberBorder else MandiBorder),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Farmer Custody" else "किसान की अमानत (रोकड़)",
+                            fontSize = 10.sp,
+                            color = if (totalFarmerCustodyBags > 0) MandiAmberDark else MandiTextSecondary
+                        )
+                        Text(
+                            text = "${MandiMathEngine.formatIndianGrouping(totalFarmerCustodyBags)} ${if (isEnglish) "Bags" else "बोरी"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (totalFarmerCustodyBags > 0) MandiAmberDark else MandiTextPrimary
                         )
                     }
                 }
@@ -610,36 +584,41 @@ private fun WarehouseKpiCard(
 }
 
 /**
- * Individual Commodity Stock Card with in/out progress, variety drill-down, and expandable recent bills drawer.
+ * Individual Commodity Card: Replaces misleading progress bar with 3-Way In/Out/Balance Ledger
  */
 @Composable
-private fun StockRegisterCard(
+private fun GodownCommodityLedgerCard(
     line: StockLine,
     isEnglish: Boolean,
     bills: List<StockBill>,
     onOpenBuy: (String) -> Unit,
-    onOpenSell: (String) -> Unit
+    onOpenSell: (String) -> Unit,
+    onReconcile: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var showAllBills by remember { mutableStateOf(false) }
-    val negative = line.onHandGrams < 0
+    val isNegative = line.onHandGrams < 0
+    val unitLabel = if (line.commodityId.contains("सरसों") || line.commodityId.contains("mustard", ignoreCase = true)) {
+        if (isEnglish) "Katta" else "कट्टे"
+    } else {
+        if (isEnglish) "Bags" else "बोरी"
+    }
 
-    val soldRatio = if (line.boughtGrams > 0) {
-        (line.soldGrams.toFloat() / line.boughtGrams.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+    val bagGrams = (line.standardBagKg * 1000.0).toLong()
+    val boughtBags = if (bagGrams > 0) line.boughtGrams / bagGrams else 0L
+    val soldBags = if (bagGrams > 0) line.soldGrams / bagGrams else 0L
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
-        border = BorderStroke(1.dp, if (negative) MandiRedBorder else MandiBorder),
+        border = BorderStroke(1.dp, if (isNegative) MandiRedBorder else MandiBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Row: Commodity icon, Name + Variety Count, On-Hand Badge + Expand Icon
+            // Header Row: Avatar, Name, Unit, and Net Available Badge
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -648,20 +627,21 @@ private fun StockRegisterCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(38.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (negative) MandiRedLight else MandiSurfaceElevated),
+                        .background(if (isNegative) MandiRedLight else MandiSurfaceElevated)
+                        .border(1.dp, if (isNegative) MandiRedBorder else MandiBorder, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Inventory2,
-                        contentDescription = null,
-                        tint = if (negative) MandiRedPayable else MandiNavy,
-                        modifier = Modifier.size(22.dp)
+                    Text(
+                        text = line.commodityId.take(1),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isNegative) MandiRedText else MandiTextPrimary
                     )
                 }
 
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -672,9 +652,7 @@ private fun StockRegisterCard(
                             text = line.commodityId,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = MandiTextPrimary
                         )
                         if (line.varieties.size > 1) {
                             Surface(
@@ -683,218 +661,483 @@ private fun StockRegisterCard(
                             ) {
                                 Text(
                                     text = if (isEnglish) "${line.varieties.size} varieties" else "${line.varieties.size} किस्में",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
                                     color = MandiTextSecondary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                 )
                             }
                         }
                     }
-
-                    Spacer(Modifier.height(2.dp))
-
                     Text(
-                        text = (if (isEnglish) "In: " else "आवक: ") + "${formatQuintals(line.boughtGrams)} Q  •  " +
-                            (if (isEnglish) "Out: " else "बिक्री: ") + "${formatQuintals(line.soldGrams)} Q",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "${if (isEnglish) "Std Bag: " else "मानक बोरी: "}${line.standardBagKg.toInt()} kg",
+                        fontSize = 11.sp,
                         color = MandiTextSecondary
                     )
                 }
 
-                Spacer(Modifier.width(8.dp))
-
                 Column(horizontalAlignment = Alignment.End) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (negative) MandiRedLight else MandiGreenLight,
-                        border = BorderStroke(1.dp, if (negative) MandiRedBorder else MandiGreenBorder)
-                    ) {
-                        Text(
-                            text = "${if (line.onHandGrams > 0) "+" else ""}${formatQuintals(line.onHandGrams)} Q",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (negative) MandiRedText else MandiGreenText,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.height(2.dp))
-
                     Text(
-                        text = formatBags(line.onHandGrams, isEnglish),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MandiTextMuted
+                        text = "${line.onHandBags} $unitLabel",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isNegative) MandiRedText else MandiGreenText
+                    )
+                    Text(
+                        text = "${formatQuintals(line.onHandGrams)} Qtl",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiTextSecondary
                     )
                 }
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
                 Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
                     tint = MandiTextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
 
-            // Inflow vs Outflow Mini Progress Bar (if bought > 0)
-            if (line.boughtGrams > 0 && !negative) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // 3-Way In/Out/Available Ledger (High Contrast, replaces broken progress bar)
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MandiSurfaceElevated,
+                border = BorderStroke(1.dp, MandiBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (isEnglish) "Total Inward" else "कुल आवक",
+                            fontSize = 10.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "+$boughtBags $unitLabel",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(MandiBorder))
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (isEnglish) "Total Outward" else "कुल निकासी",
+                            fontSize = 10.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = "-$soldBags $unitLabel",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(MandiBorder))
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (isEnglish) "In Shed (Balance)" else "उपलब्ध माल",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isNegative) MandiRedText else MandiGreenText
+                        )
+                        Text(
+                            text = "${line.onHandBags} $unitLabel",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isNegative) MandiRedText else MandiGreenText
+                        )
+                    }
+                }
+            }
+
+            // Farmer Custody notice if present
+            if (line.farmerCustodyBags > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(MandiSurfaceElevated)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(fraction = soldRatio)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(MandiNavy)
-                        )
-                    }
-
-                    val soldPct = (soldRatio * 100).toInt()
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            if (isEnglish) "$soldPct% sold" else "$soldPct% बिक्री हुई",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MandiTextMuted
-                        )
-                        Text(
-                            if (isEnglish) "${100 - soldPct}% on hand" else "${100 - soldPct}% शेष",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MandiTextMuted
-                        )
-                    }
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(MandiAmberPrimary)
+                    )
+                    Text(
+                        text = if (isEnglish) {
+                            "${line.farmerCustodyBags} $unitLabel held as farmer custody (cannot sell)"
+                        } else {
+                            "${line.farmerCustodyBags} $unitLabel किसान अमानत/रोकड़ में शामिल (बिक्री योग्य नहीं)"
+                        },
+                        fontSize = 11.sp,
+                        color = MandiAmberDark,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
-            // Oversold alert within the commodity card
-            if (negative) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MandiRedLight,
-                    border = BorderStroke(1.dp, MandiRedBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MandiRedPayable,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = if (isEnglish) {
-                                "Oversold by ${formatQuintals(-line.onHandGrams)} Qtl! Check sales entries."
-                            } else {
-                                "स्टॉक से ${formatQuintals(-line.onHandGrams)} क्विंटल अधिक बिक्री! बिक्री पर्चे जांचें।"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MandiRedText,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+            // Quick Audit Action Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (line.lastAuditReason != null) {
+                    Text(
+                        text = "अंतिम समायोजन: ${line.lastAuditReason}",
+                        fontSize = 10.sp,
+                        color = MandiTextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
                 }
+
+                Text(
+                    text = if (isEnglish) "Adjust Stock →" else "घट-बढ़ दर्ज करें →",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiNavy,
+                    modifier = Modifier
+                        .clickable(onClick = onReconcile)
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                )
             }
 
-            // Expanded Section: Varieties & Bills
+            // Expandable Section: Variety breakdown & recent bills
             if (expanded) {
                 HorizontalDivider(color = MandiBorder, thickness = 1.dp)
 
-                // 1. Variety Drill-down
                 if (line.varieties.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = if (isEnglish) "VARIETY BREAKDOWN" else "किस्मवार स्टॉक विवरण",
-                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MandiTextSecondary,
-                            letterSpacing = 0.5.sp
+                            color = MandiTextSecondary
                         )
-
                         line.varieties.forEach { v ->
                             VarietyItemRow(v = v, isEnglish = isEnglish)
                         }
                     }
                 }
 
-                // 2. Recent Bills Drawer
                 if (bills.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ReceiptLong,
-                                    contentDescription = null,
-                                    tint = MandiNavy,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = if (isEnglish) "Recent Bills (${bills.size})" else "हाल के सौदे (${bills.size} पर्चे)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MandiTextPrimary
-                                )
-                            }
-
-                            if (bills.size > 5) {
-                                Text(
-                                    text = if (showAllBills) {
-                                        if (isEnglish) "Show less" else "कम दिखाएं"
-                                    } else {
-                                        if (isEnglish) "View all (${bills.size})" else "सभी देखें (${bills.size})"
-                                    },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MandiBlueSell,
-                                    modifier = Modifier
-                                        .clickable { showAllBills = !showAllBills }
-                                        .padding(4.dp)
-                                )
-                            }
-                        }
-
-                        val displayedBills = if (showAllBills) bills else bills.take(5)
-                        displayedBills.forEach { b ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (isEnglish) "Recent Slips (${bills.size})" else "हाल के सौदे (${bills.size} पर्चे)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextSecondary
+                        )
+                        bills.take(4).forEach { b ->
                             StockBillItemRow(
                                 bill = b,
                                 isEnglish = isEnglish,
-                                onClick = {
-                                    if (b.isBuy) onOpenBuy(b.id) else onOpenSell(b.id)
-                                }
+                                onClick = { if (b.isBuy) onOpenBuy(b.id) else onOpenSell(b.id) }
                             )
                         }
                     }
                 }
+            }
+        }
+    }
+}
 
-                // 3. Fallback if no varieties and no bills recorded yet
-                if (line.varieties.isEmpty() && bills.isEmpty()) {
+/**
+ * Interactive Modal Bottom Sheet for Physical Stock Audit / Opening Stock / Reconciliation
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StockReconciliationSheet(
+    stockLines: List<StockLine>,
+    initialCrop: String,
+    isEnglish: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (commodityId: String, physicalBags: Long, bagKg: Double, reason: String, farmerCustodyBags: Long) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var selectedCrop by remember { mutableStateOf(initialCrop) }
+    val currentLine = stockLines.firstOrNull { it.commodityId == selectedCrop }
+    val defaultBagKg = currentLine?.standardBagKg ?: if (selectedCrop.contains("सरसों")) 70.0 else 50.0
+
+    var physicalBagsInput by remember { mutableStateOf(currentLine?.onHandBags?.toString().orEmpty()) }
+    var bagWeightInput by remember { mutableStateOf(defaultBagKg.toInt().toString()) }
+    var farmerCustodyInput by remember { mutableStateOf(currentLine?.farmerCustodyBags?.toString().orEmpty()) }
+
+    val reasons = listOf(
+        if (isEnglish) "Moisture Shrinkage" else "नमी / सूख वजन कमी",
+        if (isEnglish) "Damaged / Torn Bag" else "बोरी फटने से नुकसान",
+        if (isEnglish) "Opening Stock Entry" else "प्रारंभिक स्टॉक दर्ज किया",
+        if (isEnglish) "Audit Count Correction" else "गिनती संशोधन (ऑडिट सुधार)"
+    )
+    var selectedReason by remember { mutableStateOf(reasons.first()) }
+
+    val physicalBags = physicalBagsInput.toLongOrNull() ?: 0L
+    val bookBags = currentLine?.bookOnHandGrams?.let { if (defaultBagKg > 0) (it / (defaultBagKg * 1000.0)).toLong() else 0L } ?: 0L
+    val diffBags = physicalBags - bookBags
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MandiSurface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .navigationBarsPadding()
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Sheet Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
-                        text = if (isEnglish) "No detailed bills recorded for this commodity." else "इस जिंस के लिए कोई पर्चा दर्ज नहीं है।",
+                        text = if (isEnglish) "Stock Audit & Adjustment" else "स्टॉक मिलान व समायोजन",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                    Text(
+                        text = if (isEnglish) "Reconcile floor count with ledger" else "गोदाम की वास्तविक गिनती दर्ज करें",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MandiTextMuted,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        color = MandiTextSecondary
                     )
                 }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = MandiTextSecondary)
+                }
             }
+
+            // 1. Commodity Selector Chips
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = if (isEnglish) "Select Commodity:" else "जिंस चुनें:",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextSecondary
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val availableCrops = if (stockLines.isNotEmpty()) stockLines.map { it.commodityId } else listOf("गेहूं", "सरसों", "चना")
+                    items(availableCrops) { crop ->
+                        val isSel = crop == selectedCrop
+                        FilterChip(
+                            selected = isSel,
+                            onClick = {
+                                selectedCrop = crop
+                                val newLine = stockLines.firstOrNull { it.commodityId == crop }
+                                physicalBagsInput = newLine?.onHandBags?.toString().orEmpty()
+                                farmerCustodyInput = newLine?.farmerCustodyBags?.toString().orEmpty()
+                                bagWeightInput = (newLine?.standardBagKg ?: if (crop.contains("सरसों")) 70.0 else 50.0).toInt().toString()
+                            },
+                            label = { Text(crop, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MandiNavy,
+                                selectedLabelColor = Color.White,
+                                containerColor = MandiSurfaceElevated,
+                                labelColor = MandiTextSecondary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isSel,
+                                borderColor = MandiBorder,
+                                selectedBorderColor = MandiNavy
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    }
+                }
+            }
+
+            // 2. Physical Count & Live Difference
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = physicalBagsInput,
+                    onValueChange = { physicalBagsInput = it.filter { ch -> ch.isDigit() } },
+                    label = { Text(if (isEnglish) "Physical Bags" else "गोदाम में असली बोरी") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MandiSurface,
+                        unfocusedContainerColor = MandiSurface,
+                        focusedBorderColor = MandiNavy,
+                        unfocusedBorderColor = MandiBorder
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = when {
+                        diffBags > 0 -> MandiGreenLight
+                        diffBags < 0 -> MandiAmberLight
+                        else -> MandiSurfaceElevated
+                    },
+                    border = BorderStroke(
+                        1.dp,
+                        when {
+                            diffBags > 0 -> MandiGreenBorder
+                            diffBags < 0 -> MandiAmberBorder
+                            else -> MandiBorder
+                        }
+                    ),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Difference" else "घट-बढ़ (अंतर)",
+                            fontSize = 10.sp,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = when {
+                                diffBags > 0 -> "+$diffBags ${if (isEnglish) "Bags (Surplus)" else "बोरी (अधिक)"}"
+                                diffBags < 0 -> "$diffBags ${if (isEnglish) "Bags (Deficit)" else "बोरी (कमी)"}"
+                                else -> if (isEnglish) "0 (Exact match)" else "0 (बराबर)"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                diffBags > 0 -> MandiGreenText
+                                diffBags < 0 -> MandiAmberDark
+                                else -> MandiTextPrimary
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 3. Reason for Adjustment Chips
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = if (isEnglish) "Reason for Adjustment:" else "समायोजन का कारण:",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextSecondary
+                )
+                reasons.forEach { r ->
+                    val isSel = r == selectedReason
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSel) MandiSurfaceElevated else MandiSurface,
+                        border = BorderStroke(1.dp, if (isSel) MandiNavy else MandiBorder),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedReason = r }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSel) MandiNavy else MandiBorder)
+                            )
+                            Text(
+                                text = r,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                color = MandiTextPrimary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Packaging Weight & Farmer Custody Inputs
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = bagWeightInput,
+                    onValueChange = { bagWeightInput = it.filter { ch -> ch.isDigit() } },
+                    label = { Text(if (isEnglish) "Bag Weight (Kg)" else "बोरी वजन (कि.ग्रा.)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MandiSurface,
+                        unfocusedContainerColor = MandiSurface,
+                        focusedBorderColor = MandiNavy,
+                        unfocusedBorderColor = MandiBorder
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                OutlinedTextField(
+                    value = farmerCustodyInput,
+                    onValueChange = { farmerCustodyInput = it.filter { ch -> ch.isDigit() } },
+                    label = { Text(if (isEnglish) "Farmer Custody (Bags)" else "किसान अमानत (बोरी)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MandiSurface,
+                        unfocusedContainerColor = MandiSurface,
+                        focusedBorderColor = MandiNavy,
+                        unfocusedBorderColor = MandiBorder
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Save Audit Button
+            Button(
+                onClick = {
+                    val bagKg = bagWeightInput.toDoubleOrNull() ?: defaultBagKg
+                    val custodyBags = farmerCustodyInput.toLongOrNull() ?: 0L
+                    onSave(selectedCrop, physicalBags, bagKg, selectedReason, custodyBags)
+                },
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MandiNavy,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(
+                    text = if (isEnglish) "Save Godown Audit" else "स्टॉक मिलान सहेजें",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -960,15 +1203,15 @@ private fun StockBillItemRow(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = MandiSurfaceElevated,
+        shape = RoundedCornerShape(10.dp),
+        color = MandiSurface,
         border = BorderStroke(1.dp, MandiBorder),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -1003,7 +1246,7 @@ private fun StockBillItemRow(
                     )
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = MandiSurface
+                        color = MandiSurfaceElevated
                     ) {
                         Text(
                             text = "#${bill.slip}",
@@ -1105,9 +1348,9 @@ private fun StockEmptyState(
             Text(
                 text = if (!hasStockInStore) {
                     if (isEnglish) {
-                        "Enter new purchase entries in the Purchase tab. Godown inventory updates automatically."
+                        "Enter purchases or tap 'Audit Stock' above to record opening stock."
                     } else {
-                        "खरीद टैब में नई खरीद (आवक) दर्ज करें, गोदाम स्टॉक अपने आप अपडेट हो जाएगा।"
+                        "खरीद दर्ज करें या ऊपर 'स्टॉक मिलाएँ' बटन दबाकर गोदाम का शुरुआती स्टॉक दर्ज करें।"
                     }
                 } else {
                     if (isEnglish) {
