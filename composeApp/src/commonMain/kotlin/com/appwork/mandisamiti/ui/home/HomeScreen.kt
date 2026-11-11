@@ -221,6 +221,10 @@ fun HomeScreen(
                             buys = uiState.buys,
                             sells = uiState.sells,
                             partyNamesById = uiState.allParties.associate { it.party.id to it.party.name },
+                            gallaCashPaisa = uiState.rokdiBalancePaisa,
+                            onSettleBuySlipCash = { buyId, cashAmountPaisa ->
+                                viewModel.settleBuySlipCash(buyId, cashAmountPaisa)
+                            },
                             onOpenBuyReceipt = onNavigateToBuyReceipt,
                             onOpenSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewBuy = onNavigateToBuy,

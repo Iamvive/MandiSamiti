@@ -3,6 +3,7 @@ package com.appwork.mandisamiti.ui.buy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -14,6 +15,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,6 +34,7 @@ import com.appwork.mandisamiti.ui.components.MandiLinesCard
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
 import com.appwork.mandisamiti.ui.components.MandiScreenHeader
 import com.appwork.mandisamiti.ui.components.MandiSecondaryButton
+import com.appwork.mandisamiti.ui.parchi.FarmerSlipCashSettlementSheet
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
@@ -66,9 +72,13 @@ fun BuyTransactionReceiptScreen(
     partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
+    gallaCashPaisa: Long = 0L,
+    onSettleCash: ((amountPaisa: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     MandiBackHandler { onBack() }
+
+    var showSettlementSheet by remember { mutableStateOf(false) }
 
     val displayName = farmerName.takeIf { it.isNotBlank() && it != "किसान" }
         ?: entry?.farmerId?.takeIf { it.isNotBlank() }
@@ -77,6 +87,20 @@ fun BuyTransactionReceiptScreen(
     val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots) } ?: ""
 
     val slipNum = entry?.let { slipLabel(it.slipNo, it.id) } ?: ""
+
+    if (showSettlementSheet && entry != null) {
+        FarmerSlipCashSettlementSheet(
+            buy = entry,
+            farmerName = displayName,
+            gallaCashPaisa = gallaCashPaisa,
+            isEnglish = isEnglish,
+            onDismiss = { showSettlementSheet = false },
+            onConfirmPayment = { amountPaisa ->
+                onSettleCash?.invoke(amountPaisa)
+                showSettlementSheet = false
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -94,24 +118,62 @@ fun BuyTransactionReceiptScreen(
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (entry != null && onShareWhatsApp != null) {
+                val hasPendingDue = entry != null && entry.paidPaisa < entry.netPayablePaisa && onSettleCash != null
+
+                if (hasPendingDue) {
                     MandiPrimaryButton(
-                        text = if (isEnglish) "Share slip" else "पर्ची भेजें",
-                        leadingIcon = Icons.Default.Share,
-                        height = 56.dp,
-                        fontSize = 16.sp,
-                        onClick = { onShareWhatsApp(slipText) },
+                        text = if (isEnglish) "Pay Cash from Galla →" else "गल्ला से नकद भुगतान करें →",
+                        height = 52.dp,
+                        fontSize = 15.sp,
+                        onClick = { showSettlementSheet = true },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onShareWhatsApp != null) {
+                            MandiSecondaryButton(
+                                text = if (isEnglish) "Share slip" else "पर्ची भेजें",
+                                leadingIcon = Icons.Default.Share,
+                                height = 44.dp,
+                                fontSize = 13.sp,
+                                fullWidth = false,
+                                onClick = { onShareWhatsApp(slipText) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        MandiSecondaryButton(
+                            text = if (isEnglish) "New purchase" else "नई खरीद",
+                            height = 44.dp,
+                            fontSize = 13.sp,
+                            fullWidth = false,
+                            onClick = { onNewBuy?.invoke() ?: onBack() },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    if (entry != null && onShareWhatsApp != null) {
+                        MandiPrimaryButton(
+                            text = if (isEnglish) "Share slip" else "पर्ची भेजें",
+                            leadingIcon = Icons.Default.Share,
+                            height = 56.dp,
+                            fontSize = 16.sp,
+                            onClick = { onShareWhatsApp(slipText) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    MandiSecondaryButton(
+                        text = if (isEnglish) "New purchase" else "नई खरीद",
+                        height = 48.dp,
+                        fontSize = 14.sp,
+                        onClick = { onNewBuy?.invoke() ?: onBack() },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-
-                MandiSecondaryButton(
-                    text = if (isEnglish) "New purchase" else "नई खरीद",
-                    height = 48.dp,
-                    fontSize = 14.sp,
-                    onClick = { onNewBuy?.invoke() ?: onBack() },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         },
         modifier = modifier.fillMaxSize().background(MandiBackground)

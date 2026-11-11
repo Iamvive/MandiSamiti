@@ -621,6 +621,10 @@ fun App(
                 var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
                 var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
                 val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
+                val allCashTransactions by cashRepo.getTransactionsByShopStream(shopId ?: "").collectAsState(initial = emptyList())
+                val gallaCashPaisa = remember(allCashTransactions) {
+                    com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(allCashTransactions)
+                }
                 LaunchedEffect(screen.id) {
                     buyEntry = buyRepo.getBuyEntryById(screen.id)
                     receiptParty = buyEntry?.farmerId?.let { partyRepo.getPartyById(it) }
@@ -632,6 +636,40 @@ fun App(
                     shopName = receiptShop?.shopName.orEmpty(),
                     mandiName = receiptShop?.mandiName.orEmpty(),
                     partyVillage = receiptParty?.village,
+                    gallaCashPaisa = gallaCashPaisa,
+                    onSettleCash = { amountPaisa ->
+                        val entryToSettle = buyEntry ?: return@BuyTransactionReceiptScreen
+                        val currentShop = shopId ?: return@BuyTransactionReceiptScreen
+                        coroutineScope.launch {
+                            val newPaid = entryToSettle.paidPaisa + amountPaisa
+                            val updatedBuy = entryToSettle.copy(
+                                paidPaisa = newPaid,
+                                updatedAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+                                revision = entryToSettle.revision + 1
+                            )
+                            buyRepo.editBuyEntry(updatedBuy)
+
+                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            val slipRef = entryToSettle.slipNo?.let { "#$it" } ?: entryToSettle.id.takeLast(5)
+                            val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                shopId = currentShop,
+                                partyId = entryToSettle.farmerId,
+                                transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                amountPaisa = amountPaisa,
+                                paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                transactionDate = now,
+                                remarks = "खरीद पर्ची $slipRef भुगतान",
+                                createdAt = now,
+                                updatedAt = now,
+                                sourceEntryType = "BUY",
+                                sourceEntryId = entryToSettle.id
+                            )
+                            cashRepo.recordTransaction(tx)
+                            syncScheduler.scheduleOneTimeSync()
+                            buyEntry = buyRepo.getBuyEntryById(screen.id)
+                        }
+                    },
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
                     onEdit = { currentScreen = Screen.BuyEntry(it) },
                     onNewBuy = { currentScreen = Screen.BuyEntry(null) },
