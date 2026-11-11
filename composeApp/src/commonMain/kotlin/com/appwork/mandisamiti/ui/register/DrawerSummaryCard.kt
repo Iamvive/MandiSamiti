@@ -1,9 +1,11 @@
 package com.appwork.mandisamiti.ui.register
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ExpandMore
@@ -16,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,34 +48,75 @@ internal fun DrawerSummaryCard(
     onWhatsApp: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val countActionSemantics = if (isEnglish) "Count cash · Close day" else "नकद गिनें · दिन बंद करें"
+
+    val isMatched = state.reconciliationStatus == BahiReconciliationStatus.BALANCED
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp).testTag("drawer-summary"),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .testTag("drawer-summary"),
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         border = BorderStroke(1.dp, MandiBorder),
+        shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // SLIM TOP ROW: Compact Date Chip + More Menu
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Surface(
                     onClick = onDateClick,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = MandiSurfaceElevated,
                     border = BorderStroke(1.dp, MandiBorder),
-                    modifier = Modifier.heightIn(min = 40.dp).testTag("drawer-date-chip"),
+                    modifier = Modifier.heightIn(min = 32.dp).testTag("drawer-date-chip"),
                 ) {
-                    Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MandiTextPrimary, modifier = Modifier.size(18.dp))
-                        Text(drawerChipDate(state.selectedDate, isEnglish, state.isToday), color = MandiTextPrimary,
-                            fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Icon(Icons.Default.ExpandMore, contentDescription = if (isEnglish) "Pick date" else "तारीख चुनें",
-                            tint = MandiTextPrimary, modifier = Modifier.size(18.dp))
+                    Row(
+                        Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = MandiTextPrimary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            drawerChipDate(state.selectedDate, isEnglish, state.isToday),
+                            color = MandiTextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Icon(
+                            Icons.Default.ExpandMore,
+                            contentDescription = if (isEnglish) "Pick date" else "तारीख चुनें",
+                            tint = MandiTextPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 }
-                Spacer(Modifier.weight(1f))
+
                 Box {
-                    IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.MoreVert, contentDescription = if (isEnglish) "More" else "और विकल्प", tint = MandiTextPrimary)
+                    IconButton(
+                        onClick = { menuOpen = true },
+                        modifier = Modifier.size(26.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = if (isEnglish) "More" else "और विकल्प",
+                            tint = MandiTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
@@ -88,41 +133,112 @@ internal fun DrawerSummaryCard(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+            // COMPACT HERO ROW: Cash in Drawer + Balance + Status Pill ON LEFT | Fast CTA Button ON RIGHT
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Column(Modifier.weight(1f)) {
-                    Text(if (isEnglish) "Cash in drawer (per bahi)" else "गल्ले में नकद (बही के अनुसार)",
-                        color = MandiTextSecondary, fontSize = 12.sp, lineHeight = 16.sp)
-                    Text(MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa),
-                        color = MandiTextPrimary, fontWeight = FontWeight.Bold, fontSize = 23.sp, lineHeight = 28.sp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(if (state.inHandCashDrawerPaisa >= 0) MandiGreenReceivable else MandiRedPayable)
+                        )
+                        Text(
+                            text = if (isEnglish) "CASH IN DRAWER" else "गल्ले में उपलब्ध नकद",
+                            color = MandiTextSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa),
+                            color = MandiTextPrimary,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                            lineHeight = 24.sp
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isMatched) MandiGreenLight else MandiSurfaceElevated,
+                            border = BorderStroke(1.dp, if (isMatched) MandiGreenBorder else MandiBorder),
+                            modifier = Modifier.testTag("drawer-status-chip")
+                        ) {
+                            Text(
+                                text = drawerCountStatus(state, isEnglish),
+                                color = if (isMatched) MandiGreenText else MandiTextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
-                Surface(shape = RoundedCornerShape(8.dp), color = MandiSurfaceElevated, border = BorderStroke(1.dp, MandiBorder),
-                    modifier = Modifier.widthIn(max = 150.dp).testTag("drawer-status-chip")) {
-                    Text(drawerCountStatus(state, isEnglish), color = MandiTextPrimary, fontSize = 12.sp, lineHeight = 16.sp,
-                        fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+
+                if (!state.isReadOnly) {
+                    Button(
+                        onClick = onCount,
+                        enabled = !state.isSaving,
+                        modifier = Modifier
+                            .height(34.dp)
+                            .testTag("drawer-count-button")
+                            .semantics { contentDescription = countActionSemantics },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiSurfaceElevated,
+                            contentColor = MandiTextPrimary
+                        ),
+                        border = BorderStroke(1.dp, MandiBorder),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Count cash →" else "हिसाब मिलाएँ →",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = MandiTextPrimary
+                        )
+                    }
                 }
             }
+
+            // SUBTLE 1-LINE WARNING (ONLY IF CASH IS BELOW ZERO)
             if (state.isNegativeCash) {
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 40.dp).clickable(enabled = !state.isReadOnly, onClick = onOpening)
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !state.isReadOnly, onClick = onOpening)
+                        .padding(top = 1.dp)
                         .testTag("drawer-negative-cash"),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = MandiAmberDark, modifier = Modifier.size(16.dp))
-                    Text(if (isEnglish) "Cash is below zero · set opening cash" else "रकम माइनस है · शुरुआती रोकड़ दर्ज करें",
-                        color = MandiAmberDark, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            if (!state.isReadOnly) {
-                Button(
-                    onClick = onCount,
-                    enabled = !state.isSaving,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).testTag("drawer-count-button"),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiPrimaryAction, contentColor = MandiPrimaryActionText),
-                ) {
-                    Text(if (isEnglish) "Count cash · Close day" else "नकद गिनें · दिन बंद करें", fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MandiAmberDark,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = if (isEnglish) "Negative balance · set opening cash" else "रकम माइनस है · शुरुआती रोकड़ दर्ज करें",
+                        color = MandiAmberDark,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
