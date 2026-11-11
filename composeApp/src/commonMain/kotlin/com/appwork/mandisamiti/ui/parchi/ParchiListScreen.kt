@@ -76,7 +76,6 @@ import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
-import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedBorder
@@ -118,6 +117,7 @@ fun ParchiListScreen(
     buys: List<BuyEntry>,
     sells: List<SellEntry>,
     partyNamesById: Map<String, String>,
+    parties: List<Party> = emptyList(),
     gallaCashPaisa: Long = 0L,
     onOpenBuyReceipt: (String) -> Unit,
     onOpenSellReceipt: (String) -> Unit,
@@ -130,6 +130,7 @@ fun ParchiListScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    var query by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         floatingActionButton = {
@@ -214,6 +215,8 @@ fun ParchiListScreen(
                 }
             }
 
+            ParchiSearchBox(query = query, onQueryChange = { query = it }, isEnglish = isEnglish)
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -223,6 +226,8 @@ fun ParchiListScreen(
                 when (page) {
                     0 -> KisaanParchiView(
                         buys = buys,
+                        query = query,
+                        parties = parties,
                         partyNamesById = partyNamesById,
                         gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenBuyReceipt,
@@ -231,6 +236,8 @@ fun ParchiListScreen(
                     )
                     1 -> VyapariParchiView(
                         sells = sells,
+                        query = query,
+                        parties = parties,
                         partyNamesById = partyNamesById,
                         gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenSellReceipt,
@@ -246,6 +253,8 @@ fun ParchiListScreen(
 @Composable
 private fun KisaanParchiView(
     buys: List<BuyEntry>,
+    query: String,
+    parties: List<Party>,
     partyNamesById: Map<String, String>,
     gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
@@ -269,12 +278,63 @@ private fun KisaanParchiView(
             .sortedByDescending { it.entryDate }
             .groupBy { epochToLocalDate(it.entryDate) }
     }
+    val searchGroups = remember(query, nonVoidBuys, parties) {
+        filterSlipsByParty(query, nonVoidBuys, parties, { it.farmerId }, ::buyDuePaisa, { it.entryDate })
+    }
+    val expandedPaid = remember(query) { mutableStateMapOf<String, Boolean>() }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        if (query.isNotBlank()) {
+            if (searchGroups.isEmpty()) {
+                item(key = "kisaan_search_empty") { SearchEmptyState(isEnglish) }
+            } else {
+                searchGroups.forEach { g ->
+                    item(key = "ks_sum_${g.party.id}") {
+                        PartySearchSummary(
+                            name = g.party.name,
+                            village = g.party.village,
+                            phone = g.party.phone,
+                            unpaidCount = g.unpaid.size,
+                            totalDuePaisa = g.totalDuePaisa,
+                            isReceivable = false,
+                            isEnglish = isEnglish
+                        )
+                    }
+                    items(g.unpaid, key = { "ks_u_${it.id}" }) { buy ->
+                        KisaanSlipCard(
+                            buy = buy,
+                            farmerName = g.party.name,
+                            onOpenReceipt = { onOpenReceipt(buy.id) },
+                            onSettleCash = { settlingBuy = buy },
+                            isEnglish = isEnglish
+                        )
+                    }
+                    if (g.paid.isNotEmpty()) {
+                        val open = expandedPaid[g.party.id] == true
+                        item(key = "ks_fold_${g.party.id}") {
+                            PaidSlipsFold(g.paid.size, open, { expandedPaid[g.party.id] = !open }, isEnglish)
+                        }
+                        if (open) {
+                            items(g.paid, key = { "ks_p_${it.id}" }) { buy ->
+                                Box(Modifier.alpha(0.6f)) {
+                                    KisaanSlipCard(
+                                        buy = buy,
+                                        farmerName = g.party.name,
+                                        onOpenReceipt = { onOpenReceipt(buy.id) },
+                                        onSettleCash = { settlingBuy = buy },
+                                        isEnglish = isEnglish
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
         // Top 3 Cards
         item(key = "kisaan_kpi_cards") {
             Row(
@@ -333,6 +393,7 @@ private fun KisaanParchiView(
                 }
             }
         }
+        }
     }
 
     settlingBuy?.let { buy ->
@@ -353,6 +414,8 @@ private fun KisaanParchiView(
 @Composable
 private fun VyapariParchiView(
     sells: List<SellEntry>,
+    query: String,
+    parties: List<Party>,
     partyNamesById: Map<String, String>,
     gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
@@ -375,12 +438,63 @@ private fun VyapariParchiView(
             .sortedByDescending { it.entryDate }
             .groupBy { epochToLocalDate(it.entryDate) }
     }
+    val searchGroups = remember(query, nonVoidSells, parties) {
+        filterSlipsByParty(query, nonVoidSells, parties, { it.buyerId }, ::sellDuePaisa, { it.entryDate })
+    }
+    val expandedPaid = remember(query) { mutableStateMapOf<String, Boolean>() }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        if (query.isNotBlank()) {
+            if (searchGroups.isEmpty()) {
+                item(key = "vyapari_search_empty") { SearchEmptyState(isEnglish) }
+            } else {
+                searchGroups.forEach { g ->
+                    item(key = "vs_sum_${g.party.id}") {
+                        PartySearchSummary(
+                            name = g.party.name,
+                            village = g.party.village,
+                            phone = g.party.phone,
+                            unpaidCount = g.unpaid.size,
+                            totalDuePaisa = g.totalDuePaisa,
+                            isReceivable = true,
+                            isEnglish = isEnglish
+                        )
+                    }
+                    items(g.unpaid, key = { "vs_u_${it.id}" }) { sell ->
+                        VyapariSlipCard(
+                            sell = sell,
+                            buyerName = g.party.name,
+                            onOpenReceipt = { onOpenReceipt(sell.id) },
+                            onSettleCash = if (onSettleSellSlipCash != null) { { settlingSell = sell } } else null,
+                            isEnglish = isEnglish
+                        )
+                    }
+                    if (g.paid.isNotEmpty()) {
+                        val open = expandedPaid[g.party.id] == true
+                        item(key = "vs_fold_${g.party.id}") {
+                            PaidSlipsFold(g.paid.size, open, { expandedPaid[g.party.id] = !open }, isEnglish)
+                        }
+                        if (open) {
+                            items(g.paid, key = { "vs_p_${it.id}" }) { sell ->
+                                Box(Modifier.alpha(0.6f)) {
+                                    VyapariSlipCard(
+                                        sell = sell,
+                                        buyerName = g.party.name,
+                                        onOpenReceipt = { onOpenReceipt(sell.id) },
+                                        onSettleCash = null,
+                                        isEnglish = isEnglish
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
         // Top 3 Cards
         item(key = "vyapari_kpi_cards") {
             Row(
@@ -438,6 +552,7 @@ private fun VyapariParchiView(
                     )
                 }
             }
+        }
         }
     }
 
@@ -669,8 +784,8 @@ private fun KisaanSlipCard(
                         onClick = onSettleCash,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MandiNavy,
-                            contentColor = Color.White
+                            containerColor = MandiPrimaryAction,
+                            contentColor = MandiPrimaryActionText
                         ),
                         modifier = Modifier.height(34.dp)
                     ) {
@@ -829,8 +944,8 @@ private fun VyapariSlipCard(
                     onClick = onSettleCash,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MandiNavy,
-                        contentColor = Color.White
+                        containerColor = MandiPrimaryAction,
+                        contentColor = MandiPrimaryActionText
                     ),
                     modifier = Modifier
                         .align(Alignment.End)
@@ -904,7 +1019,7 @@ private fun PartySearchSummary(
                 val sub = listOfNotNull(village, phone).joinToString(" · ")
                 if (sub.isNotEmpty()) Text(sub, fontSize = 12.sp, color = MandiTextMuted)
                 Text(
-                    if (isEnglish) "$unpaidCount unpaid slips" else "$unpaidCount पर्ची बाकी",
+                    if (isEnglish) "$unpaidCount unpaid ${if (unpaidCount == 1) "slip" else "slips"}" else "$unpaidCount पर्ची बाकी",
                     fontSize = 12.sp,
                     color = MandiTextMuted
                 )
