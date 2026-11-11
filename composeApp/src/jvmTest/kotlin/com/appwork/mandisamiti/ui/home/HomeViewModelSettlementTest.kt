@@ -40,3 +40,4 @@ class HomeViewModelSettlementTest {
         assertEquals(PaymentStatus.COMPLETED, completedBuy.paymentStatus)
     }
 }
+

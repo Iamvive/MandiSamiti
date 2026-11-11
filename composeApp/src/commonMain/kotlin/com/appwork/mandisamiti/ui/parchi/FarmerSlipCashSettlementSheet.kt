@@ -126,10 +126,10 @@ fun FarmerSlipCashSettlementSheet(
                         color = MandiTextSecondary
                     )
                     Text(
-                        text = "₹${MandiMathEngine.formatIndianGrouping(gallaCashPaisa / 100)}",
+                        text = MandiMathEngine.formatRupees(gallaCashPaisa),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MandiGreenText
+                        color = if (gallaCashPaisa >= 0L) MandiGreenText else MandiAmberDark
                     )
                 }
             }
