@@ -1,14 +1,17 @@
 package com.appwork.mandisamiti.ui.register
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
+import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.ui.theme.*
 
 /** Day-closing bottom sheet. Input state is owned by the screen (it is keyed on the selected date). */
@@ -92,16 +96,86 @@ internal fun DayClosingSheet(
                 )
             }
             if (useDenominations) {
-                drawerDenominations.forEach { denomination ->
-                    OutlinedTextField(
-                        value = denominationQuantities[denomination].orEmpty(),
-                        onValueChange = { onDenominationChange(denomination, it) },
-                        label = { Text("₹$denomination × " + if (isEnglish) "quantity" else "संख्या") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        isError = denominationQuantities[denomination]?.let { it.isNotBlank() && parseDrawerRupees(it) == null } ?: false,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    drawerDenominations.forEach { denomination ->
+                        val countStr = denominationQuantities[denomination].orEmpty()
+                        val count = countStr.trim().toLongOrNull() ?: 0L
+                        val subtotal = count * denomination
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MandiSurfaceElevated),
+                            border = BorderStroke(1.dp, MandiBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = if (denomination <= 5) "₹$denomination (${if (isEnglish) "Coins" else "सिक्के"})" else "₹$denomination",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MandiTextPrimary,
+                                    modifier = Modifier.width(76.dp)
+                                )
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            val newCount = (count - 1).coerceAtLeast(0L)
+                                            onDenominationChange(denomination, if (newCount > 0) newCount.toString() else "")
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "−", tint = MandiTextPrimary)
+                                    }
+
+                                    OutlinedTextField(
+                                        value = countStr,
+                                        onValueChange = { onDenominationChange(denomination, it) },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier.width(64.dp).heightIn(min = 40.dp),
+                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MandiTextPrimary
+                                        )
+                                    )
+
+                                    IconButton(
+                                        onClick = {
+                                            val newCount = count + 1
+                                            onDenominationChange(denomination, newCount.toString())
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "+", tint = MandiTextPrimary)
+                                    }
+                                }
+
+                                Text(
+                                    text = "₹${MandiMathEngine.formatIndianGrouping(subtotal)}",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = if (subtotal > 0) MandiTextPrimary else MandiTextSecondary,
+                                    modifier = Modifier.width(72.dp),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
