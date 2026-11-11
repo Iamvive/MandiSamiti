@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Inventory2
@@ -18,20 +19,20 @@ enum class NavigationTab(
         titleEn = "Dashboard",
         icon = Icons.Default.Dashboard
     ),
-    KHATA(
-        titleHi = "खाता बही",
-        titleEn = "Ledger",
-        icon = Icons.Default.People
-    ),
-    GODOWN(
-        titleHi = "गोदाम",
-        titleEn = "Godown",
-        icon = Icons.Default.Inventory2
+    PARCHI(
+        titleHi = "पर्चियां",
+        titleEn = "Slips",
+        icon = Icons.AutoMirrored.Filled.ReceiptLong
     ),
     GALLA(
         titleHi = "गल्ला रोकड़",
         titleEn = "Cash Drawer",
         icon = Icons.Default.AccountBalanceWallet
+    ),
+    GODOWN(
+        titleHi = "गोदाम",
+        titleEn = "Godown",
+        icon = Icons.Default.Inventory2
     ),
     SETTINGS(
         titleHi = "सेटिंग्स",

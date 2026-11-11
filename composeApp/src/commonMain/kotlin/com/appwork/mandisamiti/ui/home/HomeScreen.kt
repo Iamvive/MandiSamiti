@@ -154,7 +154,7 @@ fun HomeScreen(
                 onOpenHelp = {
                     activeTutorial = when (uiState.currentTab) {
                         NavigationTab.DASHBOARD -> MandiTutorial.DEAL_ENTRY
-                        NavigationTab.KHATA -> MandiTutorial.KHATA_STATEMENT
+                        NavigationTab.PARCHI -> MandiTutorial.KHATA_STATEMENT
                         NavigationTab.GODOWN -> MandiTutorial.KHATA_STATEMENT
                         NavigationTab.GALLA -> MandiTutorial.GALLA_REGISTER
                         NavigationTab.SETTINGS -> MandiTutorial.SOUNDBOX_SETTINGS
@@ -205,7 +205,7 @@ fun HomeScreen(
                             onNavigateToStockSheet = onNavigateToStockSheet,
                             onNavigateToGalla = { viewModel.selectTab(NavigationTab.GALLA) },
                             onNavigateToPartyKhata = onNavigateToPartyKhata,
-                            onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.KHATA) },
+                            onNavigateToAllKhata = { viewModel.selectTab(NavigationTab.PARCHI) },
                             onNavigateToBuyReceipt = onNavigateToBuyReceipt,
                             onNavigateToSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewEntry = onNavigateToNewEntry,
@@ -216,17 +216,15 @@ fun HomeScreen(
                         )
                     }
 
-                    NavigationTab.KHATA -> {
-                        KhataLedgerTabScreen(
-                            uiState = uiState,
-                            onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
-                            onFilterSelected = { viewModel.onFilterSelected(it) },
-                            onTypeFilterSelected = { viewModel.onTypeFilterSelected(it) },
-                            onPartyClick = onNavigateToPartyKhata,
-                            onCreateParty = viewModel::createParty,
-                            onUpdatePartyPhone = viewModel::updatePartyPhone,
-                            onNavigateToStockSheet = { viewModel.selectTab(NavigationTab.GODOWN) },
-                            onPhoneNeeded = promptAddPhone,
+                    NavigationTab.PARCHI -> {
+                        com.appwork.mandisamiti.ui.parchi.ParchiListScreen(
+                            buys = uiState.buys,
+                            sells = uiState.sells,
+                            partyNamesById = uiState.allParties.associate { it.party.id to it.party.name },
+                            onOpenBuyReceipt = onNavigateToBuyReceipt,
+                            onOpenSellReceipt = onNavigateToSellReceipt,
+                            onNavigateToNewBuy = onNavigateToBuy,
+                            onNavigateToNewSell = onNavigateToSell,
                             isEnglish = uiState.isEnglish
                         )
                     }
