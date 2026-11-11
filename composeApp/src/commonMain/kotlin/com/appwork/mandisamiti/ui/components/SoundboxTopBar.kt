@@ -2,43 +2,39 @@ package com.appwork.mandisamiti.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
-import com.appwork.mandisamiti.ui.theme.MandiGreenLight
 import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -53,15 +49,13 @@ fun SoundboxTopBar(
     isSoundEnabled: Boolean,
     onToggleSound: () -> Unit,
     modifier: Modifier = Modifier,
-    pendingSyncCount: Int = 0,
-    onSyncClick: (() -> Unit)? = null,
-    isSyncing: Boolean = false,
     isEnglish: Boolean = false,
     onOpenHelp: (() -> Unit)? = null,
+    onOpenSettings: (() -> Unit)? = null,
     navigationIcon: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
-    val soundBtnShape = RoundedCornerShape(20.dp)
+    var isMenuExpanded by remember { mutableStateOf(false) }
     val monogramInitial = remember(shopName) {
         val trimmed = shopName.trim()
         if (trimmed.isEmpty()) {
@@ -101,13 +95,13 @@ fun SoundboxTopBar(
             .background(MandiSurface)
             .border(1.dp, MandiBorder)
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.weight(1f)
         ) {
             if (navigationIcon != null) {
@@ -136,13 +130,15 @@ fun SoundboxTopBar(
                     color = MandiTextPrimary,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = mandiLocation,
                     color = MandiTextSecondary,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -155,67 +151,57 @@ fun SoundboxTopBar(
                 actions()
             }
 
-            // Clean Minimal Soundbox Status Pill
-            Row(
-                modifier = Modifier
-                    .clip(soundBtnShape)
-                    .background(if (isSoundEnabled) MandiGreenLight else MandiSurfaceElevated)
-                    .border(
-                        width = 1.dp,
-                        color = if (isSoundEnabled) MandiGreenBorder else MandiBorder,
-                        shape = soundBtnShape
-                    )
-                    .clickable { onToggleSound() }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            IconButton(
+                onClick = onToggleSound,
+                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             ) {
                 Icon(
                     imageVector = if (isSoundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                    contentDescription = if (isEnglish) "Voice Soundbox Status" else "वॉइस साउंडबॉक्स स्थिति",
-                    tint = if (isSoundEnabled) MandiGreenText else MandiTextMuted,
-                    modifier = Modifier.size(15.dp)
-                )
-                Text(
-                    text = if (isSoundEnabled) {
-                        if (isEnglish) "Voice On" else "वॉइस ऑन"
+                    contentDescription = if (isEnglish) {
+                        if (isSoundEnabled) "Turn sound off" else "Turn sound on"
                     } else {
-                        if (isEnglish) "Mute" else "म्यूट"
+                        if (isSoundEnabled) "आवाज़ बंद करें" else "आवाज़ चालू करें"
                     },
-                    color = if (isSoundEnabled) MandiGreenText else MandiTextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                    tint = if (isSoundEnabled) MandiGreenText else MandiTextMuted,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            // Persistent Thumb-Accessible Video Help Pill
-            if (onOpenHelp != null) {
-                Row(
-                    modifier = Modifier
-                        .clip(soundBtnShape)
-                        .background(MandiSurfaceElevated)
-                        .border(
-                            width = 1.dp,
-                            color = MandiBorder,
-                            shape = soundBtnShape
+            if (onOpenHelp != null || onOpenSettings != null) {
+                Box {
+                    IconButton(
+                        onClick = { isMenuExpanded = true },
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = if (isEnglish) "More options" else "अन्य विकल्प",
+                            tint = MandiTextPrimary
                         )
-                        .clickable { onOpenHelp() }
-                        .padding(horizontal = 9.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayCircle,
-                        contentDescription = if (isEnglish) "Help Guides" else "वीडियो सहायता",
-                        tint = MandiGreenText,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Text(
-                        text = if (isEnglish) "Help" else "सीखें",
-                        color = MandiTextPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    }
+                    DropdownMenu(
+                        expanded = isMenuExpanded,
+                        onDismissRequest = { isMenuExpanded = false }
+                    ) {
+                        if (onOpenHelp != null) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEnglish) "Help & guides" else "सहायता और गाइड") },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    onOpenHelp()
+                                }
+                            )
+                        }
+                        if (onOpenSettings != null) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEnglish) "Settings" else "सेटिंग्स") },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    onOpenSettings()
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }

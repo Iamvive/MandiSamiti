@@ -151,6 +151,7 @@ fun HomeScreen(
                 isSoundEnabled = uiState.isSoundEnabled,
                 onToggleSound = { viewModel.toggleSoundSetting() },
                 isEnglish = uiState.isEnglish,
+                onOpenSettings = { viewModel.selectTab(NavigationTab.SETTINGS) },
                 onOpenHelp = {
                     activeTutorial = when (uiState.currentTab) {
                         NavigationTab.DASHBOARD -> MandiTutorial.DEAL_ENTRY
@@ -210,6 +211,7 @@ fun HomeScreen(
                             onNavigateToSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewEntry = onNavigateToNewEntry,
                             onNavigateToQuotaPlans = onNavigateToQuotaPlans,
+                            onNavigateToSettings = { viewModel.selectTab(NavigationTab.SETTINGS) },
                             onPhoneNeeded = promptAddPhone,
                             needsLogin = needsLogin,
                             isEnglish = uiState.isEnglish

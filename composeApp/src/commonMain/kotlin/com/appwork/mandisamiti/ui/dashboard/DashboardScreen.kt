@@ -105,6 +105,7 @@ fun DashboardScreen(
     onNavigateToSellReceipt: (String) -> Unit = {},
     onNavigateToNewEntry: () -> Unit = onNavigateToBuy,
     onNavigateToQuotaPlans: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onPhoneNeeded: (onAdd: () -> Unit) -> Unit = {},
     needsLogin: Boolean = false,
     isEnglish: Boolean = false,
@@ -253,6 +254,48 @@ fun DashboardScreen(
                         isEnglish = isEnglish,
                         onClick = onNavigateToQuotaPlans
                     )
+                }
+            }
+
+            if (uiState.pendingSyncCount > 0) {
+                item(key = "pending_sync_notice") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onNavigateToSettings),
+                        shape = RoundedCornerShape(14.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MandiTextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isEnglish) "Cloud backup pending" else "ऑनलाइन बैकअप बाकी",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MandiTextPrimary
+                                )
+                                Text(
+                                    text = if (isEnglish) {
+                                        "${uiState.pendingSyncCount} entries waiting. Open Settings to sync."
+                                    } else {
+                                        "${uiState.pendingSyncCount} प्रविष्टियां बाकी। सिंक के लिए सेटिंग्स खोलें।"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MandiTextSecondary
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

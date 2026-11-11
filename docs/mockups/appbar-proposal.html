@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MandiSamiti AppBar proposal</title>
+  <link rel="stylesheet" href="../../../../brand-assets/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--ngdl-bg-canvas); color: var(--ngdl-text-primary); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .stage { min-height: 100vh; padding: 42px 20px; display: grid; place-items: start center; }
+    .layout { width: min(100%, 760px); }
+    .eyebrow { color: var(--ngdl-text-secondary); font-size: 12px; letter-spacing: .11em; text-transform: uppercase; margin: 0 0 8px; }
+    h1 { font-size: clamp(24px, 5vw, 34px); line-height: 1.15; margin: 0; }
+    .intro { color: var(--ngdl-text-secondary); margin: 10px 0 22px; line-height: 1.5; }
+    .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    button { color: var(--ngdl-text-primary); font: inherit; cursor: pointer; }
+    .theme-toggle { border: 1px solid var(--ngdl-border-subtle); background: var(--ngdl-surface-card); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+    .device { margin: auto; max-width: 430px; min-height: 735px; border: 1px solid var(--ngdl-border-active); border-radius: 28px; overflow: hidden; background: var(--ngdl-bg-canvas); box-shadow: var(--ngdl-card-shadow); position: relative; }
+    .statusbar { height: 28px; padding: 7px 22px 0; display:flex; justify-content:space-between; font-size: 11px; font-weight: 600; }
+    .appbar { min-height: 68px; padding: 10px 14px; display:flex; align-items:center; gap: 10px; background: var(--ngdl-surface-card); border-bottom: 1px solid var(--ngdl-border-subtle); }
+    .identity { display:flex; align-items:center; gap: 10px; flex:1; min-width:0; }
+    .avatar { flex:0 0 38px; height:38px; display:grid; place-items:center; border-radius:50%; background:var(--ngdl-surface-elevated); color:var(--ngdl-text-primary); font-weight:700; }
+    .nameblock { min-width:0; }
+    .shop { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .location { color:var(--ngdl-text-secondary); font-size:12px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .right { display:flex; align-items:center; gap:6px; }
+    .sync { display:flex; align-items:center; gap:5px; padding:7px 9px; border-radius:999px; background:color-mix(in srgb, var(--ngdl-status-success) 13%, var(--ngdl-surface-card)); color:var(--ngdl-status-success); font-size:11px; font-weight:650; white-space:nowrap; }
+    .sync svg { width:14px; height:14px; }
+    .iconbtn { height:38px; min-width:38px; display:grid; place-items:center; border:1px solid var(--ngdl-border-subtle); border-radius:12px; background:var(--ngdl-surface-elevated); }
+    .iconbtn svg { width:18px; height:18px; }
+    .overflow { position:relative; }
+    .menu { display:none; position:absolute; z-index:5; right:0; top:44px; width:190px; padding:6px; border:1px solid var(--ngdl-border-subtle); border-radius:14px; background:var(--ngdl-surface-card); box-shadow:var(--ngdl-card-shadow); }
+    .menu.open { display:block; }
+    .menu button { display:block; width:100%; text-align:left; padding:11px 10px; background:transparent; border:0; border-radius:9px; font-size:13px; }
+    .menu button:hover { background:var(--ngdl-surface-elevated); }
+    .content { padding:18px 16px 84px; }
+    .hello { font-size:13px; color:var(--ngdl-text-secondary); }
+    .date { margin-top:4px; font-size:20px; font-weight:700; }
+    .hero { margin-top:18px; padding:18px; border:1px solid var(--ngdl-border-subtle); border-radius:18px; background:var(--ngdl-surface-card); box-shadow:var(--ngdl-card-shadow); }
+    .hero-label { color:var(--ngdl-text-secondary); font-size:12px; }
+    .hero-value { font-size:28px; font-weight:750; margin:6px 0 16px; }
+    .cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .metric { padding:14px; border-radius:14px; background:var(--ngdl-surface-elevated); }
+    .metric-label { color:var(--ngdl-text-secondary); font-size:11px; }
+    .metric-value { margin-top:7px; font-size:17px; font-weight:700; }
+    .action { display:flex; align-items:center; gap:10px; margin-top:14px; padding:14px; background:var(--ngdl-surface-card); border:1px solid var(--ngdl-border-subtle); border-radius:15px; box-shadow:var(--ngdl-card-shadow); font-size:13px; }
+    .action strong { display:block; font-size:14px; margin-bottom:3px; }
+    .action small { color:var(--ngdl-text-secondary); }
+    .bottom { position:absolute; bottom:0; left:0; right:0; height:66px; background:var(--ngdl-surface-card); border-top:1px solid var(--ngdl-border-subtle); display:flex; justify-content:space-around; align-items:center; color:var(--ngdl-text-secondary); font-size:10px; }
+    .bottom span { text-align:center; }
+    .bottom b { display:block; color:var(--ngdl-text-primary); font-size:18px; margin-bottom:2px; font-weight:500; }
+    .caption { max-width:430px; margin:12px auto 0; color:var(--ngdl-text-secondary); font-size:12px; line-height:1.45; }
+    @media (max-width:390px) { .stage { padding:24px 0; } .device { width:100%; border-radius:0; min-height:100vh; border-left:0; border-right:0; } .appbar { gap:6px; padding-inline:10px; } .sync { padding:7px; font-size:0; } .sync svg { width:17px; height:17px; } .right { gap:5px; } }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="layout">
+      <p class="eyebrow">MandiSamiti · AppBar concept</p>
+      <h1>A quieter header for the shop.</h1>
+      <p class="intro">A compact header for the daily trading workflow: shop identity, sound preference, and secondary help. Sync stays in Settings.</p>
+      <div class="toolbar"><button class="theme-toggle" id="theme">Switch to dark</button></div>
+      <div class="device" aria-label="MandiSamiti dashboard mockup">
+        <div class="statusbar"><span>9:41</span><span>●●● ▰</span></div>
+        <header class="appbar">
+          <div class="identity">
+            <div class="avatar" aria-hidden="true">अ</div>
+            <div class="nameblock"><div class="shop">अग्रवाल ट्रेडर्स</div><div class="location">अनाज मंडी · मथुरा</div></div>
+          </div>
+          <div class="right">
+            <button class="iconbtn" aria-label="Soundbox enabled" title="Soundbox enabled">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            </button>
+            <div class="overflow">
+              <button class="iconbtn" id="more" aria-label="More options" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+              </button>
+              <div class="menu" id="menu"><button>Help &amp; guides</button><button>Shop settings</button></div>
+            </div>
+          </div>
+        </header>
+        <div class="content">
+          <div class="hello">नमस्ते, अग्रवाल ट्रेडर्स</div><div class="date">आज का हिसाब</div>
+          <section class="hero"><div class="hero-label">आज का कारोबार</div><div class="hero-value">₹ 1,24,500</div><div class="cards"><div class="metric"><div class="metric-label">खरीद</div><div class="metric-value">₹ 78,000</div></div><div class="metric"><div class="metric-label">बिक्री</div><div class="metric-value">₹ 46,500</div></div></div></section>
+          <div class="action"><span aria-hidden="true">＋</span><div><strong>नई एंट्री</strong><small>खरीद, बिक्री या उधार दर्ज करें</small></div></div>
+          <div class="action"><span aria-hidden="true">▤</span><div><strong>हाल की पर्चियाँ</strong><small>आज की 8 पर्चियाँ देखें</small></div></div>
+        </div>
+        <nav class="bottom" aria-label="Main navigation"><span><b>⌂</b>होम</span><span><b>▤</b>पर्ची</span><span><b>▥</b>गोडाउन</span><span><b>₹</b>गल्ला</span></nav>
+      </div>
+      <p class="caption">Concept notes: shop name stays on one line; sync stays in Settings; show a temporary dashboard notice only when sync needs attention; sound remains a one-tap preference toggle; help and secondary actions sit in the overflow menu. Mock dashboard values are illustrative.</p>
+    </section>
+  </main>
+  <script>
+    const root = document.documentElement;
+    const themeButton = document.getElementById('theme');
+    themeButton.addEventListener('click', () => {
+      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      themeButton.textContent = next === 'light' ? 'Switch to dark' : 'Switch to light';
+    });
+    const more = document.getElementById('more');
+    const menu = document.getElementById('menu');
+    more.addEventListener('click', () => {
+      const open = menu.classList.toggle('open');
+      more.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.overflow')) { menu.classList.remove('open'); more.setAttribute('aria-expanded', 'false'); }
+    });
+  </script>
+</body>
+</html>
