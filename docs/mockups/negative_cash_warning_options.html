@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="hi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mandi Cash Drawer - Negative Cash Warning Design Options</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; }
+    .tnum { font-feature-settings: "tnum"; }
+    .tap-scale { transition: transform 0.1s ease; }
+    .tap-scale:active { transform: scale(0.97); }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 p-4 md:p-8 min-h-screen">
+  <div class="max-w-6xl mx-auto space-y-8">
+    
+    <!-- HEADER -->
+    <div class="space-y-2 border-b border-neutral-800 pb-4">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Design Exploration</span>
+        <span class="text-neutral-500 text-xs">• MandiSamiti Cash Drawer (Galla Rokad)</span>
+      </div>
+      <h1 class="text-2xl font-black tracking-tight text-white">Negative Cash Warning Options</h1>
+      <p class="text-sm text-neutral-400 max-w-2xl">
+        When cash in drawer is negative (usually because morning opening cash wasn't entered yet), how should we guide the trader without cluttering the screen or looking like an ugly system error?
+      </p>
+    </div>
+
+    <!-- 3 OPTIONS SIDE-BY-SIDE -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- OPTION A: INLINE HERO PILL -->
+      <div class="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-4 flex flex-col justify-between hover:border-amber-500/40 transition">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Option A</span>
+            <span class="text-[11px] text-neutral-400 font-semibold">Zero Extra Height</span>
+          </div>
+          <h2 class="text-lg font-bold text-white">Inline Status Pill</h2>
+          <p class="text-xs text-neutral-400 leading-relaxed">
+            Replaces the passive "Physical cash not counted" pill with an amber interactive chip right next to the negative amount. Zero vertical space added to the card.
+          </p>
+          
+          <!-- PHONE PREVIEW CARD -->
+          <div class="mt-4 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-3">
+            <div class="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Device Mockup Preview</div>
+            
+            <!-- SUMMARY CARD -->
+            <div class="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2 shadow-md">
+              <div class="flex items-center justify-between text-xs">
+                <span class="px-2 py-0.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 font-medium text-[11px]">📅 Today, 11 Nov ▾</span>
+                <span class="text-neutral-500">⋮</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    CASH IN DRAWER
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-xl font-black text-rose-400 tnum">-₹39,004</span>
+                    <!-- AMBER ACTION PILL -->
+                    <button class="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold text-[10px] flex items-center gap-1 hover:bg-amber-500/25 tap-scale">
+                      <span>✏️ शुरुआती रोकड़</span>
+                    </button>
+                  </div>
+                </div>
+                <button class="px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs">
+                  Count cash →
+                </button>
+              </div>
+            </div>
+
+            <!-- MINI TABLE SNIPPET -->
+            <div class="p-2 rounded-xl bg-neutral-900/40 border border-neutral-850 text-[11px] text-neutral-400 flex justify-between">
+              <span>Receipts (Jama)</span>
+              <span>Payments (Naame)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-neutral-800/80 text-xs space-y-1 text-neutral-400">
+          <div class="text-emerald-400 font-medium">✓ Card stays strictly ~68dp high</div>
+          <div class="text-emerald-400 font-medium">✓ 1-tap direct access to Bohani dialog</div>
+          <div class="text-neutral-400">Takes width beside the balance amount</div>
+        </div>
+      </div>
+
+      <!-- OPTION B: BAHI FIRST-ROW ANCHOR (RECOMMENDED BY PM) -->
+      <div class="rounded-2xl border-2 border-emerald-500/40 bg-neutral-900/80 p-5 space-y-4 flex flex-col justify-between relative shadow-lg shadow-emerald-950/20">
+        <div class="absolute -top-3 right-4 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500 text-neutral-950">
+          Cred PM Pick
+        </div>
+        
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Option B</span>
+            <span class="text-[11px] text-emerald-400 font-semibold">Contextual & Authentic</span>
+          </div>
+          <h2 class="text-lg font-bold text-white">Bahi First-Row Callout</h2>
+          <p class="text-xs text-neutral-400 leading-relaxed">
+            Keeps the top hero card 100% clean with no error text. Instead, highlights the authentic <span class="text-neutral-200 font-semibold">बाकी निकाला (Opening Cash)</span> row inside the Bahi table with an amber action banner.
+          </p>
+
+          <!-- PHONE PREVIEW CARD -->
+          <div class="mt-4 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-3">
+            <div class="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Device Mockup Preview</div>
+            
+            <!-- CLEAN SUMMARY CARD -->
+            <div class="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2 shadow-md">
+              <div class="flex items-center justify-between text-xs">
+                <span class="px-2 py-0.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 font-medium text-[11px]">📅 Today, 11 Nov ▾</span>
+                <span class="text-neutral-500">⋮</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    CASH IN DRAWER
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-xl font-black text-white tnum">-₹39,004</span>
+                    <span class="text-[10px] text-neutral-400 bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">Not counted</span>
+                  </div>
+                </div>
+                <button class="px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs">
+                  Count cash →
+                </button>
+              </div>
+            </div>
+
+            <!-- BAHI TABLE HIGHLIGHTING OPENING ROW -->
+            <div class="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden text-xs">
+              <div class="grid grid-cols-2 bg-neutral-950 p-2 border-b border-neutral-800 text-[11px] font-bold">
+                <span class="text-emerald-400">● Receipts (जमा)</span>
+                <span class="text-rose-400 pl-2">● Payments (नामे)</span>
+              </div>
+              <!-- FIRST ROW: HIGHLIGHTED BOHANI CALLOUT -->
+              <div class="p-2.5 bg-amber-500/10 border-b border-amber-500/30 flex items-center justify-between">
+                <div>
+                  <div class="text-[10px] uppercase font-extrabold text-amber-400 flex items-center gap-1">
+                    <span>⚡ बाकी निकाला</span>
+                    <span class="text-[9px] text-amber-500/80 font-normal">(सुबह की रोकड़ बाकी)</span>
+                  </div>
+                  <div class="font-extrabold text-sm text-amber-300 tnum">₹0</div>
+                </div>
+                <button class="px-2.5 py-1 rounded-lg bg-amber-500 text-neutral-950 font-bold text-xs hover:bg-amber-400 shadow-sm tap-scale">
+                  + रोकड़ डालें
+                </button>
+              </div>
+              <div class="p-2 text-[10px] text-neutral-500 flex justify-between">
+                <span>Vivek (+₹8,445)</span>
+                <span>Manoj (-₹10,000)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-neutral-800/80 text-xs space-y-1 text-neutral-400">
+          <div class="text-emerald-400 font-medium">✓ 100% true to Bahi Khata tradition</div>
+          <div class="text-emerald-400 font-medium">✓ Fixes the exact missing number right where it lives</div>
+          <div class="text-emerald-400 font-medium">✓ Hero card stays calm, uncluttered & premium</div>
+        </div>
+      </div>
+
+      <!-- OPTION C: INTEGRATED AMBER BANNER STRIP -->
+      <div class="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-4 flex flex-col justify-between hover:border-amber-500/40 transition">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Option C</span>
+            <span class="text-[11px] text-neutral-400 font-semibold">Subtle Bottom Ribbon</span>
+          </div>
+          <h2 class="text-lg font-bold text-white">Attached Alert Ribbon</h2>
+          <p class="text-xs text-neutral-400 leading-relaxed">
+            Attaches a slim, integrated amber ribbon seamlessly to the bottom edge of the hero card with a direct "Fix" action button.
+          </p>
+
+          <!-- PHONE PREVIEW CARD -->
+          <div class="mt-4 p-3 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-3">
+            <div class="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Device Mockup Preview</div>
+            
+            <!-- CARD WITH ATTACHED RIBBON -->
+            <div class="rounded-xl bg-neutral-900 border border-amber-500/30 overflow-hidden shadow-md">
+              <div class="p-3 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="px-2 py-0.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 font-medium text-[11px]">📅 Today, 11 Nov ▾</span>
+                  <span class="text-neutral-500">⋮</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                      <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                      CASH IN DRAWER
+                    </div>
+                    <div class="text-xl font-black text-rose-400 tnum mt-0.5">-₹39,004</div>
+                  </div>
+                  <button class="px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs">
+                    Count cash →
+                  </button>
+                </div>
+              </div>
+              <!-- ATTACHED SLIM RIBBON -->
+              <div class="bg-amber-500/15 border-t border-amber-500/20 px-3 py-1.5 flex items-center justify-between text-[11px]">
+                <span class="text-amber-300 font-medium flex items-center gap-1">
+                  <span>⚠️</span> शुरुआती रोकड़ दर्ज नहीं है
+                </span>
+                <button class="text-amber-300 hover:text-white font-bold underline tap-scale">
+                  अभी दर्ज करें →
+                </button>
+              </div>
+            </div>
+
+            <!-- MINI TABLE SNIPPET -->
+            <div class="p-2 rounded-xl bg-neutral-900/40 border border-neutral-850 text-[11px] text-neutral-400 flex justify-between">
+              <span>Receipts (Jama)</span>
+              <span>Payments (Naame)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-neutral-800/80 text-xs space-y-1 text-neutral-400">
+          <div class="text-emerald-400 font-medium">✓ Highly noticeable without being aggressive</div>
+          <div class="text-neutral-400">Adds ~24dp to the hero card height</div>
+          <div class="text-neutral-400">Can feel like a permanent banner if ignored</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PM ARCHITECTURE / CODE VISUAL COMPARISON -->
+    <div class="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-6 space-y-4">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Architecture & Component Responsibility</h3>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div class="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1">
+          <div class="font-bold text-amber-400">Option A Code Impact</div>
+          <div class="text-neutral-400 font-mono text-[11px]">DrawerSummaryCard.kt</div>
+          <p class="text-neutral-400">Mutates <code>drawer-status-chip</code> when <code>state.isNegativeCash</code>. No changes to table or screen scaffolding.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-neutral-950 border border-emerald-500/40 space-y-1">
+          <div class="font-bold text-emerald-400">Option B Code Impact (Recommended)</div>
+          <div class="text-neutral-400 font-mono text-[11px]">DailyCashRegisterScreen.kt</div>
+          <p class="text-neutral-400">Decorates <code>BahiAnchorRow</code> with amber container when <code>openingCashPaisa == 0L &amp;&amp; isNegativeCash</code>. Completely removes warning from <code>DrawerSummaryCard</code>.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1">
+          <div class="font-bold text-amber-400">Option C Code Impact</div>
+          <div class="text-neutral-400 font-mono text-[11px]">DrawerSummaryCard.kt</div>
+          <p class="text-neutral-400">Appends attached bottom bar to card layout when <code>state.isNegativeCash</code>. Adds 24dp vertical card height.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
