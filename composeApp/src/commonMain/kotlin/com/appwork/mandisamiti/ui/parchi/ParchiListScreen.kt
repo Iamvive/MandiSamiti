@@ -24,23 +24,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Agriculture
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,10 +58,20 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
+import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiGreenBorder
+import com.appwork.mandisamiti.ui.theme.MandiGreenLight
+import com.appwork.mandisamiti.ui.theme.MandiGreenText
+import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
+import com.appwork.mandisamiti.ui.theme.MandiRedBorder
+import com.appwork.mandisamiti.ui.theme.MandiRedLight
+import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
@@ -90,10 +108,12 @@ fun ParchiListScreen(
     buys: List<BuyEntry>,
     sells: List<SellEntry>,
     partyNamesById: Map<String, String>,
+    gallaCashPaisa: Long = 0L,
     onOpenBuyReceipt: (String) -> Unit,
     onOpenSellReceipt: (String) -> Unit,
     onNavigateToNewBuy: () -> Unit,
     onNavigateToNewSell: () -> Unit,
+    onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -193,7 +213,9 @@ fun ParchiListScreen(
                     0 -> KisaanParchiView(
                         buys = buys,
                         partyNamesById = partyNamesById,
+                        gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenBuyReceipt,
+                        onSettleBuySlipCash = onSettleBuySlipCash,
                         isEnglish = isEnglish
                     )
                     1 -> VyapariParchiView(
@@ -212,7 +234,9 @@ fun ParchiListScreen(
 private fun KisaanParchiView(
     buys: List<BuyEntry>,
     partyNamesById: Map<String, String>,
+    gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
+    onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
     isEnglish: Boolean
 ) {
     val nonVoidBuys = remember(buys) { buys.filter { !it.isVoid } }
@@ -224,6 +248,8 @@ private fun KisaanParchiView(
     val totalNetProcuredPaisa = remember(nonVoidBuys) { nonVoidBuys.sumOf { it.netPayablePaisa } }
     val totalGrossPaisa = remember(nonVoidBuys) { nonVoidBuys.sumOf { it.grossPaisa } }
     val totalWeightGrams = remember(nonVoidBuys) { nonVoidBuys.sumOf { it.totalWeightGrams } }
+
+    var settlingBuy by remember { mutableStateOf<BuyEntry?>(null) }
 
     val dateGroupedEntries = remember(nonVoidBuys) {
         nonVoidBuys
@@ -288,11 +314,26 @@ private fun KisaanParchiView(
                         buy = buy,
                         farmerName = partyNamesById[buy.farmerId] ?: buy.farmerId,
                         onOpenReceipt = { onOpenReceipt(buy.id) },
+                        onSettleCash = { settlingBuy = buy },
                         isEnglish = isEnglish
                     )
                 }
             }
         }
+    }
+
+    settlingBuy?.let { buy ->
+        FarmerSlipCashSettlementSheet(
+            buy = buy,
+            farmerName = partyNamesById[buy.farmerId] ?: buy.farmerId,
+            gallaCashPaisa = gallaCashPaisa,
+            onDismiss = { settlingBuy = null },
+            onConfirmPayment = { amountPaisa ->
+                onSettleBuySlipCash?.invoke(buy.id, amountPaisa)
+                settlingBuy = null
+            },
+            isEnglish = isEnglish
+        )
     }
 }
 
@@ -463,15 +504,16 @@ private fun KisaanSlipCard(
     buy: BuyEntry,
     farmerName: String,
     onOpenReceipt: () -> Unit,
+    onSettleCash: (() -> Unit)? = null,
     isEnglish: Boolean
 ) {
-    // Slip amount WITHOUT majdoori and commission:
-    // This is grossPaisa (base weight x rate)
-    val baseValueWithoutChargesPaisa = buy.grossPaisa
     val displayFarmerName = farmerName.ifBlank { if (isEnglish) "Farmer" else "किसान" }
     val cropLabel = buy.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
     val quintals = MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)
     val rateRupees = buy.ratePaisaPerQuintal / 100
+    val isFullyPaid = buy.paidPaisa >= buy.netPayablePaisa
+    val remainingPaisa = (buy.netPayablePaisa - buy.paidPaisa).coerceAtLeast(0L)
+    val remainingRupees = remainingPaisa / 100
 
     Card(
         modifier = Modifier
@@ -487,61 +529,127 @@ private fun KisaanSlipCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Header Row: Farmer Name & Slip # (Left), Net Amount & Status Badge (Right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = displayFarmerName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MandiSurfaceElevated
+                        ) {
+                            Text(
+                                text = "#${slipLabel(buy.slipNo, buy.id)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MandiTextSecondary,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        text = displayFarmerName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "पर्चा #${slipLabel(buy.slipNo, buy.id)}",
+                        text = "$cropLabel • ${buy.bagsCount} बोरी ($quintals Q @ ₹${MandiMathEngine.formatIndianGrouping(rateRupees)}/Q)",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MandiTextMuted
+                        color = MandiTextSecondary
                     )
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "₹${MandiMathEngine.formatIndianGrouping(baseValueWithoutChargesPaisa / 100)}",
+                        text = "₹${MandiMathEngine.formatIndianGrouping(buy.netPayablePaisa / 100)}",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiPrimaryAction
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MandiTextPrimary
                     )
-                    Text(
-                        text = if (isEnglish) "Base (excl. cuts)" else "बिना मजदूरी/कमीशन",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        color = MandiTextMuted
-                    )
+                    Spacer(Modifier.height(2.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = when {
+                            isFullyPaid -> MandiGreenLight
+                            buy.paidPaisa > 0 -> MandiAmberLight
+                            else -> MandiRedLight
+                        },
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            when {
+                                isFullyPaid -> MandiGreenBorder
+                                buy.paidPaisa > 0 -> MandiAmberBorder
+                                else -> MandiRedBorder
+                            }
+                        )
+                    ) {
+                        Text(
+                            text = when {
+                                isFullyPaid -> if (isEnglish) "✓ Paid" else "✓ चुक्ता"
+                                else -> if (isEnglish) "Due ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}" else "बाकी ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                isFullyPaid -> MandiGreenText
+                                buy.paidPaisa > 0 -> MandiAmberDark
+                                else -> MandiRedText
+                            },
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "$cropLabel • ${buy.bagsCount} बोरी • $quintals क्विंटल",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MandiTextSecondary
-                )
-                Text(
-                    text = "@ ₹${MandiMathEngine.formatIndianGrouping(rateRupees)}/Q",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MandiTextMuted
-                )
+            // Bottom Action Row if unpaid / partial
+            if (!isFullyPaid && onSettleCash != null) {
+                HorizontalDivider(color = MandiBorder, thickness = 1.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (buy.paidPaisa > 0) {
+                        Text(
+                            text = if (isEnglish) "Paid: ₹${MandiMathEngine.formatIndianGrouping(buy.paidPaisa / 100)}" else "पूर्व भुगतान: ₹${MandiMathEngine.formatIndianGrouping(buy.paidPaisa / 100)}",
+                            fontSize = 11.sp,
+                            color = MandiTextSecondary
+                        )
+                    } else {
+                        Text(
+                            text = if (isEnglish) "Tap card for details" else "विवरण देखने के लिए पर्चा खोलें",
+                            fontSize = 11.sp,
+                            color = MandiTextMuted
+                        )
+                    }
+
+                    Button(
+                        onClick = onSettleCash,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiNavy,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Pay Cash →" else "नकद दें →",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
