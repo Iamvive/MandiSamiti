@@ -23,7 +23,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.alpha
+import com.appwork.mandisamiti.domain.model.Party
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -834,6 +844,128 @@ private fun VyapariSlipCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ParchiSearchBox(query: String, onQueryChange: (String) -> Unit, isEnglish: Boolean) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        singleLine = true,
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MandiTextMuted) },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = if (isEnglish) "Clear search" else "खोज साफ़ करें",
+                        tint = MandiTextMuted
+                    )
+                }
+            }
+        },
+        placeholder = {
+            Text(
+                if (isEnglish) "Search name, village or phone" else "नाम, गाँव या फ़ोन खोजें",
+                color = MandiTextMuted
+            )
+        },
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    )
+}
+
+@Composable
+private fun PartySearchSummary(
+    name: String,
+    village: String?,
+    phone: String?,
+    unpaidCount: Int,
+    totalDuePaisa: Long,
+    isReceivable: Boolean,
+    isEnglish: Boolean
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MandiSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MandiTextPrimary)
+                val sub = listOfNotNull(village, phone).joinToString(" · ")
+                if (sub.isNotEmpty()) Text(sub, fontSize = 12.sp, color = MandiTextMuted)
+                Text(
+                    if (isEnglish) "$unpaidCount unpaid slips" else "$unpaidCount पर्ची बाकी",
+                    fontSize = 12.sp,
+                    color = MandiTextMuted
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    if (isReceivable) {
+                        if (isEnglish) "Total to receive" else "कुल लेना है"
+                    } else {
+                        if (isEnglish) "Total to pay" else "कुल देना है"
+                    },
+                    fontSize = 12.sp,
+                    color = MandiTextMuted
+                )
+                Text(
+                    "₹${MandiMathEngine.formatIndianGrouping(totalDuePaisa / 100)}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = MandiTextPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaidSlipsFold(count: Int, expanded: Boolean, onToggle: () -> Unit, isEnglish: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, MandiBorder, RoundedCornerShape(12.dp))
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (isEnglish) "Paid slips ($count)" else "चुक्ता पर्ची ($count)",
+            fontSize = 13.sp,
+            color = MandiTextMuted
+        )
+        Icon(
+            if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MandiTextMuted
+        )
+    }
+}
+
+@Composable
+private fun SearchEmptyState(isEnglish: Boolean) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (isEnglish) "No slips found for this name or phone" else "इस नाम/फ़ोन से कोई पर्ची नहीं मिली",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MandiTextMuted
+        )
     }
 }
 
