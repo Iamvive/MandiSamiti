@@ -17,7 +17,13 @@ internal fun drawerCashFingerprint(transactions: List<CashTransaction>, endMs: L
 
 internal val drawerMovementTypes = setOf(TransactionType.JAMA_RECEIVED, TransactionType.INTEREST_RECEIVED, TransactionType.UDHAR_GIVEN)
 
-internal val drawerDenominations = listOf(500, 200, 100, 50, 20, 10, 5, 2, 1)
+internal val drawerDenominations = listOf(2000, 500, 200, 100, 50, 20, 10, 5, 2, 1)
+
+internal fun adjustDenomination(current: Map<Int, String>, denomination: Int, delta: Int): Map<Int, String> {
+    val existing = current[denomination]?.trim()?.toLongOrNull() ?: 0L
+    val updated = (existing + delta).coerceAtLeast(0L)
+    return current + (denomination to updated.toString())
+}
 
 internal fun parseDrawerRupees(value: String): Long? = value.trim().let { text ->
     if (text.isEmpty() || text.any { it !in '0'..'9' }) null
