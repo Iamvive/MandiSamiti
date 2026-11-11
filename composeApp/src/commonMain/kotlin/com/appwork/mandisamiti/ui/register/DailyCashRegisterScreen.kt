@@ -485,24 +485,24 @@ fun DailyCashRegisterScreen(
                                 color = MandiTextSecondary
                             )
                             Text(
-                                text = "₹${MandiMathEngine.paisaToRupeesString(totalJamaSidePaisa)}",
-                                fontSize = 13.sp,
+                                text = "+₹${MandiMathEngine.paisaToRupeesString(totalJamaSidePaisa)}",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiTextPrimary
+                                color = MandiGreenReceivable
                             )
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = if (isEnglish) "Total out (cash)" else "कुल नामे (नकद)",
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 color = MandiTextSecondary
                             )
                             Text(
-                                text = "₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashOutPaisa)}",
-                                fontSize = 13.sp,
+                                text = "−₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashOutPaisa)}",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MandiTextPrimary
+                                color = MandiRedPayable
                             )
                         }
                     }
@@ -953,7 +953,8 @@ private fun BahiTransactionItem(
             fontWeight = FontWeight.SemiBold, maxLines = if (isCompact) 2 else 3, overflow = TextOverflow.Ellipsis)
         Text(
             text = "${if (isDeposit) "+" else "−"}₹$amountStr",
-            fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary,
+            fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold,
+            color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
             textDecoration = if (isVoid) TextDecoration.LineThrough else null,
         )
         val meta = listOfNotNull(item.village?.takeIf { it.isNotBlank() },
@@ -1001,7 +1002,7 @@ private fun BahiAnchorRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, fontSize = 12.sp, lineHeight = 16.sp, color = MandiTextSecondary)
             Text(MandiCurrencyFormatter.formatRupees(amountPaisa), fontSize = 16.sp, lineHeight = 20.sp,
-                fontWeight = FontWeight.Bold, color = MandiTextPrimary)
+                fontWeight = FontWeight.Bold, color = color)
         }
         if (actionLabel != null && onClick != null) {
             IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
