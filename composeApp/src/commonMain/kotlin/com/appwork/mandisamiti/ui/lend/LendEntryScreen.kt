@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,9 +79,13 @@ fun LendEntryScreen(
     parties: List<Party> = emptyList(),
     lendRepository: LendRepository? = null,
     isEnglish: Boolean = false,
+    grainOnly: Boolean = false,
     formState: LendEntryFormState = remember { LendEntryFormState() },
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(grainOnly) {
+        if (grainOnly) formState.lendType = LendType.GRAIN
+    }
     var showCustomDatePicker by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
@@ -135,7 +140,16 @@ fun LendEntryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEnglish) "Record Loan / Advance" else "उधार दर्ज करें (Lend)") },
+                title = {
+                    Text(
+                        when {
+                            grainOnly && isEnglish -> "Record Grain Loan"
+                            grainOnly -> "अनाज का उधार दर्ज करें"
+                            isEnglish -> "Record Loan / Advance"
+                            else -> "उधार दर्ज करें (Lend)"
+                        }
+                    )
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -178,7 +192,11 @@ fun LendEntryScreen(
                         enabled = canSave,
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text(if (canSave) (if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें") else disabledReason)
+                        Text(
+                            if (!canSave) disabledReason
+                            else if (grainOnly) (if (isEnglish) "Save grain loan" else "अनाज उधार सुरक्षित करें")
+                            else if (isEnglish) "Save Loan / Advance" else "उधार सुरक्षित करें"
+                        )
                     }
                 }
             }
@@ -192,18 +210,22 @@ fun LendEntryScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(if (isEnglish) "Lend Type" else "उधार का प्रकार (Lend Type)")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = isMoney,
-                    onClick = { formState.lendType = LendType.MONEY },
-                    label = { Text(if (isEnglish) "Cash / Money" else "रुपये / नकद (Money)") }
-                )
-                FilterChip(
-                    selected = !isMoney,
-                    onClick = { formState.lendType = LendType.GRAIN },
-                    label = { Text(if (isEnglish) "Grain / Commodity" else "अनाज (Grain)") }
-                )
+            if (!grainOnly) {
+                Text(if (isEnglish) "Lend Type" else "उधार का प्रकार (Lend Type)")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = isMoney,
+                        onClick = { formState.lendType = LendType.MONEY },
+                        label = { Text(if (isEnglish) "Cash / Money" else "रुपये / नकद (Money)") }
+                    )
+                    FilterChip(
+                        selected = !isMoney,
+                        onClick = { formState.lendType = LendType.GRAIN },
+                        label = { Text(if (isEnglish) "Grain / Commodity" else "अनाज (Grain)") }
+                    )
+                }
+            } else {
+                Text(if (isEnglish) "Grain loan" else "अनाज का उधार")
             }
 
             // Phone-first party block

@@ -7,6 +7,7 @@ import com.appwork.mandisamiti.ui.sell.SellEntryScreen
 import com.appwork.mandisamiti.ui.sell.SellTransactionsListScreen
 import com.appwork.mandisamiti.ui.sell.SellTransactionReceiptScreen
 import com.appwork.mandisamiti.ui.lend.LendEntryScreen
+import com.appwork.mandisamiti.ui.lend.LoanAdvanceEntryScreen
 import com.appwork.mandisamiti.ui.lend.LendTransactionsListScreen
 import com.appwork.mandisamiti.ui.expense.ExpenseEntryScreen
 import com.appwork.mandisamiti.ui.expense.labelHi
@@ -85,6 +86,7 @@ sealed interface Screen {
     data object SellList : Screen
     data class SellReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data object LendEntry : Screen
+    data class GrainLendEntry(val returnScreen: Screen = Screen.LendEntry) : Screen
     data object LendList : Screen
     data class ExpenseEntry(val existingId: String? = null) : Screen
     data object ExpenseList : Screen
@@ -101,6 +103,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.SellReceipt -> returnScreen ?: Screen.SellList
     is Screen.SellList -> Screen.Home
     is Screen.LendEntry -> Screen.LendList
+    is Screen.GrainLendEntry -> returnScreen
     is Screen.LendList -> Screen.Home
     is Screen.ExpenseEntry -> if (existingId != null) Screen.ExpenseList else Screen.Home
     is Screen.ExpenseList -> Screen.ExpenseEntry()
@@ -744,12 +747,12 @@ fun App(
             }
             is Screen.LendEntry -> {
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
-                LendEntryScreen(
+                LoanAdvanceEntryScreen(
                     shopId = shopId ?: "",
                     parties = parties,
                     lendRepository = lendRepo,
                     isEnglish = tradeSettings?.isEnglish ?: false,
-                    onSaved = { entry, party ->
+                    onLoanGiven = { entry, party ->
                         coroutineScope.launch {
                             if (party != null) {
                                 partyRepo.saveParty(party)
@@ -773,6 +776,33 @@ fun App(
                                     )
                                 )
                             }
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.LendList
+                        }
+                    },
+                    onLoanReceived = { transaction, party ->
+                        coroutineScope.launch {
+                            if (party != null) partyRepo.saveParty(party)
+                            cashRepo.recordTransaction(transaction)
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = Screen.Home
+                        }
+                    },
+                    onBack = { currentScreen = screen.backTarget() }
+                )
+            }
+            is Screen.GrainLendEntry -> {
+                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
+                LendEntryScreen(
+                    shopId = shopId ?: "",
+                    parties = parties,
+                    lendRepository = lendRepo,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
+                    grainOnly = true,
+                    onSaved = { entry, party ->
+                        coroutineScope.launch {
+                            if (party != null) partyRepo.saveParty(party)
+                            lendRepo.saveLendEntry(entry)
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = Screen.LendList
                         }
