@@ -21,7 +21,7 @@
 Based on Anthropic's "Effective harnesses for long-running agents". Files at the repo root: `FEATURES.json`, `PROGRESS.md`, `init.sh`.
 1. **Start:** read `vaults/Vivek-K/wiki/hot.md`, then `PROGRESS.md` and `git log -5`. Run `./init.sh`. If the base state is broken (tests fail, dirty tree you did not make), fix that first.
 2. **Pick one** `failing` feature from `FEATURES.json`. Work on that one only.
-3. **Edit rules for `FEATURES.json`:** change only `status` and `evidence` of existing entries. Never delete or reword one. New features go at the end.
+3. **Edit rules for `FEATURES.json`:** change only `status` and `evidence` of existing entries. Never delete or reword one. New features go at the end. If a device or pilot check (e.g. clean-install defaults, smoke test, recovery drill) is executed, add it as a new feature at the end if not already listed so its evidence is permanently preserved.
 4. **Mark `passing` only with evidence:** a test run, or a Redmi `d93c743` check with the date. If you cannot check on a device, leave it `failing` and say what is unverified.
-5. **End:** leave the tree clean and committed, append one entry to `PROGRESS.md` (date, AI, done, next). `hot.md` still needs Vivek's approval (section 1).
+5. **End (MANDATORY):** append one entry to `PROGRESS.md` (date, AI runtime, what changed, evidence, next). Never finish a session without logging to `PROGRESS.md` and syncing `FEATURES.json`. Leave the tree clean and committed. `hot.md` still needs Vivek's approval (section 1).
 6. Section 1 still applies: build the feature first, write tests once it is final.
