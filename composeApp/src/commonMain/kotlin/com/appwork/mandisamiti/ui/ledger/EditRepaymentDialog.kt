@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -108,7 +110,7 @@ fun EditRepaymentDialog(
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (isReadOnlyAmount) {
@@ -242,7 +244,7 @@ fun EditRepaymentDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(amountPaisa, dateMs) },
-                enabled = preview != null && preview.changes.isNotEmpty() && errorCode == null,
+                enabled = amountPaisa > 0L && preview != null && preview.changes.isNotEmpty() && errorCode == null,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MandiBtnSuccessBg,
                     contentColor = MandiBtnSuccessFg

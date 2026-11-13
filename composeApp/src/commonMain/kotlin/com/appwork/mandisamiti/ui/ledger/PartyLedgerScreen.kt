@@ -1287,23 +1287,20 @@ fun PartyLedgerScreen(
     }
 
     editingSettlement?.let { s ->
-        val loan = uiState.openLoans.find { it.lend.id == s.lendId }
-        if (loan == null) {
-            editingSettlement = null
-        } else {
-            EditRepaymentDialog(
-                settlement = s,
-                isEnglish = isEnglish,
-                preview = uiState.repaymentEditPreview,
-                errorCode = uiState.repaymentEditError,
-                onPreview = { amount, at -> viewModel.previewRepaymentEdit(s.lendId, s.id, amount, at, loan.monthlyRatePercent) },
-                onConfirm = { amount, at ->
-                    viewModel.editRepayment(s.id, amount, at, loan.monthlyRatePercent)
-                    editingSettlement = null
-                },
-                onDismiss = { viewModel.clearRepaymentEdit(); editingSettlement = null },
-            )
-        }
+        // Same rate the open-loan list uses; settled loans are not in openLoans but can still be edited.
+        val rate = uiState.party?.monthlyInterestRate ?: uiState.defaultMonthlyRatePercent
+        EditRepaymentDialog(
+            settlement = s,
+            isEnglish = isEnglish,
+            preview = uiState.repaymentEditPreview,
+            errorCode = uiState.repaymentEditError,
+            onPreview = { amount, at -> viewModel.previewRepaymentEdit(s.lendId, s.id, amount, at, rate) },
+            onConfirm = { amount, at ->
+                viewModel.editRepayment(s.id, amount, at, rate)
+                editingSettlement = null
+            },
+            onDismiss = { viewModel.clearRepaymentEdit(); editingSettlement = null },
+        )
     }
 
     historySettlement?.let { s ->
