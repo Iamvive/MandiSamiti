@@ -82,3 +82,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Evidence (Redmi d93c743, Dark, dummy shop, staging): old Rs 5,000 loan shows 2.0%/mo; form default 2; rate 0 gives red error and disabled save; Rs 1,000 loan at 1.5 shows 1.5%/mo, loan #1 still 2.0; staging lend_entries holds 1.5 and 2.
 - Unverified: Light theme (needs manual MIUI toggle), 390dp overflow measurement, interest-first part payment on device (jvmTest only). money-slip-interest-settlement stays failing. Dummy shop now has Lend Party loan #2 (Rs 1,000 at 1.5).
 - Next: Vivek switches the phone to Light, then check the Loan Given form and loan book; then approve for hot.md and pointer bump.
+
+## 2026-11-13 (Claude Code): per-loan interest rate, Light and 390dp checks
+- Redmi d93c743, Light (night mode off), dummy shop, staging build. Screen set to 1072x2340 (about 390dp at 440dpi), then reset.
+- Loan Given form: rate field shows default 2, label and value readable, date and save button below it, no horizontal overflow. Interest dialog on Lend Party (Rs 6,000) shows rate 2.0 and Rs 4 for 1 day, readable, no overflow. Lend Party ledger (loans #1, #2) shows no overflow.
+- Observation: the rate field is outlined while the fields above it are filled. Style mismatch, not fixed.
+- Unverified: per-loan 1.5 display in Light, interest-first part payment on device (jvmTest only), Task 4 error text "1 to 100" and the literal "2" defaults. No hot.md or pointer change.
+- Next: Vivek approval, then hot.md, parent pointer, push plan commit 3445092, cleanup of ms-loan-rate-wt and test data.
