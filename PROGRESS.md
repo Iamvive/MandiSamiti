@@ -89,3 +89,8 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Observation: the rate field is outlined while the fields above it are filled. Style mismatch, not fixed.
 - Unverified: per-loan 1.5 display in Light, interest-first part payment on device (jvmTest only), Task 4 error text "1 to 100" and the literal "2" defaults. No hot.md or pointer change.
 - Next: Vivek approval, then hot.md, parent pointer, push plan commit 3445092, cleanup of ms-loan-rate-wt and test data.
+
+## 2026-11-13 (Claude Code): per-loan rate approved and merged, staging cleaned
+- Vivek approved. feat/loan-rate fast-forwarded into main (183569c) and pushed with plan commit 3445092. Worktree ms-loan-rate-wt and branch removed.
+- Cleanup: TestShop (fc373fed) transactional data deleted on staging (0 rows left, other shops untouched); Redmi app data cleared. Dummy loan #2 (Rs 1,000 at 1.5) is gone.
+- Still open: part payment interest-first on device, 1.5 display in Light, deferred minor fixes (error text "1 to 100", literal "2" defaults, rate field style). money-slip-interest-settlement stays failing.
