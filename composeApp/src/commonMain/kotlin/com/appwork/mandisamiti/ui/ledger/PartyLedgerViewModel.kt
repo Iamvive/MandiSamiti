@@ -87,6 +87,7 @@ data class PartyLedgerUiState(
     val balancePaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
     val openLoans: List<OpenLoanInfo> = emptyList(),
+    val loansInfoById: Map<String, OpenLoanInfo> = emptyMap(),
     val isCashDialogOpen: Boolean = false,
     val isInterestDialogOpen: Boolean = false,
     val calculatedInterest: InterestCalculation? = null,
@@ -160,48 +161,48 @@ class PartyLedgerViewModel(
         val tradeItemsFlow = combine(buysFlow, sellsFlow, lendsFlow, settlementsFlow) { buysList, sellsList, lendsList, settlementsList ->
             val partyLends = lendsList.filter { it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true)) }
 
-            val openLends = partyLends.filter { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED }.mapNotNull { lend ->
+            val rate = currentMonthlyRate()
+            val allLoansInfo = partyLends.filter { !it.isVoid }.associate { lend ->
                 val nonVoidSettlements = settlementsList.filter { it.lendId == lend.id && !it.isVoid }
                 val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
                 val isMoney = lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY
-                // Interest rows are part of amountPaisa but never reduce the loan; only principal does (D4.4).
                 val reducedPaisa = if (isMoney) nonVoidSettlements.sumOf { it.principalPaisa } else repaidPaisa
                 val outstandingPaisa = (lend.amountPaisa - reducedPaisa).coerceAtLeast(0L)
-                val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
-                val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
-
-                val isOpen = if (lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY) {
-                    outstandingPaisa > 0L
-                } else {
-                    outstandingGrams > 0L
-                }
-
-                if (isOpen) {
-                    val rate = currentMonthlyRate()
-                    val interestDue = if (isMoney) {
-                        RuralInterestEngine.interestDue(lend.amountPaisa, rate, lend.entryDate, nonVoidSettlements, Clock.System.now().toEpochMilliseconds())
-                    } else 0L
-                    OpenLoanInfo(
-                        lend = lend,
-                        outstandingPaisa = outstandingPaisa,
-                        interestDuePaisa = interestDue,
-                        monthlyRatePercent = rate,
-                        settlements = nonVoidSettlements
-                    )
-                } else {
-                    null
-                }
+                val interestDue = if (isMoney && outstandingPaisa > 0L) {
+                    RuralInterestEngine.interestDue(lend.amountPaisa, rate, lend.entryDate, nonVoidSettlements, Clock.System.now().toEpochMilliseconds())
+                } else 0L
+                lend.id to OpenLoanInfo(
+                    lend = lend,
+                    outstandingPaisa = outstandingPaisa,
+                    interestDuePaisa = interestDue,
+                    monthlyRatePercent = rate,
+                    settlements = nonVoidSettlements
+                )
             }
 
-            Triple(buysList, sellsList, partyLends) to openLends
+            val openLends = partyLends.filter { !it.isVoid && it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED }.mapNotNull { lend ->
+                val info = allLoansInfo[lend.id] ?: return@mapNotNull null
+                val isOpen = if (lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY) {
+                    info.outstandingPaisa > 0L
+                } else {
+                    val nonVoidSettlements = info.settlements
+                    val repaidGrams = nonVoidSettlements.sumOf { it.weightGrams }
+                    val outstandingGrams = (lend.weightGrams - repaidGrams).coerceAtLeast(0L)
+                    outstandingGrams > 0L
+                }
+                if (isOpen) info else null
+            }
+
+            Triple(buysList, sellsList, partyLends) to (openLends to allLoansInfo)
         }
 
         combine(
             cashRepository.getTransactionsByPartyStream(partyId),
             dealRepository.getDealsByShopStream(shopId),
             tradeItemsFlow
-        ) { cashList, dealsList, (trades, openLends) ->
+        ) { cashList, dealsList, (trades, loansPair) ->
             val (buysList, sellsList, partyLends) = trades
+            val (openLends, allLoansInfo) = loansPair
             val allItems = mutableListOf<LedgerItem>()
 
             // 1. Cash transactions
@@ -222,9 +223,14 @@ class PartyLedgerViewModel(
             dealsList.filter { it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true))) }
                 .forEach { allItems.add(LedgerItem.DealItem(it)) }
 
-            allItems.sortedByDescending { it.timestamp } to openLends
-        }.onEach { (sortedItems, openLends) ->
-            _uiState.value = _uiState.value.copy(ledgerItems = sortedItems, openLoans = openLends)
+            allItems.sortedByDescending { it.timestamp } to (openLends to allLoansInfo)
+        }.onEach { (sortedItems, loansPair) ->
+            val (openLends, allLoansInfo) = loansPair
+            _uiState.value = _uiState.value.copy(
+                ledgerItems = sortedItems,
+                openLoans = openLends,
+                loansInfoById = allLoansInfo
+            )
         }.launchIn(viewModelScope)
     }
 

@@ -392,7 +392,7 @@ fun PartyLedgerScreen(
                             )
                         }
                         is LedgerItem.LendItem -> {
-                            val matchingLoan = uiState.openLoans.find { it.lend.id == item.lend.id }
+                            val matchingLoan = uiState.loansInfoById[item.lend.id] ?: uiState.openLoans.find { it.lend.id == item.lend.id }
                             FintechLendCard(
                                 isEnglish = isEnglish,
                                 lend = item.lend,
