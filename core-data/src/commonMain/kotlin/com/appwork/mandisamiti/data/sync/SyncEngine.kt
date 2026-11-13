@@ -133,13 +133,15 @@ class SyncEngine(
         }
 
         val txs = queries.getPendingSyncTransactions().executeAsList().map {
+            val isExpense = it.party_id.startsWith("EXPENSE_") || it.party_id.isBlank()
             CashTransactionSyncDto(
                 id = it.id,
-                party_id = it.party_id,
+                party_id = if (isExpense) null else it.party_id,
                 deal_id = it.deal_id,
                 transaction_type = it.transaction_type,
                 amount_paisa = it.amount_paisa,
                 payment_mode = it.payment_mode,
+                category = if (isExpense) "EXPENSE" else "TRADE_PAYMENT",
                 transaction_date = it.transaction_date,
                 voice_note_uri = it.voice_note_uri,
                 remarks = it.remarks,
