@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.domain.model
 
+import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import kotlinx.serialization.Serializable
 
 enum class LendType { MONEY, GRAIN }
@@ -25,5 +26,6 @@ data class LendEntry(
     val revision: Long = 1L,
     val isVoid: Boolean = false,
     val voidReason: String? = null,
+    val monthlyRatePercent: Double = RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT,
     val syncStatus: Long = 0L,
 )

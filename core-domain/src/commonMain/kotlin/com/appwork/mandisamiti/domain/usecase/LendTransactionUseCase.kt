@@ -10,6 +10,7 @@ data class LendForm(
     val shopId: String, val partyId: String, val lendType: LendType,
     val amountPaisa: Long = 0L, val commodityId: String? = null, val bags: Long = 0L, val weightGrams: Long = 0L,
     val expectedReturnDate: Long? = null, val notes: String? = null,
+    val monthlyRatePercent: Double = RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT,
 )
 
 sealed class LendException(message: String) : IllegalArgumentException(message) {
@@ -30,11 +31,13 @@ class LendTransactionUseCase(
             LendType.MONEY -> require(form.amountPaisa > 0) { "Amount is required" }
             LendType.GRAIN -> require(form.weightGrams > 0 && form.commodityId != null) { "Grain and weight are required" }
         }
+        require(form.monthlyRatePercent > 0.0) { "Interest rate must be above zero" }
         val now = nowMillis()
         val entry = LendEntry(
             id = newId(), shopId = form.shopId, partyId = form.partyId, lendType = form.lendType, entryDate = now,
             amountPaisa = form.amountPaisa, commodityId = form.commodityId, bagsCount = form.bags,
             weightGrams = form.weightGrams, expectedReturnDate = form.expectedReturnDate, notes = form.notes,
+            monthlyRatePercent = form.monthlyRatePercent,
             createdAt = now, updatedAt = now,
         )
         repo.saveLendEntry(entry)

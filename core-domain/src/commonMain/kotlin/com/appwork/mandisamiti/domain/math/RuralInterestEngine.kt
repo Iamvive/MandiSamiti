@@ -19,8 +19,11 @@ object RuralInterestEngine {
 
     const val DAYS_IN_MONTH = 30.0
 
+    /** Rate every new loan starts with, in percent per month. A single loan may be given another rate. */
+    const val DEFAULT_MONTHLY_RATE_PERCENT = 2.0
+
     /**
-     * Calculates simple monthly interest based on days elapsed (e.g. ₹1.50 per ₹100 per month).
+     * Calculates simple monthly interest based on days elapsed (e.g. ₹2 per ₹100 per month).
      * Formula: Interest = Principal * (Rate / 100) * (Days / 30)
      */
     fun calculateAccruedInterestByDays(
@@ -40,7 +43,7 @@ object RuralInterestEngine {
         }
 
         val months = elapsedDays / DAYS_IN_MONTH
-        // Money stays in Long: the rate is taken in hundredths of a percent (1.5% -> 150) and the division floors.
+        // Money stays in Long: the rate is taken in hundredths of a percent (2% -> 200) and the division floors.
         val rateHundredths = (monthlyRatePercent * 100.0).roundToLong()
         val accruedInterestPaisa = principalPaisa * rateHundredths * elapsedDays / (10_000L * DAYS_IN_MONTH.toLong())
         val totalPayablePaisa = principalPaisa + accruedInterestPaisa
