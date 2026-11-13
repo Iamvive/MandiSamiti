@@ -89,6 +89,9 @@ data class PartyLedgerUiState(
     val isCashDialogOpen: Boolean = false,
     val isInterestDialogOpen: Boolean = false,
     val calculatedInterest: InterestCalculation? = null,
+    val repaymentEditPreview: com.appwork.mandisamiti.domain.math.RepaymentEditPlan? = null,
+    val repaymentEditError: String? = null,
+    val repaymentHistory: List<com.appwork.mandisamiti.domain.model.LendSettlement> = emptyList(),
     val isSaving: Boolean = false,
     val error: String? = null
 )
@@ -263,6 +266,52 @@ class PartyLedgerViewModel(
             }
             _events.emit(PartyLedgerEvent.TransactionRecorded(parts.joinToString(", ") + " दर्ज किया गया"))
         }
+    }
+
+    private fun lendUseCase(): LendTransactionUseCase? {
+        val repo = lendRepository ?: return null
+        return LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
+    }
+
+    /** Fills [PartyLedgerUiState.repaymentEditPreview] or [PartyLedgerUiState.repaymentEditError]. Saves nothing. */
+    fun previewRepaymentEdit(lendId: String, settlementId: String, amountPaisa: Long, settledAt: Long, ratePercent: Double) {
+        viewModelScope.launch {
+            val useCase = lendUseCase() ?: return@launch
+            try {
+                val plan = useCase.previewRepaymentEdit(lendId, settlementId, amountPaisa, settledAt, ratePercent)
+                _uiState.value = _uiState.value.copy(repaymentEditPreview = plan, repaymentEditError = null)
+            } catch (e: com.appwork.mandisamiti.domain.usecase.LendException.OverRepayment) {
+                _uiState.value = _uiState.value.copy(repaymentEditPreview = null, repaymentEditError = "OVER")
+            } catch (e: IllegalArgumentException) {
+                _uiState.value = _uiState.value.copy(repaymentEditPreview = null, repaymentEditError = "INVALID")
+            }
+        }
+    }
+
+    fun editRepayment(settlementId: String, amountPaisa: Long, settledAt: Long, ratePercent: Double) {
+        viewModelScope.launch {
+            val useCase = lendUseCase() ?: return@launch
+            try {
+                useCase.editRepayment(settlementId, amountPaisa, settledAt, ratePercent)
+            } catch (e: IllegalArgumentException) {
+                _events.emit(PartyLedgerEvent.Error("वापसी बदली नहीं जा सकी"))
+                return@launch
+            }
+            syncScheduler.scheduleOneTimeSync()
+            clearRepaymentEdit()
+            _events.emit(PartyLedgerEvent.TransactionRecorded("वापसी सुधारी गई"))
+        }
+    }
+
+    fun loadRepaymentHistory(settlementId: String) {
+        viewModelScope.launch {
+            val repo = lendRepository ?: return@launch
+            _uiState.value = _uiState.value.copy(repaymentHistory = repo.getSettlementHistory(settlementId))
+        }
+    }
+
+    fun clearRepaymentEdit() {
+        _uiState.value = _uiState.value.copy(repaymentEditPreview = null, repaymentEditError = null, repaymentHistory = emptyList())
     }
 
     /**
