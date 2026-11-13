@@ -45,3 +45,9 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - payments-staging-sync (PASS): Tested offline-first outbox by disabling wifi and mobile data. Recorded cash payment of ₹10,008 on Buy slip #5 locally while offline (slip due dropped from ₹11,820 to ₹1,812; 0 rows on staging DB). Re-enabled connectivity; outbox drained automatically with HTTP 200 (`POST /api/v1/sync/push`), row confirmed in staging PostgreSQL `cash_transactions` (`id=e3181223-f8e9-4805-b949-afb664f49913`, `amount_paisa=1000800`, `source_entry_type=BUY`) and `buy_entries.paid_paisa` updated to 1000800.
 - Updated `FEATURES.json`: marked `e2e-saves-dummy-shop` passing, `payments-staging-sync` passing, and added `clean-install-defaults` passing.
 - Next: pick next failing feature from `FEATURES.json` (`sell-receipt-cash-in` or `sheet-amount-keyboard`).
+
+## 2026-11-13, Claude (update and staging deploy)
+- Ran `project_update.py` on MandiSamiti: full Gradle test suite passed, pushed, sync-log and graphify updated.
+- Deployed backend to staging with `deploy_staging.sh` (http://64.227.142.180:8060): backend tests passed, Alembic upgraded `0003_cash_tx_source_entry` to `0004_shop_quota` (shop quota and emergency extension columns), API recreated, smoke tests passed (health, readiness db+redis ok, check-phone).
+- `backup_offsite.sh` and `restore_test.sh` now sit in `/opt/mandisamiti-staging/scripts/` on the VPS but have not been run. `offsite-backup-restore-drill` stays failing.
+- Next: run `bash /opt/mandisamiti-staging/scripts/backup_offsite.sh` on the VPS once, then add the Sunday cron line from its header. Staging is on Alembic 0004 now; hot.md still says 0003 (needs Vivek's approval to edit).
