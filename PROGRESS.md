@@ -51,3 +51,9 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Deployed backend to staging with `deploy_staging.sh` (http://64.227.142.180:8060): backend tests passed, Alembic upgraded `0003_cash_tx_source_entry` to `0004_shop_quota` (shop quota and emergency extension columns), API recreated, smoke tests passed (health, readiness db+redis ok, check-phone).
 - `backup_offsite.sh` and `restore_test.sh` now sit in `/opt/mandisamiti-staging/scripts/` on the VPS but have not been run. `offsite-backup-restore-drill` stays failing.
 - Next: run `bash /opt/mandisamiti-staging/scripts/backup_offsite.sh` on the VPS once, then add the Sunday cron line from its header. Staging is on Alembic 0004 now; hot.md still says 0003 (needs Vivek's approval to edit).
+
+## 2026-11-13 (Claude Code): slip-party-search device check
+- Built `main` (d3cbf09), installed on Redmi d93c743 (392dp, 440dpi, Dark).
+- Farmer tab: search "Ramesh" returns party summary (Rampur, phone, Rs 1,812 due) and the slip. No horizontal overflow; keyboard clear of results.
+- Not done: Light theme (needs manual MIUI toggle), Buyer tab 390px. Feature stays `failing`.
+- Next: Vivek switches the phone to Light, then check Farmer and Buyer tabs; then mark passing.
