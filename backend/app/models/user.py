@@ -14,7 +14,7 @@ class ShopProfile(Base):
     shop_number = Column(String, nullable=True)
     phone_number = Column(String(15), nullable=True)
     pin_hash = Column(String, nullable=True)
-    default_monthly_interest_rate = Column(Float, default=1.5)
+    default_monthly_interest_rate = Column(Float, default=2.0)
     is_sound_enabled = Column(Integer, default=1)
     soundbox_voice_lang = Column(String, default="hi-IN")
     created_at = Column(BigInteger, default=lambda: int(time.time() * 1000))

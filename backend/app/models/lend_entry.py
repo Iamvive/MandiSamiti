@@ -1,6 +1,6 @@
 import uuid
 import time
-from sqlalchemy import Column, String, BigInteger, Integer, ForeignKey
+from sqlalchemy import Column, String, BigInteger, Integer, Float, ForeignKey
 from app.database import Base
 
 class LendEntry(Base):
@@ -22,6 +22,7 @@ class LendEntry(Base):
 
     is_void = Column(Integer, default=0)
     void_reason = Column(String, nullable=True)
+    monthly_interest_rate = Column(Float, nullable=False, default=2.0, server_default="2.0")
     revision = Column(Integer, default=1)
     is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)

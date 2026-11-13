@@ -13,7 +13,7 @@ class Party(Base):
     phone = Column(String(15), nullable=True)
     role = Column(String(20), nullable=False)  # FARMER (किसान), BUYER (व्यापारी)
     village = Column(String, nullable=True)
-    monthly_interest_rate = Column(Float, nullable=True, default=1.5)
+    monthly_interest_rate = Column(Float, nullable=True, default=2.0)
     photo_uri = Column(String, nullable=True)
     gstin = Column(String(15), nullable=True)
     mandi_license = Column(String(100), nullable=True)

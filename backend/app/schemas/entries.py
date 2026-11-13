@@ -107,6 +107,7 @@ class LendEntryBase(BaseModel):
     weight_grams: int = 0
     expected_return_date: Optional[int] = None
     slip_no: Optional[int] = None
+    monthly_interest_rate: float = 2.0
     notes: Optional[str] = None
     status: str = "OPEN"
 

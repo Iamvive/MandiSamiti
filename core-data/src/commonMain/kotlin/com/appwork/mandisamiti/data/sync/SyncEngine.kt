@@ -190,7 +190,7 @@ class SyncEngine(
             LendEntrySyncDto(
                 id = it.id, party_id = it.party_id, lend_type = it.lend_type, entry_date = it.entry_date,
                 amount_paisa = it.amount_paisa, commodity_id = it.commodity_id, bags_count = it.bags_count,
-                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, slip_no = it.slip_no, notes = it.notes,
+                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, slip_no = it.slip_no, monthly_interest_rate = it.monthly_interest_rate, notes = it.notes,
                 status = it.status, is_void = it.is_void.toInt(), void_reason = it.void_reason,
                 revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
                 created_at = it.created_at, updated_at = it.updated_at
@@ -500,8 +500,7 @@ class SyncEngine(
                         revision = l.revision.toLong(),
                         is_void = l.is_void.toLong(),
                         void_reason = l.void_reason,
-                        // Server DTO carries no per-loan rate until the backend task; 2.0 is the product default.
-                        monthly_interest_rate = 2.0
+                        monthly_interest_rate = l.monthly_interest_rate
                     )
                 }
 

@@ -8,7 +8,7 @@ class PartyBase(BaseModel):
     phone: Optional[str] = None
     role: str  # FARMER, BUYER
     village: Optional[str] = None
-    monthly_interest_rate: Optional[float] = 1.5
+    monthly_interest_rate: Optional[float] = 2.0
     photo_uri: Optional[str] = None
     gstin: Optional[str] = Field(default=None, max_length=15, pattern=r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
     mandi_license: Optional[str] = Field(default=None, max_length=100)

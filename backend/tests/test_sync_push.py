@@ -193,3 +193,17 @@ async def test_older_cash_push_gives_held_row_a_new_seq(db):
     await sync_push(SyncPushRequest(transactions=[tx(1, 100)]), USER, db)
     row = (await db.execute(select(CashTransaction).where(CashTransaction.id == "t1"))).scalars().one()
     assert row.amount_paisa == 200 and row.server_seq == 2
+
+
+@pytest.mark.asyncio
+async def test_lend_monthly_interest_rate_is_stored_and_defaults_to_2(db):
+    from app.models.lend_entry import LendEntry
+    from app.schemas.entries import LendEntryCreate
+    await sync_push(SyncPushRequest(lend_entries=[
+        LendEntryCreate(id="l-rate", party_id="p1", monthly_interest_rate=1.5),
+        LendEntryCreate(id="l-default", party_id="p1"),
+    ]), USER, db)
+    rows = {r.id: r for r in (await db.execute(select(LendEntry))).scalars().all()}
+    assert rows["l-rate"].monthly_interest_rate == 1.5
+    assert rows["l-default"].monthly_interest_rate == 2.0
+    assert LendEntryCreate(id="x", party_id="p1").monthly_interest_rate == 2.0

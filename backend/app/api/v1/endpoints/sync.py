@@ -475,6 +475,7 @@ async def sync_push(
                     existing_lend.weight_grams = l_in.weight_grams
                     existing_lend.expected_return_date = l_in.expected_return_date
                     existing_lend.slip_no = l_in.slip_no
+                    existing_lend.monthly_interest_rate = l_in.monthly_interest_rate
                     existing_lend.notes = l_in.notes
                     existing_lend.status = l_in.status
                     existing_lend.is_void = l_in.is_void
@@ -500,6 +501,7 @@ async def sync_push(
                 weight_grams=l_in.weight_grams,
                 expected_return_date=l_in.expected_return_date,
                 slip_no=l_in.slip_no,
+                monthly_interest_rate=l_in.monthly_interest_rate,
                 notes=l_in.notes,
                 status=l_in.status,
                 is_void=l_in.is_void,
