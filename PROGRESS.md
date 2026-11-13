@@ -70,3 +70,8 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Evidence (Redmi d93c743, Light, dummy shop): Rs 1,000 cash-in on Suresh Trader slip #1 moved Rokad 3,84,842 to 3,85,842 and receivable 13,200 to 12,200. jvmTests pass.
 - Unverified: Dark theme for both, full settlement, button hidden when paid or void, Farmer-side sheet. Both features stay `failing`.
 - Next: switch phone to Dark and check; then mark passing. Then money-slip-interest-settlement.
+
+## 2026-11-13 (Claude Code): Dark check, two features passing
+- Redmi d93c743, Dark: sell receipt "नकद लें" button visible; settlement sheet shows received Rs 1,000 and due Rs 12,200; amount field and confirm button above keyboard. `sell-receipt-cash-in` and `sheet-amount-keyboard` marked `passing`.
+- Still unchecked: full settlement, button hidden when paid or void, Farmer-side sheet in Dark. Commits local, not pushed. hot.md not updated (awaits Vivek's approval).
+- Next: money-slip-interest-settlement (needs brainstorming first), offsite backup drill, khata-chips-explained.
