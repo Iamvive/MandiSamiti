@@ -75,7 +75,7 @@ class MandiSamitiE2ETest {
             village = "राया (मथुरा)",
             phone = "9837999888",
             partyType = PartyType.FARMER,
-            monthlyInterestRate = 1.5,
+            monthlyInterestRate = 2.0,
             createdAt = 1000L,
             updatedAt = 1000L
         )

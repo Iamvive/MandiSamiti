@@ -42,4 +42,17 @@ class LendEntryRateTest {
         form.reset()
         assertEquals("2", form.rateInput)
     }
+
+    @Test
+    fun newLoanFormStartsAtTwoPercentAndAcceptsOverride() {
+        val form = LendEntryFormState()
+        assertEquals("2", form.rateInput)
+        assertEquals(2.0, form.parsedRate)
+        form.rateInput = "1.5"
+        assertEquals(1.5, form.parsedRate)
+        form.rateInput = "0"
+        assertNull(form.parsedRate)
+        form.reset()
+        assertEquals("2", form.rateInput)
+    }
 }

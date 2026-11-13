@@ -79,3 +79,9 @@ async def test_expense_entry_roundtrip(db_session):
     await db_session.commit()
     row = (await db_session.execute(select(ExpenseEntry).where(ExpenseEntry.id == "e1"))).scalar_one()
     assert row.amount_paisa == 50000
+
+
+def test_lend_entry_create_rate_defaults_to_two_and_keeps_override():
+    from app.schemas.entries import LendEntryCreate
+    assert LendEntryCreate(party_id="p1").monthly_interest_rate == 2.0
+    assert LendEntryCreate(party_id="p1", monthly_interest_rate=1.5).monthly_interest_rate == 1.5

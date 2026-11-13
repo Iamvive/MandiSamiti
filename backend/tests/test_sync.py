@@ -6,7 +6,7 @@ from app.schemas.transaction import CashTransactionCreate
 from app.schemas.revision import EntryRevisionCreate
 
 def test_sync_push_payload_serialization():
-    party = PartyCreate(name="अग्रवाल ट्रेडर्स", phone="9876543210", role="BUYER", village="मथुरा", monthly_interest_rate=1.5)
+    party = PartyCreate(name="अग्रवाल ट्रेडर्स", phone="9876543210", role="BUYER", village="मथुरा", monthly_interest_rate=2.0)
     deal = DealCreate(
         id="deal-1",
         farmer_id="farmer_1",

@@ -41,6 +41,16 @@ class LendEntryRepositoryTest {
     }
 
     @Test
+    fun monthlyRateRoundTripsAndDefaultsToTwo() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstLendRepository(db, clock = clock)
+        repo.saveLendEntry(sampleLendEntry(id = "r-default"))
+        repo.saveLendEntry(sampleLendEntry(id = "r-custom").copy(monthlyRatePercent = 1.5))
+        assertEquals(2.0, repo.getLendEntryById("r-default")!!.monthlyRatePercent)
+        assertEquals(1.5, repo.getLendEntryById("r-custom")!!.monthlyRatePercent)
+    }
+
+    @Test
     fun partialRepaymentLeavesLendPartial() = runTest {
         val db = createTestDatabase()
         val repo = OfflineFirstLendRepository(db, clock = clock)
