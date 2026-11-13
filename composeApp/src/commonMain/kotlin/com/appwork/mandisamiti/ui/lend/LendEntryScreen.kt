@@ -317,6 +317,14 @@ fun LendEntryScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedTextField(
+                    value = formState.rateInput,
+                    onValueChange = { formState.rateInput = it },
+                    label = { Text(if (isEnglish) "Interest rate (% per month)" else "ब्याज दर (% प्रति माह)") },
+                    isError = formState.parsedRate == null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth()
+                )
             } else {
                 OutlinedTextField(
                     value = formState.commodityName,

@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
@@ -40,6 +41,12 @@ class LendEntryFormState {
     var expectedReturnMillis by mutableStateOf<Long?>(null)
     var notes by mutableStateOf("")
 
+    var rateInput by mutableStateOf("2")
+
+    /** Null when the text is not a number above zero and at most 100. */
+    val parsedRate: Double?
+        get() = rateInput.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0.0 && it <= 100.0 }
+
     val phoneValidation: ValidationResult
         get() = MandiValidators.validatePhone(phone, isRequired = true)
 
@@ -63,7 +70,8 @@ class LendEntryFormState {
         if (villageValidation !is ValidationResult.Valid) return false
 
         return if (lendType == LendType.MONEY) {
-            amountRupees.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amountRupees) > 0L
+            amountRupees.isNotBlank() && MandiMathEngine.parseRupeesToPaisa(amountRupees) > 0L &&
+                parsedRate != null
         } else {
             commodityName.trim().isNotBlank() && MandiMathEngine.parseKgToGrams(weightKg) > 0L
         }
@@ -82,6 +90,9 @@ class LendEntryFormState {
         if (lendType == LendType.MONEY) {
             if (amountRupees.isBlank() || MandiMathEngine.parseRupeesToPaisa(amountRupees) <= 0L) {
                 return if (isEnglish) "Enter loan amount (₹)" else "उधार राशि (रु) दर्ज करें"
+            }
+            if (parsedRate == null) {
+                return if (isEnglish) "Enter interest rate (1 to 100)" else "ब्याज दर (1 से 100) दर्ज करें"
             }
         } else {
             if (commodityName.trim().isBlank() || MandiMathEngine.parseKgToGrams(weightKg) <= 0L) {
@@ -115,6 +126,7 @@ class LendEntryFormState {
         selectedDaysChip = null
         expectedReturnMillis = null
         notes = ""
+        rateInput = "2"
     }
 
     fun toLendEntry(
@@ -136,6 +148,8 @@ class LendEntryFormState {
             weightGrams = if (!isMoney) MandiMathEngine.parseKgToGrams(weightKg) else 0L,
             expectedReturnDate = expectedReturnMillis,
             notes = notes.trim().ifEmpty { null },
+            monthlyRatePercent = if (isMoney) parsedRate ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT
+            else RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT,
             status = LendStatus.OPEN,
             createdAt = now,
             updatedAt = now,
