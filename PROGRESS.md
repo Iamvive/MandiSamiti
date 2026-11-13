@@ -63,3 +63,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Light, Farmer tab: "Ramesh" shows party summary plus slip. Light, Buyer tab: "Suresh" shows party summary plus slip. No overflow, keyboard clear of results.
 - Dark Farmer was checked earlier today; Dark by name, Light and Dark by phone per earlier evidence. Marked `passing`.
 - Phone left in Light. Next: sell-receipt-cash-in, then money-slip-interest-settlement.
+
+## 2026-11-13 (Claude Code): sell receipt cash-in and settlement sheet keyboard
+- Added "नकद लें" button on SellTransactionReceiptScreen (shown when balance due > 0 and not void), wired in App.kt with a JAMA_RECEIVED cash entry, same pattern as the Buy receipt.
+- Fixed the settlement sheet: keyboard covered the amount field and confirm button. Cause was no IME insets inside the sheet's dialog window; now reads IME height in the main window.
+- Evidence (Redmi d93c743, Light, dummy shop): Rs 1,000 cash-in on Suresh Trader slip #1 moved Rokad 3,84,842 to 3,85,842 and receivable 13,200 to 12,200. jvmTests pass.
+- Unverified: Dark theme for both, full settlement, button hidden when paid or void, Farmer-side sheet. Both features stay `failing`.
+- Next: switch phone to Dark and check; then mark passing. Then money-slip-interest-settlement.

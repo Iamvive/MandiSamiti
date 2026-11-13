@@ -2,7 +2,12 @@ package com.appwork.mandisamiti.ui.sell
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
@@ -16,7 +21,9 @@ import com.appwork.mandisamiti.ui.components.ReceiptDivider
 import com.appwork.mandisamiti.ui.components.ReceiptHero
 import com.appwork.mandisamiti.ui.components.ReceiptLot
 import com.appwork.mandisamiti.ui.components.ReceiptLotRow
+import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
 import com.appwork.mandisamiti.ui.components.ReceiptScaffold
+import com.appwork.mandisamiti.ui.parchi.TraderSlipCashSettlementSheet
 import kotlinx.serialization.json.Json
 
 @Composable
@@ -30,8 +37,12 @@ fun SellTransactionReceiptScreen(
     mandiName: String = "",
     partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
+    isEnglish: Boolean = false,
+    gallaCashPaisa: Long = 0L,
+    onSettleCash: ((amountPaisa: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var showSettlementSheet by remember { mutableStateOf(false) }
     val billText = entry?.let { buildSellBillText(it, buyerName) } ?: ""
     val isBos = entry?.billMode == BillMode.BILL_OF_SUPPLY
     ReceiptScaffold(
@@ -109,6 +120,27 @@ fun SellTransactionReceiptScreen(
             }
             ReceiptDivider()
             ReceiptAmountRow("कुल देय राशि", MandiMathEngine.formatRupees(entry.totalReceivablePaisa), emphasized = true)
+        }
+
+        if (!entry.isVoid && entry.balanceDuePaisa > 0L && onSettleCash != null) {
+            MandiPrimaryButton(
+                text = if (isEnglish) "Cash in →" else "नकद लें →",
+                onClick = { showSettlementSheet = true },
+                height = 52.dp
+            )
+        }
+        if (showSettlementSheet) {
+            TraderSlipCashSettlementSheet(
+                sell = entry,
+                traderName = name,
+                gallaCashPaisa = gallaCashPaisa,
+                isEnglish = isEnglish,
+                onDismiss = { showSettlementSheet = false },
+                onConfirmReceipt = { amountPaisa ->
+                    onSettleCash?.invoke(amountPaisa)
+                    showSettlementSheet = false
+                }
+            )
         }
     }
 }

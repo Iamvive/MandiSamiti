@@ -787,6 +787,10 @@ fun App(
                 var sellEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.SellEntry?>(null) }
                 var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
                 val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
+                val sellCashTransactions by cashRepo.getTransactionsByShopStream(shopId ?: "").collectAsState(initial = emptyList())
+                val sellGallaCashPaisa = remember(sellCashTransactions) {
+                    com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(sellCashTransactions)
+                }
                 LaunchedEffect(screen.id) {
                     sellEntry = sellRepo.getSellEntryById(screen.id)
                     receiptParty = sellEntry?.buyerId?.let { partyRepo.getPartyById(it) }
@@ -798,6 +802,46 @@ fun App(
                     shopName = receiptShop?.shopName.orEmpty(),
                     mandiName = receiptShop?.mandiName.orEmpty(),
                     partyVillage = receiptParty?.village,
+                    gallaCashPaisa = sellGallaCashPaisa,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
+                    onSettleCash = { amountPaisa ->
+                        val current = sellEntry ?: return@SellTransactionReceiptScreen
+                        val currentShop = shopId ?: return@SellTransactionReceiptScreen
+                        coroutineScope.launch {
+                            val fresh = sellRepo.getSellEntryById(current.id) ?: return@launch
+                            if (fresh.isVoid) return@launch
+                            val applied = minOf(amountPaisa, fresh.balanceDuePaisa)
+                            if (applied <= 0L) return@launch
+                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            sellRepo.editSellEntry(
+                                fresh.copy(
+                                    receivedPaisa = fresh.receivedPaisa + applied,
+                                    balanceDuePaisa = fresh.balanceDuePaisa - applied,
+                                    updatedAt = now,
+                                    revision = fresh.revision + 1
+                                )
+                            )
+                            val slipRef = fresh.slipNo?.let { "#$it" } ?: fresh.id.takeLast(5)
+                            cashRepo.recordTransaction(
+                                com.appwork.mandisamiti.domain.model.CashTransaction(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = currentShop,
+                                    partyId = fresh.buyerId,
+                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                    amountPaisa = applied,
+                                    paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                    transactionDate = now,
+                                    remarks = "बिक्री पर्ची $slipRef नकद प्राप्त",
+                                    createdAt = now,
+                                    updatedAt = now,
+                                    sourceEntryType = "SELL",
+                                    sourceEntryId = fresh.id
+                                )
+                            )
+                            syncScheduler.scheduleOneTimeSync()
+                            sellEntry = sellRepo.getSellEntryById(screen.id)
+                        }
+                    },
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
                     onEdit = { currentScreen = Screen.SellEntry(it) },
                     onBack = { currentScreen = screen.backTarget() }
