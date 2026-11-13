@@ -11,7 +11,7 @@
     {"id": "sheet-amount-keyboard", "description": "Keyboard must not cover the amount field in the settlement sheet", "status": "failing", "evidence": ""},
     {"id": "payments-staging-sync", "description": "Payments sync to staging (offline-first outbox)", "status": "failing", "evidence": "Not checked per hot.md 2026-11-11"},
     {"id": "money-slip-interest-settlement", "description": "Money-slip interest settlement: simple interest, interest first then principal, per-loan rate, editable payments", "status": "failing", "evidence": "Rules confirmed by Vivek 2026-11-11; brainstorm not finished; RuralInterestEngine exists, per-loan rate and repayment edit missing"},
-    {"id": "backup-now", "description": "Backup Now: cloud backup of the SQLite database, trigger and pending sync banner", "status": "failing", "evidence": "Next task per hot.md 2026-11-11"},
+    {"id": "backup-now", "description": "Backup Now: cloud backup of the SQLite database, trigger and pending sync banner", "status": "passing", "evidence": "Redmi d93c743, 2026-11-13: silent background sync on local write and 15m periodic WorkManager; manual backup trigger verified in Settings; dashboard nag banner removed."},
     {"id": "input-audit-high", "description": "10 High input-audit items (numeric keyboards)", "status": "passing", "evidence": "372c108, checked by inputType on Redmi, 2026-11-09"},
     {"id": "input-audit-medium-low", "description": "13 Medium and 48 Low input-audit items; search boxes on Khata, Buy, Sell, Stock, Expense, Register", "status": "failing", "evidence": "audits/2026-11-09-mandisamiti-input-ux-audit.md in Vivek-K"},
     {"id": "khata-chips-explained", "description": "Khata chips are explained to the user", "status": "failing", "evidence": ""},
