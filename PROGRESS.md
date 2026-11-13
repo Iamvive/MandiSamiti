@@ -100,3 +100,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Changes: Updated `KhataLedgerTabScreen.kt`, `KhataFilterExplainerCard.kt`, `KhataFilterExplainerTest.kt`, `2026-11-13-khata-chips-explained.md`.
 - Evidence: Dry-run verification of 8-stage sync
 - Next: Continue implementation and feature verification.
+
+## 2026-11-13 (Claude Code): khata filter explainer card
+- Added KhataFilterExplainerCard.kt (bilingual card, NGDL tokens, shadow, full-width wrapping layout, Clear filters button) and wired it into the empty-state block of KhataLedgerTabScreen.kt. Visibility lives in a pure function shouldShowKhataFilterExplainer (empty, not loading, any filter active); otherwise the old "No matching accounts found" text stays.
+- Tests: KhataFilterExplainerTest (7 cases: no filters, status filter, type filter, both, non-empty list, loading, helper). The repo has no Compose UI test harness, so the reset button wiring and rendering are not unit tested. `./gradlew jvmTest` BUILD SUCCESSFUL.
+- Note: a parallel Gemini project-update sync (ac7bd1a) had already committed these source files under a chore message; this commit adds the FEATURES.json entry and this log.
+- Unverified: Redmi d93c743 check (Light, Dark, 390dp, Clear filters tap). Feature khata-filter-explainer-card stays failing until then.
+- Next: install on Redmi (staging), verify, then mark passing and seek approval for hot.md.

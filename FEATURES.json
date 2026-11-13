@@ -114,6 +114,12 @@
       "description": "2% rewrite and per-loan rate column visible on staging (Alembic 0005_loan_interest_rate)",
       "status": "passing",
       "evidence": "deploy_staging.sh 2026-11-13: 130 backend tests passed, upgrade 0004_shop_quota -> 0005_loan_interest_rate, health and readiness ok; staging lend_entries.monthly_interest_rate shows 2 for existing loans and 1.5 for the test loan synced from the Redmi."
+    },
+    {
+      "id": "khata-filter-explainer-card",
+      "description": "Khata ledger shows a bilingual filters-explained card with Clear filters when an active filter yields no accounts",
+      "status": "failing",
+      "evidence": "jvmTest 2026-11-13: KhataFilterExplainerTest 7 tests pass, ./gradlew jvmTest BUILD SUCCESSFUL. Not yet checked on Redmi d93c743 (Light, Dark, 390dp), so stays failing."
     }
   ]
 }
