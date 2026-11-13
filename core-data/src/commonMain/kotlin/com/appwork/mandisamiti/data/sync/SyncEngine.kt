@@ -499,7 +499,9 @@ class SyncEngine(
                         sync_status = 1L,
                         revision = l.revision.toLong(),
                         is_void = l.is_void.toLong(),
-                        void_reason = l.void_reason
+                        void_reason = l.void_reason,
+                        // Server DTO carries no per-loan rate until the backend task; 2.0 is the product default.
+                        monthly_interest_rate = 2.0
                     )
                 }
 

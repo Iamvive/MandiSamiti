@@ -14,7 +14,7 @@ CREATE TABLE shopProfileEntity (
     shop_number TEXT,
     phone_number TEXT NOT NULL,
     pin_hash TEXT NOT NULL,
-    default_monthly_interest_rate REAL NOT NULL DEFAULT 1.5,
+    default_monthly_interest_rate REAL NOT NULL DEFAULT 2.0,
     is_sound_enabled INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,

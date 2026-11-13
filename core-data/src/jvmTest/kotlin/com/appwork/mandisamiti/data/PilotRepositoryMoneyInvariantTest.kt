@@ -105,7 +105,7 @@ class PilotRepositoryMoneyInvariantTest {
                 row.id, row.shop_id, row.party_id, row.lend_type, row.entry_date, row.amount_paisa,
                 row.commodity_id, row.bags_count, row.weight_grams, row.expected_return_date, null,
                 row.notes, row.status, row.created_at, row.updated_at, row.is_deleted, 0L,
-                row.revision, row.is_void, row.void_reason,
+                row.revision, row.is_void, row.void_reason, row.monthly_interest_rate,
             )
         }
         source.appDatabaseQueries.insertLendSettlement(

@@ -155,7 +155,8 @@ class OfflineFirstCashTransactionRepository(
                                 sync_status = 0L,
                                 revision = lendEntity.revision + 1L,
                                 is_void = lendEntity.is_void,
-                                void_reason = lendEntity.void_reason
+                                void_reason = lendEntity.void_reason,
+                                monthly_interest_rate = lendEntity.monthly_interest_rate
                             )
                             cascadeRevision(lendEntity.shop_id, lendEntity.id, "LEND", lendEntity.revision + 1L, "EDIT", null, now)
                         }

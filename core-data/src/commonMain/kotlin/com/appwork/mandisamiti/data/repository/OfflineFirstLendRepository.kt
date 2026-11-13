@@ -407,6 +407,7 @@ class OfflineFirstLendRepository(
             revision = entry.revision,
             is_void = if (entry.isVoid) 1L else 0L,
             void_reason = entry.voidReason,
+            monthly_interest_rate = entry.monthlyRatePercent,
         )
     }
 
@@ -457,6 +458,7 @@ class OfflineFirstLendRepository(
         revision = revision,
         isVoid = is_void == 1L,
         voidReason = void_reason,
+        monthlyRatePercent = monthly_interest_rate,
         syncStatus = sync_status,
     )
 
