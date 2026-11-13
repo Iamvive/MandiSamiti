@@ -29,6 +29,7 @@ import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -273,9 +274,12 @@ class PartyLedgerViewModel(
         return LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
     }
 
+    private var previewJob: Job? = null
+
     /** Fills [PartyLedgerUiState.repaymentEditPreview] or [PartyLedgerUiState.repaymentEditError]. Saves nothing. */
     fun previewRepaymentEdit(lendId: String, settlementId: String, amountPaisa: Long, settledAt: Long, ratePercent: Double) {
-        viewModelScope.launch {
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch {
             val useCase = lendUseCase() ?: return@launch
             try {
                 val plan = useCase.previewRepaymentEdit(lendId, settlementId, amountPaisa, settledAt, ratePercent)
@@ -311,6 +315,7 @@ class PartyLedgerViewModel(
     }
 
     fun clearRepaymentEdit() {
+        previewJob?.cancel()
         _uiState.value = _uiState.value.copy(repaymentEditPreview = null, repaymentEditError = null, repaymentHistory = emptyList())
     }
 
