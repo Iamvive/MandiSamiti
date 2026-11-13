@@ -22,3 +22,11 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Verified manual backup trigger remains cleanly accessible inside `SettingsScreen.kt` for explicit migrations.
 - Tested and verified on physical Redmi Note 7 (`d93c743`), full Gradle test suite passing.
 - Next: pick next failing feature from `FEATURES.json` (`sell-slip-cash-settle-test` or `sheet-amount-keyboard`).
+
+## 2026-11-13, Gemini / Antigravity (Edit Loan Repayment - Tasks 3 to 6)
+- Implemented Task 3: `PartyLedgerViewModel` preview, edit, and history methods with error state handling and sync scheduling.
+- Implemented Task 4: Created `EditRepaymentDialog.kt` with live preview of Galla cash delta and subsequent interest adjustments, whole-rupee input, date picker, and validation.
+- Created `RepaymentHistoryDialog.kt` showing pairwise revision diffs (amount changes, date shifts, and recalculated splits).
+- Wired edit button and "edited" history tag into `PartyLedgerScreen.kt` loan card settlements list with responsive 390px layout.
+- Tested: Full jvmTest suite passed across `:core-domain`, `:core-data`, and `:composeApp`. Debug APK built and installed on Redmi Note 7 (`d93c743`).
+- Awaiting Vivek's approval before merging `feat/edit-repayment` to `main`.

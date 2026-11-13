@@ -15,6 +15,7 @@
     {"id": "input-audit-high", "description": "10 High input-audit items (numeric keyboards)", "status": "passing", "evidence": "372c108, checked by inputType on Redmi, 2026-11-09"},
     {"id": "input-audit-medium-low", "description": "13 Medium and 48 Low input-audit items; search boxes on Khata, Buy, Sell, Stock, Expense, Register", "status": "failing", "evidence": "audits/2026-11-09-mandisamiti-input-ux-audit.md in Vivek-K"},
     {"id": "khata-chips-explained", "description": "Khata chips are explained to the user", "status": "failing", "evidence": ""},
-    {"id": "e2e-saves-dummy-shop", "description": "End-to-end saves verified on the dummy shop 9999900001 (staging)", "status": "failing", "evidence": ""}
+    {"id": "e2e-saves-dummy-shop", "description": "End-to-end saves verified on the dummy shop 9999900001 (staging)", "status": "failing", "evidence": ""},
+    {"id": "edit-loan-repayment", "description": "Edit loan repayment: replay planner, cash row sync, edit dialog with live preview, revision history dialog", "status": "passing", "evidence": "RepaymentEditPlannerTest (5 tests), RepaymentEditRepositoryTest (4 tests), LendTransactionUseCaseTest, PartyLedgerViewModel, EditRepaymentDialog, RepaymentHistoryDialog verified; installed on Redmi d93c743, 2026-11-13."}
   ]
 }
