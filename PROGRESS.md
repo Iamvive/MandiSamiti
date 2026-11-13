@@ -37,3 +37,11 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - New `HomeViewModelSellSettlementTest` (6 jvmTests, pass): `settleSellSlipCash` partial payment, cap at balance due, already paid, void slip, zero/negative amount, unknown slip.
 - Unverified: both scripts only syntax-checked (`bash -n`); no docker here, so the restore drill and cron are not run on the VPS. Feature `offsite-backup-restore-drill` added as failing.
 - Next: on the VPS, run `backup_offsite.sh` once by hand, then add the cron line from the script header.
+
+## 2026-11-13, Gemini / Antigravity (Device verification: Edit loan repayment & Pilot readiness checks)
+- Merged `feat/edit-repayment` to `main` at `67daf64` after all staging click-through checks (Checks A to M) passed on Redmi Note 7 (`d93c743`).
+- Clean-install defaults check (PASS): uninstalled previous build, installed clean debug APK pointed at staging (`http://64.227.142.180:8060`). Completed onboarding for dummy shop `9999900001`. Verified Settings defaults: farmer commission `0.70%`, labour `₹10 / बोरी` in Light and Dark themes at 390dp reference width (`check_A_settings_light.png`, `check_A_settings_dark.png`).
+- e2e-saves-dummy-shop (PASS): Saved 1 Buy (Slip #5, ₹11,820, DB id `afe6285d-e257-480e-8679-45a6d26a6347`), 1 Sell (Bill #1, ₹13,200, DB id `sell-4fe31e2b-7b64-4251-9dcc-111957f5bda1`), 1 Lend (Lend Party, ₹5,000, DB id `a819e5c8-1fdc-4e3f-b35a-ff2ba48bea9d`), 1 Expense (Chai Pani, ₹150, DB id `d0e8b0de-7953-45f5-9af0-9e059c706955`). All 4 verified in UI lists and staging PostgreSQL DB.
+- payments-staging-sync (PASS): Tested offline-first outbox by disabling wifi and mobile data. Recorded cash payment of ₹10,008 on Buy slip #5 locally while offline (slip due dropped from ₹11,820 to ₹1,812; 0 rows on staging DB). Re-enabled connectivity; outbox drained automatically with HTTP 200 (`POST /api/v1/sync/push`), row confirmed in staging PostgreSQL `cash_transactions` (`id=e3181223-f8e9-4805-b949-afb664f49913`, `amount_paisa=1000800`, `source_entry_type=BUY`) and `buy_entries.paid_paisa` updated to 1000800.
+- Updated `FEATURES.json`: marked `e2e-saves-dummy-shop` passing, `payments-staging-sync` passing, and added `clean-install-defaults` passing.
+- Next: pick next failing feature from `FEATURES.json` (`sell-receipt-cash-in` or `sheet-amount-keyboard`).
