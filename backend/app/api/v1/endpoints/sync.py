@@ -40,6 +40,13 @@ async def sync_push(
     if not shop_id:
         raise HTTPException(status_code=400, detail="User is not associated with a Shop")
 
+    user_role = (current_user.get("role") or "").upper()
+    if user_role == "VIEWER":
+        raise HTTPException(
+            status_code=403,
+            detail="READ_ONLY_ACCESS: VIEWER role is not permitted to push or modify shop records"
+        )
+
     now_ms = int(time.time() * 1000)
     synced_parties = []
     synced_deals = []

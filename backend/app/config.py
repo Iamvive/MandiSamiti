@@ -1,4 +1,5 @@
 import logging
+import secrets
 from typing import List
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,18 +44,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_prod_secrets(self):
-        if self.APP_ENV.strip().lower() not in ("prod", "production"):
+        env = self.APP_ENV.strip().lower()
+        if env not in ("prod", "production", "staging", "stage"):
             return self
+
         key = self.SECRET_KEY
-        if key == DEFAULT_SECRET_KEY or key.startswith("change-me") or len(key) < MIN_PROD_SECRET_LEN:
+        if not key or key == DEFAULT_SECRET_KEY or key.startswith("change-me") or len(key) < MIN_PROD_SECRET_LEN:
             raise ValueError(
-                "SECRET_KEY is the code default, a change-me placeholder, or shorter than "
-                f"{MIN_PROD_SECRET_LEN} chars; refusing to start with APP_ENV=prod. "
+                f"SECRET_KEY is the code default, a change-me placeholder, or shorter than "
+                f"{MIN_PROD_SECRET_LEN} chars; refusing to start with APP_ENV={self.APP_ENV}. "
                 "Set a random key, e.g. `openssl rand -hex 32`."
             )
         if self.OTP_STATIC_ENABLED:
             logger.warning(
-                "!!! OTP_STATIC_ENABLED=true in APP_ENV=prod: every phone accepts the static OTP code. "
+                f"!!! OTP_STATIC_ENABLED=true in APP_ENV={self.APP_ENV}: every phone accepts the static OTP code. "
                 "Login security rests on the MPIN only. Switch to an SMS provider before paying shops. !!!"
             )
         return self

@@ -126,21 +126,23 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db), redis=Depends(get_redis)):
     phone = _clean_phone(req.phone)
 
-    # Track MPIN failures per phone; reset on success
+    # Check if account is already locked
     fail_key = f"mpin_fail:{phone}"
-    user_fails = await redis.incr(fail_key)
-    await redis.expire(fail_key, PHONE_LOCK_S, nx=True)
-
-    if user_fails > MAX_MPIN_FAILS_PER_PHONE:
+    current_fails = int(await redis.get(fail_key) or 0)
+    if current_fails >= MAX_MPIN_FAILS_PER_PHONE:
         raise _unauthorized({"code": "ACCOUNT_LOCKED"})
 
     user = (await db.execute(select(User).where(User.phone_number == phone))).scalars().first()
-    ok = bool(
-        user and user.is_active and user.mpin_hash
-        and await run_in_threadpool(verify_password, req.mpin, user.mpin_hash)
-    )
-    if not ok:
-        raise _unauthorized({"code": "MPIN_INVALID", "attempts_left": MAX_MPIN_FAILS_PER_PHONE - user_fails})
+    if not user or not user.is_active or not user.mpin_hash:
+        raise _unauthorized({"code": "MPIN_INVALID", "attempts_left": max(0, MAX_MPIN_FAILS_PER_PHONE - current_fails)})
+
+    is_valid = await run_in_threadpool(verify_password, req.mpin, user.mpin_hash)
+    if not is_valid:
+        user_fails = await redis.incr(fail_key)
+        await redis.expire(fail_key, PHONE_LOCK_S, nx=True)
+        if user_fails >= MAX_MPIN_FAILS_PER_PHONE:
+            raise _unauthorized({"code": "ACCOUNT_LOCKED"})
+        raise _unauthorized({"code": "MPIN_INVALID", "attempts_left": max(0, MAX_MPIN_FAILS_PER_PHONE - user_fails)})
 
     await redis.delete(fail_key)
     shop = (await db.execute(select(ShopProfile).where(ShopProfile.id == user.shop_id))).scalars().first()
