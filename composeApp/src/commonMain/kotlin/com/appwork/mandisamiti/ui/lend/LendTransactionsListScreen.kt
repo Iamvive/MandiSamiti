@@ -82,7 +82,6 @@ fun LendTransactionsListScreen(
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     getSettlements: (suspend (String) -> List<LendSettlement>)? = null,
     onRepayMoney: ((lendId: String, paymentPaisa: Long, interestPaisa: Long, calculatedInterestPaisa: Long) -> Unit)? = null,
-    getMonthlyRatePercent: suspend (partyId: String) -> Double = { 1.5 },
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -212,7 +211,6 @@ fun LendTransactionsListScreen(
             MoneyRepayHost(
                 lend = lend,
                 getSettlements = getSettlements!!,
-                getMonthlyRatePercent = getMonthlyRatePercent,
                 isEnglish = isEnglish,
                 onConfirm = { payment, interest, calculated ->
                     onRepayMoney!!(lend.id, payment, interest, calculated)
@@ -531,20 +529,17 @@ private fun RepaymentBottomSheet(
 private fun MoneyRepayHost(
     lend: LendEntry,
     getSettlements: suspend (String) -> List<LendSettlement>,
-    getMonthlyRatePercent: suspend (String) -> Double,
     isEnglish: Boolean,
     onConfirm: (paymentPaisa: Long, interestPaisa: Long, calculatedInterestPaisa: Long) -> Unit,
     onDismiss: () -> Unit
 ) {
     var settlements by remember(lend.id) { mutableStateOf<List<LendSettlement>?>(null) }
-    var rate by remember(lend.id) { mutableStateOf<Double?>(null) }
     LaunchedEffect(lend.id) {
         settlements = getSettlements(lend.id).filter { !it.isVoid }
-        rate = getMonthlyRatePercent(lend.partyId)
     }
     val live = settlements
-    val ratePercent = rate
-    if (live == null || ratePercent == null) return
+    val ratePercent = lend.monthlyRatePercent
+    if (live == null) return
     RepayLoanDialog(
         outstandingPrincipalPaisa = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L),
         calculatedInterestPaisa = RuralInterestEngine.interestDue(

@@ -64,7 +64,7 @@ object DemoSimulator {
             phone = "9876543210",
             village = "गोवर्धन, मथुरा",
             partyType = PartyType.FARMER,
-            monthlyInterestRate = 1.5,
+            monthlyInterestRate = 2.0,
             createdAt = currentTime,
             updatedAt = currentTime
         )

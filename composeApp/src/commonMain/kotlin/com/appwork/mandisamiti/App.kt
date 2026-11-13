@@ -482,8 +482,7 @@ fun App(
                         val live = lendRepo.getSettlements(lend.id).filter { !it.isVoid }
                         val principal = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
                         if (principal <= 0L) continue
-                        val rate = partyRepo.getPartyById(lend.partyId)?.monthlyInterestRate
-                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate ?: 1.5
+                        val rate = lend.monthlyRatePercent
                         val interest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
                             lend.amountPaisa, rate, lend.entryDate, live, kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                         )
@@ -692,8 +691,7 @@ fun App(
                         val live = lendRepo.getSettlements(lend.id).filter { !it.isVoid }
                         val principal = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
                         if (principal <= 0L) continue
-                        val rate = partyRepo.getPartyById(lend.partyId)?.monthlyInterestRate
-                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate ?: 1.5
+                        val rate = lend.monthlyRatePercent
                         val interest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
                             lend.amountPaisa, rate, lend.entryDate, live, kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                         )
@@ -941,11 +939,6 @@ fun App(
                             }
                             syncScheduler.scheduleOneTimeSync()
                         }
-                    },
-                    getMonthlyRatePercent = { partyId ->
-                        partyRepo.getPartyById(partyId)?.monthlyInterestRate
-                            ?: shopRepo.getShopProfileStream().first()?.defaultMonthlyInterestRate
-                            ?: 1.5
                     },
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onVoid = { id, reason ->

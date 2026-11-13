@@ -83,7 +83,6 @@ data class OpenLoanInfo(
 data class PartyLedgerUiState(
     val party: Party? = null,
     val isSoundEnabled: Boolean = true,
-    val defaultMonthlyRatePercent: Double = 1.5,
     val balancePaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
     val openLoans: List<OpenLoanInfo> = emptyList(),
@@ -132,7 +131,7 @@ class PartyLedgerViewModel(
         shopProfileRepository.getShopProfileStream()
             .onEach { profile ->
                 if (profile != null) {
-                    _uiState.value = _uiState.value.copy(isSoundEnabled = profile.isSoundEnabled, defaultMonthlyRatePercent = profile.defaultMonthlyInterestRate)
+                    _uiState.value = _uiState.value.copy(isSoundEnabled = profile.isSoundEnabled)
                 }
             }
             .launchIn(viewModelScope)
@@ -161,7 +160,6 @@ class PartyLedgerViewModel(
         val tradeItemsFlow = combine(buysFlow, sellsFlow, lendsFlow, settlementsFlow) { buysList, sellsList, lendsList, settlementsList ->
             val partyLends = lendsList.filter { it.partyId == partyId || (partyName != null && it.partyId.equals(partyName, ignoreCase = true)) }
 
-            val rate = currentMonthlyRate()
             val allLoansInfo = partyLends.filter { !it.isVoid }.associate { lend ->
                 val nonVoidSettlements = settlementsList.filter { it.lendId == lend.id && !it.isVoid }
                 val repaidPaisa = nonVoidSettlements.sumOf { it.amountPaisa }
@@ -169,13 +167,13 @@ class PartyLedgerViewModel(
                 val reducedPaisa = if (isMoney) nonVoidSettlements.sumOf { it.principalPaisa } else repaidPaisa
                 val outstandingPaisa = (lend.amountPaisa - reducedPaisa).coerceAtLeast(0L)
                 val interestDue = if (isMoney && outstandingPaisa > 0L) {
-                    RuralInterestEngine.interestDue(lend.amountPaisa, rate, lend.entryDate, nonVoidSettlements, Clock.System.now().toEpochMilliseconds())
+                    RuralInterestEngine.interestDue(lend.amountPaisa, lend.monthlyRatePercent, lend.entryDate, nonVoidSettlements, Clock.System.now().toEpochMilliseconds())
                 } else 0L
                 lend.id to OpenLoanInfo(
                     lend = lend,
                     outstandingPaisa = outstandingPaisa,
                     interestDuePaisa = interestDue,
-                    monthlyRatePercent = rate,
+                    monthlyRatePercent = lend.monthlyRatePercent,
                     settlements = nonVoidSettlements
                 )
             }
@@ -233,9 +231,6 @@ class PartyLedgerViewModel(
             )
         }.launchIn(viewModelScope)
     }
-
-    private fun currentMonthlyRate(): Double =
-        _uiState.value.party?.monthlyInterestRate ?: _uiState.value.defaultMonthlyRatePercent
 
     fun applyCashEntryToLoan(lendId: String, amountRs: Long, note: String? = null) =
         repayLoan(lendId, amountRs * 100L, interestPaisa = 0L, calculatedInterestPaisa = 0L, note = note)
@@ -424,7 +419,8 @@ class PartyLedgerViewModel(
         if (principal > 0L) {
             val interest = RuralInterestEngine.calculateAccruedInterestByDays(
                 principalPaisa = principal,
-                monthlyRatePercent = currentMonthlyRate(),
+                monthlyRatePercent = _uiState.value.openLoans.minByOrNull { it.lend.entryDate }?.monthlyRatePercent
+                    ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT,
                 elapsedDays = 30
             )
             _uiState.value = _uiState.value.copy(

@@ -144,7 +144,7 @@ fun PartyLedgerScreen(
         cashRemarksInput = pendingCashRemarks
     }
 
-    var interestRateInput by remember { mutableStateOf("1.5") }
+    var interestRateInput by remember { mutableStateOf("2") }
     var interestDaysInput by remember { mutableStateOf("30") }
 
     var showEditPartyDialog by remember { mutableStateOf(false) }
@@ -338,7 +338,7 @@ fun PartyLedgerScreen(
                                 interestDaysInput = (ms / 86_400_000L).coerceAtLeast(1L).toString()
                                 interestRateInput = oldest.monthlyRatePercent.toString()
                             } else {
-                                interestRateInput = (uiState.party?.monthlyInterestRate ?: uiState.defaultMonthlyRatePercent).toString()
+                                interestRateInput = RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT.toString()
                             }
                             viewModel.openInterestDialog()
                         },
@@ -1287,8 +1287,9 @@ fun PartyLedgerScreen(
     }
 
     editingSettlement?.let { s ->
-        // Same rate the open-loan list uses; settled loans are not in openLoans but can still be edited.
-        val rate = uiState.party?.monthlyInterestRate ?: uiState.defaultMonthlyRatePercent
+        // The loan's own rate; settled loans are not in openLoans but can still be edited.
+        val rate = uiState.loansInfoById[s.lendId]?.monthlyRatePercent
+            ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT
         EditRepaymentDialog(
             settlement = s,
             isEnglish = isEnglish,
@@ -1315,7 +1316,7 @@ fun PartyLedgerScreen(
     // Desi Interest Modal (Clean UI)
     if (uiState.isInterestDialogOpen) {
         val principal = if (uiState.balancePaisa > 0) uiState.balancePaisa else 0L
-        val rate = interestRateInput.toDoubleOrNull() ?: 1.5
+        val rate = interestRateInput.toDoubleOrNull() ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT
         val days = interestDaysInput.toIntOrNull() ?: 30
         val interestResult = RuralInterestEngine.calculateAccruedInterestByDays(principal, rate, days)
 
