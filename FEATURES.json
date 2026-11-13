@@ -83,7 +83,7 @@
       "id": "khata-chips-explained",
       "description": "Khata chips are explained to the user",
       "status": "failing",
-      "evidence": ""
+      "evidence": "KhataFilterExplainerCard.kt built, integrated into KhataLedgerTabScreen.kt empty state, 7 unit tests pass (26498f6, commit message adds 2026-11-13 plan and PROGRESS.md entry). Card appears when filters active and no results, shows Hindi/English explanations, reset button clears filters. Redmi d93c743 device check pending: Light, Dark, 390dp, tap reset button."
     },
     {
       "id": "e2e-saves-dummy-shop",
