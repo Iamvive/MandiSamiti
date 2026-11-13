@@ -6,7 +6,12 @@ import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.LendEntryEntity
 import com.appwork.mandisamiti.database.LendSettlementEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.math.RepaymentEditPlan
+import com.appwork.mandisamiti.domain.math.RepaymentEditPlanner
+import com.appwork.mandisamiti.domain.math.effectivePrincipalPaisa
 import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
@@ -196,6 +201,99 @@ class OfflineFirstLendRepository(
     override suspend fun voidLendEntry(id: String, reason: VoidReason) = withContext(ioDispatcher) {
         val now = clock.now().toEpochMilliseconds()
         database.transaction { voidLendInTransaction(id, reason, now) }
+    }
+
+    override suspend fun editSettlement(
+        settlementId: String, newAmountPaisa: Long, newSettledAt: Long, monthlyRatePercent: Double,
+    ): RepaymentEditPlan = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transactionWithResult {
+            val target = queries.getLendSettlementById(settlementId).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Payment $settlementId does not exist")
+            require(!target.isVoid) { "Voided payment cannot be edited" }
+            val lend = queries.getLendEntryById(target.lendId).executeAsOneOrNull()?.toDomain()
+                ?: throw IllegalArgumentException("Lend ${target.lendId} does not exist")
+            require(!lend.isVoid && lend.lendType == LendType.MONEY) { "Only payments on a live money loan can be edited" }
+
+            val live = queries.getLendSettlementsByLend(lend.id).executeAsList().map { it.toDomain() }
+            val plan = RepaymentEditPlanner.plan(lend, live, settlementId, newAmountPaisa, newSettledAt, monthlyRatePercent, now)
+            val before = live.associateBy { it.id }
+
+            plan.changedSettlements.forEach { s ->
+                insertSettlement(s)
+                queries.insertRevision(
+                    id = IdGenerator.newId(), shop_id = s.shopId, entry_id = s.id, entry_kind = "LEND_SETTLEMENT",
+                    revision = s.revision, change_kind = "EDIT",
+                    snapshot_json = json.encodeToString(LendSettlement.serializer(), s),
+                    void_reason = null, changed_at = now,
+                )
+                syncSettlementCashRows(lend, s, dateChanged = before.getValue(s.id).settledAt != s.settledAt, now = now)
+            }
+
+            val changedById = plan.changedSettlements.associateBy { it.id }
+            val repaid = live.sumOf { (changedById[it.id] ?: it).effectivePrincipalPaisa() }
+            val newStatus = if (repaid >= lend.amountPaisa) LendStatus.SETTLED else LendStatus.PARTIAL
+            if (newStatus != lend.status) {
+                val updatedLend = lend.copy(status = newStatus, revision = lend.revision + 1, updatedAt = now, syncStatus = 0)
+                insertOrReplace(updatedLend)
+                recordLendRevision(updatedLend, "EDIT", now)
+            }
+            plan
+        }
+    }
+
+    override suspend fun getSettlementHistory(settlementId: String): List<LendSettlement> = withContext(ioDispatcher) {
+        queries.getRevisionsForEntry(settlementId).executeAsList()
+            .filter { it.entry_kind == "LEND_SETTLEMENT" && it.snapshot_json.isNotBlank() }
+            .map { json.decodeFromString(LendSettlement.serializer(), it.snapshot_json) }
+    }
+
+    /**
+     * Makes the tagged cash rows of one payment match its new split: the JAMA_RECEIVED row carries the principal,
+     * the INTEREST_RECEIVED row carries the interest. A row that drops to 0 is voided; a row that is needed
+     * and missing is created. The general-jama overflow row has no tag and is never touched.
+     */
+    private fun syncSettlementCashRows(lend: LendEntry, s: LendSettlement, dateChanged: Boolean, now: Long) {
+        val tag = "[SETTLE:${s.id}:${s.lendId}]"
+        val rows = queries.getCashTransactionsByTag(tag).executeAsList()
+        val date = if (dateChanged) s.settledAt else null
+
+        fun adjust(type: TransactionType, newPaisa: Long, remarks: String) {
+            val row = rows.firstOrNull { it.transaction_type == type.name }
+            if (row == null) {
+                if (newPaisa > 0L) {
+                    insertCashEntry(
+                        CashTransaction(
+                            id = IdGenerator.newId(), shopId = s.shopId,
+                            partyId = rows.firstOrNull()?.party_id ?: lend.partyId,
+                            transactionType = type, amountPaisa = newPaisa,
+                            paymentMode = PaymentMode.valueOf(rows.firstOrNull()?.payment_mode ?: PaymentMode.CASH.name),
+                            transactionDate = s.settledAt, remarks = "$remarks $tag", createdAt = now, updatedAt = now,
+                        ),
+                        now,
+                    )
+                }
+                return
+            }
+            if (row.amount_paisa == newPaisa && date == null) return
+            val void = newPaisa == 0L
+            queries.insertCashTransaction(
+                id = row.id, shop_id = row.shop_id, party_id = row.party_id, deal_id = row.deal_id,
+                transaction_type = row.transaction_type, amount_paisa = if (void) row.amount_paisa else newPaisa,
+                payment_mode = row.payment_mode, transaction_date = date ?: row.transaction_date,
+                voice_note_uri = row.voice_note_uri, remarks = row.remarks, created_at = row.created_at,
+                updated_at = now, is_deleted = row.is_deleted, sync_status = 0L, revision = row.revision + 1L,
+                is_void = if (void) 1L else 0L, void_reason = if (void) "REPAYMENT_EDITED" else null,
+                source_entry_type = row.source_entry_type, source_entry_id = row.source_entry_id,
+            )
+            queries.insertRevision(
+                id = IdGenerator.newId(), shop_id = row.shop_id, entry_id = row.id, entry_kind = "CASH",
+                revision = row.revision + 1L, change_kind = if (void) "VOID" else "EDIT", snapshot_json = "",
+                void_reason = if (void) "REPAYMENT_EDITED" else null, changed_at = now,
+            )
+        }
+        adjust(TransactionType.JAMA_RECEIVED, s.principalPaisa, "उधार वापसी जमा")
+        adjust(TransactionType.INTEREST_RECEIVED, s.interestPaisa, "ब्याज जमा")
     }
 
     /** Voids the lend, its settlements and every linked cash row. Must run inside the caller's DB transaction. */

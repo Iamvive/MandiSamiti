@@ -21,4 +21,13 @@ interface LendRepository {
      */
     suspend fun editLendEntry(id: String, amountPaisa: Long, notes: String?)
     suspend fun voidLendEntry(id: String, reason: VoidReason)
+    /**
+     * Edits the amount and date of one payment on a money loan and recalculates every payment after it,
+     * in one transaction. Linked cash rows (principal and interest) and the loan status follow.
+     * Throws [com.appwork.mandisamiti.domain.usecase.LendException.OverRepayment] and writes nothing
+     * when a payment would exceed the outstanding principal.
+     */
+    suspend fun editSettlement(settlementId: String, newAmountPaisa: Long, newSettledAt: Long, monthlyRatePercent: Double): com.appwork.mandisamiti.domain.math.RepaymentEditPlan
+    /** One snapshot per revision of a payment, oldest first. The last one is the current state. */
+    suspend fun getSettlementHistory(settlementId: String): List<LendSettlement>
 }

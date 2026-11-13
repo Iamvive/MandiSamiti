@@ -1,5 +1,7 @@
 package com.appwork.mandisamiti.domain.usecase
 
+import com.appwork.mandisamiti.domain.math.RepaymentEditPlan
+import com.appwork.mandisamiti.domain.math.RepaymentEditPlanner
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.*
 import com.appwork.mandisamiti.domain.repository.LendRepository
@@ -107,6 +109,21 @@ class LendTransactionUseCase(
         repo.settle(s, rows)
         return DepositSplit(principalSplit.loanPaisa, principalSplit.generalPaisa, interestSplit.interestPaisa)
     }
+
+    /** What an edit would change, without saving. Same checks as [editRepayment]. */
+    suspend fun previewRepaymentEdit(
+        lendId: String, settlementId: String, newAmountPaisa: Long, newSettledAt: Long, monthlyRatePercent: Double,
+    ): RepaymentEditPlan {
+        val lend = repo.getLendEntryById(lendId) ?: throw IllegalArgumentException("Lend $lendId does not exist")
+        return RepaymentEditPlanner.plan(
+            lend, repo.getSettlements(lendId).filter { !it.isVoid }, settlementId,
+            newAmountPaisa, newSettledAt, monthlyRatePercent, nowMillis(),
+        )
+    }
+
+    suspend fun editRepayment(
+        settlementId: String, newAmountPaisa: Long, newSettledAt: Long, monthlyRatePercent: Double,
+    ): RepaymentEditPlan = repo.editSettlement(settlementId, newAmountPaisa, newSettledAt, monthlyRatePercent)
 }
 
 data class DepositSplit(val loanPaisa: Long, val generalPaisa: Long, val interestPaisa: Long = 0L)

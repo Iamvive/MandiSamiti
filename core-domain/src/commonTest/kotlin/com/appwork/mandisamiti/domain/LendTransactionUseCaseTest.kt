@@ -27,6 +27,10 @@ class LendTransactionUseCaseTest {
         override suspend fun getSettlements(lendId: String): List<LendSettlement> =
             settlements.filter { it.lendId == lendId && !it.isVoid }
 
+        override suspend fun editSettlement(settlementId: String, newAmountPaisa: Long, newSettledAt: Long, monthlyRatePercent: Double): com.appwork.mandisamiti.domain.math.RepaymentEditPlan =
+            throw UnsupportedOperationException()
+        override suspend fun getSettlementHistory(settlementId: String): List<LendSettlement> = emptyList()
+
         override suspend fun saveLendEntry(entry: LendEntry) {
             lends[entry.id] = entry
         }
