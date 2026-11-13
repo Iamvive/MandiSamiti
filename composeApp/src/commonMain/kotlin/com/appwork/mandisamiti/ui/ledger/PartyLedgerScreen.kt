@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -45,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -125,6 +127,8 @@ fun PartyLedgerScreen(
     var pendingCashRemarks by remember { mutableStateOf("") }
     var selectedLoanIdForRepay by remember { mutableStateOf<String?>(null) }
     var repayDialogLoanId by remember { mutableStateOf<String?>(null) }
+    var editingSettlement by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.LendSettlement?>(null) }
+    var historySettlement by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.LendSettlement?>(null) }
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
     var lendEditTarget by remember { mutableStateOf<LedgerItem.LendItem?>(null) }
@@ -393,6 +397,8 @@ fun PartyLedgerScreen(
                                 isEnglish = isEnglish,
                                 lend = item.lend,
                                 loanInfo = matchingLoan,
+                                onEditRepayment = { editingSettlement = it },
+                                onShowRepaymentHistory = { historySettlement = it },
                                 onLongPress = { voidTarget = item }
                             )
                         }
@@ -1280,6 +1286,35 @@ fun PartyLedgerScreen(
         }
     }
 
+    editingSettlement?.let { s ->
+        val loan = uiState.openLoans.find { it.lend.id == s.lendId }
+        if (loan == null) {
+            editingSettlement = null
+        } else {
+            EditRepaymentDialog(
+                settlement = s,
+                isEnglish = isEnglish,
+                preview = uiState.repaymentEditPreview,
+                errorCode = uiState.repaymentEditError,
+                onPreview = { amount, at -> viewModel.previewRepaymentEdit(s.lendId, s.id, amount, at, loan.monthlyRatePercent) },
+                onConfirm = { amount, at ->
+                    viewModel.editRepayment(s.id, amount, at, loan.monthlyRatePercent)
+                    editingSettlement = null
+                },
+                onDismiss = { viewModel.clearRepaymentEdit(); editingSettlement = null },
+            )
+        }
+    }
+
+    historySettlement?.let { s ->
+        LaunchedEffect(s.id) { viewModel.loadRepaymentHistory(s.id) }
+        RepaymentHistoryDialog(
+            history = uiState.repaymentHistory,
+            isEnglish = isEnglish,
+            onDismiss = { viewModel.clearRepaymentEdit(); historySettlement = null },
+        )
+    }
+
     // Desi Interest Modal (Clean UI)
     if (uiState.isInterestDialogOpen) {
         val principal = if (uiState.balancePaisa > 0) uiState.balancePaisa else 0L
@@ -1975,6 +2010,8 @@ private fun FintechLendCard(
     isEnglish: Boolean,
     lend: com.appwork.mandisamiti.domain.model.LendEntry,
     loanInfo: OpenLoanInfo? = null,
+    onEditRepayment: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
+    onShowRepaymentHistory: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onLongPress: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
@@ -2098,19 +2135,55 @@ private fun FintechLendCard(
                         settlements.forEach { s ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${formatEpochDate(s.settledAt)} · ${if (isEnglish) "Cash" else "नकद"}",
-                                    fontSize = 11.sp,
-                                    color = MandiTextSecondary
-                                )
-                                Text(
-                                    text = "+₹${MandiMathEngine.paisaToRupeesString(s.amountPaisa)}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MandiGreenReceivable
-                                )
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "${formatEpochDate(s.settledAt)} · ${if (isEnglish) "Cash" else "नकद"}",
+                                        fontSize = 11.sp,
+                                        color = MandiTextSecondary
+                                    )
+                                    if (s.revision > 1L) {
+                                        Text(
+                                            text = if (isEnglish) "edited" else "सुधारा",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MandiAmberDark,
+                                            modifier = Modifier
+                                                .clickable { onShowRepaymentHistory(s) }
+                                                .padding(horizontal = 2.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "+₹${MandiMathEngine.paisaToRupeesString(s.amountPaisa)}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MandiGreenReceivable
+                                    )
+                                    if (lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY && !isVoid) {
+                                        IconButton(
+                                            onClick = { onEditRepayment(s) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = if (isEnglish) "Edit payment" else "वापसी सुधारें",
+                                                tint = MandiTextSecondary,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -2143,7 +2216,7 @@ private fun formatVoidReason(reasonStr: String?, isEnglish: Boolean): String {
     return VoidReason.entries.find { it.name == reasonStr }?.let { if (isEnglish) it.labelEn else it.labelHi } ?: reasonStr
 }
 
-private fun formatEpochDate(epochMs: Long): String {
+internal fun formatEpochDate(epochMs: Long): String {
     val dt = Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault())
     val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     val monthStr = monthNames.getOrElse(dt.monthNumber - 1) { dt.month.name.take(3) }
