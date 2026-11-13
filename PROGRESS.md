@@ -57,3 +57,9 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Farmer tab: search "Ramesh" returns party summary (Rampur, phone, Rs 1,812 due) and the slip. No horizontal overflow; keyboard clear of results.
 - Not done: Light theme (needs manual MIUI toggle), Buyer tab 390px. Feature stays `failing`.
 - Next: Vivek switches the phone to Light, then check Farmer and Buyer tabs; then mark passing.
+
+## 2026-11-13 (Claude Code): slip-party-search passing
+- Phone switched to Light by Vivek. Redmi d93c743, 392dp, build of main d3cbf09.
+- Light, Farmer tab: "Ramesh" shows party summary plus slip. Light, Buyer tab: "Suresh" shows party summary plus slip. No overflow, keyboard clear of results.
+- Dark Farmer was checked earlier today; Dark by name, Light and Dark by phone per earlier evidence. Marked `passing`.
+- Phone left in Light. Next: sell-receipt-cash-in, then money-slip-interest-settlement.
