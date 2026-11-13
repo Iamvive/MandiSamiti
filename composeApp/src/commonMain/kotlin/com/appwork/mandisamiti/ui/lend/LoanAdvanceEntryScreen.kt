@@ -128,6 +128,7 @@ fun LoanAdvanceEntryScreen(
     var useBeneficiary by remember { mutableStateOf(false) }
     var receivedAmount by remember { mutableStateOf("") }
     var givenAmount by remember { mutableStateOf("") }
+    var givenRate by remember { mutableStateOf("2") }
     var receivedDate by remember { mutableStateOf(defaultDate) }
     var givenDate by remember { mutableStateOf(defaultDate) }
     var showReceivedDatePicker by remember { mutableStateOf(false) }
@@ -135,7 +136,7 @@ fun LoanAdvanceEntryScreen(
     var showDiscardDialog by remember { mutableStateOf(false) }
 
     val isDirty = lender.isDirty || cashRecipient.isDirty || beneficiary.isDirty ||
-        receivedAmount.isNotBlank() || givenAmount.isNotBlank() || useBeneficiary ||
+        receivedAmount.isNotBlank() || givenAmount.isNotBlank() || givenRate != "2" || useBeneficiary ||
         receivedDate != defaultDate || givenDate != defaultDate
     MandiBackHandler(enabled = true) {
         if (isDirty) showDiscardDialog = true else onBack()
@@ -143,7 +144,7 @@ fun LoanAdvanceEntryScreen(
 
     val receivedValid = lender.isValid && wholeRupeePaisa(receivedAmount) != null
     val givenValid = cashRecipient.isValid && (!useBeneficiary || beneficiary.isValid) &&
-        wholeRupeePaisa(givenAmount) != null
+        wholeRupeePaisa(givenAmount) != null && parseLoanRate(givenRate) != null
 
     val villageSuggestions = remember(parties, recentLends) {
         (parties.mapNotNull { it.village?.trim()?.takeIf(String::isNotEmpty) } +
@@ -215,6 +216,7 @@ fun LoanAdvanceEntryScreen(
                                     entryDate = givenDate,
                                     amountPaisa = wholeRupeePaisa(givenAmount) ?: return@Button,
                                     notes = receiverSummary,
+                                    monthlyRatePercent = parseLoanRate(givenRate) ?: return@Button,
                                     status = LendStatus.OPEN,
                                     createdAt = now,
                                     updatedAt = now,
@@ -341,6 +343,15 @@ fun LoanAdvanceEntryScreen(
                             onValueChange = { givenAmount = acceptWholeRupeesInput(givenAmount, it) },
                             label = if (isEnglish) "Amount (₹) *" else "राशि (₹) *",
                             isEnglish = isEnglish,
+                        )
+                        OutlinedTextField(
+                            value = givenRate,
+                            onValueChange = { givenRate = it },
+                            label = { Text(if (isEnglish) "Interest rate (% per month) *" else "ब्याज दर (% प्रति माह) *") },
+                            isError = parseLoanRate(givenRate) == null,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                         TransactionDateField(
                             dateMillis = givenDate,

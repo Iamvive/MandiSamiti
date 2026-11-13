@@ -45,7 +45,7 @@ class LendEntryFormState {
 
     /** Null when the text is not a number above zero and at most 100. */
     val parsedRate: Double?
-        get() = rateInput.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0.0 && it <= 100.0 }
+        get() = parseLoanRate(rateInput)
 
     val phoneValidation: ValidationResult
         get() = MandiValidators.validatePhone(phone, isRequired = true)
@@ -157,3 +157,7 @@ class LendEntryFormState {
     }
 }
 
+
+/** Monthly loan rate typed by hand: decimal comma allowed, above 0 and at most 100, else null. */
+fun parseLoanRate(text: String): Double? =
+    text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0.0 && it <= 100.0 }

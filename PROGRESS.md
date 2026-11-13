@@ -75,3 +75,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Redmi d93c743, Dark: sell receipt "नकद लें" button visible; settlement sheet shows received Rs 1,000 and due Rs 12,200; amount field and confirm button above keyboard. `sell-receipt-cash-in` and `sheet-amount-keyboard` marked `passing`.
 - Still unchecked: full settlement, button hidden when paid or void, Farmer-side sheet in Dark. Commits local, not pushed. hot.md not updated (awaits Vivek's approval).
 - Next: money-slip-interest-settlement (needs brainstorming first), offsite backup drill, khata-chips-explained.
+
+## 2026-11-13 (Claude Code): per-loan interest rate, Tasks 6 and 7
+- Task 6 tests committed (3684a08). Alembic 0005 deployed to staging with Vivek's approval; 130 backend tests passed, health and readiness ok.
+- Device check found the Task 4 rate field sat on LendEntryScreen, which is now grain-only. Money loans use LoanAdvanceEntryScreen, so the field was unreachable. Added the field to its "Loan Given" tab (shared parseLoanRate, default 2, blocks save when invalid) plus a parseLoanRate test.
+- Evidence (Redmi d93c743, Dark, dummy shop, staging): old Rs 5,000 loan shows 2.0%/mo; form default 2; rate 0 gives red error and disabled save; Rs 1,000 loan at 1.5 shows 1.5%/mo, loan #1 still 2.0; staging lend_entries holds 1.5 and 2.
+- Unverified: Light theme (needs manual MIUI toggle), 390dp overflow measurement, interest-first part payment on device (jvmTest only). money-slip-interest-settlement stays failing. Dummy shop now has Lend Party loan #2 (Rs 1,000 at 1.5).
+- Next: Vivek switches the phone to Light, then check the Loan Given form and loan book; then approve for hot.md and pointer bump.

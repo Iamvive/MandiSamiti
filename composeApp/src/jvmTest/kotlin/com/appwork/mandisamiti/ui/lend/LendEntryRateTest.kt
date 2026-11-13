@@ -55,4 +55,11 @@ class LendEntryRateTest {
         form.reset()
         assertEquals("2", form.rateInput)
     }
+
+    @Test
+    fun parseLoanRate_usedByMoneyLoanScreen() {
+        assertEquals(2.0, parseLoanRate("2"))
+        assertEquals(1.5, parseLoanRate(" 1,5 "))
+        for (bad in listOf("", "0", "-1", "abc", "100.5")) assertNull(parseLoanRate(bad), "expected null for '$bad'")
+    }
 }

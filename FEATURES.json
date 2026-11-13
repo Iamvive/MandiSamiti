@@ -1,23 +1,119 @@
 {
   "_rules": "Agents may change only `status` and `evidence` of existing entries. Never delete or reword an entry. Add new entries at the end. Mark `passing` only with evidence: a test run, or a device check on the Redmi (d93c743) with the date. Source of this seed: vaults/Vivek-K/wiki/hot.md handoffs up to 2026-11-11.",
   "features": [
-    {"id": "godown-tab", "description": "Godown tab: 3-way ledger, crop packing, custody split, reconcile sheet", "status": "passing", "evidence": "Redmi d93c743, 2026-11-11 (hot.md)"},
-    {"id": "cash-drawer-v2", "description": "Galla Rokad v2: right-aligned balance, negative pill, bahi table, note steppers", "status": "passing", "evidence": "Redmi d93c743, e05f291, 2026-11-11"},
-    {"id": "farmer-slip-cash-settlement", "description": "Farmer slip cash settlement sheet, badges, Galla deduction, Naame sync", "status": "passing", "evidence": "Redmi d93c743 full and partial payment, 2026-11-11"},
-    {"id": "trader-slip-cash-settlement", "description": "Trader slip cash settlement with partial payments into Galla", "status": "passing", "evidence": "approved by Vivek, 7dba7b1, 2026-11-11"},
-    {"id": "slip-party-search", "description": "Name, village or phone search on Slips (Farmer and Buyer tabs)", "status": "passing", "evidence": "Verified Light and Dark by name, Dark by phone, 8 jvmTests. Not checked: 390px overflow, Farmer tab in Light. 2026-11-13 Claude: Farmer tab Dark on Redmi d93c743 (392dp, build of main d3cbf09): search \"Ramesh\" shows party summary (Rampur, phone, Rs 1,812) plus slip, no overflow, keyboard does not cover results. 2026-11-13 Light on Redmi d93c743 (392dp): Farmer search \"Ramesh\" and Buyer search \"Suresh\" show party summary plus slip, no overflow, keyboard clear. Name, village/phone field hint present on both tabs."},
-    {"id": "sell-slip-cash-settle-test", "description": "Unit test for settleSellSlipCash", "status": "passing", "evidence": "HomeViewModelSellSettlementTest, 6 jvmTests pass (partial, cap at due, already paid, void, zero/negative, unknown slip), 2026-11-13"},
-    {"id": "sell-receipt-cash-in", "description": "Cash-in button on the sell receipt", "status": "passing", "evidence": "2026-11-13 Claude: Cash-in button (\"नकद लें\") on sell receipt opens TraderSlipCashSettlementSheet. Redmi d93c743, Light, dummy shop TestShop, slip #1 Suresh Trader Rs 13,200: partial cash-in Rs 1,000 -> Rokad 3,84,842 to 3,85,842, trader receivable 13,200 to 12,200. jvmTests pass. Dark checked 2026-11-13: button visible; sheet shows prior received Rs 1,000 and due Rs 12,200 (persisted)."},
-    {"id": "sheet-amount-keyboard", "description": "Keyboard must not cover the amount field in the settlement sheet", "status": "passing", "evidence": "2026-11-13 Claude: bug reproduced (keyboard hid amount field and confirm button). Cause: ModalBottomSheet dialog window gets no IME insets (imePadding read 0). Fix: read WindowInsets.ime in main window and pad the sheet; content scrollable. Redmi d93c743, Light: field and confirm button visible above keyboard. Dark checked 2026-11-13: field and confirm button above keyboard."},
-    {"id": "payments-staging-sync", "description": "Payments sync to staging (offline-first outbox)", "status": "passing", "evidence": "Verified on Redmi Note 7 (d93c743) against staging (http://64.227.142.180:8060) on dummy shop 9999900001, 2026-11-13. Disabled wifi and mobile data; recorded cash payment of ₹10,008 on Buy slip #5 locally while offline (remaining balance dropped from ₹11,820 to ₹1,812 in UI). Confirmed absent from staging DB while offline. Re-enabled network; outbox drained with HTTP 200 (POST /api/v1/sync/push). Staging PostgreSQL confirmed row in cash_transactions (id e3181223-f8e9-4805-b949-afb664f49913, amount_paisa 1000800, source_entry_type BUY) and buy_entries.paid_paisa updated to 1000800."},
-    {"id": "money-slip-interest-settlement", "description": "Money-slip interest settlement: simple interest, interest first then principal, per-loan rate, editable payments", "status": "failing", "evidence": "Rules confirmed by Vivek 2026-11-11; brainstorm not finished; RuralInterestEngine exists, per-loan rate and repayment edit missing"},
-    {"id": "backup-now", "description": "Backup Now: cloud backup of the SQLite database, trigger and pending sync banner", "status": "passing", "evidence": "Redmi d93c743, 2026-11-13: silent background sync on local write and 15m periodic WorkManager; manual backup trigger verified in Settings; dashboard nag banner removed."},
-    {"id": "input-audit-high", "description": "10 High input-audit items (numeric keyboards)", "status": "passing", "evidence": "372c108, checked by inputType on Redmi, 2026-11-09"},
-    {"id": "input-audit-medium-low", "description": "13 Medium and 48 Low input-audit items; search boxes on Khata, Buy, Sell, Stock, Expense, Register", "status": "failing", "evidence": "audits/2026-11-09-mandisamiti-input-ux-audit.md in Vivek-K"},
-    {"id": "khata-chips-explained", "description": "Khata chips are explained to the user", "status": "failing", "evidence": ""},
-    {"id": "e2e-saves-dummy-shop", "description": "End-to-end saves verified on the dummy shop 9999900001 (staging)", "status": "passing", "evidence": "Verified on Redmi Note 7 (d93c743) against staging (http://64.227.142.180:8060) on dummy shop 9999900001 (fc373fed-15c3-4803-8ef5-848423c46370), 2026-11-13. Saved Buy entry (Slip #5, Ramesh Kumar, 10 bags, net ₹11,820, DB id afe6285d-e257-480e-8679-45a6d26a6347), Sell entry (Bill #1, Suresh Trader, 10 bags, ₹13,200, DB id sell-4fe31e2b-7b64-4251-9dcc-111957f5bda1), Lend entry (Lend Party, ₹5,000, DB id a819e5c8-1fdc-4e3f-b35a-ff2ba48bea9d), and Expense entry (Chai Pani, ₹150, DB id d0e8b0de-7953-45f5-9af0-9e059c706955). All 4 visible in their respective UI lists and confirmed in staging PostgreSQL."},
-    {"id": "edit-loan-repayment", "description": "Edit loan repayment: replay planner, cash row sync, edit dialog with live preview, revision history dialog", "status": "passing", "evidence": "Verified on Redmi Note 7 (d93c743) on staging (http://64.227.142.180:8060), 2026-11-13 across Light, Dark, and 390px: Checks A-M pass (edit icons, touch targets >48dp, preview delta, date edit, over-repayment guard, empty amount guard, debounce, audit history, SETTLED-to-PARTIAL flip, PARTIAL-to-SETTLED flip, paise read-only guard, staging sync HTTP 200 with revisions in DB, Galla cash balance match, zero horizontal overflow)."},
-    {"id": "offsite-backup-restore-drill", "description": "Weekly encrypted offsite backup (Sunday cron) plus a restore drill into a scratch Postgres", "status": "failing", "evidence": "backup_offsite.sh and restore_test.sh written, bash -n ok; not run on the VPS (no docker locally); cron line not installed; rclone gdrive remote and passphrase file existence unchecked"},
-    {"id": "clean-install-defaults", "description": "Clean-install defaults: farmer commission 0.70%, labour ₹10 / बोरी in Light and Dark themes at 390dp width", "status": "passing", "evidence": "Verified on Redmi Note 7 (d93c743) with staging build, 2026-11-13. Clean uninstall, fresh debug install, onboarding on dummy shop 9999900001. Settings defaults verified: किसान आढ़त दर 0.70%, हम्माली / पल्लेदारी ₹10 / बोरी in both Light and Dark themes, no horizontal overflow at 390dp reference width."}
+    {
+      "id": "godown-tab",
+      "description": "Godown tab: 3-way ledger, crop packing, custody split, reconcile sheet",
+      "status": "passing",
+      "evidence": "Redmi d93c743, 2026-11-11 (hot.md)"
+    },
+    {
+      "id": "cash-drawer-v2",
+      "description": "Galla Rokad v2: right-aligned balance, negative pill, bahi table, note steppers",
+      "status": "passing",
+      "evidence": "Redmi d93c743, e05f291, 2026-11-11"
+    },
+    {
+      "id": "farmer-slip-cash-settlement",
+      "description": "Farmer slip cash settlement sheet, badges, Galla deduction, Naame sync",
+      "status": "passing",
+      "evidence": "Redmi d93c743 full and partial payment, 2026-11-11"
+    },
+    {
+      "id": "trader-slip-cash-settlement",
+      "description": "Trader slip cash settlement with partial payments into Galla",
+      "status": "passing",
+      "evidence": "approved by Vivek, 7dba7b1, 2026-11-11"
+    },
+    {
+      "id": "slip-party-search",
+      "description": "Name, village or phone search on Slips (Farmer and Buyer tabs)",
+      "status": "passing",
+      "evidence": "Verified Light and Dark by name, Dark by phone, 8 jvmTests. Not checked: 390px overflow, Farmer tab in Light. 2026-11-13 Claude: Farmer tab Dark on Redmi d93c743 (392dp, build of main d3cbf09): search \"Ramesh\" shows party summary (Rampur, phone, Rs 1,812) plus slip, no overflow, keyboard does not cover results. 2026-11-13 Light on Redmi d93c743 (392dp): Farmer search \"Ramesh\" and Buyer search \"Suresh\" show party summary plus slip, no overflow, keyboard clear. Name, village/phone field hint present on both tabs."
+    },
+    {
+      "id": "sell-slip-cash-settle-test",
+      "description": "Unit test for settleSellSlipCash",
+      "status": "passing",
+      "evidence": "HomeViewModelSellSettlementTest, 6 jvmTests pass (partial, cap at due, already paid, void, zero/negative, unknown slip), 2026-11-13"
+    },
+    {
+      "id": "sell-receipt-cash-in",
+      "description": "Cash-in button on the sell receipt",
+      "status": "passing",
+      "evidence": "2026-11-13 Claude: Cash-in button (\"नकद लें\") on sell receipt opens TraderSlipCashSettlementSheet. Redmi d93c743, Light, dummy shop TestShop, slip #1 Suresh Trader Rs 13,200: partial cash-in Rs 1,000 -> Rokad 3,84,842 to 3,85,842, trader receivable 13,200 to 12,200. jvmTests pass. Dark checked 2026-11-13: button visible; sheet shows prior received Rs 1,000 and due Rs 12,200 (persisted)."
+    },
+    {
+      "id": "sheet-amount-keyboard",
+      "description": "Keyboard must not cover the amount field in the settlement sheet",
+      "status": "passing",
+      "evidence": "2026-11-13 Claude: bug reproduced (keyboard hid amount field and confirm button). Cause: ModalBottomSheet dialog window gets no IME insets (imePadding read 0). Fix: read WindowInsets.ime in main window and pad the sheet; content scrollable. Redmi d93c743, Light: field and confirm button visible above keyboard. Dark checked 2026-11-13: field and confirm button above keyboard."
+    },
+    {
+      "id": "payments-staging-sync",
+      "description": "Payments sync to staging (offline-first outbox)",
+      "status": "passing",
+      "evidence": "Verified on Redmi Note 7 (d93c743) against staging (http://64.227.142.180:8060) on dummy shop 9999900001, 2026-11-13. Disabled wifi and mobile data; recorded cash payment of ₹10,008 on Buy slip #5 locally while offline (remaining balance dropped from ₹11,820 to ₹1,812 in UI). Confirmed absent from staging DB while offline. Re-enabled network; outbox drained with HTTP 200 (POST /api/v1/sync/push). Staging PostgreSQL confirmed row in cash_transactions (id e3181223-f8e9-4805-b949-afb664f49913, amount_paisa 1000800, source_entry_type BUY) and buy_entries.paid_paisa updated to 1000800."
+    },
+    {
+      "id": "money-slip-interest-settlement",
+      "description": "Money-slip interest settlement: simple interest, interest first then principal, per-loan rate, editable payments",
+      "status": "failing",
+      "evidence": "Per-loan rate built (commits 47f068b..3684a08 + rate field on LoanAdvanceEntryScreen), 2026-11-13. Redmi d93c743, Dark, dummy shop, staging at Alembic 0005: existing Rs 5,000 loan shows 2.0%/mo; new-loan form shows rate '2'; rate 0 shows red error and disables save; Rs 1,000 loan saved at 1.5 shows 1.5%/mo while loan #1 stays 2.0; staging lend_entries holds 1.5 for the new loan and 2 for the rest. Unverified on device: Light theme, 390dp overflow measurement, part payment interest-first with non-zero interest (covered by jvmTest only). Stays failing."
+    },
+    {
+      "id": "backup-now",
+      "description": "Backup Now: cloud backup of the SQLite database, trigger and pending sync banner",
+      "status": "passing",
+      "evidence": "Redmi d93c743, 2026-11-13: silent background sync on local write and 15m periodic WorkManager; manual backup trigger verified in Settings; dashboard nag banner removed."
+    },
+    {
+      "id": "input-audit-high",
+      "description": "10 High input-audit items (numeric keyboards)",
+      "status": "passing",
+      "evidence": "372c108, checked by inputType on Redmi, 2026-11-09"
+    },
+    {
+      "id": "input-audit-medium-low",
+      "description": "13 Medium and 48 Low input-audit items; search boxes on Khata, Buy, Sell, Stock, Expense, Register",
+      "status": "failing",
+      "evidence": "audits/2026-11-09-mandisamiti-input-ux-audit.md in Vivek-K"
+    },
+    {
+      "id": "khata-chips-explained",
+      "description": "Khata chips are explained to the user",
+      "status": "failing",
+      "evidence": ""
+    },
+    {
+      "id": "e2e-saves-dummy-shop",
+      "description": "End-to-end saves verified on the dummy shop 9999900001 (staging)",
+      "status": "passing",
+      "evidence": "Verified on Redmi Note 7 (d93c743) against staging (http://64.227.142.180:8060) on dummy shop 9999900001 (fc373fed-15c3-4803-8ef5-848423c46370), 2026-11-13. Saved Buy entry (Slip #5, Ramesh Kumar, 10 bags, net ₹11,820, DB id afe6285d-e257-480e-8679-45a6d26a6347), Sell entry (Bill #1, Suresh Trader, 10 bags, ₹13,200, DB id sell-4fe31e2b-7b64-4251-9dcc-111957f5bda1), Lend entry (Lend Party, ₹5,000, DB id a819e5c8-1fdc-4e3f-b35a-ff2ba48bea9d), and Expense entry (Chai Pani, ₹150, DB id d0e8b0de-7953-45f5-9af0-9e059c706955). All 4 visible in their respective UI lists and confirmed in staging PostgreSQL."
+    },
+    {
+      "id": "edit-loan-repayment",
+      "description": "Edit loan repayment: replay planner, cash row sync, edit dialog with live preview, revision history dialog",
+      "status": "passing",
+      "evidence": "Verified on Redmi Note 7 (d93c743) on staging (http://64.227.142.180:8060), 2026-11-13 across Light, Dark, and 390px: Checks A-M pass (edit icons, touch targets >48dp, preview delta, date edit, over-repayment guard, empty amount guard, debounce, audit history, SETTLED-to-PARTIAL flip, PARTIAL-to-SETTLED flip, paise read-only guard, staging sync HTTP 200 with revisions in DB, Galla cash balance match, zero horizontal overflow)."
+    },
+    {
+      "id": "offsite-backup-restore-drill",
+      "description": "Weekly encrypted offsite backup (Sunday cron) plus a restore drill into a scratch Postgres",
+      "status": "failing",
+      "evidence": "backup_offsite.sh and restore_test.sh written, bash -n ok; not run on the VPS (no docker locally); cron line not installed; rclone gdrive remote and passphrase file existence unchecked"
+    },
+    {
+      "id": "clean-install-defaults",
+      "description": "Clean-install defaults: farmer commission 0.70%, labour ₹10 / बोरी in Light and Dark themes at 390dp width",
+      "status": "passing",
+      "evidence": "Verified on Redmi Note 7 (d93c743) with staging build, 2026-11-13. Clean uninstall, fresh debug install, onboarding on dummy shop 9999900001. Settings defaults verified: किसान आढ़त दर 0.70%, हम्माली / पल्लेदारी ₹10 / बोरी in both Light and Dark themes, no horizontal overflow at 390dp reference width."
+    },
+    {
+      "id": "loan-rate-migration-staging",
+      "description": "2% rewrite and per-loan rate column visible on staging (Alembic 0005_loan_interest_rate)",
+      "status": "passing",
+      "evidence": "deploy_staging.sh 2026-11-13: 130 backend tests passed, upgrade 0004_shop_quota -> 0005_loan_interest_rate, health and readiness ok; staging lend_entries.monthly_interest_rate shows 2 for existing loans and 1.5 for the test loan synced from the Redmi."
+    }
   ]
 }
