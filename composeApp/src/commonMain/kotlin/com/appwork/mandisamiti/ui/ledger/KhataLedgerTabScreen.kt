@@ -317,17 +317,33 @@ fun KhataLedgerTabScreen(
 
             if (uiState.filteredParties.isEmpty() && !uiState.isLoading) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (isEnglish) "No matching accounts found" else "कोई खाता नहीं मिला",
-                            color = MandiTextMuted,
-                            fontSize = 14.sp
+                    if (shouldShowKhataFilterExplainer(
+                            filteredIsEmpty = true,
+                            isLoading = uiState.isLoading,
+                            statusFilter = uiState.activeFilter,
+                            typeFilter = uiState.activeTypeFilter
                         )
+                    ) {
+                        KhataFilterExplainerCard(
+                            isEnglish = isEnglish,
+                            onResetFilters = {
+                                onFilterSelected(PartyFilter.ALL)
+                                onTypeFilterSelected(PartyTypeFilter.ALL)
+                            }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isEnglish) "No matching accounts found" else "कोई खाता नहीं मिला",
+                                color = MandiTextMuted,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
             }

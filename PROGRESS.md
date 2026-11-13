@@ -94,3 +94,9 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Vivek approved. feat/loan-rate fast-forwarded into main (183569c) and pushed with plan commit 3445092. Worktree ms-loan-rate-wt and branch removed.
 - Cleanup: TestShop (fc373fed) transactional data deleted on staging (0 rows left, other shops untouched); Redmi app data cleared. Dummy loan #2 (Rs 1,000 at 1.5) is gone.
 - Still open: part payment interest-first on device, 1.5 display in Light, deferred minor fixes (error text "1 to 100", literal "2" defaults, rate field style). money-slip-interest-settlement stays failing.
+
+
+## 2026-11-13 (Gemini / Antigravity): chore(sync): test enhanced project-update pipeline
+- Changes: Updated `KhataLedgerTabScreen.kt`, `KhataFilterExplainerCard.kt`, `KhataFilterExplainerTest.kt`, `2026-11-13-khata-chips-explained.md`.
+- Evidence: Dry-run verification of 8-stage sync
+- Next: Continue implementation and feature verification.
