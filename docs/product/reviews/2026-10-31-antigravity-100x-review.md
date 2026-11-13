@@ -1,4 +1,7 @@
 # MandiSamiti — 100x Product & UX Review
+
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 **Date:** 2026-10-31  
 **Review Team:** Antigravity Panel (Android Lead, Product Designer, Ledger/Payments Specialist, Performance Engineer, Accessibility Specialist, Mathura Bahi UX Writer)  
 **Target Device / Environment:** Android (Redmi Note physical device `d93c743` read-only audit; JVM test suite verification)  

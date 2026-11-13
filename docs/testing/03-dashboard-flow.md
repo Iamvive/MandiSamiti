@@ -1,5 +1,7 @@
 # MandiSamiti Revamp — Flow 03: Dashboard & Entry Points (डैशबोर्ड एवं सौदे के मुख्य द्वार)
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 ## 1. Flow Overview & Scope
 The Dashboard serves as the financial command center for the commission agent (आढ़ती). It aggregates real-time transactions from all four financial pillars (`Buy`, `Sell`, `Lend`, and `Expense`) and Godown inventory into high-trust visual indicators, while providing immediate 1-tap quick action entry points to create or view transactions.
 

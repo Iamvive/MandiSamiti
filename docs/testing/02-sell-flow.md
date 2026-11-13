@@ -1,5 +1,7 @@
 # MandiSamiti Revamp — Flow 02: Sell Flow (बिक्री सौदा — Direction B)
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 ## 1. Flow Overview & Scope
 The Sell Flow handles retail sales to direct consumers (Customer / ग्राहक) and wholesale distribution to grain merchants (Merchant / व्यापारी). Direction B unifies the Sell entry experience with the approved Buy entry design: phone-first party autocomplete, required name and village, 3-column lot rows (Bags | Weight/bag | Extra), tare removed from new slips, and an advance/balance section after the slip calculations.
 

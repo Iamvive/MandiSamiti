@@ -1,5 +1,7 @@
 # MandiSamiti Revamp — Flow 01: Buy Flow (खरीद सौदा)
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 ## 1. Flow Overview & Scope
 The Buy Flow covers grain procurement from farmers at the mandi auction platform (आढ़त खरीद). It calculates precise 64-bit integer paisa totals, deducts commission and labour, accounts for advance payments, persists to the local Room database, queues for V2 synchronization, and generates a formatted Hindi WhatsApp receipt.
 

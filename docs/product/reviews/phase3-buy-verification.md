@@ -1,5 +1,7 @@
 # Phase 3 Buy Flow Verification Report (A3/A5 — Direction B Final)
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 ## 1. Scope & Verification Matrix
 - **Design Target:** Direction "B final" from `docs/product/ux-directions/index.html` (the sole approved source).
 - **Screens Rebuilt:**

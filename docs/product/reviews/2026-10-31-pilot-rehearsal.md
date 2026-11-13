@@ -1,5 +1,7 @@
 # MandiSamiti Task D1: Physical Device Rehearsal Report
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 Date: 2026-10-30  
 Device: Redmi Note (adb `d93c743`)  
 Target Pilot Build: `exports/mandisamiti-pilot-debug.apk` (Verified exact size: `20,890,987` bytes; SHA256: `6fae859cf838706c9a33bb7f5a8946726227fe25779ecb001d9c3ce860e6f663`)  

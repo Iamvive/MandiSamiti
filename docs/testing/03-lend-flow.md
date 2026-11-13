@@ -1,5 +1,7 @@
 # MandiSamiti Revamp — Flow 03: Lend Flow (उधार खाता - पैसे एवं जिंस — Direction B)
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 ## 1. Flow Overview & Scope
 Mandi commission agents (आढ़ती) advance money (रोकड़ उधार / पेशगी) or lend grain seed/fertilizer (जिंस उधार) to farmers before harvesting season.
 Direction B unifies the Lend entry experience with Buy and Sell:

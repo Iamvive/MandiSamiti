@@ -1,5 +1,7 @@
 # MandiSamiti UX review (Claude), Phase 1
 
+> Screenshots cited here were deleted on 2026-11-13. Recover them from git history with `git show 05f8301^:<path>`.
+
 Status: Phase 1 finished on 2026-10-31 except for the gaps listed under "Not verified". Phase 2 direction chosen: B (तराजू), see "Phase 2 decision" at the end. Brief: `prompts/mandisamiti-ux-overhaul.md` in the Vivek-K repo. Screenshots are in `docs/testing/evidence/ux-review/` (115 files). Code paths below are relative to `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/` unless they start with another top-level folder.
 
 ## Decide before the pilot goes further
