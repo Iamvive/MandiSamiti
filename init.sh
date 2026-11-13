@@ -3,6 +3,8 @@
 set -u
 cd "$(dirname "$0")"
 echo "== git =="; git branch --show-current; git status --short | head -10; git log --oneline -3
+git config core.hooksPath .githooks   # tracker guard on every commit
+python3 scripts/check_tracker.py || echo "FIX THE TRACKER FIRST"
 echo "== features =="
 python3 - <<'PY'
 import json
