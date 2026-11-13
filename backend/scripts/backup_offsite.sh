@@ -2,6 +2,9 @@
 # Weekly off-VPS copy of the newest staging dump to Google Drive. Run on the VPS from cron.
 # Encrypts with a passphrase file (mode 600, VPS only) before upload; Drive only ever sees ciphertext.
 # One-time setup: rclone remote named "gdrive" (scope drive.file), passphrase file at $PASS_FILE.
+# Cron (VPS, server clock UTC, Sunday 02:30, after the nightly backup_staging.sh):
+#   30 2 * * 0 /opt/mandisamiti-staging/backend/scripts/backup_offsite.sh >> /var/log/mandi-offsite.log 2>&1
+# After upload it runs restore_test.sh against the copy it just pushed (set RESTORE_TEST=0 to skip).
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/root/mandi-backups}"
@@ -23,3 +26,6 @@ rclone lsf "$REMOTE" | grep -c "$NAME" >/dev/null || { echo "offsite: upload not
 # keep newest $KEEP copies
 rclone lsf "$REMOTE" | sort -r | tail -n +"$((KEEP + 1))" | while read -r f; do rclone deletefile "$REMOTE/$f"; done
 echo "offsite ok: $NAME"
+if [ "${RESTORE_TEST:-1}" = "1" ]; then
+  "$(dirname "$0")/restore_test.sh" "$NAME"
+fi

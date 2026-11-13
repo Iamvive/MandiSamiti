@@ -30,3 +30,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Wired edit button and "edited" history tag into `PartyLedgerScreen.kt` loan card settlements list with responsive 390px layout.
 - Tested: Full jvmTest suite passed across `:core-domain`, `:core-data`, and `:composeApp`. Debug APK built and installed on Redmi Note 7 (`d93c743`).
 - Awaiting Vivek's approval before merging `feat/edit-repayment` to `main`.
+
+## 2026-11-13, Claude (offsite backup restore drill + sell settle test)
+- `backend/scripts/backup_offsite.sh` already existed (6ef1197, encrypted copy to Google Drive via rclone). Added the Sunday 02:30 UTC cron line in its header and a restore test call at the end (`RESTORE_TEST=0` skips).
+- New `backend/scripts/restore_test.sh`: pulls the newest (or named) encrypted dump from the remote, decrypts, loads it into a throwaway `postgres:16-alpine` container, checks table count and the `alembic_version` row. No secrets in either script; passphrase read from a file on the VPS.
+- New `HomeViewModelSellSettlementTest` (6 jvmTests, pass): `settleSellSlipCash` partial payment, cap at balance due, already paid, void slip, zero/negative amount, unknown slip.
+- Unverified: both scripts only syntax-checked (`bash -n`); no docker here, so the restore drill and cron are not run on the VPS. Feature `offsite-backup-restore-drill` added as failing.
+- Next: on the VPS, run `backup_offsite.sh` once by hand, then add the cron line from the script header.
