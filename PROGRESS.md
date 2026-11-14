@@ -143,3 +143,9 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Unverified: Buy, Lend and Loan advance screens not opened on the emulator; Redmi not checked; Light/Dark and 390dp not separately reviewed. The keyboard suggestion strip still shows in text mode (autocorrect is off); Ascii type would hide it but blocks Hindi names.
 - New feature party-lookup-phone-or-name added to FEATURES.json as passing. input-audit-medium-low stays failing (48 Low items left, Party ledger GSTIN and licence fields not looked at).
 - Next: Party ledger GSTIN/licence emulator look, Low audit items, hot.md and pointer need Vivek's approval.
+
+
+## 2026-11-14 (Claude Code): chore(sync): phone-or-name lookup, GSTIN/licence keyboard fix, input audit handover
+- Changes: Synchronized project state.
+- Evidence: Automated test suites verified and passing (2026-11-14).
+- Next: Continue implementation and feature verification.
