@@ -114,3 +114,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - money-slip-interest-settlement marked passing.
 - Open: interest field kept showing 220 after typing 100 while the split line said 100 (saved result correct); emulator not Redmi.
 - Next: wipe the Rate Test loan on staging, then Vivek approval for hot.md and pointer bump; then khata-chips-explained / khata-filter-explainer-card device check.
+
+## 2026-11-14 (Claude Code): Rate Test loan check and stale interest field analysis
+- Rate Test loan: already absent on staging (no party "Rate Test" or phone 9999900003 in any of the 5 shops; 4 lend_entries left, all at 2%). Nothing deleted. Vivek approved the wipe, so no action was needed.
+- Interest field (RepayLoanDialog.kt:69): not a bug. `interestInput` is a one-time prefill of the interest owed and does not follow the amount typed. The split line shows how the payment lands via `repayPreview`. Saved results were correct (Rs 220 to 120 after Rs 100).
+- Added RepayPreviewTest (3 cases: Rs 100 on 220 interest, Rs 5,120 on 120 interest + 5,000 principal, overpayment to general jama). `:composeApp:jvmTest --tests "*RepayPreviewTest"` passes, 3 tests 0 failures.
+- Deferred: relabel the field ("Interest due") or add a helper line if traders get confused. Brainstorm first.
+- Next: khata-chips-explained / khata-filter-explainer-card device check, then Vivek approval for hot.md and pointer bump.
