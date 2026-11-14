@@ -107,3 +107,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Note: a parallel Gemini project-update sync (ac7bd1a) had already committed these source files under a chore message; this commit adds the FEATURES.json entry and this log.
 - Unverified: Redmi d93c743 check (Light, Dark, 390dp, Clear filters tap). Feature khata-filter-explainer-card stays failing until then.
 - Next: install on Redmi (staging), verify, then mark passing and seek approval for hot.md.
+
+## 2026-11-14 (Claude Code): interest-first settlement verified, feature passing
+- Redmi was not connected, so verified on emulator medium_phone (Android 15), staging build of main fca6a07, test shop Maa Sharda Traders. Created loan Rs 10,000 at 1.5% dated 2026-10-01.
+- Repay dialog: interest due Rs 220 at 1.5%/माह (matches 10000 x 1.5% x 44/30). Part payment Rs 100: interest 100, principal 0, interest due 120 after. Payment Rs 5,120: interest 120, principal 5,000, remaining principal 5,000, card shows आंशिक वापसी. Dark: dialog shows principal 5,000, interest 0, 1.5%/माह, readable.
+- money-slip-interest-settlement marked passing.
+- Open: interest field kept showing 220 after typing 100 while the split line said 100 (saved result correct); emulator not Redmi.
+- Next: wipe the Rate Test loan on staging, then Vivek approval for hot.md and pointer bump; then khata-chips-explained / khata-filter-explainer-card device check.
