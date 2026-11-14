@@ -127,3 +127,10 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Vivek decided to leave it for now (no product decision on filters). khata-chips-explained and khata-filter-explainer-card stay failing, evidence updated. Dead screen and tests untouched.
 - Options still open: filters on Parchi (brainstorm first) or restore the Khata tab.
 - Next: offsite-backup-restore-drill, input-audit-medium-low.
+
+## 2026-11-14 (Claude Code): input audit, reachable Medium GSTIN and licence fields
+- 7 of 13 Medium items were already fixed in b9d41c8. 3 more sit in KhataLedgerTabScreen, which is unreachable (see entry above), so they do not count.
+- Fixed: Sell entry Buyer GSTIN, Party ledger GSTIN and Mandi licence fields now use KeyboardType.Ascii and autoCorrect = false (SellEntryScreen.kt, PartyLedgerScreen.kt).
+- Evidence: `:composeApp:jvmTest` 304 tests 0 failures; debug build installed on emulator-5554 (staging). Sell > Merchant > Bill of Supply > GSTIN opens the plain QWERTY keyboard with Next, no suggestion strip. Nothing saved. Party ledger fields use the same options but were not opened on the emulator.
+- Open Medium: phone-or-name lookup (MandiTextField.kt:197) forces a Phone keyboard and a digit filter, so names cannot be typed. Needs a design decision. 48 Low items deferred.
+- input-audit-medium-low stays failing.

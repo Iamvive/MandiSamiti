@@ -495,12 +495,12 @@ fun PartyLedgerScreen(
                             supportingText = if (!gstinValid) {
                                 { Text(if (isEnglish) "15-character GSTIN required" else "GSTIN 15 अक्षरों का होना चाहिए") }
                             } else null,
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrect = false, keyboardType = KeyboardType.Ascii),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrect = false, keyboardType = KeyboardType.Ascii),
                             value = editMandiLicenseInput,
                             onValueChange = { if (it.length <= 50) editMandiLicenseInput = it },
                             label = { Text(if (isEnglish) "Mandi Licence No. (Optional)" else "मंडी लाइसेंस नंबर (वैकल्पिक)") },

@@ -423,6 +423,8 @@ fun SellEntryScreen(
                         errorMessage = formState.gstin.errorIfFilled(formState.gstinValidation.errorOrNull),
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Characters,
+                            autoCorrect = false,
+                            keyboardType = KeyboardType.Ascii,
                             imeAction = ImeAction.Next
                         ),
                         isTall = true,
