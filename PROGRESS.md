@@ -121,3 +121,9 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Added RepayPreviewTest (3 cases: Rs 100 on 220 interest, Rs 5,120 on 120 interest + 5,000 principal, overpayment to general jama). `:composeApp:jvmTest --tests "*RepayPreviewTest"` passes, 3 tests 0 failures.
 - Deferred: relabel the field ("Interest due") or add a helper line if traders get confused. Brainstorm first.
 - Next: khata-chips-explained / khata-filter-explainer-card device check, then Vivek approval for hot.md and pointer bump.
+
+## 2026-11-14 (Claude Code): khata filter explainer is unreachable
+- Emulator (emulator-5554, staging build) check could not start: `KhataLedgerTabScreen` has no caller. Commit 3b9b704 replaced the Khata tab with Parchi. The filter chips and KhataFilterExplainerCard only render inside that screen; Parchi has no filters. HomeViewModel still keeps the filter state.
+- Vivek decided to leave it for now (no product decision on filters). khata-chips-explained and khata-filter-explainer-card stay failing, evidence updated. Dead screen and tests untouched.
+- Options still open: filters on Parchi (brainstorm first) or restore the Khata tab.
+- Next: offsite-backup-restore-drill, input-audit-medium-low.

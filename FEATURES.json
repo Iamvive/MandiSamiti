@@ -83,7 +83,7 @@
       "id": "khata-chips-explained",
       "description": "Khata chips are explained to the user",
       "status": "failing",
-      "evidence": "KhataFilterExplainerCard.kt built, integrated into KhataLedgerTabScreen.kt empty state, 7 unit tests pass (26498f6, commit message adds 2026-11-13 plan and PROGRESS.md entry). Card appears when filters active and no results, shows Hindi/English explanations, reset button clears filters. Redmi d93c743 device check pending: Light, Dark, 390dp, tap reset button."
+      "evidence": "KhataFilterExplainerCard.kt built, integrated into KhataLedgerTabScreen.kt empty state, 7 unit tests pass (26498f6, commit message adds 2026-11-13 plan and PROGRESS.md entry). Card appears when filters active and no results, shows Hindi/English explanations, reset button clears filters. Redmi d93c743 device check pending: Light, Dark, 390dp, tap reset button. 2026-11-14 emulator check: KhataLedgerTabScreen is not called anywhere since 3b9b704 (Parchi tab replaced Khata), so the chips and this card are unreachable in the app. Vivek decided to leave it as is for now; no product decision yet on filters (see PROGRESS.md)."
     },
     {
       "id": "e2e-saves-dummy-shop",
@@ -119,7 +119,7 @@
       "id": "khata-filter-explainer-card",
       "description": "Khata ledger shows a bilingual filters-explained card with Clear filters when an active filter yields no accounts",
       "status": "failing",
-      "evidence": "jvmTest 2026-11-13: KhataFilterExplainerTest 7 tests pass, ./gradlew jvmTest BUILD SUCCESSFUL. Not yet checked on Redmi d93c743 (Light, Dark, 390dp), so stays failing."
+      "evidence": "jvmTest 2026-11-13: KhataFilterExplainerTest 7 tests pass, ./gradlew jvmTest BUILD SUCCESSFUL. Not yet checked on Redmi d93c743 (Light, Dark, 390dp), so stays failing. 2026-11-14 emulator check: KhataLedgerTabScreen is not called anywhere since 3b9b704 (Parchi tab replaced Khata), so the chips and this card are unreachable in the app. Vivek decided to leave it as is for now; no product decision yet on filters (see PROGRESS.md)."
     }
   ]
 }
