@@ -175,20 +175,8 @@ fun MandiPartyLookupField(
     val effectiveQuery = if (searchQuery.isNotEmpty()) searchQuery else phoneValue
     val trimmed = effectiveQuery.trim()
 
-    val matches = remember(parties, trimmed) {
-        if (trimmed.isEmpty()) {
-            emptyList()
-        } else {
-            val digits = trimmed.filter { it.isDigit() }
-            if (digits.length >= 2) {
-                parties.filter { it.phone?.startsWith(digits) == true || it.name.contains(trimmed, ignoreCase = true) }.take(5)
-            } else if (trimmed.length >= 2) {
-                parties.filter { it.name.contains(trimmed, ignoreCase = true) || it.village?.contains(trimmed, ignoreCase = true) == true }.take(5)
-            } else {
-                emptyList()
-            }
-        }
-    }
+    var textMode by remember { mutableStateOf(false) }
+    val matches = remember(parties, trimmed) { PartyLookup.matches(parties, trimmed) }
 
     val showDropdown = expanded && matches.isNotEmpty() &&
         !matches.any { (it.phone == trimmed || it.name.equals(trimmed, ignoreCase = true)) && matches.size == 1 }
@@ -196,14 +184,37 @@ fun MandiPartyLookupField(
     Column(modifier = modifier.fillMaxWidth()) {
         MandiFlatTextField(
             value = if (searchQuery.isNotEmpty()) searchQuery else phoneValue,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            keyboardOptions = if (textMode) {
+                KeyboardOptions(keyboardType = KeyboardType.Text, autoCorrect = false)
+            } else {
+                KeyboardOptions(keyboardType = KeyboardType.Phone)
+            },
+            trailingIcon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable {
+                            textMode = !textMode
+                            searchQuery = ""
+                            expanded = false
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (textMode) "123" else "अ/A",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiTextSecondary
+                    )
+                }
+            },
             onValueChange = { raw ->
-                val input = raw.filter { it.isDigit() }.take(10)
-                searchQuery = input
+                val result = PartyLookup.onInput(raw, textMode)
+                searchQuery = result.query
                 expanded = true
-                onPhoneChange(input)
-                val digits = input
-                if (digits.length == 10) {
+                result.phoneToEmit?.let(onPhoneChange)
+                val digits = result.query
+                if (!textMode && digits.length == 10) {
                     val exact = parties.firstOrNull { it.phone == digits }
                     if (exact != null) {
                         onPartySelected(exact)
@@ -234,6 +245,7 @@ fun MandiPartyLookupField(
                                 .clickable {
                                     expanded = false
                                     searchQuery = ""
+                                    textMode = false
                                     onPartySelected(party)
                                 }
                                 .padding(horizontal = 14.dp, vertical = 10.dp),

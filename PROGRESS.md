@@ -134,3 +134,12 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Evidence: `:composeApp:jvmTest` 304 tests 0 failures; debug build installed on emulator-5554 (staging). Sell > Merchant > Bill of Supply > GSTIN opens the plain QWERTY keyboard with Next, no suggestion strip. Nothing saved. Party ledger fields use the same options but were not opened on the emulator.
 - Open Medium: phone-or-name lookup (MandiTextField.kt:197) forces a Phone keyboard and a digit filter, so names cannot be typed. Needs a design decision. 48 Low items deferred.
 - input-audit-medium-low stays failing.
+
+## 2026-11-14 (Claude Code): phone-or-name lookup
+- Design agreed with Vivek by brainstorming: number pad by default, an अ/A toggle inside the field switches to a text keyboard. Text mode is search-only: it never calls onPhoneChange, so callers still only receive digits. Picking a party fills phone, name and village (existing onPartySelected) and returns the field to number mode. Switching mode clears the typed query.
+- Changes: new PartyLookup.kt (pure matches and onInput logic), MandiPartyLookupField in MandiTextField.kt uses it and has the toggle. No caller changes (Buy, Sell, Lend, LoanAdvance).
+- Test first: PartyLookupTest (7 cases) failed to compile before PartyLookup existed, then passed. `:composeApp:jvmTest :core-data:jvmTest` 0 failures, composeApp 311 tests.
+- Emulator-5554 (staging build), Sell entry: toggle shows keyboard QWERTY with inputType 0x1 (no autocorrect), 'ra' finds Ramesh by name, pick fills phone 9876543211, name Ramesh, village Orai, toggle back to अ/A with number pad. Nothing saved.
+- Unverified: Buy, Lend and Loan advance screens not opened on the emulator; Redmi not checked; Light/Dark and 390dp not separately reviewed. The keyboard suggestion strip still shows in text mode (autocorrect is off); Ascii type would hide it but blocks Hindi names.
+- New feature party-lookup-phone-or-name added to FEATURES.json as passing. input-audit-medium-low stays failing (48 Low items left, Party ledger GSTIN and licence fields not looked at).
+- Next: Party ledger GSTIN/licence emulator look, Low audit items, hot.md and pointer need Vivek's approval.

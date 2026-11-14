@@ -120,6 +120,12 @@
       "description": "Khata ledger shows a bilingual filters-explained card with Clear filters when an active filter yields no accounts",
       "status": "failing",
       "evidence": "jvmTest 2026-11-13: KhataFilterExplainerTest 7 tests pass, ./gradlew jvmTest BUILD SUCCESSFUL. Not yet checked on Redmi d93c743 (Light, Dark, 390dp), so stays failing. 2026-11-14 emulator check: KhataLedgerTabScreen is not called anywhere since 3b9b704 (Parchi tab replaced Khata), so the chips and this card are unreachable in the app. Vivek decided to leave it as is for now; no product decision yet on filters (see PROGRESS.md)."
+    },
+    {
+      "id": "party-lookup-phone-or-name",
+      "description": "Party lookup field (Buy, Sell, Lend, Loan advance) opens on the number pad and has an अ/A toggle to a text keyboard so a party can be found by name or village; typed text never reaches the phone value",
+      "status": "passing",
+      "evidence": "2026-11-14 emulator-5554 (staging build): Sell entry, toggle to text keyboard (inputType 0x1, no autocorrect), typed 'ra', dropdown showed Ramesh 9876543211 Orai, picking it filled phone, name and village and reset the field to the number pad. composeApp jvmTest 311 tests 0 failures including PartyLookupTest (7 cases). Not opened on emulator: Buy, Lend and Loan advance screens (same MandiPartyLookupField, no caller changes). Not checked on Redmi d93c743, Light/Dark and 390dp not separately reviewed."
     }
   ]
 }
