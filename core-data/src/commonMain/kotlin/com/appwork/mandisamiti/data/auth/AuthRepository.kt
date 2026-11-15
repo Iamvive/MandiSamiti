@@ -54,6 +54,9 @@ class AuthRepository(
                 createdAt = now,
                 updatedAt = now,
                 syncStatus = 1,
+                address = shop.address,
+                gstin = shop.gstin,
+                licenceNo = shop.licenceNo,
             )
         )
         if (rehome) wiper.rehomeForeignRowsTo(shop.id)

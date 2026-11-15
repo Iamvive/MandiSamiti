@@ -32,7 +32,7 @@ class P3SlipNumberAuditTest {
 
     private suspend fun seedShopAndParties(db: AppDatabase, shopId: String = "shop-p3") {
         db.appDatabaseQueries.insertShopProfile(
-            shopId, "परीक्षण आढ़त", "मुनीम", "मंडी", null, "9876543210", "", 1.5, 1L, 0L, 0L, 1L
+            shopId, "परीक्षण आढ़त", "मुनीम", "मंडी", null, "9876543210", "", 1.5, 1L, 0L, 0L, 1L, null, null, null
         )
         val partyRepo = OfflineFirstPartyRepository(db)
         partyRepo.saveParty(

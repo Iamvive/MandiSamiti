@@ -43,7 +43,7 @@ class ExpenseSyncWireTest {
     }
 
     private fun seedShop(db: AppDatabase) =
-        db.appDatabaseQueries.insertShopProfile("shop-1", "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L)
+        db.appDatabaseQueries.insertShopProfile("shop-1", "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L, null, null, null)
 
     private suspend fun saveExpense(db: AppDatabase) = OfflineFirstExpenseRepository(db).saveExpense(
         ExpenseEntry(

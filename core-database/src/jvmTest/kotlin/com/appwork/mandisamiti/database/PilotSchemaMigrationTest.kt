@@ -43,6 +43,9 @@ class PilotSchemaMigrationTest {
             assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM lendEntryEntity WHERE monthly_interest_rate = 2.0"))
             assertEquals(0L, driver.scalarLong("SELECT COUNT(*) FROM shopProfileEntity WHERE default_monthly_interest_rate = 1.5"))
             assertEquals(0L, driver.scalarLong("SELECT COUNT(*) FROM partyEntity WHERE monthly_interest_rate = 1.5"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(address) FROM shopProfileEntity"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(gstin) FROM shopProfileEntity"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(licence_no) FROM shopProfileEntity"))
         } finally {
             driver.close()
             database.deleteIfExists()
@@ -209,7 +212,7 @@ class PilotSchemaMigrationTest {
 
     private companion object {
         const val PRE_PILOT_VERSION = 6L
-        const val CURRENT_SCHEMA_VERSION = 12L
+        const val CURRENT_SCHEMA_VERSION = 13L
 
         val TABLES = listOf(
             "shopProfileEntity",

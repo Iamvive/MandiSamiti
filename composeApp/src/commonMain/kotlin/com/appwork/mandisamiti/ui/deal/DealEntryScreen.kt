@@ -420,7 +420,7 @@ fun DealEntryScreen(
                                     .padding(10.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                InvoiceRow(label = "सकल माल मूल्य (Gross)", amountPaisa = uiState.grossAmountPaisa, isBold = false)
+                                InvoiceRow(label = "असल माल मूल्य (Gross)", amountPaisa = uiState.grossAmountPaisa, isBold = false)
                                 if (uiState.grossAmountPaisa > 0L) {
                                     val farmerBps = MandiMathEngine.parsePercentToBasisPoints(uiState.commissionPercentText)
                                     val farmerCommPaisa = MandiMathEngine.percentageOf(uiState.grossAmountPaisa, farmerBps)

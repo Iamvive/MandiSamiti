@@ -32,12 +32,18 @@ class DatabaseTest {
             is_sound_enabled = 1L,
             created_at = 1710928000000L,
             updated_at = 1710928000000L,
-            sync_status = 0L
+            sync_status = 0L,
+            address = "मंडी रोड",
+            gstin = "09AAAAA0000A1Z5",
+            licence_no = "LIC-42"
         )
 
         val shop = queries.getShopProfile().executeAsOneOrNull()
         assertNotNull(shop)
         assertEquals("श्री गणेश ट्रेडिंग", shop.shop_name)
+        assertEquals("मंडी रोड", shop.address)
+        assertEquals("09AAAAA0000A1Z5", shop.gstin)
+        assertEquals("LIC-42", shop.licence_no)
 
         // 2. Insert Farmer and Buyer
         queries.insertParty(

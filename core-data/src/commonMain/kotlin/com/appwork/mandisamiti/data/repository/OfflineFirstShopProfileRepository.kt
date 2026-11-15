@@ -39,7 +39,10 @@ class OfflineFirstShopProfileRepository(
             is_sound_enabled = if (profile.isSoundEnabled) 1L else 0L,
             created_at = profile.createdAt,
             updated_at = profile.updatedAt,
-            sync_status = profile.syncStatus.toLong()
+            sync_status = profile.syncStatus.toLong(),
+            address = profile.address,
+            gstin = profile.gstin,
+            licence_no = profile.licenceNo
         )
     }
 
@@ -65,7 +68,10 @@ class OfflineFirstShopProfileRepository(
             isSoundEnabled = is_sound_enabled == 1L,
             createdAt = created_at,
             updatedAt = updated_at,
-            syncStatus = sync_status.toInt()
+            syncStatus = sync_status.toInt(),
+            address = address,
+            gstin = gstin,
+            licenceNo = licence_no
         )
     }
 }

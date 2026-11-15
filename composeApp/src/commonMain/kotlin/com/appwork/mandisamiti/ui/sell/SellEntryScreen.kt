@@ -104,6 +104,9 @@ fun SellEntryScreen(
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showSanityConfirmation by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var showStockWarningDialog by remember { mutableStateOf(false) }
+    var confirmedStockWarning by remember { mutableStateOf(false) }
+    var stockWarningDetails by remember { mutableStateOf<List<Pair<String, Pair<Long, Long>>>>(emptyList()) }
     var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
     var pendingEntryToSave by remember { mutableStateOf<SellEntry?>(null) }
 
@@ -148,9 +151,25 @@ fun SellEntryScreen(
             !prev.isVoid && isSameParty && isSameCommodity && isSameBags && isSameAmount && isRecent
         }
 
+        val calculatedLots = formState.lots.map { it.toCropLot() }
+        val saleByCrop = calculatedLots.groupBy { it.cropName.trim().ifBlank { "गेहूं" } }
+            .mapValues { (_, lots) -> lots.sumOf { it.totalWeightGrams } }
+
+        val shortfalls = mutableListOf<Pair<String, Pair<Long, Long>>>()
+        for ((crop, saleGrams) in saleByCrop) {
+            val stockGrams = stockLines.firstOrNull { it.commodityId.equals(crop, ignoreCase = true) }?.onHandGrams ?: 0L
+            if (stockGrams < saleGrams) {
+                shortfalls.add(crop to (stockGrams to saleGrams))
+            }
+        }
+
         if (isDuplicate) {
             pendingEntryToSave = entry
             showDuplicateDialog = true
+        } else if (shortfalls.isNotEmpty() && !confirmedStockWarning) {
+            pendingEntryToSave = entry
+            stockWarningDetails = shortfalls
+            showStockWarningDialog = true
         } else if (formState.hasSanityWarning() && !showSanityConfirmation) {
             pendingEntryToSave = entry
             showSanityConfirmation = true
@@ -827,6 +846,63 @@ fun SellEntryScreen(
             onDismiss = {
                 showDuplicateDialog = false
                 pendingEntryToSave = null
+            }
+        )
+    }
+
+    if (showStockWarningDialog && pendingEntryToSave != null) {
+        val pending = pendingEntryToSave!!
+        AlertDialog(
+            onDismissRequest = { showStockWarningDialog = false },
+            title = {
+                Text(
+                    text = if (isEnglish) "Stock Shortage Warning" else "स्टॉक कमी की चेतावनी",
+                    fontWeight = FontWeight.Bold,
+                    color = MandiAmberDark
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    stockWarningDetails.forEach { (crop, pair) ->
+                        val (stockGrams, saleGrams) = pair
+                        val stockQtl = MandiMathEngine.gramsToQuintals(stockGrams)
+                        val saleQtl = MandiMathEngine.gramsToQuintals(saleGrams)
+                        Text(
+                            text = if (isEnglish) {
+                                "Crop $crop: Stock ${stockQtl} qtl, Sale ${saleQtl} qtl."
+                            } else {
+                                "फसल $crop: स्टॉक ${stockQtl} क्विंटल, बिक्री ${saleQtl} क्विंटल।"
+                            },
+                            color = MandiTextPrimary,
+                            fontSize = 14.sp
+                        )
+                    }
+                    Text(
+                        text = if (isEnglish) "Available stock is less than sale quantity. Save anyway?" else "उपलब्ध स्टॉक बिक्री मात्रा से कम है। क्या आप फिर भी सुरक्षित करना चाहते हैं?",
+                        color = MandiTextSecondary,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showStockWarningDialog = false
+                        confirmedStockWarning = true
+                        if (formState.hasSanityWarning() && !showSanityConfirmation) {
+                            showSanityConfirmation = true
+                        } else {
+                            commit(pending)
+                        }
+                    }
+                ) {
+                    Text(if (isEnglish) "Save Anyway" else "हाँ, सुरक्षित करें", color = MandiAmberDark, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStockWarningDialog = false }) {
+                    Text(if (isEnglish) "Cancel" else "रद्द करें")
+                }
             }
         )
     }

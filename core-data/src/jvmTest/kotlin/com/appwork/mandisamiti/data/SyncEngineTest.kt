@@ -50,7 +50,7 @@ class FakeSyncApiClient : MandiSyncApiClient {
 
 /** Pulled rows only land while the shop profile they belong to exists locally. */
 private fun seedShop(db: com.appwork.mandisamiti.database.AppDatabase, id: String) =
-    db.appDatabaseQueries.insertShopProfile(id, "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L)
+    db.appDatabaseQueries.insertShopProfile(id, "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L, null, null, null)
 
 private fun farmer() = Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L)
 

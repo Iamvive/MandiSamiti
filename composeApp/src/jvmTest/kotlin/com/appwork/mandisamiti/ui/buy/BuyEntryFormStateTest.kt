@@ -164,4 +164,23 @@ class BuyEntryFormStateTest {
         assertTrue(agg.commissionPaisa >= 0, "commission was ${agg.commissionPaisa}")
         assertEquals(125_000L, agg.netPayablePaisa)
     }
+
+    @Test
+    fun extraWeightLabourHalfUnitRule() {
+        val form20 = BuyEntryFormState().apply {
+            farmerName = "रमेश किसान"
+            bags = "10"; weightPerBagKg = "50"; extraWeightKg = "20"; ratePerQuintal = "2000"
+            commissionPercent = "0"; labourPerBag = "5"; advancePaid = "0"
+        }
+        // 20 kg or less: no extra bori billed for labour (10 bags * 5 = 50 Rs = 5000 paisa)
+        assertEquals(5_000L, form20.aggregatePreview().labourPaisa)
+
+        val form21 = BuyEntryFormState().apply {
+            farmerName = "रमेश किसान"
+            bags = "10"; weightPerBagKg = "50"; extraWeightKg = "21"; ratePerQuintal = "2000"
+            commissionPercent = "0"; labourPerBag = "5"; advancePaid = "0"
+        }
+        // > 20 kg: bills +1 bori for labour (11 bags * 5 = 55 Rs = 5500 paisa)
+        assertEquals(5_500L, form21.aggregatePreview().labourPaisa)
+    }
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.ui.slip.slipEquation
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.receiptDateShort
@@ -69,6 +70,9 @@ fun BuyTransactionReceiptScreen(
     farmerName: String = "किसान",
     shopName: String = "",
     mandiName: String = "",
+    shopAddress: String? = null,
+    shopGstin: String? = null,
+    shopLicenceNo: String? = null,
     partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
@@ -84,7 +88,7 @@ fun BuyTransactionReceiptScreen(
         ?: entry?.farmerId?.takeIf { it.isNotBlank() }
         ?: if (isEnglish) "Farmer" else "किसान"
     val lots = entry?.let { extractLots(it) } ?: emptyList()
-    val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots) } ?: ""
+    val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo) } ?: ""
 
     val slipNum = entry?.let { slipLabel(it.slipNo, it.id) } ?: ""
 
@@ -221,6 +225,37 @@ fun BuyTransactionReceiptScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            // Shop header if present
+            val shopHeader = listOfNotNull(
+                shopName.takeIf { it.isNotBlank() },
+                mandiName.takeIf { it.isNotBlank() },
+                shopAddress?.takeIf { it.isNotBlank() }
+            ).joinToString(" • ")
+
+            if (shopHeader.isNotBlank() || !shopGstin.isNullOrBlank() || !shopLicenceNo.isNullOrBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (shopHeader.isNotBlank()) {
+                        Text(
+                            text = shopHeader,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                    }
+                    val taxLines = listOfNotNull(
+                        shopGstin?.takeIf { it.isNotBlank() }?.let { "GSTIN: $it" },
+                        shopLicenceNo?.takeIf { it.isNotBlank() }?.let { if (isEnglish) "Licence: $it" else "लाइसेंस: $it" }
+                    ).joinToString("  |  ")
+                    if (taxLines.isNotBlank()) {
+                        Text(
+                            text = taxLines,
+                            fontSize = 11.sp,
+                            color = MandiTextSecondary
+                        )
+                    }
+                }
+            }
+
             // Revision / Original indicator (f12 w6)
             Text(
                 text = revisionText,
@@ -234,13 +269,13 @@ fun BuyTransactionReceiptScreen(
                 if (lots.isNotEmpty()) {
                     lots.forEachIndexed { idx, lot ->
                         Line(
-                            label = if (isEnglish) "Lot #${idx + 1}: ${lot.cropName}, ${lot.bags} bags, ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} Qtl @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}" else "फसल #${idx + 1}: ${lot.cropName}, ${lot.bags} बोरी, ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}",
+                            label = "${if (isEnglish) "Lot" else "फसल"} #${idx + 1}: ${lot.cropName}\n${slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal)}",
                             amountText = MandiMathEngine.formatRupees(lot.grossPaisa)
                         )
                     }
                 } else {
                     Line(
-                        label = if (isEnglish) "Crop: ${entry.commodityId}, ${entry.bagsCount} bags, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} Qtl @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}" else "फसल: ${entry.commodityId}, ${entry.bagsCount} बोरी, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}",
+                        label = "${if (isEnglish) "Crop" else "फसल"}: ${entry.commodityId}\n${slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal)}",
                         amountText = MandiMathEngine.formatRupees(entry.grossPaisa)
                     )
                 }
@@ -319,10 +354,33 @@ private fun extractLots(entry: BuyEntry): List<BuyCropLot> {
     }
 }
 
-fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropLot> = emptyList()): String = buildString {
+fun buildFarmerSlipText(
+    entry: BuyEntry,
+    farmerName: String,
+    lots: List<BuyCropLot> = emptyList(),
+    shopName: String = "",
+    mandiName: String = "",
+    shopAddress: String? = null,
+    shopGstin: String? = null,
+    shopLicenceNo: String? = null
+): String = buildString {
     val isRevised = entry.revision > 1 || entry.paidPaisa > 0
     val headerTitle = if (isRevised) "*किसान खरीद पर्चा (संशोधित)*" else "*किसान खरीद पर्चा*"
     appendLine(headerTitle)
+    val shopHeader = listOfNotNull(
+        shopName.takeIf { it.isNotBlank() },
+        mandiName.takeIf { it.isNotBlank() },
+        shopAddress?.takeIf { it.isNotBlank() }
+    ).joinToString(" • ")
+    if (shopHeader.isNotBlank()) {
+        appendLine(shopHeader)
+    }
+    if (!shopGstin.isNullOrBlank()) {
+        appendLine("GSTIN: $shopGstin")
+    }
+    if (!shopLicenceNo.isNullOrBlank()) {
+        appendLine("लाइसेंस नं.: $shopLicenceNo")
+    }
     appendLine("पर्चा #: ${slipLabel(entry.slipNo, entry.id)}")
     if (isRevised) {
         appendLine("संशोधन समय: ${receiptDateTime(entry.updatedAt)}")
@@ -341,14 +399,14 @@ fun buildFarmerSlipText(entry: BuyEntry, farmerName: String, lots: List<BuyCropL
     if (lots.isNotEmpty()) {
         lots.forEachIndexed { i, lot ->
             appendLine("फसल ${i + 1}: ${lot.cropName}")
-            appendLine("${lot.bags} बोरी | ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)} = ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}")
+            appendLine(slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal))
+            appendLine("रकम: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}")
             appendLine()
         }
         appendLine("--------------------")
     } else {
-        appendLine("बोरी: ${entry.bagsCount}")
-        appendLine("वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल")
-        appendLine("भाव: ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}/क्विंटल")
+        appendLine(slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal))
+        appendLine("रकम: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
         appendLine("--------------------")
     }
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")

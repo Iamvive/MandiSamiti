@@ -126,4 +126,44 @@ class BuyTransactionReceiptTest {
         assertEquals("बाकी", hiLeft)
         assertEquals("Left", enLeft)
     }
+
+    @Test
+    fun buildFarmerSlipText_includesShopHeaderAndTaxDetails() {
+        val entry = BuyEntry(
+            id = "buy_tax_1",
+            shopId = "shop_1",
+            farmerId = "farmer_1",
+            commodityId = "गेहूं",
+            entryDate = 1730454600000L,
+            bagsCount = 10,
+            weightPerBagGrams = 50_000L,
+            extraWeightGrams = 0L,
+            totalWeightGrams = 500_000L,
+            ratePaisaPerQuintal = 240_000L,
+            commissionBps = 70L,
+            labourPerBagPaisa = 1_000L,
+            advancePaidPaisa = 0L,
+            grossPaisa = 1_200_000L,
+            commissionPaisa = 8_400L,
+            labourPaisa = 10_000L,
+            netPayablePaisa = 1_181_600L,
+            paidPaisa = 0L,
+            createdAt = 1730454600000L,
+            updatedAt = 1730454600000L
+        )
+
+        val slipText = buildFarmerSlipText(
+            entry = entry,
+            farmerName = "श्याम लाल",
+            shopName = "श्री गणेश ट्रेडिंग",
+            mandiName = "नवीन अनाज मंडी, मथुरा",
+            shopAddress = "दुकान नं. 42",
+            shopGstin = "09AAAAA0000A1Z5",
+            shopLicenceNo = "LIC-42"
+        )
+
+        assertTrue(slipText.contains("श्री गणेश ट्रेडिंग • नवीन अनाज मंडी, मथुरा • दुकान नं. 42"))
+        assertTrue(slipText.contains("GSTIN: 09AAAAA0000A1Z5"))
+        assertTrue(slipText.contains("लाइसेंस नं.: LIC-42"))
+    }
 }

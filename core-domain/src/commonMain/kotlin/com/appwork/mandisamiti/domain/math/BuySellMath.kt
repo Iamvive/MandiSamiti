@@ -58,7 +58,7 @@ object BuySellMath {
         MandiMathEngine.grossAmountPaisa(totalWeightGrams, TULAK_PAISA_PER_QUINTAL)
 
     /** Sheet rule: extra loose weight above 20 kg is billed as one more bag for labour (Buy only). */
-    private const val EXTRA_BAG_THRESHOLD_GRAMS = 20_000L
+    const val EXTRA_BAG_THRESHOLD_GRAMS = 20_000L
     private const val PAISA_PER_RUPEE = 100L
     private const val ROUND_TO_PAISA = 1_000L // nearest Rs 10
 

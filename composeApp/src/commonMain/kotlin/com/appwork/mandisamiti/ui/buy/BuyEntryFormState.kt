@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.BuyMathResult
+import com.appwork.mandisamiti.domain.math.BuySellMath
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
@@ -270,9 +271,9 @@ class BuyEntryFormState(
         val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
         val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
 
-        // Sheet Rule 2: Extra loose weight > 5kg adds 1 billed bag for labour
+        // Sheet Rule 2: Extra loose weight > 20kg adds 1 billed bag for labour (labour-half-unit-rule)
         val totalExtraGrams = lotResults.sumOf { it.second.extraWeightGrams }
-        val billedBags = totalBags + if (totalExtraGrams > 5000L) 1L else 0L
+        val billedBags = totalBags + if (totalExtraGrams > BuySellMath.EXTRA_BAG_THRESHOLD_GRAMS) 1L else 0L
         val labourPaisa = billedBags * labourPaisaPerBag
 
         // Sheet Rule 3 & 4: Final rounded to nearest Rs 10, commission absorbs rounding

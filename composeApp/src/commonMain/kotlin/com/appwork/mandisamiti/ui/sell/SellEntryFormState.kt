@@ -463,7 +463,7 @@ class SellEntryFormState(
                         initialBags = if (lot.bags > 0) lot.bags.toString() else "",
                         initialWeightPerBagKg = if (lot.weightPerBagGrams > 0) (lot.weightPerBagGrams / 1000.0).toString() else "50",
                         initialExtraWeightKg = if (lot.extraWeightGrams > 0) (lot.extraWeightGrams / 1000.0).toString() else "",
-                        initialRatePerQuintal = if (lot.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal) else "",
+                        initialRatePerQuintal = if (lot.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToInputString(lot.ratePaisaPerQuintal) else "",
                     )
                 )
             }
@@ -473,7 +473,7 @@ class SellEntryFormState(
                     initialCropName = entry.commodityId,
                     initialBags = if (entry.bagsCount > 0) entry.bagsCount.toString() else "",
                     initialWeightPerBagKg = if (entry.weightPerBagGrams > 0) (entry.weightPerBagGrams / 1000.0).toString() else "50",
-                    initialRatePerQuintal = if (entry.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal) else "",
+                    initialRatePerQuintal = if (entry.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToInputString(entry.ratePaisaPerQuintal) else "",
                 )
             )
         }

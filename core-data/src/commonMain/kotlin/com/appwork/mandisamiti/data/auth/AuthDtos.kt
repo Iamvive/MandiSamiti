@@ -10,6 +10,9 @@ data class ShopDto(
     @SerialName("owner_name") val ownerName: String? = null,
     @SerialName("mandi_name") val mandiName: String? = null,
     @SerialName("phone_number") val phoneNumber: String? = null,
+    @SerialName("address") val address: String? = null,
+    @SerialName("gstin") val gstin: String? = null,
+    @SerialName("licence_no") val licenceNo: String? = null,
 )
 
 @Serializable

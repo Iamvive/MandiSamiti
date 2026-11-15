@@ -16,5 +16,8 @@ data class ShopProfile(
     val isSoundEnabled: Boolean = true,
     val createdAt: Long,
     val updatedAt: Long,
-    val syncStatus: Int = 0
+    val syncStatus: Int = 0,
+    val address: String? = null,
+    val gstin: String? = null,
+    val licenceNo: String? = null
 )

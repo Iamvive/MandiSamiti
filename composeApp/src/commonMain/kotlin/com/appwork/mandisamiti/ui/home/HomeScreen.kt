@@ -274,6 +274,7 @@ fun HomeScreen(
                             onToggleSound = { viewModel.toggleSoundSetting() },
                             onSignOutClick = onSignOut,
                             onUpdateTradeSettings = { viewModel.updateTradeSettings(it) },
+                            onSaveShopProfile = { viewModel.updateShopProfile(it) },
                             onSyncClick = onSyncClick,
                             isSyncing = isSyncing
                         )

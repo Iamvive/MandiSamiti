@@ -38,7 +38,7 @@ class P2DayCloseAuditTest {
 
     private suspend fun seedShopAndParty(db: AppDatabase, shopId: String = "shop-p2", partyId: String = "party-p2") {
         db.appDatabaseQueries.insertShopProfile(
-            shopId, "दुकान", "मालिक", "मंडी", null, "9876543210", "", 1.5, 1L, 0L, 0L, 1L
+            shopId, "दुकान", "मालिक", "मंडी", null, "9876543210", "", 1.5, 1L, 0L, 0L, 1L, null, null, null
         )
         OfflineFirstPartyRepository(db).saveParty(
             Party(

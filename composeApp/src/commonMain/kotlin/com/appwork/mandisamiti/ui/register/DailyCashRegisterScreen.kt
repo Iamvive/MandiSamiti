@@ -739,11 +739,19 @@ fun DailyCashRegisterScreen(
                         fontSize = 12.sp,
                         color = MandiTextSecondary
                     )
+                    if (uiState.openingCashPaisa > 0L) {
+                        val carried = MandiMathEngine.paisaToRupeesString(uiState.openingCashPaisa)
+                        FilterChip(
+                            selected = openingBalanceInput == (uiState.openingCashPaisa / 100L).toString(),
+                            onClick = { openingBalanceInput = (uiState.openingCashPaisa / 100L).toString() },
+                            label = { Text(if (isEnglish) "Shree Rokad Baki ₹$carried" else "श्री रोकड़ बाकी ₹$carried") }
+                        )
+                    }
                     OutlinedTextField(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         value = openingBalanceInput,
                         onValueChange = { openingBalanceInput = it },
-                        label = { Text(if (isEnglish) "Opening Cash Float ₹" else "प्रारंभिक रोकड़ शेष ₹") },
+                        label = { Text(if (isEnglish) "Opening Cash Float ₹" else "श्री रोकड़ बाकी ₹") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

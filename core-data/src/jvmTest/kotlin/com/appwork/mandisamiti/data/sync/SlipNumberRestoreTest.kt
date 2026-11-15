@@ -70,7 +70,7 @@ class SlipNumberRestoreTest {
     @Test
     fun nextBuySellLendNumbersContinueAfterRestoredSlips() = runTest {
         val db = createTestDatabase()
-        db.appDatabaseQueries.insertShopProfile("shop-1", "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L)
+        db.appDatabaseQueries.insertShopProfile("shop-1", "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L, null, null, null)
         engine(db, pull).pullRemoteChanges("shop-1").getOrThrow()
 
         val buys = OfflineFirstBuyRepository(db)

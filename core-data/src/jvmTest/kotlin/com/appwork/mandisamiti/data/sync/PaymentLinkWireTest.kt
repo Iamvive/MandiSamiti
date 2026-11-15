@@ -41,7 +41,7 @@ class PaymentLinkWireTest {
     }
 
     private fun seedShop(db: AppDatabase) =
-        db.appDatabaseQueries.insertShopProfile("shop-1", "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L)
+        db.appDatabaseQueries.insertShopProfile("shop-1", "दुकान", "मालिक", "मंडी", null, "9000000001", "", 1.5, 1L, 0L, 0L, 1L, null, null, null)
 
     private fun tx(sourceType: String?, sourceId: String?) = CashTransaction(
         id = "tx1", shopId = "shop-1", partyId = "p1", transactionType = TransactionType.UDHAR_GIVEN,

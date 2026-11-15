@@ -391,8 +391,15 @@ class HomeViewModel(
     }
 
     fun updateTradeSettings(settings: com.appwork.mandisamiti.domain.model.TradeSettings) {
-        viewModelScope.launch {
+        viewModelScope.launch(backgroundDispatcher) {
             tradeSettingsRepository?.saveTradeSettings(settings)
+            onLocalWrite()
+        }
+    }
+
+    fun updateShopProfile(profile: ShopProfile) {
+        viewModelScope.launch(backgroundDispatcher) {
+            shopProfileRepository.saveShopProfile(profile)
             onLocalWrite()
         }
     }

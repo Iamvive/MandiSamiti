@@ -348,7 +348,7 @@ private fun KisaanParchiView(
                     modifier = Modifier.weight(1f)
                 )
                 ParchiKpiCard(
-                    title = if (isEnglish) "Gross" else "सकल (Gross)",
+                    title = if (isEnglish) "Gross" else "असल (Gross)",
                     value = "₹${MandiMathEngine.formatIndianGrouping(totalGrossPaisa / 100)}",
                     subtitle = if (isEnglish) "Base value" else "फसल मूल्य",
                     modifier = Modifier.weight(1f)

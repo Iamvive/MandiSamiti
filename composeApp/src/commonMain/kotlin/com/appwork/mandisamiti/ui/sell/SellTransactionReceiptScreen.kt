@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.ui.slip.slipEquation
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
@@ -35,6 +36,9 @@ fun SellTransactionReceiptScreen(
     buyerName: String = "खरीदार",
     shopName: String = "",
     mandiName: String = "",
+    shopAddress: String? = null,
+    shopGstin: String? = null,
+    shopLicenceNo: String? = null,
     partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
@@ -43,7 +47,7 @@ fun SellTransactionReceiptScreen(
     modifier: Modifier = Modifier
 ) {
     var showSettlementSheet by remember { mutableStateOf(false) }
-    val billText = entry?.let { buildSellBillText(it, buyerName) } ?: ""
+    val billText = entry?.let { buildSellBillText(it, buyerName, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo) } ?: ""
     val isBos = entry?.billMode == BillMode.BILL_OF_SUPPLY
     ReceiptScaffold(
         title = when {
@@ -73,10 +77,16 @@ fun SellTransactionReceiptScreen(
             partyVillage?.takeIf { it.isNotBlank() },
             entry.vehicleNumber?.takeIf { it.isNotBlank() }
         ).joinToString(" • ")
-        val shop = listOf(shopName, mandiName).filter { it.isNotBlank() }.joinToString(", ")
+        val shop = listOfNotNull(
+            shopName.takeIf { it.isNotBlank() },
+            mandiName.takeIf { it.isNotBlank() },
+            shopAddress?.takeIf { it.isNotBlank() }
+        ).joinToString(", ")
 
         ReceiptCard {
             if (shop.isNotBlank()) Text(shop)
+            if (!shopGstin.isNullOrBlank()) ReceiptAmountRow("दुकान GSTIN", shopGstin)
+            if (!shopLicenceNo.isNullOrBlank()) ReceiptAmountRow(if (isEnglish) "Shop Licence" else "मंडी लाइसेंस", shopLicenceNo)
             ReceiptHero(
                 partyName = name,
                 meta = meta,
@@ -91,7 +101,7 @@ fun SellTransactionReceiptScreen(
                     ReceiptLotRow(
                         ReceiptLot(
                             title = "${i + 1}. ${lot.cropName}",
-                            detail = "${lot.bags} बोरी • ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}/क्विंटल",
+                            detail = slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal),
                             amount = "₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}"
                         )
                     )
@@ -100,7 +110,7 @@ fun SellTransactionReceiptScreen(
                 ReceiptLotRow(
                     ReceiptLot(
                         title = entry.commodityId,
-                        detail = "${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}/क्विंटल",
+                        detail = slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal),
                         amount = "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
                     )
                 )
@@ -145,7 +155,15 @@ fun SellTransactionReceiptScreen(
     }
 }
 
-fun buildSellBillText(entry: SellEntry, buyerName: String): String {
+fun buildSellBillText(
+    entry: SellEntry,
+    buyerName: String,
+    shopName: String = "",
+    mandiName: String = "",
+    shopAddress: String? = null,
+    shopGstin: String? = null,
+    shopLicenceNo: String? = null
+): String {
     val lots = try {
         entry.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
     } catch (_: Exception) {
@@ -154,25 +172,40 @@ fun buildSellBillText(entry: SellEntry, buyerName: String): String {
     val isBos = entry.billMode == BillMode.BILL_OF_SUPPLY
     val title = if (isBos) "सप्लाई बिल (Bill of Supply)" else "बिक्री पर्चा (Mandi Sale Bill)"
 
+    val shopHeader = listOfNotNull(
+        shopName.takeIf { it.isNotBlank() },
+        mandiName.takeIf { it.isNotBlank() },
+        shopAddress?.takeIf { it.isNotBlank() }
+    ).joinToString(", ")
+    val shopLine = if (shopHeader.isNotBlank()) "विक्रेता: $shopHeader\n" else ""
+    val shopGstinLine = if (!shopGstin.isNullOrBlank()) "विक्रेता GSTIN: $shopGstin\n" else ""
+    val shopLicLine = if (!shopLicenceNo.isNullOrBlank()) "विक्रेता लाइसेंस: $shopLicenceNo\n" else ""
+
     val lotsText = if (!lots.isNullOrEmpty()) {
         lots.mapIndexed { i, lot ->
-            "${i + 1}. ${lot.cropName}: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}\n   (${lot.bags} बोरी • ${MandiMathEngine.gramsToQuintals(lot.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(lot.ratePaisaPerQuintal)}/qtl)"
+            "${i + 1}. ${lot.cropName}\n${slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}"
         }.joinToString("\n")
     } else {
-        "जिंस: ${entry.commodityId}\nबोरी: ${entry.bagsCount} • वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल @ ₹${MandiMathEngine.paisaToRupeesString(entry.ratePaisaPerQuintal)}/qtl"
+        "जिंस: ${entry.commodityId}\n${slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
+    }
+
+    val labourAmt = if (!isBos) {
+        entry.totalReceivablePaisa - entry.grossPaisa - entry.aratPaisa
+    } else {
+        entry.totalReceivablePaisa - entry.grossPaisa - entry.mandiShulkPaisa - entry.tulakPaisa
     }
 
     return """
 *$title*
-बिल #: ${slipLabel(entry.slipNo, entry.id)}
+$shopLine$shopGstinLine${shopLicLine}बिल #: ${slipLabel(entry.slipNo, entry.id)}
 क्रेता: ${buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry.buyerId.ifBlank { "खरीदार" }}
 ${if (!entry.gstin.isNullOrBlank()) "GSTIN: ${entry.gstin}\n" else ""}--------------------
 $lotsText
 --------------------
 कुल बोरी: ${entry.bagsCount}
 कुल वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल
-कुल सकल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
-${if (!isBos && entry.aratPaisa > 0) "कमीशन जोड़: +₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}\n" else ""}${if (isBos && entry.mandiShulkPaisa > 0) "मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}\n" else ""}${if (isBos && entry.tulakPaisa > 0) "तुलाई: +₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}\n" else ""}--------------------
+कुल असल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
+${if (!isBos && entry.aratPaisa > 0) "कमीशन जोड़: +₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}\n" else ""}${if (isBos && entry.mandiShulkPaisa > 0) "मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}\n" else ""}${if (isBos && entry.tulakPaisa > 0) "तुलाई: +₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}\n" else ""}${if (labourAmt > 0) "हमाली / मजदूरी: +₹${MandiMathEngine.paisaToRupeesString(labourAmt)}\n" else ""}--------------------
 *कुल देय राशि: ${MandiMathEngine.formatRupees(entry.totalReceivablePaisa)}*
     """.trimIndent()
 }

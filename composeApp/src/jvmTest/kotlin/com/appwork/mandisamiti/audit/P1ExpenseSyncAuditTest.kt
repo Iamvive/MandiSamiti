@@ -41,7 +41,7 @@ class P1ExpenseSyncAuditTest {
     private fun seedShop(db: AppDatabase, shopId: String = "shop-p1") {
         db.appDatabaseQueries.insertShopProfile(
             shopId, "परीक्षण दुकान", "परीक्षण मुनीम", "मथुरा मंडी",
-            null, "9876543210", "", 1.5, 1L, 0L, 0L, 1L
+            null, "9876543210", "", 1.5, 1L, 0L, 0L, 1L, null, null, null
         )
     }
 

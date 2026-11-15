@@ -94,7 +94,8 @@ object MandiMathEngine {
         (amountPaisa * basisPoints + BASIS_POINTS_PER_UNIT / 2) / BASIS_POINTS_PER_UNIT
 
     private fun parseFixedTwoDecimals(input: String): Long {
-        val parts = input.trim().split(".")
+        val clean = input.trim().replace(",", "")
+        val parts = clean.split(".")
         if (parts.size > 2) return 0L
         val whole = parts[0].ifEmpty { "0" }.toLongOrNull() ?: return 0L
         val fraction = if (parts.size == 2) parts[1].padEnd(2, '0').take(2).toLongOrNull() ?: return 0L else 0L

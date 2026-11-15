@@ -185,7 +185,7 @@ class PilotRepositoryMoneyInvariantTest {
 
     private fun seedShop(database: AppDatabase) {
         database.appDatabaseQueries.insertShopProfile(
-            SHOP_ID, "Shop", "Owner", "Mandi", null, "9000000001", "hash", 1.5, 1L, 1L, 1L, 1L,
+            SHOP_ID, "Shop", "Owner", "Mandi", null, "9000000001", "hash", 1.5, 1L, 1L, 1L, 1L, null, null, null,
         )
     }
 

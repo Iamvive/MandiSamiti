@@ -1,0 +1,3 @@
+ALTER TABLE shopProfileEntity ADD COLUMN address TEXT;
+ALTER TABLE shopProfileEntity ADD COLUMN gstin TEXT;
+ALTER TABLE shopProfileEntity ADD COLUMN licence_no TEXT;

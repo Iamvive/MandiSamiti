@@ -92,12 +92,14 @@ class TradeSettingsFormDefaultsF05Test {
             farmerCommissionBps = 250L,  // 2.5%
             buyerCommissionBps = 190L,   // merchant 1.9%
             customerCommissionBps = 175L, // customer 1.75%, the default Sell party
-            defaultLabourPaisa = 1200L   // ₹12 / bag
+            defaultLabourPaisa = 1200L,  // ₹12 / bag
+            traderLabourPaisaPerQuintal = 500L // ₹5 / qtl
         )
         repo.saveTradeSettings(updated)
 
         // Form seeded from updated settings
         val latest = repo.getTradeSettingsStream().first()
+        assertEquals(500L, latest.traderLabourPaisaPerQuintal)
         val form2 = BuyEntryFormState(latest)
         assertEquals("2.50", form2.commissionPercent)
         assertEquals("12", form2.labourPerBag)

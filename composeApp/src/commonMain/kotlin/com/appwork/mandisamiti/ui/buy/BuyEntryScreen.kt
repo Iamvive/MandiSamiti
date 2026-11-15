@@ -569,7 +569,7 @@ fun BuyEntryScreenContent(
                             color = MandiTextPrimary
                         )
                         Text(
-                            text = if (isEnglish) "Gross: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}" else "सकल: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}",
+                            text = if (isEnglish) "Gross: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}" else "असल: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = MandiTextPrimary

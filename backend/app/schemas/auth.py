@@ -40,6 +40,9 @@ class ShopOut(BaseModel):
     owner_name: Optional[str] = None
     mandi_name: Optional[str] = None
     phone_number: Optional[str] = None
+    address: Optional[str] = None
+    gstin: Optional[str] = None
+    licence_no: Optional[str] = None
 
 
 class AuthSession(BaseModel):

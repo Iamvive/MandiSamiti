@@ -11,7 +11,10 @@ CREATE TABLE shopProfileEntity (
     is_sound_enabled INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
-    sync_status INTEGER NOT NULL DEFAULT 0
+    sync_status INTEGER NOT NULL DEFAULT 0,
+    address TEXT,
+    gstin TEXT,
+    licence_no TEXT
 );
 
 -- Party Master (Farmers & Buyers)
@@ -313,8 +316,8 @@ getShopProfile:
 SELECT * FROM shopProfileEntity LIMIT 1;
 
 insertShopProfile:
-INSERT OR REPLACE INTO shopProfileEntity(id, shop_name, owner_name, mandi_name, shop_number, phone_number, pin_hash, default_monthly_interest_rate, is_sound_enabled, created_at, updated_at, sync_status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO shopProfileEntity(id, shop_name, owner_name, mandi_name, shop_number, phone_number, pin_hash, default_monthly_interest_rate, is_sound_enabled, created_at, updated_at, sync_status, address, gstin, licence_no)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateSoundSetting:
 UPDATE shopProfileEntity SET is_sound_enabled = ?, updated_at = ? WHERE id = ?;

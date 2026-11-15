@@ -28,6 +28,15 @@ object DigitalSlipRenderer {
         return buildString {
             appendLine("🌾 *${shopProfile.shopName}* 🌾")
             appendLine("📍 ${shopProfile.mandiName} • दूकान नं: ${shopProfile.shopNumber ?: "-"}")
+            if (!shopProfile.address.isNullOrBlank()) {
+                appendLine("पता: ${shopProfile.address}")
+            }
+            if (!shopProfile.gstin.isNullOrBlank()) {
+                appendLine("GSTIN: ${shopProfile.gstin}")
+            }
+            if (!shopProfile.licenceNo.isNullOrBlank()) {
+                appendLine("लाइसेंस नं.: ${shopProfile.licenceNo}")
+            }
             appendLine("📞 मो.: ${shopProfile.phoneNumber}")
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
             appendLine("📜 *पक्का सौदा पर्चा (Settlement Slip)*")
