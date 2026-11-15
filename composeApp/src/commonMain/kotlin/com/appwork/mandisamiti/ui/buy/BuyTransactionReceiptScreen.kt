@@ -375,7 +375,8 @@ fun BuyTransactionReceiptScreen(
                 TotalLine(
                     label = if (isEnglish) "Slip value" else "पर्ची राशि",
                     amountText = MandiMathEngine.formatRupees(entry.netPayablePaisa),
-                    largeAmount = !hasAdvance && !hasLoanCut && cashPaymentPaisa == 0L
+                    largeAmount = true,
+                    isEmphasized = true
                 )
 
                 if (hasAdvance) {
@@ -503,7 +504,9 @@ fun buildFarmerSlipText(
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
     // The farmer sees only the combined खर्चा; labour and commission are not split
     appendLine("कुल खर्चा: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa + entry.commissionPaisa)}")
-    appendLine("पर्ची राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}")
+    appendLine("--------------------")
+    appendLine("*पर्ची राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}*")
+    appendLine("--------------------")
     if (entry.advancePaidPaisa > 0) {
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }
@@ -515,13 +518,14 @@ fun buildFarmerSlipText(
     if (entry.advancePaidPaisa > 0 || loanCutPaisa > 0) {
         appendLine("--------------------")
         appendLine("*अंतिम देय राशि: ${MandiMathEngine.formatRupees(postDeduction)}*")
+        appendLine("--------------------")
     }
     val cashPaid = BuyPaymentCalculations.calculateCashPayment(entry.paidPaisa, entry.advancePaidPaisa, loanCutPaisa)
     if (payments.isNotEmpty()) {
-        appendLine("--------------------")
         payments.forEach { p ->
             appendLine("• नकद भुगतान · ${receiptDateShort(p.transactionDate)}: -₹${MandiMathEngine.paisaToRupeesString(p.amountPaisa)}")
         }
+        appendLine("--------------------")
         val left = BuyPaymentCalculations.calculateRemainingLeft(postDeduction, cashPaid)
         if (left > 0) {
             appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(left)}*")
@@ -529,9 +533,9 @@ fun buildFarmerSlipText(
             appendLine("*स्थिति: पूर्ण चुकता*")
         }
     } else if (cashPaid > 0) {
-        appendLine("--------------------")
         val left = BuyPaymentCalculations.calculateRemainingLeft(postDeduction, cashPaid)
         appendLine("• नकद भुगतान · ${receiptDateShort(entry.updatedAt)}: -₹${MandiMathEngine.paisaToRupeesString(cashPaid)}")
+        appendLine("--------------------")
         if (left > 0) {
             appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(left)}*")
         } else {

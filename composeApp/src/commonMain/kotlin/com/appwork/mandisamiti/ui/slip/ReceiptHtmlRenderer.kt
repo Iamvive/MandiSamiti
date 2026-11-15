@@ -166,6 +166,22 @@ object ReceiptHtmlRenderer {
                 border-top: 2px solid #000;
                 border-bottom: 2px solid #000;
             }
+            .summary-table .grand-total td {
+                font-size: 15px;
+                font-weight: bold;
+            }
+            .summary-table .parchi-rashi {
+                font-size: 15px;
+                font-weight: bold;
+                background: #f4f4f4;
+            }
+            .summary-table .parchi-rashi td {
+                font-size: 15px;
+                font-weight: bold;
+                padding: 5px 6px;
+                border-top: 2px solid #000;
+                border-bottom: 2px solid #000;
+            }
             .footer {
                 margin-top: 28px;
                 display: flex;
@@ -321,7 +337,7 @@ object ReceiptHtmlRenderer {
                 appendLine("</tr>")
             }
 
-            appendLine("<tr>")
+            appendLine("<tr class=\"parchi-rashi\">")
             appendLine("<td>पर्ची राशि:</td>")
             appendLine("<td class=\"text-right\">₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}</td>")
             appendLine("</tr>")

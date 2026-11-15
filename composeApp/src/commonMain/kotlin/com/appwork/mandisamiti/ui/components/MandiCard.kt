@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiBorderActive
+import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
@@ -112,6 +115,7 @@ interface MandiLinesScope {
         label: String,
         amountText: String,
         largeAmount: Boolean = false,
+        isEmphasized: Boolean = false,
         modifier: Modifier = Modifier
     )
 
@@ -121,6 +125,7 @@ interface MandiLinesScope {
 
 private class MandiLinesScopeImpl : MandiLinesScope {
     private var isFirst = true
+    private var hasTrailingDivider = false
 
     @Composable
     override fun Line(
@@ -129,10 +134,11 @@ private class MandiLinesScopeImpl : MandiLinesScope {
         isMuted: Boolean,
         modifier: Modifier
     ) {
-        if (!isFirst) {
+        if (!isFirst && !hasTrailingDivider) {
             HorizontalDivider(color = MandiBorder, thickness = 1.dp)
         }
         isFirst = false
+        hasTrailingDivider = false
         Row(
             modifier = modifier
                 .fillMaxWidth()
@@ -159,38 +165,57 @@ private class MandiLinesScopeImpl : MandiLinesScope {
         label: String,
         amountText: String,
         largeAmount: Boolean,
+        isEmphasized: Boolean,
         modifier: Modifier
     ) {
-        HorizontalDivider(color = MandiBorder, thickness = 1.dp)
+        if (!isFirst && !hasTrailingDivider) {
+            HorizontalDivider(
+                color = if (isEmphasized) MandiBorderActive else MandiBorder,
+                thickness = if (isEmphasized) 1.5.dp else 1.dp
+            )
+        }
         isFirst = false
-        Row(
-            modifier = modifier
+        val rowModifier = if (isEmphasized) {
+            modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 11.dp),
+                .background(MandiNeutralLight.copy(alpha = 0.5f))
+        } else {
+            modifier.fillMaxWidth()
+        }
+        Row(
+            modifier = rowModifier
+                .padding(horizontal = 14.dp, vertical = if (isEmphasized) 13.dp else 11.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = label,
-                fontSize = 14.sp,
+                fontSize = if (isEmphasized) 16.sp else 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = MandiTextPrimary
             )
             Text(
                 text = amountText,
-                fontSize = if (largeAmount) 20.sp else 16.sp,
+                fontSize = if (isEmphasized || largeAmount) 20.sp else 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MandiTextPrimary
             )
+        }
+        if (isEmphasized) {
+            HorizontalDivider(color = MandiBorderActive, thickness = 1.5.dp)
+            hasTrailingDivider = true
+        } else {
+            hasTrailingDivider = false
         }
     }
 
     @Composable
     override fun CustomRow(content: @Composable () -> Unit) {
-        if (!isFirst) {
+        if (!isFirst && !hasTrailingDivider) {
             HorizontalDivider(color = MandiBorder, thickness = 1.dp)
         }
         isFirst = false
+        hasTrailingDivider = false
         Box(
             modifier = Modifier
                 .fillMaxWidth()

@@ -658,7 +658,8 @@ fun BuyEntryScreenContent(
                 TotalLine(
                     label = if (isEnglish) "Slip value" else "पर्ची राशि",
                     amountText = MandiMathEngine.formatRupees(state.slip.netPayablePaisa),
-                    largeAmount = true
+                    largeAmount = true,
+                    isEmphasized = true
                 )
             }
 

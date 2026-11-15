@@ -99,8 +99,9 @@ class BuyReceiptPaymentHistoryTest {
         assertFalse(slipText.contains("मजदूरी कटौती"), "Must NOT split labour in share text")
         assertFalse(slipText.contains("कमीशन कटौती"), "Must NOT split commission in share text")
 
-        // Sequence: Gross -> कुल खर्चा -> पर्ची राशि
+        // Sequence: Gross -> कुल खर्चा -> पर्ची राशि (bold and framed with separators)
         assertTrue(slipText.contains("कुल राशि: ₹50,000"), "Must contain gross")
+        assertTrue(slipText.contains("--------------------\n*पर्ची राशि: ₹49,000*\n--------------------"), "Parchi Rashi must be bold and framed with separators in share text")
         assertTrue(slipText.contains("पर्ची राशि: ₹49,000"), "Must contain slip value")
 
         // Payment installment timeline with date stamps
@@ -120,6 +121,7 @@ class BuyReceiptPaymentHistoryTest {
 
         assertTrue(html.contains("<td>कुल खर्चा:</td>"), "A5 print must contain single 'कुल खर्चा:' row")
         assertFalse(html.contains("मजदूरी + आढ़त"), "A5 print must NOT mention 'मजदूरी + आढ़त'")
+        assertTrue(html.contains("<tr class=\"parchi-rashi\">"), "A5 print must contain 'parchi-rashi' class row")
         assertTrue(html.contains("<td>पर्ची राशि:</td>"), "A5 print must contain 'पर्ची राशि:' row")
         assertTrue(html.contains("• नकद भुगतान · $day1Date:"), "A5 print must contain Day 1 payment with date")
         assertTrue(html.contains("- ₹25,000"), "A5 print must show ₹25,000 deduction")
