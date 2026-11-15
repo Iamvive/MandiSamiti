@@ -32,6 +32,7 @@ data class BuyEntry(
     val isVoid: Boolean = false,
     val voidReason: String? = null,
     val syncStatus: Long = 0L,
+    val isKhaate: Boolean = false,
 ) {
     val paymentStatus: PaymentStatus
         get() = when {

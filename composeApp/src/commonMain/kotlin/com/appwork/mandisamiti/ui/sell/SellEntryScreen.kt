@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +62,8 @@ import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.MandiCard
 import com.appwork.mandisamiti.ui.components.MandiChip
+import com.appwork.mandisamiti.ui.khaate.KhaateShortWarningBanner
+import com.appwork.mandisamiti.ui.khaate.KhaateToggleRow
 import com.appwork.mandisamiti.ui.components.MandiFlatTextField
 import com.appwork.mandisamiti.ui.components.MandiLinesCard
 import com.appwork.mandisamiti.ui.components.MandiPartyLookupField
@@ -132,11 +135,15 @@ fun SellEntryScreen(
     }
 
     val commit: (SellEntry) -> Unit = { raw ->
-        val existing = BuyPartyResolver.existing(parties, formState.selectedBuyerId, formState.phone)
-            ?: parties.firstOrNull { it.id == raw.buyerId }
-        val party = SellPartyResolver.partyToSave(formState, shopId, existing, Clock.System.now().toEpochMilliseconds())
-        val partyId = existing?.id ?: party?.id
-        onSaved(if (partyId != null) raw.copy(buyerId = partyId) else raw, party)
+        if (raw.isKhaate) {
+            onSaved(raw, null)
+        } else {
+            val existing = BuyPartyResolver.existing(parties, formState.selectedBuyerId, formState.phone)
+                ?: parties.firstOrNull { it.id == raw.buyerId }
+            val party = SellPartyResolver.partyToSave(formState, shopId, existing, Clock.System.now().toEpochMilliseconds())
+            val partyId = existing?.id ?: party?.id
+            onSaved(if (partyId != null) raw.copy(buyerId = partyId) else raw, party)
+        }
     }
 
     val performSave: () -> Unit = {
@@ -156,7 +163,7 @@ fun SellEntryScreen(
             .mapValues { (_, lots) -> lots.sumOf { it.totalWeightGrams } }
 
         val shortfalls = mutableListOf<Pair<String, Pair<Long, Long>>>()
-        for ((crop, saleGrams) in saleByCrop) {
+        for ((crop, saleGrams) in (if (formState.isKhaate) emptyMap() else saleByCrop)) {
             val stockGrams = stockLines.firstOrNull { it.commodityId.equals(crop, ignoreCase = true) }?.onHandGrams ?: 0L
             if (stockGrams < saleGrams) {
                 shortfalls.add(crop to (stockGrams to saleGrams))
@@ -179,7 +186,7 @@ fun SellEntryScreen(
     }
 
     val triggerSave: () -> Unit = {
-        val typedCheck = checkTypedParty(formState.buyerName, formState.selectedBuyerId, parties)
+        val typedCheck = if (formState.isKhaate) null else checkTypedParty(formState.buyerName, formState.selectedBuyerId, parties)
         if (typedCheck is TypedPartyCheck.NeedsConfirm) {
             newPartyCheck = typedCheck
         } else {
@@ -195,6 +202,11 @@ fun SellEntryScreen(
 
     val existingParty = BuyPartyResolver.existing(parties, formState.selectedBuyerId, formState.phone)
     val isOldPartyWithoutPhone = formState.selectedBuyerId != null && formState.phone.isBlank()
+
+    // Khaate pile per crop on this slip.
+    val khaatePile = formState.lots.map { it.cropName.trim().ifBlank { "गेहूं" }.lowercase() }.distinct()
+        .associateWith { crop -> stockLines.firstOrNull { it.commodityId.equals(crop, ignoreCase = true) }?.khaateOnHandGrams ?: 0L }
+    SideEffect { if (formState.khaateOnHandByCrop != khaatePile) formState.khaateOnHandByCrop = khaatePile }
 
     Scaffold(
         topBar = {
@@ -247,9 +259,9 @@ fun SellEntryScreen(
                         )
                     }
 
-                    val saveButtonHint = if (formState.buyerName.isBlank() || formState.village.isBlank()) {
+                    val saveButtonHint = if (!formState.isKhaate && (formState.buyerName.isBlank() || formState.village.isBlank())) {
                         if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
-                    } else if (formState.phone.length < 10) {
+                    } else if (!formState.isKhaate && formState.phone.length < 10) {
                         if (isEnglish) "Enter 10-digit mobile number" else "10 अंकों का मोबाइल नंबर डालें"
                     } else {
                         validationReason ?: (if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा")
@@ -287,6 +299,19 @@ fun SellEntryScreen(
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Locked once saved: an entry cannot switch between normal and khaate.
+            if (existingId == null) {
+                KhaateToggleRow(
+                    isKhaate = formState.isKhaate,
+                    isEnglish = isEnglish,
+                    onChange = { formState.isKhaate = it },
+                )
+            }
+            if (formState.khaateShortWarning) {
+                KhaateShortWarningBanner(isEnglish = isEnglish)
+            }
+
+            if (!formState.isKhaate) {
             // Category Selector: Customer vs Merchant
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
@@ -462,6 +487,8 @@ fun SellEntryScreen(
                 }
             }
 
+            }
+
             // Section 2: Crop Lots / Varieties
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -628,6 +655,7 @@ fun SellEntryScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            if (!formState.isKhaate) {
             // Section 3: Deductions & Charges
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -650,6 +678,8 @@ fun SellEntryScreen(
                     isTall = true,
                     modifier = Modifier.weight(1f)
                 )
+            }
+
             }
 
             // Section 4: हिसाब पर्ची (Slip summary card with lines)
@@ -713,6 +743,7 @@ fun SellEntryScreen(
                 )
             }
 
+            if (!formState.isKhaate) {
             // Section 5: पर्ची के बाद का हिसाब (After the slip)
             Text(
                 text = if (isEnglish) "After the slip" else "पर्ची के बाद का हिसाब",
@@ -797,6 +828,8 @@ fun SellEntryScreen(
                         color = MandiTextSecondary
                     )
                 }
+            }
+
             }
 
             // Summary Lines (After the slip calculation card)

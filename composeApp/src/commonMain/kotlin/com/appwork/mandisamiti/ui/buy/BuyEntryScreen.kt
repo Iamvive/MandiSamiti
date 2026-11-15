@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.ui.khaate.KhaateToggleRow
 import com.appwork.mandisamiti.domain.repository.BuyRepository
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
@@ -137,11 +138,15 @@ fun BuyEntryScreen(
     }
 
     val commit: (BuyEntry) -> Unit = { raw ->
-        val existing = parties.firstOrNull { it.id == formState.selectedFarmerId || it.id == raw.farmerId }
-            ?: formState.phone.takeIf { it.isNotBlank() }?.let { ph -> parties.firstOrNull { it.phone == ph } }
-        val party = BuyPartyResolver.partyToSave(formState, shopId, existing, Clock.System.now().toEpochMilliseconds())
-        val partyId = existing?.id ?: party?.id
-        onSaved(if (partyId != null) raw.copy(farmerId = partyId) else raw, party)
+        if (raw.isKhaate) {
+            onSaved(raw, null)
+        } else {
+            val existing = parties.firstOrNull { it.id == formState.selectedFarmerId || it.id == raw.farmerId }
+                ?: formState.phone.takeIf { it.isNotBlank() }?.let { ph -> parties.firstOrNull { it.phone == ph } }
+            val party = BuyPartyResolver.partyToSave(formState, shopId, existing, Clock.System.now().toEpochMilliseconds())
+            val partyId = existing?.id ?: party?.id
+            onSaved(if (partyId != null) raw.copy(farmerId = partyId) else raw, party)
+        }
     }
 
     val performSave: () -> Unit = {
@@ -175,7 +180,7 @@ fun BuyEntryScreen(
         buyEntryActions(
             formState = formState,
             onSaveTriggered = {
-                val typedCheck = checkTypedParty(formState.farmerName, formState.selectedFarmerId, parties)
+                val typedCheck = if (formState.isKhaate) null else checkTypedParty(formState.farmerName, formState.selectedFarmerId, parties)
                 if (typedCheck is TypedPartyCheck.NeedsConfirm) {
                     newPartyCheck = typedCheck
                 } else {
@@ -360,7 +365,9 @@ fun BuyEntryScreenContent(
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        val disabledText = if (state.party.needsPhonePrompt || state.party.phone.isBlank()) {
+                        val disabledText = if (state.isKhaate) {
+                            state.saveBlockedReason ?: if (isEnglish) "Save" else "सुरक्षित करें"
+                        } else if (state.party.needsPhonePrompt || state.party.phone.isBlank()) {
                             if (isEnglish) "Add number to save" else "नंबर डालने पर सुरक्षित होगा"
                         } else if (state.party.name.isBlank() || state.party.village.isBlank()) {
                             if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
@@ -391,10 +398,21 @@ fun BuyEntryScreenContent(
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Khaate toggle: spare crop, no party, no charges
+            // Locked once saved: an entry cannot switch between normal and khaate.
+            if (existingId == null) {
+                KhaateToggleRow(
+                    isKhaate = state.isKhaate,
+                    isEnglish = isEnglish,
+                    onChange = { actions.onKhaateChange(it) },
+                )
+            }
+
             // Section 1: Farmer block (Flat inputs, order: Mobile/Name lookup, Farmer name, Village)
             val existingParty = BuyPartyResolver.existing(parties, state.party.selectedPartyId, state.party.phone)
             val isOldPartyWithoutPhone = state.party.selectedPartyId != null && state.party.phone.isBlank()
 
+            if (!state.isKhaate) {
             MandiPartyLookupField(
                 phoneValue = state.party.phone,
                 onPhoneChange = { actions.onPhoneChange(it) },
@@ -465,6 +483,8 @@ fun BuyEntryScreenContent(
                     fontSize = 12.sp,
                     color = MandiTextSecondary
                 )
+            }
+
             }
 
             // Crop input lines
@@ -587,7 +607,7 @@ fun BuyEntryScreenContent(
             )
 
             // Deductions Grid (Commission % and Labour in 2-column grid)
-            Row(
+            if (!state.isKhaate) Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -625,14 +645,16 @@ fun BuyEntryScreenContent(
                         amountText = MandiMathEngine.formatRupees(lot.grossPaisa)
                     )
                 }
-                Line(
-                    label = if (isEnglish) "Labour" else "मजदूरी कटौती",
-                    amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.labourPaisa)}"
-                )
-                Line(
-                    label = if (isEnglish) "Commission" else "कमीशन कटौती",
-                    amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.commissionPaisa)}"
-                )
+                if (!state.isKhaate) {
+                    Line(
+                        label = if (isEnglish) "Labour" else "मजदूरी कटौती",
+                        amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.labourPaisa)}"
+                    )
+                    Line(
+                        label = if (isEnglish) "Commission" else "कमीशन कटौती",
+                        amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.commissionPaisa)}"
+                    )
+                }
                 TotalLine(
                     label = if (isEnglish) "Slip value" else "पर्ची राशि",
                     amountText = MandiMathEngine.formatRupees(state.slip.netPayablePaisa),
@@ -640,6 +662,7 @@ fun BuyEntryScreenContent(
                 )
             }
 
+            if (!state.isKhaate) {
             // Section 4: पर्ची के बाद का हिसाब (After the slip)
             Text(
                 text = if (isEnglish) "After the slip" else "पर्ची के बाद का हिसाब",
@@ -810,6 +833,8 @@ fun BuyEntryScreenContent(
                     amountText = MandiMathEngine.formatRupees(state.payoutPaisa),
                     largeAmount = true
                 )
+            }
+
             }
 
             Spacer(Modifier.height(16.dp))

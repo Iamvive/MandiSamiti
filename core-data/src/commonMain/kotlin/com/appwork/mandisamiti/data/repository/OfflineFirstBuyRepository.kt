@@ -217,6 +217,7 @@ class OfflineFirstBuyRepository(
             revision = entry.revision,
             is_void = if (entry.isVoid) 1L else 0L,
             void_reason = entry.voidReason,
+            is_khaate = if (entry.isKhaate) 1L else 0L,
         )
     }
 
@@ -247,6 +248,7 @@ class OfflineFirstBuyRepository(
         updatedAt = updated_at,
         revision = revision,
         isVoid = is_void == 1L,
+        isKhaate = is_khaate == 1L,
         voidReason = void_reason,
         syncStatus = sync_status,
     )

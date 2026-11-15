@@ -10,6 +10,7 @@ import com.appwork.mandisamiti.domain.math.BuySellMath
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.domain.model.BillMode
+import com.appwork.mandisamiti.domain.model.Khaate
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
@@ -116,6 +117,12 @@ data class SellAggregateResult(
 class SellEntryFormState(
     tradeSettings: TradeSettings? = null
 ) {
+    /** Spare crop sold from the khaate pile: no party, charges or payment. Short stock only warns. */
+    var isKhaate by mutableStateOf(false)
+    /** Khaate pile on hand per crop (lowercase name to grams); the screen sets it from the stock register. */
+    var khaateOnHandByCrop by mutableStateOf<Map<String, Long>>(emptyMap())
+    /** Grams this entry already holds per crop when editing a khaate sale; the pile has them subtracted. */
+    private var khaateOwnByCrop by mutableStateOf<Map<String, Long>>(emptyMap())
     var buyerName by mutableStateOf("")
     var selectedBuyerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
@@ -247,12 +254,29 @@ class SellEntryFormState(
         return if (warnings.isEmpty()) null else warnings.joinToString("\n")
     }
 
+    val khaateShortWarning: Boolean
+        get() = isKhaate && lots.map { it.toCropLot() }
+            .groupBy { it.cropName.trim().ifBlank { "गेहूं" }.lowercase() }
+            .any { (crop, l) ->
+                l.sumOf { it.totalWeightGrams } >
+                    (khaateOnHandByCrop[crop] ?: 0L) + (khaateOwnByCrop[crop] ?: 0L)
+            }
+
     fun aggregatePreview(): SellAggregateResult {
         val calculatedLots = lots.map { it.toCropLot() }
         val totalBags = calculatedLots.sumOf { it.bags }
         val totalGrossWeight = calculatedLots.sumOf { it.totalWeightGrams }
         val totalWeight = totalGrossWeight
         val gross = calculatedLots.sumOf { it.grossPaisa }
+
+        if (isKhaate) {
+            return SellAggregateResult(
+                totalBags = totalBags, totalWeightGrams = totalWeight, grossPaisa = gross,
+                commissionPaisa = 0L, labourPaisa = 0L, mandiShulkPaisa = 0L, krishakCessPaisa = 0L,
+                tulakPaisa = 0L, totalReceivablePaisa = gross, advanceReceivedPaisa = 0L,
+                balanceDuePaisa = gross, lots = calculatedLots,
+            )
+        }
 
         val isBos = (billMode == BillMode.BILL_OF_SUPPLY && partyKind == SellPartyKind.MERCHANT)
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
@@ -329,6 +353,7 @@ class SellEntryFormState(
     fun validateLots(): List<SellLotValidation> = lots.map { it.validate() }
 
     fun validationReason(): String? {
+        if (isKhaate) return khaateValidationReason()
         val nameErr = buyerNameValidation.errorOrNull
         if (nameErr != null) return nameErr
 
@@ -359,6 +384,17 @@ class SellEntryFormState(
         return null
     }
 
+    private fun khaateValidationReason(): String? {
+        val lotsVal = validateLots()
+        val firstInvalidIdx = lotsVal.indexOfFirst { !it.isValid }
+        if (firstInvalidIdx != -1) {
+            val err = lotsVal[firstInvalidIdx]
+            return "फसल #${firstInvalidIdx + 1}: ${err.bagsError ?: err.weightError ?: err.extraError ?: err.rateError ?: "विवरण सही करें"}"
+        }
+        if (aggregatePreview().grossPaisa <= 0) return "कम से कम 1 फसल का वजन और भाव दर्ज करें"
+        return null
+    }
+
     fun canSave(): Boolean = validationReason() == null
 
     fun toSellEntry(existingId: String? = null, shopId: String = "shop-default"): SellEntry {
@@ -375,7 +411,7 @@ class SellEntryFormState(
             firstLot?.ratePaisaPerQuintal ?: 0L
         }
 
-        val cleanVillage = MandiValidators.sanitizeVillage(village)
+        val cleanVillage = if (isKhaate) "" else MandiValidators.sanitizeVillage(village)
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
             append("DATA: $lotsJson")
@@ -384,17 +420,17 @@ class SellEntryFormState(
         return SellEntry(
             id = existingId ?: "sell-${IdGenerator.newId()}",
             shopId = shopId,
-            buyerId = selectedBuyerId ?: buyerName.trim(),
+            buyerId = if (isKhaate) Khaate.partyId(shopId) else selectedBuyerId ?: buyerName.trim(),
             commodityId = if (preview.lots.size > 1) "विविध जिंस" else (firstLot?.cropName ?: "गेहूं"),
             entryDate = now,
-            billMode = billMode,
+            billMode = if (isKhaate) BillMode.NORMAL else billMode,
             partyKind = partyKind,
-            gstin = if (billMode == BillMode.BILL_OF_SUPPLY) gstin.trim().uppercase() else null,
+            gstin = if (!isKhaate && billMode == BillMode.BILL_OF_SUPPLY) gstin.trim().uppercase() else null,
             bagsCount = singleBags,
             weightPerBagGrams = singleWeightPerBag,
             totalWeightGrams = preview.totalWeightGrams,
             ratePaisaPerQuintal = effectiveRate,
-            aratBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" }),
+            aratBps = if (isKhaate) 0L else MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" }),
             tulakPaisa = preview.tulakPaisa,
             grossPaisa = preview.grossPaisa,
             aratPaisa = preview.commissionPaisa,
@@ -402,8 +438,8 @@ class SellEntryFormState(
             totalReceivablePaisa = preview.totalReceivablePaisa,
             receivedPaisa = preview.advanceReceivedPaisa,
             balanceDuePaisa = preview.balanceDuePaisa,
-            vehicleNumber = phone.trim().ifBlank { null },
-            invoiceNumber = if (billMode == BillMode.BILL_OF_SUPPLY) {
+            vehicleNumber = if (isKhaate) null else phone.trim().ifBlank { null },
+            invoiceNumber = if (!isKhaate && billMode == BillMode.BILL_OF_SUPPLY) {
                 "BOS-${(now % 100000).toString().padStart(5, '0')}"
             } else {
                 null
@@ -411,11 +447,21 @@ class SellEntryFormState(
             remarks = combinedRemarks,
             createdAt = now,
             updatedAt = now,
-            revision = 1L
+            revision = 1L,
+            isKhaate = isKhaate,
         )
     }
 
     fun populateFrom(entry: SellEntry) {
+        fillFrom(entry)
+        khaateOwnByCrop = if (entry.isKhaate) {
+            lots.map { it.toCropLot() }.groupBy { it.cropName.trim().ifBlank { "गेहूं" }.lowercase() }
+                .mapValues { (_, l) -> l.sumOf { it.totalWeightGrams } }
+        } else emptyMap()
+    }
+
+    private fun fillFrom(entry: SellEntry) {
+        isKhaate = entry.isKhaate
         selectedBuyerId = entry.buyerId
         buyerName = entry.buyerId
         phone = entry.vehicleNumber ?: ""

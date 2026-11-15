@@ -153,9 +153,14 @@ class OfflineFirstExpenseRepository(
     }
 
     override suspend fun stockTotals(shopId: String): StockTotals = withContext(ioDispatcher) {
-        val bought = queries.getStockBuyTotals(shopId).executeAsList().associate { it.commodity_id to it.grams }
-        val sold = queries.getStockSellTotals(shopId).executeAsList().associate { it.commodity_id to it.grams }
-        StockTotals(bought, sold)
+        val buys = queries.getStockBuyTotals(shopId).executeAsList()
+        val sells = queries.getStockSellTotals(shopId).executeAsList()
+        StockTotals(
+            boughtGramsByCommodity = buys.filter { it.is_khaate == 0L }.associate { it.commodity_id to it.grams },
+            soldGramsByCommodity = sells.filter { it.is_khaate == 0L }.associate { it.commodity_id to it.grams },
+            khaateBoughtGramsByCommodity = buys.filter { it.is_khaate != 0L }.associate { it.commodity_id to it.grams },
+            khaateSoldGramsByCommodity = sells.filter { it.is_khaate != 0L }.associate { it.commodity_id to it.grams }
+        )
     }
 
     private fun recordRevision(entry: ExpenseEntry, changeKind: String, at: Long) {

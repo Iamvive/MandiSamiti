@@ -67,4 +67,11 @@
 
     <!-- WhatsApp Share -->
     <string name="share_whatsapp_btn">Share Slip on WhatsApp</string>
+
+    <!-- Khaate -->
+    <string name="khaate_toggle">Khaate (spare crop)</string>
+    <string name="khaate_short_warning">Khaate stock is lower than this sale. It will still be saved.</string>
+    <string name="khaate_line">Khaate</string>
+    <string name="khaate_tag">Khaate</string>
+    <string name="khaate_count_label">Khaate bags counted</string>
 </resources>

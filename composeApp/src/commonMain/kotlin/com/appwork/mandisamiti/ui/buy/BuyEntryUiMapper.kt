@@ -17,6 +17,7 @@ fun BuyEntryFormState.toUiState(): BuyEntryUiState {
     val split = loanCutSplit()
     val cutError = loanCutError()
     return BuyEntryUiState(
+        isKhaate = isKhaate,
         party = BuyPartyState(
             phone = phone,
             phoneError = phone.errorIfFilled(validatePhone().errorOrNull),

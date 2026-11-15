@@ -67,4 +67,11 @@
 
     <!-- WhatsApp Share -->
     <string name="share_whatsapp_btn">व्हाट्सएप पर पर्ची भेजें</string>
+
+    <!-- Khaate -->
+    <string name="khaate_toggle">खाते (बचा माल)</string>
+    <string name="khaate_short_warning">खाते में इतना माल नहीं है। फिर भी सेव होगा।</string>
+    <string name="khaate_line">खाते</string>
+    <string name="khaate_tag">खाते</string>
+    <string name="khaate_count_label">खाते बोरी गिनती</string>
 </resources>

@@ -13,7 +13,8 @@ class StockInventoryUseCase(
     suspend fun lines(shopId: String): List<StockLine> {
         val t = repo.stockTotals(shopId)
         val audits = auditRepo?.loadAudits(shopId) ?: emptyMap()
-        val allRawKeys = (t.boughtGramsByCommodity.keys + t.soldGramsByCommodity.keys + audits.keys).toSet()
+        val allRawKeys = (t.boughtGramsByCommodity.keys + t.soldGramsByCommodity.keys +
+            t.khaateBoughtGramsByCommodity.keys + t.khaateSoldGramsByCommodity.keys + audits.keys).toSet()
 
         val grouped = allRawKeys.groupBy { raw -> CommodityParser.parseBaseCommodity(raw) }
 
@@ -21,6 +22,8 @@ class StockInventoryUseCase(
             val rawKeysForBase = grouped[baseCommodity] ?: emptyList()
             var totalBought = 0L
             var totalSold = 0L
+            var khaateBought = 0L
+            var khaateSold = 0L
             val varieties = mutableListOf<StockVarietyLine>()
 
             for (raw in rawKeysForBase.sorted()) {
@@ -28,6 +31,8 @@ class StockInventoryUseCase(
                 val s = t.soldGramsByCommodity[raw] ?: 0L
                 totalBought += b
                 totalSold += s
+                khaateBought += t.khaateBoughtGramsByCommodity[raw] ?: 0L
+                khaateSold += t.khaateSoldGramsByCommodity[raw] ?: 0L
 
                 val varietyName = CommodityParser.parseVarietyName(raw, baseCommodity)
                 varieties.add(StockVarietyLine(varietyName, b, s))
@@ -57,7 +62,10 @@ class StockInventoryUseCase(
                 farmerCustodyGrams = farmerCustodyGrams,
                 standardBagKg = bagWeightKg,
                 lastAuditedAt = audit?.auditedAt,
-                lastAuditReason = audit?.reason
+                lastAuditReason = audit?.reason,
+                khaateBoughtGrams = khaateBought,
+                khaateSoldGrams = khaateSold,
+                khaateAdjustmentGrams = audit?.khaateDiffGrams ?: 0L
             )
         }
     }

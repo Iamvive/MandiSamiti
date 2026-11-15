@@ -1,10 +1,12 @@
 package com.appwork.mandisamiti.domain
 
+import com.appwork.mandisamiti.domain.model.StockAudit
 import com.appwork.mandisamiti.domain.repository.*
 import com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class StockInventoryUseCaseTest {
     private class FakeStock(val totals: StockTotals) : ExpenseRepository {
@@ -14,6 +16,23 @@ class StockInventoryUseCaseTest {
         override suspend fun editExpense(entry: com.appwork.mandisamiti.domain.model.ExpenseEntry, cashRemarks: String) = Unit
         override suspend fun voidExpense(id: String, reason: com.appwork.mandisamiti.domain.model.VoidReason) = Unit
         override suspend fun stockTotals(shopId: String) = totals
+    }
+
+    private class FakeAudits(val audits: Map<String, StockAudit>) : StockAuditRepository {
+        override suspend fun loadAudits(shopId: String) = audits
+        override suspend fun saveAudit(shopId: String, audit: StockAudit) = Unit
+    }
+
+    @Test fun auditAdjustsEachLineSeparately() = runTest {
+        val totals = StockTotals(mapOf("गेहूं" to 5_000_000L), emptyMap(), mapOf("गेहूं" to 250_000L), emptyMap())
+        val audit = StockAudit(
+            commodityId = "गेहूं", physicalBags = 98, bagWeightKg = 50.0,
+            physicalGrams = 4_900_000L, diffGrams = -100_000L, reason = "count",
+            auditedAt = 1L, khaatePhysicalBags = 6, khaateDiffGrams = 50_000L
+        )
+        val line = StockInventoryUseCase(FakeStock(totals), FakeAudits(mapOf("गेहूं" to audit))).lines("s").single()
+        assertEquals(98L, line.onHandBags)
+        assertEquals(6L, line.khaateOnHandBags)
     }
 
     @Test
@@ -49,5 +68,30 @@ class StockInventoryUseCaseTest {
         assertEquals(7_200_000L, byVariety.getValue("सामान्य").onHandGrams)
         assertEquals(-500_000L, byVariety.getValue("लोकवान").onHandGrams)
         assertEquals(-1_000_000L, byVariety.getValue("शरबती").onHandGrams)
+    }
+
+    @Test fun khaateLineIsSeparateFromNormalBalance() = runTest {
+        val repo = FakeStock(StockTotals(
+            boughtGramsByCommodity = mapOf("गेहूं" to 5_000_000L),
+            soldGramsByCommodity = emptyMap(),
+            khaateBoughtGramsByCommodity = mapOf("गेहूं" to 250_000L),
+            khaateSoldGramsByCommodity = emptyMap()
+        ))
+        val line = StockInventoryUseCase(repo).lines("s").single()
+        assertEquals(100L, line.onHandBags)
+        assertEquals(5L, line.khaateOnHandBags)
+    }
+
+    @Test fun khaateLineMayGoNegative() = runTest {
+        val repo = FakeStock(StockTotals(emptyMap(), emptyMap(),
+            mapOf("गेहूं" to 250_000L), mapOf("गेहूं" to 400_000L)))
+        val line = StockInventoryUseCase(repo).lines("s").single()
+        assertEquals(-150_000L, line.khaateOnHandGrams)
+        assertTrue(line.isKhaateNegative)
+    }
+
+    @Test fun khaateOnlyCropStillGetsALine() = runTest {
+        val repo = FakeStock(StockTotals(emptyMap(), emptyMap(), mapOf("जिंस" to 100_000L), emptyMap()))
+        assertEquals(listOf("जिंस"), StockInventoryUseCase(repo).lines("s").map { it.commodityId })
     }
 }

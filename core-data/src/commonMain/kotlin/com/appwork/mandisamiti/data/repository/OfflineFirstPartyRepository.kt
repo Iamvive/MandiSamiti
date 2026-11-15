@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.domain.model.DuplicatePhoneException
 import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.domain.repository.PartyRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import com.appwork.mandisamiti.domain.model.Khaate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -82,6 +83,14 @@ class OfflineFirstPartyRepository(
                 )
             }
         }
+    }
+
+    override suspend fun ensureKhaateParty(shopId: String, partyType: String) = withContext(ioDispatcher) {
+        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        queries.ensureKhaatePartyRow(
+            id = Khaate.partyId(shopId), shop_id = shopId, name = Khaate.PARTY_NAME,
+            party_type = partyType, created_at = now, updated_at = now,
+        )
     }
 
     override suspend fun deleteParty(partyId: String) = withContext(ioDispatcher) {

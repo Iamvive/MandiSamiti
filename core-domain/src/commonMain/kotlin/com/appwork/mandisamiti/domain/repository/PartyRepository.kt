@@ -11,4 +11,7 @@ interface PartyRepository {
     suspend fun getPartyByPhone(shopId: String, phone: String): Party?
     suspend fun saveParty(party: Party)
     suspend fun deleteParty(partyId: String)
+
+    /** Creates the hidden khaate system party for [shopId] if missing. Never listed by [getPartiesStream]. */
+    suspend fun ensureKhaateParty(shopId: String, partyType: String) {}
 }

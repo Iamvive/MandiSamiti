@@ -11,6 +11,8 @@ data class StockAudit(
     val diffGrams: Long,
     val reason: String,
     val auditedAt: Long,
-    val farmerCustodyBags: Long = 0L
+    val farmerCustodyBags: Long = 0L,
+    val khaatePhysicalBags: Long = 0L,
+    val khaateDiffGrams: Long = 0L
 )
 
