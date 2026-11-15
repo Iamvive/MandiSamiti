@@ -32,9 +32,15 @@ class AuthRepository(
         // The local DB may hold several profile rows (e.g. shop_default + shop_mathura_default): any foreign row means wipe,
         // unless another server shop still has unsynced entries here: then refuse and change nothing.
         // Legacy demo profiles (sync_status = 0) are wiped regardless.
+        // Same phone under a new server shop id (e.g. the server was reset): same business, so keep its entries and re-push them.
+        var rehome = false
         if (wiper.hasDataOutsideShop(shop.id)) {
-            if (wiper.hasUnsyncedServerShopDataOutside(shop.id)) throw AuthError.UnsyncedOtherShop
-            wiper.wipeAll()
+            if (wiper.hasUnsyncedServerShopDataOutside(shop.id)) {
+                if (!wiper.foreignShopsAllHavePhone(shop.id, shop.phoneNumber ?: phone)) throw AuthError.UnsyncedOtherShop
+                rehome = true
+            } else {
+                wiper.wipeAll()
+            }
         }
         val now = clock.now().toEpochMilliseconds()
         shopProfileRepository.saveShopProfile(
@@ -50,6 +56,7 @@ class AuthRepository(
                 syncStatus = 1,
             )
         )
+        if (rehome) wiper.rehomeForeignRowsTo(shop.id)
         Session(shop.id, dto.accessToken, dto.refreshToken).also { sessionStore.save(it) }
     }
 

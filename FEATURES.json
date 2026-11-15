@@ -126,6 +126,48 @@
       "description": "Party lookup field (Buy, Sell, Lend, Loan advance) opens on the number pad and has an अ/A toggle to a text keyboard so a party can be found by name or village; typed text never reaches the phone value",
       "status": "passing",
       "evidence": "2026-11-14 emulator-5554 (staging build): Sell entry, toggle to text keyboard (inputType 0x1, no autocorrect), typed 'ra', dropdown showed Ramesh 9876543211 Orai, picking it filled phone, name and village and reset the field to the number pad. composeApp jvmTest 311 tests 0 failures including PartyLookupTest (7 cases). Not opened on emulator: Buy, Lend and Loan advance screens (same MandiPartyLookupField, no caller changes). Not checked on Redmi d93c743, Light/Dark and 390dp not separately reviewed."
+    },
+    {
+      "id": "login-rehome-and-push-resilience",
+      "description": "Login with the same phone under a new server shop id keeps and re-pushes local entries; a dangling deal_id no longer blocks push; first-sync failure does not block the user; sign-out works once synced",
+      "status": "passing",
+      "evidence": "2026-11-15 emulator-5554 (staging build, not the Redmi): login re-homed 10 rows to shop 9d36cb87; Backup now gave 5 push 200 and 1 pull 200 in staging log, all local rows sync_status 1; Sign Out returned to phone screen. Tests: AuthRepositoryTest (same-phone re-home), DanglingDealIdPushTest, core-data and composeApp jvmTest 0 failures. Unverified: Redmi, first-sync Failed redirect, server still 500s on other bad rows."
+    },
+    {
+      "id": "edit-shop-profile",
+      "description": "Shop owner can edit the shop profile in Settings (shop name, owner name, mandi name; phone excluded for now because login has no OTP)",
+      "status": "failing",
+      "evidence": "Requested by Vivek 2026-11-15. Not started. Open question: which fields are editable."
+    },
+    {
+      "id": "labour-half-unit-rule",
+      "description": "No labour charge on leftover weight below half a unit (50 kg unit: small leftover is free, more is charged)",
+      "status": "failing",
+      "evidence": "Requested by Vivek 2026-11-15. Not started. Open question: cut-off is 25 kg (half of 50) or 20 kg as in his example."
+    },
+    {
+      "id": "bill-shows-extra-weight",
+      "description": "Buy and Sell bills show the extra weight",
+      "status": "failing",
+      "evidence": "Requested by Vivek 2026-11-15. Not started."
+    },
+    {
+      "id": "sell-validates-stock",
+      "description": "Sell always checks available stock before saving a sale",
+      "status": "failing",
+      "evidence": "Requested by Vivek 2026-11-15. Not started. Open question: block the sale or only warn when stock is short."
+    },
+    {
+      "id": "trader-sell-labour-per-quintal",
+      "description": "Trader (vyapaari) Sell charges labour per quintal, not per bori; no prefilled chips; paise in the total are adjusted into Labour so the total is a whole rupee",
+      "status": "failing",
+      "evidence": "Requested by Vivek 2026-11-15. Not started. Open: confirm 'do not show prefilled chips' reading."
+    },
+    {
+      "id": "print-all-bills",
+      "description": "Print option on all bills",
+      "status": "failing",
+      "evidence": "Requested by Vivek 2026-11-15. Not started. Open question: Bluetooth thermal printer or system print/PDF."
     }
   ]
 }

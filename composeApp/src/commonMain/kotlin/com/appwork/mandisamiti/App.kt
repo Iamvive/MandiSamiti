@@ -218,6 +218,10 @@ fun App(
                     )
                 }
                 val firstSyncState by firstSyncViewModel.state.collectAsState()
+                // A failed first download must never lock the user out: entries are local, background sync retries.
+                LaunchedEffect(firstSyncState) {
+                    if (firstSyncState is com.appwork.mandisamiti.ui.sync.FirstSyncState.Failed) currentScreen = Screen.Home
+                }
                 FirstSyncScreen(
                     state = firstSyncState,
                     onRetry = firstSyncViewModel::retry,

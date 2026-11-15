@@ -149,3 +149,24 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Changes: Synchronized project state.
 - Evidence: Automated test suites verified and passing (2026-11-14).
 - Next: Continue implementation and feature verification.
+
+## 2026-11-15 (Claude Code): same-phone re-home on login (uncommitted)
+- Problem: emulator held shop 1b691cc7 (phone 9876543210) with 10 pending rows; staging returned a different shop id for the same phone, so `AuthRepository.adopt` threw UnsyncedOtherShop and the user was stuck on the phone screen with no way out.
+- Fix: if every foreign local profile has the same phone as the logging-in shop, rows are re-assigned to the new shop id, marked pending, old profile and quota deleted (`LocalDataWiper.rehomeForeignRowsTo`, new `rehome*` queries in AppDatabase.sq). Different phone still blocks.
+- Test first: `login_samePhoneNewServerShopId_rehomesPendingEntries_insteadOfBlocking` failed, then passed. `:core-data:jvmTest :composeApp:jvmTest` 0 failures.
+- Evidence (emulator-5554, staging build): login with the MPIN succeeded; local DB now holds one profile 9d36cb87 (TEST Kisan Traders, same phone), all rows under it (3 parties synced, 5 cash, 1 buy, 1 lend still pending).
+- Open: after login, FirstSyncScreen shows "इंटरनेट नहीं मिला" (no internet) with retry / later. The emulator has internet and staging answers, so the pull failed for another reason and the message is misleading; FirstSyncViewModel treats any pull failure as no internet and blocks. Cause of the pull failure not yet read (check staging API log and the pull call). Fix direction: show the real reason, never block (let the user in, retry in background).
+- Not done: FEATURES.json entry, commit, push. Code is uncommitted in MandiSamiti on main.
+- Root cause of the first-sync failure (same day): staging `POST /api/v1/sync/push` returns HTTP 500 (IntegrityError, `cash_transactions_deal_id_fkey`). One legacy local cash row has party_id "Ramesh" (a name) and deal_id f4f32eca with 0 local deals, so the whole batch is rejected on every retry and nothing after it syncs (5 cash, 1 buy, 1 lend stay pending). Evidence: staging api log 2026-11-15 09:18 to 09:20 UTC, local DB inspection on emulator-5554.
+- Fix 1 done (not committed): App.kt FirstSync block sends the user to Home when the first download fails (LaunchedEffect on FirstSyncState.Failed); background sync keeps retrying. Debug build installed on emulator-5554 and Home opens with the shop data; the Failed path itself was not re-triggered (needs a fresh login).
+- Open: the server should reject or skip one bad row instead of 500 for the whole batch, and/or the client should drop a deal_id that has no local deal. Needs Vivek's decision (backend change means a staging deploy).
+
+## 2026-11-15 (Claude Code): push no longer poisoned by a dangling deal_id; sync and sign-out work
+- Vivek reported sign-out and sync both stuck. Same cause: sign-out refuses while entries are unsynced (LogoutUseCase), and the one legacy cash row with a deal_id that has no local deal made staging 500 the whole push.
+- Fix (client only, no deploy): SyncEngine push drops a cash row's deal_id when no local deal exists. Test first: DanglingDealIdPushTest failed, then passed. `:core-data:jvmTest :composeApp:jvmTest` 0 failures.
+- Evidence (emulator-5554, staging build, shop 9d36cb87): "Backup now" in Settings gave 5 x POST /sync/push 200 and 1 x /sync/pull 200 in the staging log; local rows all sync_status 1 (cash 25, buy 3, lend 4); Settings shows "all entries safe online". Sign Out then Sign Out dialog returned to the phone screen.
+- Unverified: Redmi (adb never saw it), the first-sync Failed redirect itself, the server still 500s on any other bad row (server hardening not done), commit and push not done.
+
+## 2026-11-15 (Claude Code): backlog added to FEATURES.json
+- Added 6 `failing` entries from Vivek's requests, nothing built: edit-shop-profile, labour-half-unit-rule, bill-shows-extra-weight, sell-validates-stock, trader-sell-labour-per-quintal, print-all-bills. Open questions are in each entry's evidence and in hot.md.
+- Next: brainstorm one at a time, answering the open question first.

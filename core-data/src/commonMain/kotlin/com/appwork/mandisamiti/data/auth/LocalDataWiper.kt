@@ -33,4 +33,28 @@ class LocalDataWiper(private val database: AppDatabase) {
      */
     fun hasUnsyncedServerShopDataOutside(shopId: String): Boolean =
         database.appDatabaseQueries.countForeignPendingFromServerShop(shopId).executeAsOne() > 0
+
+    /** True if every other local shop profile has [phone]: the same business under a shop id the server no longer knows. */
+    fun foreignShopsAllHavePhone(shopId: String, phone: String): Boolean =
+        database.appDatabaseQueries.countForeignProfilesWithOtherPhone(shopId, phone).executeAsOne() == 0L
+
+    /** Moves every foreign row to [shopId] and marks it pending so the normal sync pushes it. Call after saving the [shopId] profile. */
+    fun rehomeForeignRowsTo(shopId: String) {
+        val q = database.appDatabaseQueries
+        database.transaction {
+            q.rehomeParties(shopId)
+            q.rehomeCommodities(shopId)
+            q.rehomeDeals(shopId)
+            q.rehomeCashTransactions(shopId)
+            q.rehomeRevisions(shopId)
+            q.rehomeBuyEntries(shopId)
+            q.rehomeSellEntries(shopId)
+            q.rehomeLendEntries(shopId)
+            q.rehomeLendSettlements(shopId)
+            q.rehomeDayClosings(shopId)
+            q.rehomeExpenses(shopId)
+            q.deleteForeignShopQuota(shopId)
+            q.deleteForeignShopProfiles(shopId)
+        }
+    }
 }

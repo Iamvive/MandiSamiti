@@ -137,7 +137,8 @@ class SyncEngine(
             CashTransactionSyncDto(
                 id = it.id,
                 party_id = if (isExpense) null else it.party_id,
-                deal_id = it.deal_id,
+                // A deal id with no local deal would hit the server's foreign key and 500 the whole batch, blocking all sync.
+                deal_id = it.deal_id?.takeIf { id -> queries.getDealById(id).executeAsOneOrNull() != null },
                 transaction_type = it.transaction_type,
                 amount_paisa = it.amount_paisa,
                 payment_mode = it.payment_mode,

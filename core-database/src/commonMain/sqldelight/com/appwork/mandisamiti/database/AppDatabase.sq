@@ -607,6 +607,49 @@ SELECT (
     (SELECT COUNT(*) FROM expenseEntryEntity WHERE sync_status = 0 AND shop_id IN (SELECT id FROM shopProfileEntity WHERE id != :shopId AND sync_status = 1))
 ) AS pending_count;
 
+countForeignProfilesWithOtherPhone:
+SELECT COUNT(*) FROM shopProfileEntity WHERE id != :shopId AND phone_number != :phone;
+
+-- Re-home: the server issued a new shop id for the same phone, so local rows move to it and are re-pushed
+rehomeParties:
+UPDATE partyEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeCommodities:
+UPDATE commodityEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeDeals:
+UPDATE dealEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeCashTransactions:
+UPDATE cashTransactionEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeRevisions:
+UPDATE entryRevisionEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeBuyEntries:
+UPDATE buyEntryEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeSellEntries:
+UPDATE sellEntryEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeLendEntries:
+UPDATE lendEntryEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeLendSettlements:
+UPDATE lendSettlementEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeDayClosings:
+UPDATE dayClosingEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+rehomeExpenses:
+UPDATE expenseEntryEntity SET shop_id = :shopId, sync_status = 0 WHERE shop_id != :shopId;
+
+deleteForeignShopQuota:
+DELETE FROM shopQuotaEntity WHERE shop_id != :shopId;
+
+deleteForeignShopProfiles:
+DELETE FROM shopProfileEntity WHERE id != :shopId;
+
 -- Local data wipe (sign-out / account switch), children first
 wipeRevisions:
 DELETE FROM entryRevisionEntity;

@@ -172,9 +172,9 @@ class AuthRepositoryTest {
         assertNull(db.appDatabaseQueries.getShopProfile().executeAsOneOrNull())
     }
 
-    private suspend fun Fixture.seedShopWithPendingCash(id: String, profileSyncStatus: Long, scope: TestScope) {
+    private suspend fun Fixture.seedShopWithPendingCash(id: String, profileSyncStatus: Long, scope: TestScope, phone: String = "9") {
         shops.saveShopProfile(
-            ShopProfile(id = id, shopName = "Other", ownerName = "O", mandiName = "M", phoneNumber = "9", pinHash = "",
+            ShopProfile(id = id, shopName = "Other", ownerName = "O", mandiName = "M", phoneNumber = phone, pinHash = "",
                 createdAt = 1L, updatedAt = 1L, syncStatus = profileSyncStatus.toInt())
         )
         parties.saveParty(
@@ -203,6 +203,24 @@ class AuthRepositoryTest {
         assertEquals(1, q.getAllParties("shop-1").executeAsList().size)
         assertEquals(1, q.getPendingSyncTransactions().executeAsList().size)
         assertEquals(revisionsBefore, q.getPendingSyncRevisions().executeAsList().size)
+    }
+
+    @Test
+    fun login_samePhoneNewServerShopId_rehomesPendingEntries_insteadOfBlocking() = runTest {
+        val f = fixture("shop-2")
+        f.seedShopWithPendingCash("shop-1", profileSyncStatus = 1L, scope = this, phone = "9837000000")
+        val q = f.db.appDatabaseQueries
+
+        val r = f.repo.login("9837000000", "1234")
+
+        assertTrue(r.isSuccess)
+        assertEquals("shop-2", f.store.current()?.shopId)
+        assertEquals(listOf("shop-2"), q.getShopProfile().executeAsList().map { it.id })
+        assertEquals(0, q.getAllParties("shop-1").executeAsList().size)
+        assertEquals(1, q.getAllParties("shop-2").executeAsList().size)
+        val pending = q.getPendingSyncTransactions().executeAsList()
+        assertEquals(1, pending.size)
+        assertEquals("shop-2", pending.single().shop_id)
     }
 
     @Test
