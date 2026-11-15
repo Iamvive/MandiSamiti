@@ -303,4 +303,30 @@ class SellEntryFormStateTest {
         assertEquals(entry.totalReceivablePaisa, reopened.aggregatePreview().totalReceivablePaisa)
         assertEquals(521_000L, reopened.aggregatePreview().totalWeightGrams)
     }
+
+    @Test
+    fun customDecimalLabourPerQuintalRoundsReceivableToWholeRupee() {
+        val state = SellEntryFormState() // no default settings
+        state.buyerName = "Mohan Traders"
+        state.village = "सीहोर"
+        state.setParty(SellPartyKind.MERCHANT)
+        state.commissionPercent = "1.5"
+        state.labourPerQuintal = "5.50" // Decimal labour input
+
+        // 10 bags x 50 kg + 15 kg extra = 515 kg = 5.15 qtl at ₹2,200/qtl
+        state.lots[0].bags = "10"
+        state.lots[0].weightPerBagKg = "50"
+        state.lots[0].extraWeightKg = "15"
+        state.lots[0].ratePerQuintal = "2200"
+
+        val preview = state.aggregatePreview()
+        assertEquals(515_000L, preview.totalWeightGrams)
+        // Must be an exact whole rupee:
+        assertEquals(0L, preview.totalReceivablePaisa % 100L)
+        // Labour component absorbs rounding:
+        assertEquals(
+            preview.totalReceivablePaisa,
+            preview.grossPaisa + preview.commissionPaisa + preview.tulakPaisa + preview.mandiShulkPaisa + preview.labourPaisa
+        )
+    }
 }

@@ -580,33 +580,78 @@ fun App(
                         onSavePayment = { paidAmtPaisa ->
                             coroutineScope.launch {
                                 val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                                val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
-                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                    shopId = entry.shopId,
-                                    partyId = entry.farmerId,
-                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                    amountPaisa = paidAmtPaisa,
-                                    transactionDate = now,
-                                    paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                    remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
-                                    createdAt = now,
-                                    updatedAt = now,
-                                    sourceEntryType = "BUY",
-                                    sourceEntryId = entry.id,
-                                )
-                                cashRepo.recordTransaction(tx)
+                                if (paidAmtPaisa > 0L) {
+                                    val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = entry.shopId,
+                                        partyId = entry.farmerId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                        amountPaisa = paidAmtPaisa,
+                                        transactionDate = now,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryType = "BUY",
+                                        sourceEntryId = entry.id,
+                                    )
+                                    cashRepo.recordTransaction(tx)
+                                }
                                 val updated = entry.copy(
                                     paidPaisa = entry.paidPaisa + paidAmtPaisa,
                                     updatedAt = now,
                                     revision = entry.revision + 1L
                                 )
                                 buyRepo.editBuyEntry(updated)
+
+                                val finalPayable = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateFinalPayable(entry.netPayablePaisa, entry.paidPaisa)
+                                val unpaidCreditPaisa = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateRemainingLeft(finalPayable, paidAmtPaisa)
+                                if (unpaidCreditPaisa > 0L) {
+                                    val creditTx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = entry.shopId,
+                                        partyId = entry.farmerId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = unpaidCreditPaisa,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.BOOK_ENTRY,
+                                        transactionDate = now,
+                                        remarks = "${paymentParty?.name ?: "किसान"} • खरीद पर्ची #${entry.slipNo ?: ""} बाकी जमा (क्रेडिट)",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryType = "BUY_CREDIT",
+                                        sourceEntryId = entry.id,
+                                    )
+                                    cashRepo.recordTransaction(creditTx)
+                                }
+
                                 syncScheduler.scheduleOneTimeSync()
                                 currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
                             }
                         },
                         onSkip = {
-                            currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
+                            coroutineScope.launch {
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val finalPayable = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateFinalPayable(entry.netPayablePaisa, entry.paidPaisa)
+                                if (finalPayable > 0L) {
+                                    val creditTx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = entry.shopId,
+                                        partyId = entry.farmerId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = finalPayable,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.BOOK_ENTRY,
+                                        transactionDate = now,
+                                        remarks = "${paymentParty?.name ?: "किसान"} • खरीद पर्ची #${entry.slipNo ?: ""} बाकी जमा (क्रेडिट)",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryType = "BUY_CREDIT",
+                                        sourceEntryId = entry.id,
+                                    )
+                                    cashRepo.recordTransaction(creditTx)
+                                    syncScheduler.scheduleOneTimeSync()
+                                }
+                                currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
+                            }
                         }
                     )
                 }
@@ -642,6 +687,18 @@ fun App(
                     buyEntry = buyRepo.getBuyEntryById(screen.id)
                     receiptParty = buyEntry?.farmerId?.let { partyRepo.getPartyById(it) }
                 }
+                val payments = remember(allCashTransactions, screen.id) {
+                    allCashTransactions
+                        .filter {
+                            it.sourceEntryType == "BUY" &&
+                            it.sourceEntryId == screen.id &&
+                            !it.isDeleted &&
+                            !it.isVoid &&
+                            it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN &&
+                            it.paymentMode == com.appwork.mandisamiti.domain.model.PaymentMode.CASH
+                        }
+                        .sortedBy { it.transactionDate }
+                }
                 BuyTransactionReceiptScreen(
                     id = screen.id,
                     entry = buyEntry,
@@ -653,6 +710,7 @@ fun App(
                     shopLicenceNo = receiptShop?.licenceNo,
                     partyVillage = receiptParty?.village,
                     gallaCashPaisa = gallaCashPaisa,
+                    payments = payments,
                     onSettleCash = { amountPaisa ->
                         val entryToSettle = buyEntry ?: return@BuyTransactionReceiptScreen
                         val currentShop = shopId ?: return@BuyTransactionReceiptScreen

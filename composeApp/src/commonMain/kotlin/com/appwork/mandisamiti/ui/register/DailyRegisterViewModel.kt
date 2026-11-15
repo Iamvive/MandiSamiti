@@ -86,6 +86,7 @@ data class DailyRegisterUiState(
     val isReadOnly: Boolean = false,
     val openingCashPaisa: Long = 0L,
     val todayCashInPaisa: Long = 0L,
+    val todayCreditInPaisa: Long = 0L,
     val todayCashOutPaisa: Long = 0L,
     val inHandCashDrawerPaisa: Long = 0L,
     val physicalCountPaisa: Long? = null,
@@ -122,7 +123,7 @@ data class DailyRegisterUiState(
         get() = physicalCountPaisa ?: inHandCashDrawerPaisa
 
     val totalJamaSidePaisa: Long
-        get() = openingCashPaisa + todayCashInPaisa
+        get() = openingCashPaisa + todayCashInPaisa + todayCreditInPaisa
 
     val totalNameSidePaisa: Long
         get() = todayCashOutPaisa + effectiveClosingCashPaisa
@@ -278,6 +279,10 @@ class DailyRegisterViewModel(
                     closingPaisa = (count?.countedPaisa ?: summary.closingPaisa).coerceAtLeast(0L),
                     entries = bahiEntries,
                 )
+                val creditInPaisa = allTx
+                    .filter { !it.isDeleted && !it.isVoid && it.transactionDate >= window.startMs && it.transactionDate < window.endMs && it.paymentMode == PaymentMode.BOOK_ENTRY && it.transactionType == TransactionType.JAMA_RECEIVED }
+                    .sumOf { it.amountPaisa }
+
                 _uiState.value = _uiState.value.copy(
                     selectedDate = date,
                     selectedInstant = date.atStartOfDayIn(timeZone),
@@ -286,6 +291,7 @@ class DailyRegisterViewModel(
                     availableParties = parties,
                     openingCashPaisa = summary.openingPaisa,
                     todayCashInPaisa = summary.cashInPaisa,
+                    todayCreditInPaisa = creditInPaisa,
                     todayCashOutPaisa = summary.cashOutPaisa,
                     inHandCashDrawerPaisa = summary.closingPaisa,
                     physicalCountPaisa = count?.countedPaisa,

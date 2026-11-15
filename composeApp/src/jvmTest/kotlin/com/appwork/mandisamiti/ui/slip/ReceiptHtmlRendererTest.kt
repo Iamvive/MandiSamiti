@@ -179,4 +179,73 @@ class ReceiptHtmlRendererTest {
         assertTrue(html.contains("75,000"), "Must contain gross amount")
         assertTrue(html.contains("76,250"), "Must contain total receivable")
     }
+
+    @Test
+    fun testBuyReceiptHtmlFollowsSequenceWithCombinedKarchaAndPaymentTimeline() {
+        val entry = BuyEntry(
+            id = "buy_seq",
+            shopId = "shop_1",
+            farmerId = "farmer_1",
+            commodityId = "बाजरा",
+            entryDate = 1731670000000L,
+            bagsCount = 25,
+            weightPerBagGrams = 100_000,
+            extraWeightGrams = 0,
+            totalWeightGrams = 2_500_000,
+            ratePaisaPerQuintal = 200_000,
+            commissionBps = 150,
+            labourPerBagPaisa = 1_000,
+            advancePaidPaisa = 0L,
+            grossPaisa = 5_000_000L,
+            commissionPaisa = 75_000L,
+            labourPaisa = 25_000L,
+            netPayablePaisa = 4_900_000L,
+            paidPaisa = 3_700_000L,
+            slipNo = 1L,
+            createdAt = 1731670000000L,
+            updatedAt = 1731756400000L
+        )
+
+        val payments = listOf(
+            com.appwork.mandisamiti.domain.model.CashTransaction(
+                id = "tx1", shopId = "shop_1", partyId = "farmer_1",
+                transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                amountPaisa = 2_500_000L, paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                transactionDate = 1731670000000L, createdAt = 1731670000000L, updatedAt = 1731670000000L,
+                sourceEntryType = "BUY", sourceEntryId = entry.id
+            ),
+            com.appwork.mandisamiti.domain.model.CashTransaction(
+                id = "tx2", shopId = "shop_1", partyId = "farmer_1",
+                transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                amountPaisa = 1_200_000L, paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                transactionDate = 1731756400000L, createdAt = 1731756400000L, updatedAt = 1731756400000L,
+                sourceEntryType = "BUY", sourceEntryId = entry.id
+            )
+        )
+
+        val html = ReceiptHtmlRenderer.renderBuyReceiptHtml(
+            entry = entry,
+            shop = sampleShop,
+            farmerName = "Monty",
+            payments = payments
+        )
+
+        // 1. Combined खर्चा (no split)
+        assertTrue(html.contains("<td>कुल खर्चा:</td>"), "Must have single 'कुल खर्चा:' line")
+        assertTrue(!html.contains("मजदूरी + आढ़त"), "Must not split labour and commission in label")
+        assertTrue(html.contains("- ₹1,000"), "Combined expense must be ₹1,000")
+
+        // 2. पर्ची राशि
+        assertTrue(html.contains("<td>पर्ची राशि:</td>"), "Must have 'पर्ची राशि:' line")
+        assertTrue(html.contains("₹49,000"), "Slip value must be ₹49,000")
+
+        // 3. Payment timeline with dates
+        val date1 = com.appwork.mandisamiti.domain.model.receiptDateShort(1731670000000L)
+        val date2 = com.appwork.mandisamiti.domain.model.receiptDateShort(1731756400000L)
+        assertTrue(html.contains("• नकद भुगतान · $date1:"), "Must have Day 1 payment with date")
+        assertTrue(html.contains("• नकद भुगतान · $date2:"), "Must have Day 2 payment with date")
+
+        // 4. Remaining balance
+        assertTrue(html.contains("₹12,000"), "Must show remaining balance ₹12,000")
+    }
 }

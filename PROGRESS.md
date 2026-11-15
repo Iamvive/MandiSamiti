@@ -308,3 +308,30 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Tests: `SellSlipAmountsTest` (4 cases), `SellTransactionReceiptTest` label updated to `मजदूरी: +₹25.29`.
 - Evidence: `./gradlew :core-domain:jvmTest :composeApp:jvmTest` ran 332 tests, 1 failed: `HomeViewModelTest.testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked`, the known flaky test. Rerun alone: passes.
 - Not verified on device. Left: the entry form's live preview still says "हमाली / मजदूरी" (SellEntryScreen, labour line); it is not a receipt, so it is not changed here.
+
+## 2026-11-15 (Gemini / Antigravity): Buy Parchi Credit Jama, Multi-Day Payment Timeline & Sell Labour Rounding
+- **P1: Buy Slip Credit Jama in Daily Register**:
+  - Unpaid balances on Buy slips (e.g. ₹24,000) are recognized on Day 1 as non-cash Credit (जमा) entries with `PaymentMode.BOOK_ENTRY` in Daily Register.
+  - `CashDrawer.summarize` strictly filters `paymentMode == PaymentMode.CASH`, ensuring physical cash in drawer note count is never inflated by non-cash credits.
+  - In `DailyRegisterUiState`, added `todayCreditInPaisa`; in `DailyCashRegisterScreen`, displayed `[क्रेडिट / गैर-नकद]` badge for `BOOK_ENTRY` items and breakdown in tally bar (`रोकड़: ₹... • क्रेडिट: ₹...`).
+  - Added unit test: `DailyRegisterCreditJamaTest` (passes).
+- **P2: Multi-Day Payment Installment Timeline**:
+  - Cash settlements against Buy slips record `TransactionType.UDHAR_GIVEN` with `paymentMode = CASH` on the current date and append into the slip's payment timeline.
+  - In `BuyTransactionReceiptScreen`, rendered chronological date-stamped payment installments (`• नकद भुगतान · 15 Nov: − ₹25,000`), remaining balance due, or `पूर्ण चुकता` status (hiding the settlement button when fully settled).
+  - Added unit test: `BuyReceiptPaymentHistoryTest` (passes).
+- **P3: Print (ISO A5) & WhatsApp Share Sequence Alignment**:
+  - Print HTML (`ReceiptHtmlRenderer.renderBuyReceiptHtml`) and WhatsApp share text (`buildFarmerSlipText`) synchronized with on-screen sequence: Gross $\rightarrow$ Combined "कुल खर्चा" (no separate labour/commission split, preserving trader privacy) $\rightarrow$ पर्ची राशि $\rightarrow$ अग्रिम $\rightarrow$ उधार कटौती $\rightarrow$ अंतिम देय राशि $\rightarrow$ itemized payment installments with dates $\rightarrow$ बाकी राशि / पूर्ण चुकता.
+  - Updated `ReceiptHtmlRendererTest` with multi-day payment timeline and combined expense verification (passes).
+- **P4: Sell Parchi Labour Input & Whole-Rupee Rounding**:
+  - Added editable `labourPerQuintal` field on `SellEntryScreen` (`MandiKeyboard.Decimal`) initialized from settings default.
+  - Math engine (`BuySellMath.calculateSell` / `SellEntryFormState.aggregatePreview`) calculates nominal labour and adjusts final labour to absorb rounding paise, guaranteeing whole-rupee bills (`totalReceivablePaisa % 100L == 0L`).
+  - Added unit tests in `BuySellMathTest` and `SellEntryFormStateTest` (passes).
+- **Verification**:
+  - Full JVM test suite passed: `./gradlew :core-domain:jvmTest :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest`.
+  - Backend test suite passed: 130/130 tests green in 18.66s.
+  - Live verified on `emulator-5554`:
+    - Monty Slip #1: Paid ₹12,000 from Galla; verified payment row `• नकद भुगतान · 15 Nov: − ₹12,000` appended to slip timeline and remaining balance updated to ₹12,000 (`scratch/test_evidence/buy_slip_payment_timeline.png`).
+    - ISO A5 Print Preview: Verified Print dialog opens with ISO A5 paper size, single combined "कुल खर्चा" row, and date-stamped payments (`scratch/test_evidence/a5_print_preview.png`).
+    - Daily Register: Verified ₹12,000 appears in **नामे (Cash Out)** for Monty, and drawer balance updated to ₹61,980 (`scratch/test_evidence/daily_register_credit_jama.png`).
+    - Sell Parchi Labour: Entered 10 bags @ ₹2,200/Qtl with decimal labour ₹5.50/Qtl; verified total receivable is whole rupee ₹11,198 with labour adjusted to ₹28 (`scratch/test_evidence/sell_decimal_labour_whole_rupee.png`).
+

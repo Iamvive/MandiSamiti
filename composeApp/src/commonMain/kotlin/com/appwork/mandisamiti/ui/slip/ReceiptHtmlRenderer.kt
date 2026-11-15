@@ -5,11 +5,13 @@ import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.receiptDateShort
 import com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -184,7 +186,8 @@ object ReceiptHtmlRenderer {
         entry: BuyEntry,
         shop: ShopProfile? = null,
         farmerName: String,
-        lots: List<BuyCropLot> = emptyList()
+        lots: List<BuyCropLot> = emptyList(),
+        payments: List<CashTransaction> = emptyList()
     ): String {
         val isRevised = entry.revision > 1 || entry.paidPaisa > 0
         val title = if (isRevised) "किसान खरीद पर्चा (संशोधित)" else "किसान खरीद पर्चा"
@@ -313,10 +316,15 @@ object ReceiptHtmlRenderer {
             val totalDeductions = entry.labourPaisa + entry.commissionPaisa
             if (totalDeductions > 0L) {
                 appendLine("<tr>")
-                appendLine("<td>कुल खर्चा (मजदूरी + आढ़त):</td>")
+                appendLine("<td>कुल खर्चा:</td>")
                 appendLine("<td class=\"text-right\">- ₹${MandiMathEngine.paisaToRupeesString(totalDeductions)}</td>")
                 appendLine("</tr>")
             }
+
+            appendLine("<tr>")
+            appendLine("<td>पर्ची राशि:</td>")
+            appendLine("<td class=\"text-right\">₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}</td>")
+            appendLine("</tr>")
 
             if (entry.advancePaidPaisa > 0L) {
                 appendLine("<tr>")
@@ -332,20 +340,39 @@ object ReceiptHtmlRenderer {
                 appendLine("</tr>")
             }
 
-            appendLine("<tr class=\"grand-total\">")
-            appendLine("<td>अंतिम देय राशि (Final Payable):</td>")
-            appendLine("<td class=\"text-right\">${MandiMathEngine.formatRupees(postDeduction)}</td>")
-            appendLine("</tr>")
+            if (entry.advancePaidPaisa > 0L || loanCutPaisa > 0L) {
+                appendLine("<tr class=\"grand-total\">")
+                appendLine("<td>अंतिम देय राशि (Final Payable):</td>")
+                appendLine("<td class=\"text-right\">${MandiMathEngine.formatRupees(postDeduction)}</td>")
+                appendLine("</tr>")
+            }
 
-            if (cashPaid > 0L) {
+            if (payments.isNotEmpty()) {
+                payments.forEach { p ->
+                    appendLine("<tr>")
+                    appendLine("<td>• नकद भुगतान · ${receiptDateShort(p.transactionDate)}:</td>")
+                    appendLine("<td class=\"text-right\">- ₹${MandiMathEngine.paisaToRupeesString(p.amountPaisa)}</td>")
+                    appendLine("</tr>")
+                }
+            } else if (cashPaid > 0L) {
                 appendLine("<tr>")
-                appendLine("<td>नकद भुगतान:</td>")
+                appendLine("<td>• नकद भुगतान · ${receiptDateShort(entry.updatedAt)}:</td>")
                 appendLine("<td class=\"text-right\">- ₹${MandiMathEngine.paisaToRupeesString(cashPaid)}</td>")
                 appendLine("</tr>")
-                appendLine("<tr class=\"grand-total\">")
-                appendLine("<td>बाकी राशि (Balance Due):</td>")
-                appendLine("<td class=\"text-right\">${MandiMathEngine.formatRupees(leftPaisa)}</td>")
-                appendLine("</tr>")
+            }
+
+            if (cashPaid > 0L || payments.isNotEmpty()) {
+                if (leftPaisa > 0L) {
+                    appendLine("<tr class=\"grand-total\">")
+                    appendLine("<td>बाकी राशि (Balance Due):</td>")
+                    appendLine("<td class=\"text-right\">${MandiMathEngine.formatRupees(leftPaisa)}</td>")
+                    appendLine("</tr>")
+                } else {
+                    appendLine("<tr class=\"grand-total\">")
+                    appendLine("<td>स्थिति:</td>")
+                    appendLine("<td class=\"text-right\" style=\"color: #1b5e20;\">पूर्ण चुकता</td>")
+                    appendLine("</tr>")
+                }
             }
 
             appendLine("</table>")

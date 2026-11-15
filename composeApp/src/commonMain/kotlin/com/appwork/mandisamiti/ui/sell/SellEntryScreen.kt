@@ -633,6 +633,15 @@ fun SellEntryScreen(
                 value = formState.commissionPercent,
                 onValueChange = { formState.commissionPercent = it },
                 label = if (isEnglish) "Commission %" else "कमीशन %",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                isTall = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            MandiFlatTextField(
+                value = formState.labourPerQuintal,
+                onValueChange = { formState.labourPerQuintal = it },
+                label = if (isEnglish) "Labour (₹/Quintal)" else "हम्माली / मजदूरी (₹/क्विंटल)",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = if (isBos) ImeAction.Next else ImeAction.Done),
                 isTall = true,
                 modifier = Modifier.fillMaxWidth()

@@ -150,14 +150,14 @@ fun DailyCashRegisterScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     val visibleTransactions = uiState.todayTransactions.filter {
         it.transaction.transactionType in drawerMovementTypes &&
-            it.transaction.paymentMode == PaymentMode.CASH
+            (it.transaction.paymentMode == PaymentMode.CASH || it.transaction.paymentMode == PaymentMode.BOOK_ENTRY)
     }
 
     val jamaList = remember(visibleTransactions) {
         visibleTransactions.filter { it.transaction.transactionType == TransactionType.JAMA_RECEIVED || it.transaction.transactionType == TransactionType.INTEREST_RECEIVED }
     }
     val nameList = remember(visibleTransactions) {
-        visibleTransactions.filter { it.transaction.transactionType == TransactionType.UDHAR_GIVEN }
+        visibleTransactions.filter { it.transaction.transactionType == TransactionType.UDHAR_GIVEN && it.transaction.paymentMode == PaymentMode.CASH }
     }
     val totalJamaSidePaisa = uiState.totalJamaSidePaisa
 
@@ -481,7 +481,11 @@ fun DailyCashRegisterScreen(
                     ) {
                         Column {
                             Text(
-                                text = if (isEnglish) "Total in (cash)" else "कुल जमा (नकद)",
+                                text = if (uiState.todayCreditInPaisa > 0L) {
+                                    if (isEnglish) "Cash In + Credit" else "रोकड़ + क्रेडिट जमा"
+                                } else {
+                                    if (isEnglish) "Total in (cash)" else "कुल जमा (नकद)"
+                                },
                                 fontSize = 10.sp,
                                 color = MandiTextSecondary
                             )
@@ -492,6 +496,14 @@ fun DailyCashRegisterScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = if (totalJamaSidePaisa >= 0) MandiGreenReceivable else MandiRedPayable
                             )
+                            if (uiState.todayCreditInPaisa > 0L) {
+                                Text(
+                                    text = if (isEnglish) "Cash: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashInPaisa)} • Credit: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayCreditInPaisa)}"
+                                           else "रोकड़: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayCashInPaisa)} • क्रेडिट: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayCreditInPaisa)}",
+                                    fontSize = 9.sp,
+                                    color = MandiTextMuted
+                                )
+                            }
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
@@ -928,6 +940,7 @@ private fun BahiTransactionItem(
 ) {
     val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(item.transaction.remarks)
     val isVoid = item.transaction.isVoid
+    val isBookEntry = item.transaction.paymentMode == PaymentMode.BOOK_ENTRY
     val amountStr = MandiMathEngine.paisaToRupeesString(item.transaction.amountPaisa)
     val displayName = when {
         item.partyName.isNotBlank() && item.partyName != "खाता" -> item.partyName
@@ -949,9 +962,11 @@ private fun BahiTransactionItem(
     }
 
     var showDetails by remember { mutableStateOf(false) }
-    val mode = if (item.transaction.paymentMode == PaymentMode.CASH) {
-        if (isEnglish) "Cash" else "नकद"
-    } else item.transaction.paymentMode.name
+    val mode = when (item.transaction.paymentMode) {
+        PaymentMode.CASH -> if (isEnglish) "Cash" else "नकद"
+        PaymentMode.BOOK_ENTRY -> if (isEnglish) "Credit / Non-Cash" else "क्रेडिट / गैर-नकद"
+        else -> item.transaction.paymentMode.name
+    }
     val time = kotlinx.datetime.Instant.fromEpochMilliseconds(item.transaction.transactionDate)
         .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).time.toString().take(5)
     Column(
@@ -961,12 +976,32 @@ private fun BahiTransactionItem(
     ) {
         Text(displayName, color = MandiTextPrimary, fontSize = 15.sp, lineHeight = 19.sp,
             fontWeight = FontWeight.SemiBold, maxLines = if (isCompact) 2 else 3, overflow = TextOverflow.Ellipsis)
-        Text(
-            text = "${if (isDeposit) "+" else "−"}₹$amountStr",
-            fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold,
-            color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
-            textDecoration = if (isVoid) TextDecoration.LineThrough else null,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "${if (isDeposit) "+" else "−"}₹$amountStr",
+                fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold,
+                color = if (isBookEntry) MandiTextPrimary else if (isDeposit) MandiGreenReceivable else MandiRedPayable,
+                textDecoration = if (isVoid) TextDecoration.LineThrough else null,
+            )
+            if (isBookEntry) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MandiNeutralLight,
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Text(
+                        text = if (isEnglish) "Credit" else "क्रेडिट",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiTextSecondary,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
+        }
         val meta = listOfNotNull(item.village?.takeIf { it.isNotBlank() },
             mode.takeIf { item.transaction.paymentMode != PaymentMode.CASH }).joinToString(" · ")
         if (meta.isNotBlank()) Text(meta, fontSize = 11.sp, lineHeight = 15.sp, color = MandiTextSecondary,

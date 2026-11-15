@@ -73,7 +73,7 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 - Input: `sellLabourPaisaPerQuintal: Long` (e.g. 550L for ₹5.50/Qtl).
 - Output: `SellMathResult.totalReceivablePaisa % 100L == 0L`, `labourPaisa = nominalLabour + (totalReceivable - raw)`.
 
-- [ ] **Step 1: Write unit tests in `BuySellMathTest.kt`**
+- [x] **Step 1: Write unit tests in `BuySellMathTest.kt`**
   ```kotlin
   @Test
   fun sellLabourDecimalRateRoundsToExactWholeRupee() {
@@ -99,10 +99,10 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
   }
   ```
 
-- [ ] **Step 2: Run test to verify behavior**
+- [x] **Step 2: Run test to verify behavior**
   `./gradlew :core-domain:jvmTest --tests "com.appwork.mandisamiti.domain.BuySellMathTest"`
 
-- [ ] **Step 3: Update `BuySellMath.calculateSell` if necessary to ensure rounding half-up matches exact whole rupee formula**
+- [x] **Step 3: Update `BuySellMath.calculateSell` if necessary to ensure rounding half-up matches exact whole rupee formula**
 
 ---
 
@@ -111,18 +111,18 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/sell/SellEntryFormState.kt`
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/sell/SellEntryScreen.kt`
 
-- [ ] **Step 1: Add `labourPerQuintal: String` to `SellEntryFormState`**
+- [x] **Step 1: Add `labourPerQuintal: String` to `SellEntryFormState`**
   - Initialize with `settings?.sellLabourPaisaPerQuintal?.let { MandiMathEngine.paisaToRupeesString(it) } ?: ""`
   - Add `onLabourPerQuintalChange(value: String)`
   - In `aggregatePreview`, parse `labourRatePaisa = MandiMathEngine.parseRupeesToPaisa(labourPerQuintal)` and pass to calculation.
 
-- [ ] **Step 2: Add Labour Input Field in `SellEntryScreen.kt`**
+- [x] **Step 2: Add Labour Input Field in `SellEntryScreen.kt`**
   - Place in the trade charges section alongside Commission and Tulak.
   - Label: `if (isEnglish) "Labour (₹/Quintal)" else "हम्माली / मजदूरी (₹/क्विंटल)"`
   - Keyboard: `MandiKeyboard.Decimal`
   - Single line: `singleLine = true`
 
-- [ ] **Step 3: Run JVM tests**
+- [x] **Step 3: Run JVM tests**
   `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.sell.*"`
 
 ---
@@ -133,7 +133,7 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 **Files:**
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/App.kt`
 
-- [ ] **Step 1: In `App.kt` Screen.BuyEntry checkout handler**
+- [x] **Step 1: In `App.kt` Screen.BuyEntry checkout handler**
   - Calculate `unpaidCreditPaisa = entry.netPayablePaisa - entry.advancePaidPaisa - initialPaidPaisa`.
   - When `unpaidCreditPaisa > 0L`:
     - Insert a `CashTransaction`:
@@ -163,24 +163,24 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyCashRegisterScreen.kt`
 - Create: `composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterCreditJamaTest.kt`
 
-- [ ] **Step 1: Write unit test in `DailyRegisterCreditJamaTest.kt`**
+- [x] **Step 1: Write unit test in `DailyRegisterCreditJamaTest.kt`**
   - Verify that a `BOOK_ENTRY` transaction with `TransactionType.JAMA_RECEIVED`:
     - Appears in `todayTransactions` under Jama.
     - Does **not** increase `inHandCashDrawerPaisa` (physical cash remains isolated).
     - Increases `totalJamaSidePaisa` (Credit In).
 
-- [ ] **Step 2: Update `DailyRegisterViewModel.kt`**
+- [x] **Step 2: Update `DailyRegisterViewModel.kt`**
   - Ensure `CashDrawer.summarize` calculates `openingPaisa`, `cashInPaisa`, `cashOutPaisa`, and `closingPaisa` strictly on `paymentMode == PaymentMode.CASH`.
   - Add `todayCreditInPaisa: Long` to `DailyRegisterUiState` summing `BOOK_ENTRY` rows on the selected date.
 
-- [ ] **Step 3: Update `DailyCashRegisterScreen.kt`**
+- [x] **Step 3: Update `DailyCashRegisterScreen.kt`**
   - In `jamaList`, show items with `paymentMode == PaymentMode.BOOK_ENTRY`.
   - Render a badge: `[क्रेडिट / गैर-नकद]` with `MandiSlateBg` and `MandiTextSecondary`.
   - In the summary cards, display:
     - `रोकड़ आवक: ₹...`
     - `क्रेडिट जमा: ₹...`
 
-- [ ] **Step 4: Run unit tests**
+- [x] **Step 4: Run unit tests**
   `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.register.*"`
 
 ---
@@ -193,12 +193,12 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/App.kt`
 - Create: `composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/buy/BuyReceiptPaymentHistoryTest.kt`
 
-- [ ] **Step 1: Add `payments: List<CashTransaction> = emptyList()` parameter to `BuyTransactionReceiptScreen`**
+- [x] **Step 1: Add `payments: List<CashTransaction> = emptyList()` parameter to `BuyTransactionReceiptScreen`**
   - In `App.kt` for `Screen.BuyReceipt`:
     - Filter `allCashTransactions.filter { it.sourceEntryType == "BUY" && it.sourceEntryId == screen.id && !it.isDeleted && !it.isVoid && it.transactionType == TransactionType.UDHAR_GIVEN && it.paymentMode == PaymentMode.CASH }.sortedBy { it.transactionDate }`.
     - Pass this list to `BuyTransactionReceiptScreen`.
 
-- [ ] **Step 2: Render payment history rows in `BuyTransactionReceiptScreen.kt`**
+- [x] **Step 2: Render payment history rows in `BuyTransactionReceiptScreen.kt`**
   - Replace the single consolidated cash payment line with an iteration over `payments`:
     ```kotlin
     if (payments.isNotEmpty()) {
@@ -228,7 +228,7 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
     ```
   - When `leftPaisa == 0L`, hide the `गल्ला से नकद भुगतान करें →` button.
 
-- [ ] **Step 3: Run unit tests**
+- [x] **Step 3: Run unit tests**
   `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.buy.*"`
 
 ---
@@ -241,14 +241,14 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 - Modify: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/buy/BuyTransactionReceiptScreen.kt`
 - Modify: `composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/ui/slip/ReceiptHtmlRendererTest.kt`
 
-- [ ] **Step 1: Write unit tests in `ReceiptHtmlRendererTest.kt`**
+- [x] **Step 1: Write unit tests in `ReceiptHtmlRendererTest.kt`**
   - Verify that Buy A5 receipt HTML:
     - Follows sequence: Gross $\rightarrow$ कुल खर्चा $\rightarrow$ पर्ची राशि $\rightarrow$ अग्रिम $\rightarrow$ उधार कटौती $\rightarrow$ अंतिम देय राशि $\rightarrow$ Payment timeline with dates $\rightarrow$ बाकी.
     - Contains combined "कुल खर्चा" row (`entry.labourPaisa + entry.commissionPaisa`).
     - Does **not** contain separate "मजदूरी" or "कमीशन" rows.
     - Contains separate date-stamped rows for each payment installment.
 
-- [ ] **Step 2: Update `ReceiptHtmlRenderer.renderBuyReceiptHtml`**
+- [x] **Step 2: Update `ReceiptHtmlRenderer.renderBuyReceiptHtml`**
   - Accept `payments: List<CashTransaction> = emptyList()`.
   - Format combined deduction:
     ```html
@@ -265,13 +265,13 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
     </tr>
     ```
 
-- [ ] **Step 3: Update `buildFarmerSlipText` in `BuyTransactionReceiptScreen.kt`**
+- [x] **Step 3: Update `buildFarmerSlipText` in `BuyTransactionReceiptScreen.kt`**
   - Follow the exact same sequence in WhatsApp text:
     - Combined "कुल खर्चा: -₹..."
     - Payment timeline with dates: `• नकद भुगतान · 15 Nov: - ₹...`
     - Balance remaining or "पूर्ण चुकता".
 
-- [ ] **Step 4: Run unit tests**
+- [x] **Step 4: Run unit tests**
   `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.slip.ReceiptHtmlRendererTest"`
 
 ---
@@ -279,13 +279,13 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
 ## Phase 5: Verification & Delivery
 
 ### Task 5.1: Automated Test Suite Run
-- [ ] Run `./gradlew :core-domain:jvmTest :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest`.
-- [ ] Run backend tests: `cd backend && PYTHONPATH=. .venv/bin/pytest`.
-- [ ] Verify 100% test pass.
+- [x] Run `./gradlew :core-domain:jvmTest :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest`.
+- [x] Run backend tests: `cd backend && PYTHONPATH=. .venv/bin/pytest`.
+- [x] Verify 100% test pass.
 
 ### Task 5.2: Live Verification on `emulator-5554`
-- [ ] Install debug APK: `./gradlew :composeApp:installDebug`.
-- [ ] **Verify Buy Slip #1 (Monty)**:
+- [x] Install debug APK: `./gradlew :composeApp:installDebug`.
+- [x] **Verify Buy Slip #1 (Monty)**:
   - Open Slip #1: verify initial payment (15 Nov: ₹25,000) and remaining balance ₹24,000.
   - Tap "गल्ला से नकद भुगतान करें →", enter ₹12,000, save.
   - Verify Slip #1 appends:
@@ -294,12 +294,12 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
     - `बाकी: ₹12,000`
   - Tap "प्रिंट करें": verify A5 print preview shows single "कुल खर्चा" row and both payment rows with dates.
   - Capture screenshot to `scratch/test_evidence/buy_slip_payment_timeline.png`.
-- [ ] **Verify Daily Register**:
+- [x] **Verify Daily Register**:
   - Open Galla: verify ₹12,000 appears in **नामे (Cash Out)** for today.
   - Switch to 15 Nov: verify ₹24,000 appears in **जमा** with `[क्रेडिट]` badge.
   - Verify physical cash drawer is not inflated by credit.
   - Capture screenshot to `scratch/test_evidence/daily_register_credit_jama.png`.
-- [ ] **Verify Sell Parchi Labour Input**:
+- [x] **Verify Sell Parchi Labour Input**:
   - Open New Sell Parchi.
   - Verify "हम्माली / मजदूरी (₹/क्विंटल)" input field is present.
   - Enter decimal labour rate (e.g. `5.50`).
@@ -307,5 +307,5 @@ composeApp/src/jvmTest/kotlin/com/appwork/mandisamiti/
   - Capture screenshot to `scratch/test_evidence/sell_decimal_labour_whole_rupee.png`.
 
 ### Task 5.3: Update Trackers & Git Commit
-- [ ] Update `PROGRESS.md` with implementation and verification details.
+- [x] Update `PROGRESS.md` with implementation and verification details.
 - [ ] Commit all changes cleanly following the repository guidelines.

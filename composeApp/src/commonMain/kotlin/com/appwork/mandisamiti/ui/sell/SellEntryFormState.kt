@@ -8,6 +8,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.BuySellMath
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
@@ -146,6 +147,11 @@ class SellEntryFormState(
     var labourPerBag by mutableStateOf(
         tradeSettings?.let { MandiMathEngine.paisaToRupeesString(it.defaultLabourPaisa) } ?: "10"
     )
+    var labourPerQuintal by mutableStateOf(
+        tradeSettings?.sellLabourPaisaPerQuintal?.let {
+            if (it > 0L) MandiMathEngine.paisaToInputString(it) else ""
+        } ?: ""
+    )
     var tulakPerQuintal by mutableStateOf("1")
 
     // Advance received now (अग्रिम / प्राप्त राशि)
@@ -173,6 +179,9 @@ class SellEntryFormState(
         this.settings = settings
         commissionPercent = defaultCommissionFor(partyKind)
         labourPerBag = MandiMathEngine.paisaToRupeesString(settings.defaultLabourPaisa)
+        labourPerQuintal = if (settings.sellLabourPaisaPerQuintal > 0L) {
+            MandiMathEngine.paisaToInputString(settings.sellLabourPaisaPerQuintal)
+        } else ""
     }
 
     val lots: SnapshotStateList<SellLotItemState> = mutableStateListOf(
@@ -257,9 +266,9 @@ class SellEntryFormState(
         val totalReceivable: Long
 
         // Labour on every sell slip is per quintal (farmer, customer and trader). 0 = rate not set.
-        val traderLabourRate = settings?.sellLabourPaisaPerQuintal ?: 0L
+        val labourRatePaisa = MandiMathEngine.parseRupeesToPaisa(labourPerQuintal.ifBlank { "0" })
 
-        if (traderLabourRate > 0L) {
+        if (labourRatePaisa > 0L) {
             commissionPaisa = MandiMathEngine.percentageOf(gross, commBps)
             mandiShulkPaisa = if (isBos) MandiMathEngine.percentageOf(gross, BuySellMath.MANDI_SHULK_BPS) else 0L
             val tulak = if (isBos) {
@@ -268,7 +277,7 @@ class SellEntryFormState(
             } else {
                 MandiMathEngine.grossAmountPaisa(totalWeight, 100L)
             }
-            val nominalLabour = MandiMathEngine.grossAmountPaisa(totalWeight, traderLabourRate)
+            val nominalLabour = MandiMathEngine.grossAmountPaisa(totalWeight, labourRatePaisa)
             val raw = gross + commissionPaisa + tulak + mandiShulkPaisa + nominalLabour
             totalReceivable = (raw + 50L).floorDiv(100L) * 100L
             tulakPaisa = tulak
@@ -433,6 +442,12 @@ class SellEntryFormState(
         billMode = entry.billMode
         gstin = entry.gstin ?: ""
         commissionPercent = if (entry.aratBps > 0) MandiMathEngine.paisaToInputString(entry.aratBps) else "0"
+
+        val slip = sellSlipAmounts(entry)
+        if (slip.labourPaisa > 0L && entry.totalWeightGrams > 0L) {
+            val rate = (slip.labourPaisa * MandiMathEngine.GRAMS_PER_QUINTAL) / entry.totalWeightGrams
+            labourPerQuintal = MandiMathEngine.paisaToInputString(rate)
+        }
 
         val rem = entry.remarks
         if (rem != null) {

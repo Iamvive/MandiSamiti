@@ -28,6 +28,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.ui.slip.slipEquation
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.receiptDateShort
 import com.appwork.mandisamiti.domain.model.receiptDateTime
@@ -82,6 +83,7 @@ fun BuyTransactionReceiptScreen(
     isEnglish: Boolean = false,
     gallaCashPaisa: Long = 0L,
     onSettleCash: ((amountPaisa: Long) -> Unit)? = null,
+    payments: List<CashTransaction> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     MandiBackHandler { onBack() }
@@ -92,7 +94,7 @@ fun BuyTransactionReceiptScreen(
         ?: entry?.farmerId?.takeIf { it.isNotBlank() }
         ?: if (isEnglish) "Farmer" else "किसान"
     val lots = entry?.let { extractLots(it) } ?: emptyList()
-    val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo) } ?: ""
+    val slipText = entry?.let { buildFarmerSlipText(it, displayName, lots, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo, payments) } ?: ""
     val slipHtml = entry?.let {
         val tempShop = ShopProfile(
             id = "",
@@ -107,10 +109,30 @@ fun BuyTransactionReceiptScreen(
             gstin = shopGstin,
             licenceNo = shopLicenceNo
         )
-        ReceiptHtmlRenderer.renderBuyReceiptHtml(it, tempShop, displayName, lots)
+        ReceiptHtmlRenderer.renderBuyReceiptHtml(it, tempShop, displayName, lots, payments)
     } ?: ""
 
     val slipNum = entry?.let { slipLabel(it.slipNo, it.id) } ?: ""
+
+    val loanCutPaisa = extractLoanCut(entry?.remarks)
+    val hasAdvance = (entry?.advancePaidPaisa ?: 0L) > 0L
+    val hasLoanCut = loanCutPaisa > 0L
+    val postDeductionPayable = if (entry != null) {
+        BuyPaymentCalculations.calculatePostDeductionPayable(
+            entry.netPayablePaisa,
+            entry.advancePaidPaisa,
+            loanCutPaisa
+        )
+    } else 0L
+
+    val cashPaymentPaisa = if (entry != null) {
+        BuyPaymentCalculations.calculateCashPayment(
+            entry.paidPaisa,
+            entry.advancePaidPaisa,
+            loanCutPaisa
+        )
+    } else 0L
+    val leftPaisa = BuyPaymentCalculations.calculateRemainingLeft(postDeductionPayable, cashPaymentPaisa)
 
     if (showSettlementSheet && entry != null) {
         FarmerSlipCashSettlementSheet(
@@ -142,7 +164,7 @@ fun BuyTransactionReceiptScreen(
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val hasPendingDue = entry != null && entry.paidPaisa < entry.netPayablePaisa && onSettleCash != null
+                val hasPendingDue = entry != null && leftPaisa > 0L && onSettleCash != null
 
                 if (hasPendingDue) {
                     MandiPrimaryButton(
@@ -378,16 +400,33 @@ fun BuyTransactionReceiptScreen(
                     )
                 }
 
-                if (cashPaymentPaisa > 0L) {
-                    Line(
-                        label = if (isEnglish) "Cash paid · ${receiptDateShort(entry.updatedAt)}" else "नकद भुगतान · ${receiptDateShort(entry.updatedAt)}",
-                        amountText = "− ₹${MandiMathEngine.paisaToRupeesString(cashPaymentPaisa)}"
-                    )
-                    TotalLine(
-                        label = if (isEnglish) "Left" else "बाकी",
-                        amountText = MandiMathEngine.formatRupees(leftPaisa),
-                        largeAmount = true
-                    )
+                if (cashPaymentPaisa > 0L || payments.isNotEmpty()) {
+                    if (payments.isNotEmpty()) {
+                        payments.forEach { p ->
+                            Line(
+                                label = if (isEnglish) "• Cash payment · ${receiptDateShort(p.transactionDate)}" else "• नकद भुगतान · ${receiptDateShort(p.transactionDate)}",
+                                amountText = "− ₹${MandiMathEngine.paisaToRupeesString(p.amountPaisa)}"
+                            )
+                        }
+                    } else {
+                        Line(
+                            label = if (isEnglish) "• Cash payment · ${receiptDateShort(entry.updatedAt)}" else "• नकद भुगतान · ${receiptDateShort(entry.updatedAt)}",
+                            amountText = "− ₹${MandiMathEngine.paisaToRupeesString(cashPaymentPaisa)}"
+                        )
+                    }
+                    if (leftPaisa > 0L) {
+                        TotalLine(
+                            label = if (isEnglish) "Left" else "बाकी",
+                            amountText = MandiMathEngine.formatRupees(leftPaisa),
+                            largeAmount = true
+                        )
+                    } else {
+                        TotalLine(
+                            label = if (isEnglish) "Status" else "स्थिति",
+                            amountText = if (isEnglish) "Fully Settled" else "पूर्ण चुकता",
+                            largeAmount = true
+                        )
+                    }
                 }
             }
         }
@@ -413,7 +452,8 @@ fun buildFarmerSlipText(
     mandiName: String = "",
     shopAddress: String? = null,
     shopGstin: String? = null,
-    shopLicenceNo: String? = null
+    shopLicenceNo: String? = null,
+    payments: List<CashTransaction> = emptyList()
 ): String = buildString {
     val isRevised = entry.revision > 1 || entry.paidPaisa > 0
     val headerTitle = if (isRevised) "*किसान खरीद पर्चा (संशोधित)*" else "*किसान खरीद पर्चा*"
@@ -461,8 +501,9 @@ fun buildFarmerSlipText(
         appendLine("--------------------")
     }
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-    // The farmer sees only the sum; labour and commission stay private to the trader.
+    // The farmer sees only the combined खर्चा; labour and commission are not split
     appendLine("कुल खर्चा: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa + entry.commissionPaisa)}")
+    appendLine("पर्ची राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}")
     if (entry.advancePaidPaisa > 0) {
         appendLine("अग्रिम: -₹${MandiMathEngine.paisaToRupeesString(entry.advancePaidPaisa)}")
     }
@@ -476,9 +517,25 @@ fun buildFarmerSlipText(
         appendLine("*अंतिम देय राशि: ${MandiMathEngine.formatRupees(postDeduction)}*")
     }
     val cashPaid = BuyPaymentCalculations.calculateCashPayment(entry.paidPaisa, entry.advancePaidPaisa, loanCutPaisa)
-    if (cashPaid > 0) {
+    if (payments.isNotEmpty()) {
+        appendLine("--------------------")
+        payments.forEach { p ->
+            appendLine("• नकद भुगतान · ${receiptDateShort(p.transactionDate)}: -₹${MandiMathEngine.paisaToRupeesString(p.amountPaisa)}")
+        }
         val left = BuyPaymentCalculations.calculateRemainingLeft(postDeduction, cashPaid)
-        appendLine("नकद भुगतान: -₹${MandiMathEngine.paisaToRupeesString(cashPaid)}")
-        appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(left)}*")
+        if (left > 0) {
+            appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(left)}*")
+        } else {
+            appendLine("*स्थिति: पूर्ण चुकता*")
+        }
+    } else if (cashPaid > 0) {
+        appendLine("--------------------")
+        val left = BuyPaymentCalculations.calculateRemainingLeft(postDeduction, cashPaid)
+        appendLine("• नकद भुगतान · ${receiptDateShort(entry.updatedAt)}: -₹${MandiMathEngine.paisaToRupeesString(cashPaid)}")
+        if (left > 0) {
+            appendLine("*बाकी राशि: ${MandiMathEngine.formatRupees(left)}*")
+        } else {
+            appendLine("*स्थिति: पूर्ण चुकता*")
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.domain
 
 import com.appwork.mandisamiti.domain.math.*
+import com.appwork.mandisamiti.domain.model.BillMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -71,6 +72,29 @@ class BuySellMathTest {
         assertEquals(0L, r.totalReceivablePaisa % 100)
         assertEquals(r.grossPaisa + r.aratPaisa + r.tulakPaisa + r.mandiShulkPaisa + r.labourPaisa, r.totalReceivablePaisa)
         assertEquals(521, r.tulakPaisa)
+    }
+
+    @Test
+    fun sellLabourDecimalRateRoundsToExactWholeRupee() {
+        // 5.15 Qtl (515_000 g), ₹2,200/Qtl (220_000 paisa), arat 1.5% (150 bps), tulak ₹1/Qtl, labour ₹5.50/Qtl (550 paisa)
+        val input = SellMathInput(
+            bags = 10,
+            weightPerBagGrams = 50_000,
+            ratePaisaPerQuintal = 220_000,
+            billMode = BillMode.BILL_OF_SUPPLY,
+            aratBps = 150,
+            tulakPaisaOverride = null,
+            receivedPaisa = 0,
+            extraWeightGrams = 15_000,
+            sellLabourPaisaPerQuintal = 550
+        )
+        val result = BuySellMath.calculateSell(input)
+        assertEquals(0L, result.totalReceivablePaisa % 100L, "Total receivable must be whole rupee")
+        assertEquals(
+            result.totalReceivablePaisa,
+            result.grossPaisa + result.aratPaisa + result.tulakPaisa + result.mandiShulkPaisa + result.labourPaisa,
+            "Component sum must equal total receivable"
+        )
     }
 
     @Test
