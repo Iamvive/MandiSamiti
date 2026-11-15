@@ -308,3 +308,31 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Tests: `SellSlipAmountsTest` (4 cases), `SellTransactionReceiptTest` label updated to `मजदूरी: +₹25.29`.
 - Evidence: `./gradlew :core-domain:jvmTest :composeApp:jvmTest` ran 332 tests, 1 failed: `HomeViewModelTest.testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked`, the known flaky test. Rerun alone: passes.
 - Not verified on device. Left: the entry form's live preview still says "हमाली / मजदूरी" (SellEntryScreen, labour line); it is not a receipt, so it is not changed here.
+
+## 2026-11-16 (Claude Code): spare-crop (khaate) feature, Tasks 1 to 6 (branch spare-crop-khaate)
+Plan: `docs/superpowers/plans/2026-11-16-spare-crop-khaate.md` (main checkout). Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md`. Ledger: `.superpowers/sdd/2026-11-16-spare-crop-khaate/progress.md` (git-ignored).
+
+### Done (committed on spare-crop-khaate)
+- Task 1 `5de9b06`: khaate domain model and asal math.
+- Task 2 `26cce84`: `is_khaate` column (migration 13.sqm, schema 14); one hidden party `khaate-<shop>` serves buy and sell. Spec pass, quality approved with minors. Migration13Test stands in for the on-device upgrade check.
+- Task 3 `32c2826`: separate khaate stock line per crop on StockLine. Reviewer approved. Minors: `khaateAdjustmentGrams` never populated; no multi-variety khaate test.
+- Task 4 `f279a66`: two-count stock audit (crop bags, khaate bags); `khaateDiffGrams = khaateBags × bagWeightGrams − (khaateBought − khaateSold)`. Reviewer approved. Minors: save-path formula untested; negative prefill cannot be retyped.
+- Task 5 `8dd90f1` + fix `74e9373`: khaate toggle on Buy and Sell forms, `saveKhaateAware` wrapper, backfills skip `is_khaate` rows. First review CHANGES NEEDED (edit path skipped `ensureKhaateParty`; short-stock warning summed across crops). Fix approved on re-review (`task-5-fix-review.md`). Test counts 96 / 345 / 12 / 145 passing, 0 failures, from Gradle up-to-date results, not a fresh run.
+- Task 6 `40716c7`: Godown commodity card khaate row, amber khaate chip via `StockBill.isKhaate`, audit khaate field labelled. Fresh run `:composeApp:jvmTest --rerun-tasks`: 345 tests, 0 failures. Review (`task-6-review.md`): CHANGES NEEDED on process only, the device check has no evidence.
+
+### Pending
+- Task 6 device check (blocker for review sign-off): light and dark, 390dp, card with and without khaate, negative khaate colour, audit with both counts, chip. Emulator `emulator-5554` is attached. Screenshots to `docs/testing/screenshots/khaate/`, which does not exist yet.
+- Task 6 minors: card label "खाते" appears twice (StockRegisterScreen.kt:775-784); audit khaate field hidden when the crop has no khaate activity (StockRegisterScreen.kt:1141), confirm intended; no unit test for `isKhaate` or the khaate-line condition; xml khaate keys unused (screens use inline isEnglish strings).
+- Task 4 and Task 5 device checks: no screenshots, no light, dark or 390dp evidence. Task 4 has no red run recorded.
+- Tasks 7 to 10: not started.
+- Task 2 Step 7 on-device upgrade check from 13.db snapshot (not available).
+- Task 9 must verify the server accepts the hidden `khaate-*` party (pushed with sync_status 0).
+- Backend deploy of the `is_khaate` migration: needs Vivek's confirmation through `/project-deploy`.
+- Save path: a khaate save returns to the previous screen with no receipt.
+- Deferred minors: `khaateAdjustmentGrams` never populated; negative prefill cannot be retyped; save-path formula untested.
+- `PROGRESS.md` and `FEATURES.json` tracker entries for khaate are not yet written; `scripts/check_tracker.py` expects 29 features now, 30 after Task 10.
+- Worktree cleanup later: `git worktree remove ../MandiSamiti-khaate`.
+
+### Verification
+- `git log --oneline -7` on spare-crop-khaate shows 40716c7 down to 5de9b06.
+- Not committed in this entry: this PROGRESS.md update is uncommitted until Vivek asks for a commit.
