@@ -17,7 +17,10 @@ data class StockLine(
     val farmerCustodyGrams: Long = 0L,
     val standardBagKg: Double = 50.0,
     val lastAuditedAt: Long? = null,
-    val lastAuditReason: String? = null
+    val lastAuditReason: String? = null,
+    val khaateBoughtGrams: Long = 0L,
+    val khaateSoldGrams: Long = 0L,
+    val khaateAdjustmentGrams: Long = 0L
 ) {
     val bookOnHandGrams: Long get() = boughtGrams - soldGrams
     val onHandGrams: Long get() = bookOnHandGrams + physicalAdjustmentGrams
@@ -25,4 +28,7 @@ data class StockLine(
     val ownStockGrams: Long get() = (onHandGrams - farmerCustodyGrams).coerceAtLeast(0L)
     val ownStockBags: Long get() = if (standardBagKg > 0) (ownStockGrams / (standardBagKg * 1000.0)).toLong() else 0L
     val farmerCustodyBags: Long get() = if (standardBagKg > 0) (farmerCustodyGrams / (standardBagKg * 1000.0)).toLong() else 0L
+    val khaateOnHandGrams: Long get() = khaateBoughtGrams - khaateSoldGrams + khaateAdjustmentGrams
+    val khaateOnHandBags: Long get() = if (standardBagKg > 0) (khaateOnHandGrams / (standardBagKg * 1000.0)).toLong() else 0L
+    val isKhaateNegative: Boolean get() = khaateOnHandGrams < 0L
 }

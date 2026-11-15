@@ -5,6 +5,7 @@ import com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class StockInventoryUseCaseTest {
     private class FakeStock(val totals: StockTotals) : ExpenseRepository {
@@ -49,5 +50,30 @@ class StockInventoryUseCaseTest {
         assertEquals(7_200_000L, byVariety.getValue("सामान्य").onHandGrams)
         assertEquals(-500_000L, byVariety.getValue("लोकवान").onHandGrams)
         assertEquals(-1_000_000L, byVariety.getValue("शरबती").onHandGrams)
+    }
+
+    @Test fun khaateLineIsSeparateFromNormalBalance() = runTest {
+        val repo = FakeStock(StockTotals(
+            boughtGramsByCommodity = mapOf("गेहूं" to 5_000_000L),
+            soldGramsByCommodity = emptyMap(),
+            khaateBoughtGramsByCommodity = mapOf("गेहूं" to 250_000L),
+            khaateSoldGramsByCommodity = emptyMap()
+        ))
+        val line = StockInventoryUseCase(repo).lines("s").single()
+        assertEquals(100L, line.onHandBags)
+        assertEquals(5L, line.khaateOnHandBags)
+    }
+
+    @Test fun khaateLineMayGoNegative() = runTest {
+        val repo = FakeStock(StockTotals(emptyMap(), emptyMap(),
+            mapOf("गेहूं" to 250_000L), mapOf("गेहूं" to 400_000L)))
+        val line = StockInventoryUseCase(repo).lines("s").single()
+        assertEquals(-150_000L, line.khaateOnHandGrams)
+        assertTrue(line.isKhaateNegative)
+    }
+
+    @Test fun khaateOnlyCropStillGetsALine() = runTest {
+        val repo = FakeStock(StockTotals(emptyMap(), emptyMap(), mapOf("जिंस" to 100_000L), emptyMap()))
+        assertEquals(listOf("जिंस"), StockInventoryUseCase(repo).lines("s").map { it.commodityId })
     }
 }
