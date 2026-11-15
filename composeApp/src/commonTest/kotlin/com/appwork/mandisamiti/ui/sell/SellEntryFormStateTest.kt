@@ -48,16 +48,14 @@ class SellEntryFormStateTest {
         assertEquals(1_300_000, preview.grossPaisa)
         // Commission 2% = Rs 260 (26,000 paisa)
         assertEquals(26_000, preview.commissionPaisa)
-        // Per sheet parity: Cash Memo has no separate labour; tulak absorbs whole-rupee cut
-        // 5.0 Qtl * Rs 1 nominal = Rs 5. Total unrounded = 13,000 + 260 + 5 = 13,265
+        // Tulai is same as labour: no separate tulak
         assertEquals(0, preview.labourPaisa)
         // No Mandi tax or Cess on normal
         assertEquals(0, preview.mandiShulkPaisa)
         assertEquals(0, preview.krishakCessPaisa)
-        // Tulak absorbs difference: 13,265 - 13,000 - 260 = 5 Rs = 500 paisa
-        assertEquals(500, preview.tulakPaisa)
-        // Total receivable = Rs 13,265 (1,326,500 paisa)
-        assertEquals(1_326_500, preview.totalReceivablePaisa)
+        assertEquals(0, preview.tulakPaisa)
+        // Total receivable = Rs 13,260 (1,326,000 paisa)
+        assertEquals(1_326_000, preview.totalReceivablePaisa)
 
         assertTrue(state.canSave())
         assertNull(state.validationReason())
@@ -91,14 +89,13 @@ class SellEntryFormStateTest {
         assertEquals(4_000_000, preview.grossPaisa) // Rs 40,000
         // Commission 1.5% of 40,000 = Rs 600 (60,000 paisa)
         assertEquals(60_000, preview.commissionPaisa)
-        // Per sheet parity: Cash Memo has no separate labour; tulak absorbs rounding
+        // Tulai is same as labour: no separate tulak
         assertEquals(0, preview.labourPaisa)
         // No Mandi tax on normal
         assertEquals(0, preview.mandiShulkPaisa)
-        // 30 bags x 50kg = 15.0 Qtl * Rs 1 nominal = Rs 15 (1,500 paisa)
-        assertEquals(1_500, preview.tulakPaisa)
-        // Total = 40,000 + 600 + 15 = Rs 40,615 (4,061,500 paisa)
-        assertEquals(4_061_500, preview.totalReceivablePaisa)
+        assertEquals(0, preview.tulakPaisa)
+        // Total = 40,000 + 600 = Rs 40,600 (4,060,000 paisa)
+        assertEquals(4_060_000, preview.totalReceivablePaisa)
 
         assertTrue(state.canSave())
     }
@@ -137,13 +134,12 @@ class SellEntryFormStateTest {
         assertEquals(39_000, preview.mandiShulkPaisa)
         // Krishak Kalyan Cess 0% on BOS
         assertEquals(0, preview.krishakCessPaisa)
-        // No labour on BOS per sheet parity
+        // Tulai is same as labour: no separate tulak
         assertEquals(0, preview.labourPaisa)
-        // Tulak default Rs 1/qtl = 10 * 1 = Rs 10 (1,000 paisa)
-        assertEquals(1_000, preview.tulakPaisa)
+        assertEquals(0, preview.tulakPaisa)
         // Commission (arat) 1.5% default: 26,000 * 1.5% = 390 (39,000 paisa)
-        // Total = 26,000 + 390 (arat) + 390 (shulk) + 10 (tulak) = Rs 26,790 (2,679,000 paisa)
-        assertEquals(2_679_000, preview.totalReceivablePaisa)
+        // Total = 26,000 + 390 (arat) + 390 (shulk) = Rs 26,780 (2,678,000 paisa)
+        assertEquals(2_678_000, preview.totalReceivablePaisa)
     }
 
     @Test
@@ -246,15 +242,17 @@ class SellEntryFormStateTest {
         assertEquals(1_042_000L, preview.grossPaisa)
         // Arat 1% = 10,420 paisa
         assertEquals(10_420L, preview.commissionPaisa)
-        // Tulak default Rs 1/qtl = 521 paisa
-        assertEquals(521L, preview.tulakPaisa)
+        // No Mandi Shulk on normal mode
+        assertEquals(0L, preview.mandiShulkPaisa)
+        // Tulai is same as labour: tulak = 0
+        assertEquals(0L, preview.tulakPaisa)
         // Trader labour nominal = 5.21 * 5 = 26.05 Rs = 2,605 paisa
-        // Raw total = 1,042,000 + 10,420 + 521 + 2,605 = 1,055,546 paisa
-        // Rounded to nearest rupee: 1,055,500 paisa
-        assertEquals(1_055_500L, preview.totalReceivablePaisa)
+        // Raw total = 1,042,000 + 10,420 + 2,605 = 1,055,025 paisa
+        // Rounded to nearest rupee: 1,055,000 paisa
+        assertEquals(1_055_000L, preview.totalReceivablePaisa)
         assertEquals(0L, preview.totalReceivablePaisa % 100L)
-        // Labour absorbs rounding: 2,605 + (1,055,500 - 1,055,546) = 2,605 - 46 = 2,559 paisa
-        assertEquals(2_559L, preview.labourPaisa)
+        // Labour absorbs rounding: 2,605 + (1,055,000 - 1,055,025) = 2,605 - 25 = 2,580 paisa
+        assertEquals(2_580L, preview.labourPaisa)
         assertEquals(preview.grossPaisa + preview.commissionPaisa + preview.tulakPaisa + preview.mandiShulkPaisa + preview.labourPaisa, preview.totalReceivablePaisa)
     }
 
@@ -323,6 +321,7 @@ class SellEntryFormStateTest {
         assertEquals(515_000L, preview.totalWeightGrams)
         // Must be an exact whole rupee:
         assertEquals(0L, preview.totalReceivablePaisa % 100L)
+        assertEquals(0L, preview.tulakPaisa, "Tulai is same as labour; tulak must be 0")
         // Labour component absorbs rounding:
         assertEquals(
             preview.totalReceivablePaisa,

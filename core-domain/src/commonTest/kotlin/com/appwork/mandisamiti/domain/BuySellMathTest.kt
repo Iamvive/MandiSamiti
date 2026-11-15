@@ -49,17 +49,18 @@ class BuySellMathTest {
 
     @Test
     fun traderLabourAbsorbsRoundingHalfUp() {
-        // 1 qtl at Rs 1,000; Cash Memo tulak Rs 1; labour L paisa. raw total = 100_100 + L
+        // 1 qtl at Rs 1,000; labour L paisa. raw total = 100_000 + L
         fun total(l: Long) = BuySellMath.calculateSell(
             SellMathInput(1, 100_000, 100_000, normal, 0, null, 0, sellLabourPaisaPerQuintal = l)
         )
         val down = total(49)
-        assertEquals(100_100, down.totalReceivablePaisa)
+        assertEquals(100_000, down.totalReceivablePaisa)
         assertEquals(0, down.labourPaisa)
-        assertEquals(100, down.tulakPaisa)
+        assertEquals(0, down.tulakPaisa)
         val up = total(50)
-        assertEquals(100_200, up.totalReceivablePaisa)
+        assertEquals(100_100, up.totalReceivablePaisa)
         assertEquals(100, up.labourPaisa)
+        assertEquals(0, up.tulakPaisa)
     }
 
     @Test
@@ -71,12 +72,12 @@ class BuySellMathTest {
         )
         assertEquals(0L, r.totalReceivablePaisa % 100)
         assertEquals(r.grossPaisa + r.aratPaisa + r.tulakPaisa + r.mandiShulkPaisa + r.labourPaisa, r.totalReceivablePaisa)
-        assertEquals(521, r.tulakPaisa)
+        assertEquals(0, r.tulakPaisa)
     }
 
     @Test
     fun sellLabourDecimalRateRoundsToExactWholeRupee() {
-        // 5.15 Qtl (515_000 g), ₹2,200/Qtl (220_000 paisa), arat 1.5% (150 bps), tulak ₹1/Qtl, labour ₹5.50/Qtl (550 paisa)
+        // 5.15 Qtl (515_000 g), ₹2,200/Qtl (220_000 paisa), arat 1.5% (150 bps), labour ₹5.50/Qtl (550 paisa)
         val input = SellMathInput(
             bags = 10,
             weightPerBagGrams = 50_000,
@@ -90,6 +91,7 @@ class BuySellMathTest {
         )
         val result = BuySellMath.calculateSell(input)
         assertEquals(0L, result.totalReceivablePaisa % 100L, "Total receivable must be whole rupee")
+        assertEquals(0L, result.tulakPaisa, "Tulai is same as labour; tulak must be 0")
         assertEquals(
             result.totalReceivablePaisa,
             result.grossPaisa + result.aratPaisa + result.tulakPaisa + result.mandiShulkPaisa + result.labourPaisa,

@@ -128,20 +128,20 @@ class SellEntryDirectionBTest {
         form.lots[0].ratePerQuintal = "2000"
         // 10 bags * 50kg = 5 Qtl @ 2000 = Rs 10,000 (1,000,000 paisa)
         // Commission 1.5% = Rs 150 (15,000 paisa)
-        // Nominal tulak 5 Qtl * 1 = Rs 5 (500 paisa)
-        // Total receivable = Rs 10,155 (1,015,500 paisa)
+        // Tulai is same as labour (0 in this test)
+        // Total receivable = Rs 10,150 (1,015,000 paisa)
 
         val previewBefore = form.aggregatePreview()
-        assertEquals(1_015_500L, previewBefore.totalReceivablePaisa)
+        assertEquals(1_015_000L, previewBefore.totalReceivablePaisa)
         assertEquals(0L, previewBefore.advanceReceivedPaisa)
-        assertEquals(1_015_500L, previewBefore.balanceDuePaisa)
+        assertEquals(1_015_000L, previewBefore.balanceDuePaisa)
 
         // Advance received Rs 3,000 (300,000 paisa)
         form.advanceReceived = "3000"
         val previewAfter = form.aggregatePreview()
-        assertEquals(1_015_500L, previewAfter.totalReceivablePaisa)
+        assertEquals(1_015_000L, previewAfter.totalReceivablePaisa)
         assertEquals(300_000L, previewAfter.advanceReceivedPaisa)
-        assertEquals(715_500L, previewAfter.balanceDuePaisa) // Rs 7,155 remaining receivable
+        assertEquals(715_000L, previewAfter.balanceDuePaisa) // Rs 7,150 remaining receivable
     }
 
     @Test
@@ -166,9 +166,9 @@ class SellEntryDirectionBTest {
 
         val preview = form.aggregatePreview()
         // Total receivable and balance due remain strictly commodity bill arithmetic
-        // Nominal tulak = 5 * 100 = 500 paisa -> total = 1,000,500 paisa
-        assertEquals(1_000_500L, preview.totalReceivablePaisa)
-        assertEquals(1_000_500L, preview.balanceDuePaisa)
+        // Tulai is same as labour (0 here) -> total = 1,000,000 paisa
+        assertEquals(1_000_000L, preview.totalReceivablePaisa)
+        assertEquals(1_000_000L, preview.balanceDuePaisa)
     }
 
     @Test

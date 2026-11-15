@@ -629,32 +629,26 @@ fun SellEntryScreen(
             )
 
             // Section 3: Deductions & Charges
-            MandiFlatTextField(
-                value = formState.commissionPercent,
-                onValueChange = { formState.commissionPercent = it },
-                label = if (isEnglish) "Commission %" else "कमीशन %",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                isTall = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            MandiFlatTextField(
-                value = formState.labourPerQuintal,
-                onValueChange = { formState.labourPerQuintal = it },
-                label = if (isEnglish) "Labour (₹/Quintal)" else "हम्माली / मजदूरी (₹/क्विंटल)",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = if (isBos) ImeAction.Next else ImeAction.Done),
-                isTall = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (isBos) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 MandiFlatTextField(
-                    value = formState.tulakPerQuintal,
-                    onValueChange = { formState.tulakPerQuintal = it },
-                    label = if (isEnglish) "Tulak (₹/qtl)" else "तुलाई (रु/क्विंटल)",
+                    value = formState.commissionPercent,
+                    onValueChange = { formState.commissionPercent = it },
+                    label = if (isEnglish) "Commission %" else "कमीशन %",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    isTall = true,
+                    modifier = Modifier.weight(1f)
+                )
+
+                MandiFlatTextField(
+                    value = formState.labourPerQuintal,
+                    onValueChange = { formState.labourPerQuintal = it },
+                    label = if (isEnglish) "Labour (₹/qtl)" else "मजदूरी (रु/क्विंटल)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     isTall = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -688,12 +682,6 @@ fun SellEntryScreen(
                             amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.labourPaisa)}"
                         )
                     }
-                    if (preview.tulakPaisa > 0) {
-                        Line(
-                            label = if (isEnglish) "Tulak" else "तुलाई (+)",
-                            amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.tulakPaisa)}"
-                        )
-                    }
                 } else {
                     Line(
                         label = if (isEnglish) "Mandi Tax (1.5%)" else "मंडी शुल्क (1.5%)",
@@ -705,16 +693,16 @@ fun SellEntryScreen(
                             amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.krishakCessPaisa)}"
                         )
                     }
-                    if (preview.labourPaisa > 0) {
+                    if (preview.commissionPaisa > 0) {
                         Line(
-                            label = if (isEnglish) "Hammali / Labour" else "हमाली / मजदूरी",
-                            amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.labourPaisa)}"
+                            label = if (isEnglish) "Commission" else "कमीशन जोड़ (+)",
+                            amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.commissionPaisa)}"
                         )
                     }
-                    if (preview.tulakPaisa > 0) {
+                    if (preview.labourPaisa > 0) {
                         Line(
-                            label = if (isEnglish) "Tulak" else "तुलाई (Tulak)",
-                            amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.tulakPaisa)}"
+                            label = if (isEnglish) "Labour" else "मजदूरी जोड़ (+)",
+                            amountText = "+ ₹${MandiMathEngine.paisaToRupeesString(preview.labourPaisa)}"
                         )
                     }
                 }
