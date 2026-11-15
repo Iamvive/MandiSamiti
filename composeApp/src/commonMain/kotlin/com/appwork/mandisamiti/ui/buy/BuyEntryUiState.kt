@@ -6,6 +6,8 @@ package com.appwork.mandisamiti.ui.buy
  * Errors are Hindi strings ready to show; null means the field is fine.
  */
 data class BuyEntryUiState(
+    /** Spare crop: the screen hides party, commission, labour and payment. */
+    val isKhaate: Boolean = false,
     val party: BuyPartyState = BuyPartyState(),
     val lots: List<BuyLotUiState> = emptyList(),
     val rates: BuyRatesState = BuyRatesState(),
@@ -118,6 +120,7 @@ interface BuyEntryActions {
     fun onDepositUseChange(value: String)
     fun onConfirmRateOutlier()
     fun onSave()
+    fun onKhaateChange(value: Boolean) {}
 }
 
 enum class BuyLotField { Crop, Bags, WeightPerBag, ExtraWeight, Rate }

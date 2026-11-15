@@ -490,12 +490,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 backfillPartiesFromBuyEntries:
 INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
 SELECT DISTINCT farmer_id, shop_id, farmer_id, NULL, NULL, 'FARMER', NULL, NULL, NULL, NULL, entry_date, entry_date, 0, 0
-FROM buyEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND farmer_id IS NOT NULL AND farmer_id != '';
+FROM buyEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND farmer_id IS NOT NULL AND farmer_id != '' AND is_khaate = 0;
 
 backfillPartiesFromSellEntries:
 INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
 SELECT DISTINCT buyer_id, shop_id, buyer_id, NULL, NULL, 'BUYER', NULL, NULL, NULL, NULL, entry_date, entry_date, 0, 0
-FROM sellEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND buyer_id IS NOT NULL AND buyer_id != '';
+FROM sellEntryEntity WHERE is_deleted = 0 AND is_void = 0 AND buyer_id IS NOT NULL AND buyer_id != '' AND is_khaate = 0;
 
 backfillPartiesFromLendEntries:
 INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)

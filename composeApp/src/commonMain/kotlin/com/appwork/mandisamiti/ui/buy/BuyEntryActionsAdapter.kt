@@ -66,6 +66,10 @@ fun buyEntryActions(
         formState.showRateOutlierConfirmation = false
     }
 
+    override fun onKhaateChange(value: Boolean) {
+        formState.isKhaate = value
+    }
+
     override fun onSave() {
         onSaveTriggered()
     }

@@ -539,11 +539,13 @@ fun App(
                                     createdAt = now,
                                     updatedAt = now,
                                 )
-                                buyRepo.saveBuyCheckout(
-                                    entry, party,
-                                    if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
-                                    buyForm.buildLoanCut(entry.shopId, now),
-                                )
+                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) {
+                                    buyRepo.saveBuyCheckout(
+                                        entry, party,
+                                        if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
+                                        if (entry.isKhaate) null else buyForm.buildLoanCut(entry.shopId, now),
+                                    )
+                                }
 
                                 val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
                                 val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
@@ -554,7 +556,9 @@ fun App(
                                 buyRepo.editBuyEntry(entry)
                             }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = if (screen.existingId == null) {
+                            currentScreen = if (entry.isKhaate) {
+                                screen.backTarget()
+                            } else if (screen.existingId == null) {
                                 Screen.BuyPayment(entry.id)
                             } else {
                                 Screen.BuyReceipt(entry.id)
@@ -751,7 +755,9 @@ fun App(
                                 partyRepo.saveParty(party)
                             }
                             if (screen.existingId == null) {
-                                sellRepo.saveSellEntry(entry)
+                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) {
+                                    sellRepo.saveSellEntry(entry)
+                                }
                                 if (entry.receivedPaisa > 0L) {
                                     val advanceTx = com.appwork.mandisamiti.domain.model.CashTransaction(
                                         id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
@@ -779,7 +785,7 @@ fun App(
                                 sellRepo.editSellEntry(entry)
                             }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = Screen.SellReceipt(entry.id)
+                            currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id)
                         }
                     },
                     onBack = { currentScreen = screen.backTarget() }

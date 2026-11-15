@@ -10,6 +10,7 @@ import com.appwork.mandisamiti.domain.math.BuySellMath
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.Khaate
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.ui.ledger.repayPreview
 import com.appwork.mandisamiti.domain.model.TradeSettings
@@ -104,6 +105,8 @@ data class AggregatedBuyPreview(
 class BuyEntryFormState(
     tradeSettings: TradeSettings? = null
 ) {
+    /** Spare crop booked to the hidden khaate party: no party, commission, labour or payment. */
+    var isKhaate by mutableStateOf(false)
     var farmerName by mutableStateOf("")
     var selectedFarmerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
@@ -144,7 +147,7 @@ class BuyEntryFormState(
         loanCut = ""
     }
 
-    fun loanCutPaisa(): Long = (loanCut.toLongOrNull() ?: 0L) * 100L
+    fun loanCutPaisa(): Long = if (isKhaate) 0L else (loanCut.toLongOrNull() ?: 0L) * 100L
 
     /** Interest first, then principal, as in RepayLoanDialog. */
     fun loanCutSplit() = repayPreview(loanCutPaisa(), loanInterestDuePaisa, loanPrincipalPaisa)
@@ -267,6 +270,19 @@ class BuyEntryFormState(
         val totalWeight = totalGrossWeight
         val totalGross = lotResults.sumOf { it.second.grossPaisa }
 
+        if (isKhaate) {
+            return AggregatedBuyPreview(
+                lotsCalculations = lotResults,
+                totalBags = totalBags,
+                totalWeightGrams = totalWeight,
+                totalGrossPaisa = totalGross,
+                commissionPaisa = 0L,
+                labourPaisa = 0L,
+                advancePaidPaisa = 0L,
+                netPayablePaisa = totalGross,
+            )
+        }
+
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
         val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
         val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
@@ -317,9 +333,11 @@ class BuyEntryFormState(
     fun validateLots(): List<LotValidation> = lots.map { it.validate() }
 
     fun canSave(): Boolean {
-        if (!validateFarmerName().isValid) return false
-        if (!validatePhone().isValid) return false
-        if (!validateVillage().isValid) return false
+        if (!isKhaate) {
+            if (!validateFarmerName().isValid) return false
+            if (!validatePhone().isValid) return false
+            if (!validateVillage().isValid) return false
+        }
         val lotsVal = validateLots()
         if (lotsVal.isEmpty() || lotsVal.any { !it.isValid }) return false
         val agg = aggregatePreview()
@@ -330,12 +348,14 @@ class BuyEntryFormState(
     }
 
     fun validationReason(): String? {
-        val nameVal = validateFarmerName()
-        if (!nameVal.isValid) return nameVal.errorOrNull
-        val phoneVal = validatePhone()
-        if (!phoneVal.isValid) return phoneVal.errorOrNull
-        val villageVal = validateVillage()
-        if (!villageVal.isValid) return villageVal.errorOrNull
+        if (!isKhaate) {
+            val nameVal = validateFarmerName()
+            if (!nameVal.isValid) return nameVal.errorOrNull
+            val phoneVal = validatePhone()
+            if (!phoneVal.isValid) return phoneVal.errorOrNull
+            val villageVal = validateVillage()
+            if (!villageVal.isValid) return villageVal.errorOrNull
+        }
         val lotsVal = validateLots()
         val firstInvalidIdx = lotsVal.indexOfFirst { !it.isValid }
         if (firstInvalidIdx != -1) {
@@ -357,15 +377,15 @@ class BuyEntryFormState(
     ): BuyEntry {
         val agg = aggregatePreview()
         val now = clock.now().toEpochMilliseconds()
-        val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
-        val labourPaisaPerBag = MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
-        val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
+        val commBps = if (isKhaate) 0L else MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
+        val labourPaisaPerBag = if (isKhaate) 0L else MandiMathEngine.parseRupeesToPaisa(labourPerBag.ifBlank { "0" })
+        val advancePaisa = if (isKhaate) 0L else MandiMathEngine.parseRupeesToPaisa(advancePaid.ifBlank { "0" })
         val primaryLot = lots.firstOrNull()?.calculateLot()
 
         // Build lots domain list
         val domainLots = lots.map { it.calculateLot() }
         val lotsJson = Json.encodeToString(domainLots)
-        val cleanVillage = MandiValidators.sanitizeVillage(village)
+        val cleanVillage = if (isKhaate) "" else MandiValidators.sanitizeVillage(village)
         val cutPaisa = if (agg.loanCutPaisa > 0) agg.loanCutPaisa else extractLoanCut(existingEntry?.remarks)
         val combinedRemarks = buildString {
             if (cleanVillage.isNotBlank()) append("गाँव: $cleanVillage | ")
@@ -376,7 +396,7 @@ class BuyEntryFormState(
         return BuyEntry(
             id = existingId ?: existingEntry?.id ?: IdGenerator.newId(),
             shopId = shopId,
-            farmerId = selectedFarmerId ?: farmerName.trim().ifBlank { "अज्ञात किसान" },
+            farmerId = if (isKhaate) Khaate.partyId(shopId) else selectedFarmerId ?: farmerName.trim().ifBlank { "अज्ञात किसान" },
             commodityId = lots.firstOrNull()?.cropName ?: "गेहूं",
             entryDate = existingEntry?.entryDate ?: now,
             bagsCount = agg.totalBags,
@@ -392,7 +412,7 @@ class BuyEntryFormState(
             labourPaisa = agg.labourPaisa,
             netPayablePaisa = agg.netPayablePaisa,
             paidPaisa = advancePaisa + agg.loanCutPaisa,
-            vehicleNumber = phone.ifBlank { null },
+            vehicleNumber = if (isKhaate) null else phone.ifBlank { null },
             slipNumber = existingEntry?.slipNumber,
             remarks = combinedRemarks,
             createdAt = existingEntry?.createdAt ?: now,
@@ -400,11 +420,13 @@ class BuyEntryFormState(
             revision = (existingEntry?.revision ?: 0L) + 1L,
             isVoid = false,
             voidReason = null,
-            syncStatus = 0L
+            syncStatus = 0L,
+            isKhaate = isKhaate,
         )
     }
 
     fun populateFrom(entry: BuyEntry) {
+        isKhaate = entry.isKhaate
         selectedFarmerId = entry.farmerId
         farmerName = entry.farmerId
         phone = entry.vehicleNumber ?: ""
