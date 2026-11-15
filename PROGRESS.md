@@ -268,3 +268,8 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
   - Backend pytest passes: 130 passed.
   - Updated `FEATURES.json`: `labour-half-unit-rule`, `bill-shows-extra-weight`, `sell-validates-stock`, `trader-sell-labour-per-quintal`, and `asal-rename-and-opening-cash-chip` marked `passing`.
 - **Next**: Milestone 5 (Print option on all bills / Bluetooth thermal printer or system print/PDF).
+
+## 2026-11-15 (Claude Code): device check passed for five features
+- Vivek reported the device check done and all five passed: `labour-half-unit-rule`, `trader-sell-labour-per-quintal`, `bill-shows-extra-weight`, `sell-validates-stock`, `asal-rename-and-opening-cash-chip`. All five are now `passing` in `FEATURES.json`.
+- Evidence is Vivek's report; no screenshots or logs were captured.
+- Left: `print-all-bills` (M5), Khata explainers (2), `input-audit-medium-low`, `offsite-backup-restore-drill`.
