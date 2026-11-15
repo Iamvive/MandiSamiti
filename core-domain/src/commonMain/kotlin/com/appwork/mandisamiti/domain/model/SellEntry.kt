@@ -37,4 +37,5 @@ data class SellEntry(
     val isVoid: Boolean = false,
     val voidReason: String? = null,
     val syncStatus: Long = 0L,
+    val isKhaate: Boolean = false,
 )
