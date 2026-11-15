@@ -170,3 +170,22 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 ## 2026-11-15 (Claude Code): backlog added to FEATURES.json
 - Added 6 `failing` entries from Vivek's requests, nothing built: edit-shop-profile, labour-half-unit-rule, bill-shows-extra-weight, sell-validates-stock, trader-sell-labour-per-quintal, print-all-bills. Open questions are in each entry's evidence and in hot.md.
 - Next: brainstorm one at a time, answering the open question first.
+
+## 2026-11-15 (Claude Code): M1 labour math (domain only)
+- `BuySellMath.kt`: Buy extra-bag threshold 5 kg -> 20 kg. `calculateSell` now bills `extraWeightGrams`; new optional `traderLabourPaisaPerQuintal` input and `labourPaisa` result. Trader labour absorbs rounding to a whole rupee (tulak stays default). `TradeSettings.traderLabourPaisaPerQuintal = 0L` added.
+- Tests added in `BuySellMathTest.kt`: Buy 10 bags + 4/12/20/21 kg = 10/10/10/11 bori; Sell 10 bags + 21 kg = 5.21 qtl; trader rounding 49 down / 50 up; Bill of Supply total is a whole rupee; no trader rate keeps old totals.
+- Risk check: `BuyEntry` stores `labourPaisa` at save (`BuyTransactionUseCase.kt:34`), `calculateBuy` runs only in `create`. Old bills do not change.
+- Evidence: `./gradlew :core-domain:jvmTest :composeApp:jvmTest` BUILD SUCCESSFUL. `:core-domain:allTests` fails to compile the iOS target in `PilotDayMoneyInvariantTest.kt` (`Math` unresolved in common code). File untouched by me, pre-existing.
+- Next: M2 (Settings rate field, Sell form Labour line, hide chips for traders, stock warning). `SellForm`/`SellTransactionUseCase` do not pass the new inputs yet.
+
+## 2026-11-15 (Claude Code): sell labour per quintal for every party
+- Vivek: Buy rule stays (extra <= 20 kg free, > 20 kg +1 bori); Sell labour is per quintal on every sell slip.
+- `SellEntryFormState.aggregatePreview` no longer limits the per-quintal rate to MERCHANT. `SellEntryScreen` drops the dead per-bag Labour field (nothing read it) and shows one Commission field for all parties.
+- Test `customerIgnoresTraderLabourRate` became `customerAlsoPaysPerQuintalLabour`.
+- Evidence: `./gradlew :core-domain:jvmTest :composeApp:jvmTest` BUILD SUCCESSFUL. Not verified on device.
+- Open: `SellForm`/`SellTransactionUseCase` still do not persist labour or extra weight; setting name `traderLabourPaisaPerQuintal` is now a misnomer (kept to avoid clashing with uncommitted work).
+
+## 2026-11-15 (Claude Code): sell save step checked, no schema change
+- Finding: the app saves sales through `SellEntryFormState.toSellEntry`, not `SellTransactionUseCase` (unused, dead code). Extra weight is already stored (lot JSON in `remarks`, plus `totalWeightGrams`), and per-quintal labour is already inside `totalReceivablePaisa`. No new column, migration or backend change needed.
+- Added test `savedSellKeepsExtraWeightAndLabourTotalAndReopensSame` in `SellEntryFormStateTest.kt`. NOT YET RUN: `:core-data` stopped compiling because of someone else's uncommitted M4 work (`ShopProfile` gained address/gstin/licence_no, `12.sqm` untracked, `OfflineFirstShopProfileRepository.kt:42` not updated).
+- Known receipt quirk (not changed): Cash Memo shows tulak plus labour as one "मजदूरी" row; Bill of Supply shows commission plus labour as "हमाली / मजदूरी". Totals still add up.

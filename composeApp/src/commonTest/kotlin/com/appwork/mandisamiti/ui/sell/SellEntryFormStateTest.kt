@@ -2,6 +2,7 @@ package com.appwork.mandisamiti.ui.sell
 
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellPartyKind
+import com.appwork.mandisamiti.domain.model.TradeSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -217,5 +218,89 @@ class SellEntryFormStateTest {
         assertEquals("15", restored.lots[0].bags)
         assertEquals("सरसों", restored.lots[1].cropName)
         assertEquals("25", restored.lots[1].bags)
+    }
+
+    @Test
+    fun merchantTraderLabourCalculatedAndRoundsToWholeRupee() {
+        val settings = TradeSettings(
+            traderLabourPaisaPerQuintal = 500L // ₹5 per quintal
+        )
+        val state = SellEntryFormState(settings)
+        state.buyerName = "Apex Grains"
+        state.updatePhone("9876543210")
+        state.village = "सीहोर"
+        state.setParty(SellPartyKind.MERCHANT)
+        state.commissionPercent = "1.0" // 1%
+
+        // 10 bags x 50 kg + 21 kg = 521 kg = 5.21 quintals
+        state.lots[0].cropName = "गेहूं"
+        state.lots[0].bags = "10"
+        state.lots[0].weightPerBagKg = "50"
+        state.lots[0].extraWeightKg = "21"
+        state.lots[0].ratePerQuintal = "2000"
+
+        val preview = state.aggregatePreview()
+        // Total weight = 521,000 grams = 5.21 qtl
+        assertEquals(521_000L, preview.totalWeightGrams)
+        // Gross = 5.21 * 2000 = 10,420 Rs = 1,042,000 paisa
+        assertEquals(1_042_000L, preview.grossPaisa)
+        // Arat 1% = 10,420 paisa
+        assertEquals(10_420L, preview.commissionPaisa)
+        // Tulak default Rs 1/qtl = 521 paisa
+        assertEquals(521L, preview.tulakPaisa)
+        // Trader labour nominal = 5.21 * 5 = 26.05 Rs = 2,605 paisa
+        // Raw total = 1,042,000 + 10,420 + 521 + 2,605 = 1,055,546 paisa
+        // Rounded to nearest rupee: 1,055,500 paisa
+        assertEquals(1_055_500L, preview.totalReceivablePaisa)
+        assertEquals(0L, preview.totalReceivablePaisa % 100L)
+        // Labour absorbs rounding: 2,605 + (1,055,500 - 1,055,546) = 2,605 - 46 = 2,559 paisa
+        assertEquals(2_559L, preview.labourPaisa)
+        assertEquals(preview.grossPaisa + preview.commissionPaisa + preview.tulakPaisa + preview.mandiShulkPaisa + preview.labourPaisa, preview.totalReceivablePaisa)
+    }
+
+    @Test
+    fun customerAlsoPaysPerQuintalLabour() {
+        val settings = TradeSettings(
+            traderLabourPaisaPerQuintal = 500L
+        )
+        val state = SellEntryFormState(settings)
+        state.buyerName = "Retail Customer"
+        state.updatePhone("9876543210")
+        state.village = "सीहोर"
+        state.setParty(SellPartyKind.CUSTOMER)
+        state.lots[0].bags = "10"
+        state.lots[0].weightPerBagKg = "50"
+        state.lots[0].ratePerQuintal = "2000"
+
+        val preview = state.aggregatePreview()
+        // 5 qtl x Rs 5 = Rs 25 labour; rounding paise also go into labour
+        assertEquals(true, preview.labourPaisa in 2_450L..2_550L)
+        assertEquals(0L, preview.totalReceivablePaisa % 100L)
+    }
+
+    @Test
+    fun savedSellKeepsExtraWeightAndLabourTotalAndReopensSame() {
+        val settings = TradeSettings(traderLabourPaisaPerQuintal = 500L)
+        val state = SellEntryFormState(settings)
+        state.buyerName = "Retail Customer"
+        state.updatePhone("9876543210")
+        state.village = "सीहोर"
+        state.setParty(SellPartyKind.CUSTOMER)
+        state.lots[0].cropName = "गेहूं"
+        state.lots[0].bags = "10"
+        state.lots[0].weightPerBagKg = "50"
+        state.lots[0].extraWeightKg = "21"
+        state.lots[0].ratePerQuintal = "2000"
+
+        val preview = state.aggregatePreview()
+        val entry = state.toSellEntry(shopId = "shop-1")
+        assertEquals(521_000L, entry.totalWeightGrams) // extra weight is billed and stored
+        assertEquals(preview.totalReceivablePaisa, entry.totalReceivablePaisa) // labour is inside the saved total
+        assertEquals(true, entry.remarks!!.contains("21000")) // extra weight kept per lot
+
+        val reopened = SellEntryFormState(settings)
+        reopened.populateFrom(entry)
+        assertEquals(entry.totalReceivablePaisa, reopened.aggregatePreview().totalReceivablePaisa)
+        assertEquals(521_000L, reopened.aggregatePreview().totalWeightGrams)
     }
 }

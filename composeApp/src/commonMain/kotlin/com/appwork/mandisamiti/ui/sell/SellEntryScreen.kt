@@ -610,27 +610,14 @@ fun SellEntryScreen(
             )
 
             // Section 3: Deductions & Charges
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MandiFlatTextField(
-                    value = formState.commissionPercent,
-                    onValueChange = { formState.commissionPercent = it },
-                    label = if (isEnglish) "Commission %" else "कमीशन %",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                    isTall = true,
-                    modifier = Modifier.weight(1f)
-                )
-                MandiFlatTextField(
-                    value = formState.labourPerBag,
-                    onValueChange = { formState.labourPerBag = it },
-                    label = if (isEnglish) "Labour (₹/bag)" else "मजदूरी (रु/बोरी)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                    isTall = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            MandiFlatTextField(
+                value = formState.commissionPercent,
+                onValueChange = { formState.commissionPercent = it },
+                label = if (isEnglish) "Commission %" else "कमीशन %",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = if (isBos) ImeAction.Next else ImeAction.Done),
+                isTall = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             if (isBos) {
                 MandiFlatTextField(

@@ -250,19 +250,37 @@ class SellEntryFormState(
         val commBps = MandiMathEngine.parsePercentToBasisPoints(commissionPercent.ifBlank { "0" })
 
         val commissionPaisa: Long
-        val labourPaisa: Long = 0L
+        val labourPaisa: Long
         val mandiShulkPaisa: Long
         val krishakCessPaisa: Long = 0L
         val tulakPaisa: Long
         val totalReceivable: Long
 
-        if (isBos) {
+        // Labour on every sell slip is per quintal (farmer, customer and trader). 0 = rate not set.
+        val traderLabourRate = settings?.traderLabourPaisaPerQuintal ?: 0L
+
+        if (traderLabourRate > 0L) {
+            commissionPaisa = MandiMathEngine.percentageOf(gross, commBps)
+            mandiShulkPaisa = if (isBos) MandiMathEngine.percentageOf(gross, BuySellMath.MANDI_SHULK_BPS) else 0L
+            val tulak = if (isBos) {
+                val tulakRatePaisa = MandiMathEngine.parseRupeesToPaisa(tulakPerQuintal.ifBlank { "1" })
+                MandiMathEngine.grossAmountPaisa(totalWeight, tulakRatePaisa)
+            } else {
+                MandiMathEngine.grossAmountPaisa(totalWeight, 100L)
+            }
+            val nominalLabour = MandiMathEngine.grossAmountPaisa(totalWeight, traderLabourRate)
+            val raw = gross + commissionPaisa + tulak + mandiShulkPaisa + nominalLabour
+            totalReceivable = (raw + 50L).floorDiv(100L) * 100L
+            tulakPaisa = tulak
+            labourPaisa = nominalLabour + (totalReceivable - raw)
+        } else if (isBos) {
             // Bill of Supply: Arat at entered rate, Mandi Shulk 1.5%, Tulak Rs 1/qtl
             commissionPaisa = MandiMathEngine.percentageOf(gross, commBps)
             mandiShulkPaisa = MandiMathEngine.percentageOf(gross, BuySellMath.MANDI_SHULK_BPS) // 150 bps = 1.5%
             val tulakRatePaisa = MandiMathEngine.parseRupeesToPaisa(tulakPerQuintal.ifBlank { "1" })
             tulakPaisa = MandiMathEngine.grossAmountPaisa(totalWeight, tulakRatePaisa)
             totalReceivable = gross + commissionPaisa + mandiShulkPaisa + tulakPaisa
+            labourPaisa = 0L
         } else {
             // Cash Memo: Arat at entered rate, final cut down to whole rupee, Tulak absorbs difference
             commissionPaisa = MandiMathEngine.percentageOf(gross, commBps)
@@ -271,6 +289,7 @@ class SellEntryFormState(
             val unrounded = gross + commissionPaisa + nominalTulak
             totalReceivable = (unrounded / 100L) * 100L // cut down to whole rupee per sheet rule 8
             tulakPaisa = totalReceivable - gross - commissionPaisa
+            labourPaisa = 0L
         }
 
         val advancePaisa = MandiMathEngine.parseRupeesToPaisa(advanceReceived.ifBlank { "0" })

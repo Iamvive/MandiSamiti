@@ -30,6 +30,9 @@ data class SellMathInput(
     /** null = use the Rs 1 per quintal default. */
     val tulakPaisaOverride: Long?,
     val receivedPaisa: Long,
+    val extraWeightGrams: Long = 0L,
+    /** Trader (Vyapaari) labour rate per quintal; 0 = no labour line. */
+    val traderLabourPaisaPerQuintal: Long = 0L,
 )
 
 data class SellMathResult(
@@ -40,6 +43,8 @@ data class SellMathResult(
     val mandiShulkPaisa: Long,
     val totalReceivablePaisa: Long,
     val balanceDuePaisa: Long,
+    /** Trader labour, includes the paise that round the total to a whole rupee. 0 when no rate is set. */
+    val labourPaisa: Long = 0L,
 )
 
 object BuySellMath {
@@ -52,8 +57,8 @@ object BuySellMath {
     fun defaultTulakPaisa(totalWeightGrams: Long): Long =
         MandiMathEngine.grossAmountPaisa(totalWeightGrams, TULAK_PAISA_PER_QUINTAL)
 
-    /** Sheet rule: extra loose weight above 5 kg is billed as one more bag for labour. */
-    private const val EXTRA_BAG_THRESHOLD_GRAMS = 5_000L
+    /** Sheet rule: extra loose weight above 20 kg is billed as one more bag for labour (Buy only). */
+    private const val EXTRA_BAG_THRESHOLD_GRAMS = 20_000L
     private const val PAISA_PER_RUPEE = 100L
     private const val ROUND_TO_PAISA = 1_000L // nearest Rs 10
 
@@ -74,11 +79,19 @@ object BuySellMath {
     }
 
     fun calculateSell(input: SellMathInput): SellMathResult {
-        val grams = totalWeightGrams(input.bags, input.weightPerBagGrams, 0L)
+        val grams = totalWeightGrams(input.bags, input.weightPerBagGrams, input.extraWeightGrams)
         val gross = MandiMathEngine.grossAmountPaisa(grams, input.ratePaisaPerQuintal)
         val bos = input.billMode == BillMode.BILL_OF_SUPPLY
         val arat = MandiMathEngine.percentageOf(gross, input.aratBps)
         val shulk = if (bos) MandiMathEngine.percentageOf(gross, MANDI_SHULK_BPS) else 0L
+        if (input.traderLabourPaisaPerQuintal > 0L) {
+            // Trader sale: tulak stays at its default, labour absorbs the rounding to a whole rupee.
+            val tulak = if (bos) input.tulakPaisaOverride ?: defaultTulakPaisa(grams) else defaultTulakPaisa(grams)
+            val labour = MandiMathEngine.grossAmountPaisa(grams, input.traderLabourPaisaPerQuintal)
+            val raw = gross + arat + tulak + shulk + labour
+            val total = (raw + PAISA_PER_RUPEE / 2).floorDiv(PAISA_PER_RUPEE) * PAISA_PER_RUPEE
+            return SellMathResult(grams, gross, arat, tulak, shulk, total, total - input.receivedPaisa, labour + (total - raw))
+        }
         if (bos) {
             val tulak = input.tulakPaisaOverride ?: defaultTulakPaisa(grams)
             val total = gross + arat + tulak + shulk

@@ -28,9 +28,56 @@ class BuySellMathTest {
     }
 
     @Test
-    fun extraWeightAboveFiveKgAddsABilledBag() {
-        assertEquals(1_000, buy(0, 0, 6, 1000, 0).labourPaisa)
-        assertEquals(0, buy(0, 0, 5, 1000, 0).labourPaisa)
+    fun extraWeightAboveTwentyKgAddsABilledBag() {
+        // 10 bags, Rs 10 per bag: 4, 12, 20 kg extra are free; 21 kg bills one more bori
+        for ((extraKg, bori) in listOf(4L to 10L, 12L to 10L, 20L to 10L, 21L to 11L)) {
+            assertEquals(bori * 1_000, buy(10, 50, extraKg, 1000, 0).labourPaisa, "extra $extraKg kg")
+        }
+    }
+
+    private val normal = com.appwork.mandisamiti.domain.model.BillMode.NORMAL
+    private val bos = com.appwork.mandisamiti.domain.model.BillMode.BILL_OF_SUPPLY
+
+    @Test
+    fun sellBillsExtraWeight() {
+        // 10 bags x 50 kg + 21 kg = 5.21 qtl
+        val r = BuySellMath.calculateSell(SellMathInput(10, 50_000, 200_000, normal, 0, null, 0, extraWeightGrams = 21_000))
+        assertEquals(521_000, r.totalWeightGrams)
+        assertEquals(1_042_000, r.grossPaisa)
+    }
+
+    @Test
+    fun traderLabourAbsorbsRoundingHalfUp() {
+        // 1 qtl at Rs 1,000; Cash Memo tulak Rs 1; labour L paisa. raw total = 100_100 + L
+        fun total(l: Long) = BuySellMath.calculateSell(
+            SellMathInput(1, 100_000, 100_000, normal, 0, null, 0, traderLabourPaisaPerQuintal = l)
+        )
+        val down = total(49)
+        assertEquals(100_100, down.totalReceivablePaisa)
+        assertEquals(0, down.labourPaisa)
+        assertEquals(100, down.tulakPaisa)
+        val up = total(50)
+        assertEquals(100_200, up.totalReceivablePaisa)
+        assertEquals(100, up.labourPaisa)
+    }
+
+    @Test
+    fun traderLabourOnExtraWeightBillOfSupply() {
+        // 5.21 qtl, Rs 2,000, labour Rs 5/qtl, arat 1%, BoS: whole-rupee total, labour takes the paise
+        val r = BuySellMath.calculateSell(
+            SellMathInput(10, 50_000, 200_000, bos, 100, null, 0,
+                extraWeightGrams = 21_000, traderLabourPaisaPerQuintal = 500)
+        )
+        assertEquals(0L, r.totalReceivablePaisa % 100)
+        assertEquals(r.grossPaisa + r.aratPaisa + r.tulakPaisa + r.mandiShulkPaisa + r.labourPaisa, r.totalReceivablePaisa)
+        assertEquals(521, r.tulakPaisa)
+    }
+
+    @Test
+    fun noTraderLabourKeepsOldBehaviour() {
+        val r = BuySellMath.calculateSell(SellMathInput(8, 49_000, 390_100, normal, 150, null, 0))
+        assertEquals(0, r.labourPaisa)
+        assertEquals(1_552_500, r.totalReceivablePaisa)
     }
 
     @Test
@@ -103,7 +150,7 @@ class BuySellMathTest {
         val r = BuySellMath.calculateBuy(BuyMathInput(0, 50_000, 25_000, 200_000, 0, 500, 0))
         assertEquals(25_000, r.totalWeightGrams)
         assertEquals(50_000, r.grossPaisa)
-        assertEquals(500, r.labourPaisa) // 25 kg extra is above 5 kg: one billed bag
+        assertEquals(500, r.labourPaisa) // 25 kg extra is above 20 kg: one billed bag
     }
 
     @Test

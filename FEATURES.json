@@ -143,7 +143,7 @@
       "id": "labour-half-unit-rule",
       "description": "No labour charge on leftover weight below half a unit (50 kg unit: small leftover is free, more is charged)",
       "status": "failing",
-      "evidence": "Requested by Vivek 2026-11-15. Not started. Open question: cut-off is 25 kg (half of 50) or 20 kg as in his example."
+      "evidence": "Decided D1 2026-11-15: extra weight of 20 kg or less is free, above 20 kg bills +1 bori (Buy only). M1 done 2026-11-15: BuySellMath threshold 5 kg -> 20 kg; BuySellMathTest covers 4/12/20/21 kg on 10 bags = 10/10/10/11 bori. core-domain:jvmTest + composeApp:jvmTest pass. Saved Buy entries store labourPaisa, so old bills do not change. Not verified on device."
     },
     {
       "id": "bill-shows-extra-weight",
