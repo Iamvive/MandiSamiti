@@ -553,7 +553,7 @@ fun App(
                                 val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
                                 ttsManager.speak(speech, isSound)
                             } else {
-                                buyRepo.editBuyEntry(entry)
+                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) { buyRepo.editBuyEntry(entry) }
                             }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = if (entry.isKhaate) {
@@ -782,7 +782,7 @@ fun App(
                                 val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
                                 ttsManager.speak(speech, isSound)
                             } else {
-                                sellRepo.editSellEntry(entry)
+                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) { sellRepo.editSellEntry(entry) }
                             }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id)

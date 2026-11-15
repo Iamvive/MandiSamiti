@@ -37,4 +37,11 @@ class BuyKhaateFormTest {
         assertTrue(khaateForm().toUiState().isKhaate)
         assertEquals(600_000L, khaateForm().toUiState().payoutPaisa)
     }
+
+    @Test fun editingKhaateBuyKeepsKhaateFlag() {
+        val saved = khaateForm().toBuyEntry(shopId = "s")
+        val edit = BuyEntryFormState().apply { populateFrom(saved) }
+        assertTrue(edit.isKhaate)
+        assertTrue(edit.toBuyEntry(shopId = "s", existingEntry = saved).isKhaate)
+    }
 }

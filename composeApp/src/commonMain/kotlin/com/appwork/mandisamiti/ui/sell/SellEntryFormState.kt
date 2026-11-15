@@ -118,8 +118,10 @@ class SellEntryFormState(
 ) {
     /** Spare crop sold from the khaate pile: no party, charges or payment. Short stock only warns. */
     var isKhaate by mutableStateOf(false)
-    /** Khaate pile on hand in grams; the screen sets it from the stock register. */
-    var khaateOnHandGrams by mutableStateOf(0L)
+    /** Khaate pile on hand per crop (lowercase name to grams); the screen sets it from the stock register. */
+    var khaateOnHandByCrop by mutableStateOf<Map<String, Long>>(emptyMap())
+    /** Grams this entry already holds per crop when editing a khaate sale; the pile has them subtracted. */
+    private var khaateOwnByCrop by mutableStateOf<Map<String, Long>>(emptyMap())
     var buyerName by mutableStateOf("")
     var selectedBuyerId: String? by mutableStateOf(null)
     var phone by mutableStateOf("")
@@ -245,7 +247,12 @@ class SellEntryFormState(
     }
 
     val khaateShortWarning: Boolean
-        get() = isKhaate && lots.sumOf { it.toCropLot().totalWeightGrams } > khaateOnHandGrams
+        get() = isKhaate && lots.map { it.toCropLot() }
+            .groupBy { it.cropName.trim().ifBlank { "गेहूं" }.lowercase() }
+            .any { (crop, l) ->
+                l.sumOf { it.totalWeightGrams } >
+                    (khaateOnHandByCrop[crop] ?: 0L) + (khaateOwnByCrop[crop] ?: 0L)
+            }
 
     fun aggregatePreview(): SellAggregateResult {
         val calculatedLots = lots.map { it.toCropLot() }
@@ -456,6 +463,14 @@ class SellEntryFormState(
     }
 
     fun populateFrom(entry: SellEntry) {
+        fillFrom(entry)
+        khaateOwnByCrop = if (entry.isKhaate) {
+            lots.map { it.toCropLot() }.groupBy { it.cropName.trim().ifBlank { "गेहूं" }.lowercase() }
+                .mapValues { (_, l) -> l.sumOf { it.totalWeightGrams } }
+        } else emptyMap()
+    }
+
+    private fun fillFrom(entry: SellEntry) {
         isKhaate = entry.isKhaate
         selectedBuyerId = entry.buyerId
         buyerName = entry.buyerId

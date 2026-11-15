@@ -203,10 +203,10 @@ fun SellEntryScreen(
     val existingParty = BuyPartyResolver.existing(parties, formState.selectedBuyerId, formState.phone)
     val isOldPartyWithoutPhone = formState.selectedBuyerId != null && formState.phone.isBlank()
 
-    // Khaate pile for the crops on this slip (each crop counted once).
-    val khaatePileGrams = formState.lots.map { it.cropName.trim().ifBlank { "गेहूं" } }.distinct()
-        .sumOf { crop -> stockLines.firstOrNull { it.commodityId.equals(crop, ignoreCase = true) }?.khaateOnHandGrams ?: 0L }
-    SideEffect { formState.khaateOnHandGrams = khaatePileGrams }
+    // Khaate pile per crop on this slip.
+    val khaatePile = formState.lots.map { it.cropName.trim().ifBlank { "गेहूं" }.lowercase() }.distinct()
+        .associateWith { crop -> stockLines.firstOrNull { it.commodityId.equals(crop, ignoreCase = true) }?.khaateOnHandGrams ?: 0L }
+    SideEffect { if (formState.khaateOnHandByCrop != khaatePile) formState.khaateOnHandByCrop = khaatePile }
 
     Scaffold(
         topBar = {
@@ -261,7 +261,7 @@ fun SellEntryScreen(
 
                     val saveButtonHint = if (!formState.isKhaate && (formState.buyerName.isBlank() || formState.village.isBlank())) {
                         if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
-                    } else if (formState.phone.length < 10) {
+                    } else if (!formState.isKhaate && formState.phone.length < 10) {
                         if (isEnglish) "Enter 10-digit mobile number" else "10 अंकों का मोबाइल नंबर डालें"
                     } else {
                         validationReason ?: (if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा")
@@ -299,11 +299,14 @@ fun SellEntryScreen(
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            KhaateToggleRow(
-                isKhaate = formState.isKhaate,
-                isEnglish = isEnglish,
-                onChange = { formState.isKhaate = it },
-            )
+            // Locked once saved: an entry cannot switch between normal and khaate.
+            if (existingId == null) {
+                KhaateToggleRow(
+                    isKhaate = formState.isKhaate,
+                    isEnglish = isEnglish,
+                    onChange = { formState.isKhaate = it },
+                )
+            }
             if (formState.khaateShortWarning) {
                 KhaateShortWarningBanner(isEnglish = isEnglish)
             }

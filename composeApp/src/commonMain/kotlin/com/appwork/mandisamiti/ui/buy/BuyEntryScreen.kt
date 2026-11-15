@@ -399,11 +399,14 @@ fun BuyEntryScreenContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Khaate toggle: spare crop, no party, no charges
-            KhaateToggleRow(
-                isKhaate = state.isKhaate,
-                isEnglish = isEnglish,
-                onChange = { actions.onKhaateChange(it) },
-            )
+            // Locked once saved: an entry cannot switch between normal and khaate.
+            if (existingId == null) {
+                KhaateToggleRow(
+                    isKhaate = state.isKhaate,
+                    isEnglish = isEnglish,
+                    onChange = { actions.onKhaateChange(it) },
+                )
+            }
 
             // Section 1: Farmer block (Flat inputs, order: Mobile/Name lookup, Farmer name, Village)
             val existingParty = BuyPartyResolver.existing(parties, state.party.selectedPartyId, state.party.phone)
