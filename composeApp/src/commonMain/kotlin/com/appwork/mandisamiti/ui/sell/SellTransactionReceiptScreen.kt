@@ -14,6 +14,7 @@ import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
+import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.ui.components.ReceiptAmountRow
@@ -25,6 +26,7 @@ import com.appwork.mandisamiti.ui.components.ReceiptLotRow
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
 import com.appwork.mandisamiti.ui.components.ReceiptScaffold
 import com.appwork.mandisamiti.ui.parchi.TraderSlipCashSettlementSheet
+import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
 import kotlinx.serialization.json.Json
 
 @Composable
@@ -41,13 +43,36 @@ fun SellTransactionReceiptScreen(
     shopLicenceNo: String? = null,
     partyVillage: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
+    onPrint: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
     gallaCashPaisa: Long = 0L,
     onSettleCash: ((amountPaisa: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showSettlementSheet by remember { mutableStateOf(false) }
+    val name = buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry?.buyerId?.ifBlank { "खरीदार" } ?: "खरीदार"
+    val lots = try {
+        entry?.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
+    } catch (_: Exception) {
+        null
+    }
     val billText = entry?.let { buildSellBillText(it, buyerName, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo) } ?: ""
+    val billHtml = entry?.let {
+        val tempShop = ShopProfile(
+            id = "",
+            shopName = shopName,
+            ownerName = "",
+            mandiName = mandiName,
+            phoneNumber = "",
+            pinHash = "",
+            createdAt = 0L,
+            updatedAt = 0L,
+            address = shopAddress,
+            gstin = shopGstin,
+            licenceNo = shopLicenceNo
+        )
+        ReceiptHtmlRenderer.renderSellReceiptHtml(it, tempShop, name, lots ?: emptyList())
+    } ?: ""
     val isBos = entry?.billMode == BillMode.BILL_OF_SUPPLY
     ReceiptScaffold(
         title = when {
@@ -59,18 +84,14 @@ fun SellTransactionReceiptScreen(
         onEdit = if (entry != null && !entry.isVoid && onEdit != null) ({ onEdit(entry.id) }) else null,
         shareLabel = "व्हाट्सएप पर बिल भेजें",
         onShare = if (entry != null && onShareWhatsApp != null) ({ onShareWhatsApp(billText) }) else null,
+        onPrint = if (entry != null && onPrint != null) ({ onPrint(billHtml) }) else null,
+        printLabel = if (isEnglish) "Print bill" else "प्रिंट करें",
         modifier = modifier
     ) {
         if (entry == null) {
             Text("बिल लोड हो रहा है...")
             return@ReceiptScaffold
         }
-        val lots = try {
-            entry.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
-        } catch (_: Exception) {
-            null
-        }
-        val name = buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry.buyerId.ifBlank { "खरीदार" }
         val meta = listOfNotNull(
             "#${slipLabel(entry.slipNo, entry.id)}",
             receiptDateTime(entry.entryDate),

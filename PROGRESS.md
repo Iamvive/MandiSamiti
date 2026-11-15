@@ -273,3 +273,30 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
 - Vivek reported the device check done and all five passed: `labour-half-unit-rule`, `trader-sell-labour-per-quintal`, `bill-shows-extra-weight`, `sell-validates-stock`, `asal-rename-and-opening-cash-chip`. All five are now `passing` in `FEATURES.json`.
 - Evidence is Vivek's report; no screenshots or logs were captured.
 - Left: `print-all-bills` (M5), Khata explainers (2), `input-audit-medium-low`, `offsite-backup-restore-drill`.
+
+## 2026-11-15 (Gemini / Antigravity): M5 Print on All Bills & Input Audit Group B
+- **Milestone 5 (P1) Print (`print-all-bills`)**:
+  - Implemented multiplatform `ReceiptPrinter` expect/actual:
+    - `androidMain`: Uses `PrintManager` with `PrintAttributes.MediaSize.ISO_A5` and hidden `WebView.createPrintDocumentAdapter`, unwrapping `Activity` from `ContextWrapper`.
+    - `iosMain`: Uses `UIPrintInteractionController.sharedPrintController()` with `UIMarkupTextPrintFormatter`.
+    - `jvmMain`: Multiplatform test stub.
+  - Implemented `ReceiptHtmlRenderer` in `commonMain` generating high-contrast ISO A5 formatted slips (`@page { size: A5 portrait; margin: 10mm; }`) with shop header, GSTIN/licence, itemized extra weight equations (`10 × 50 + 21 = 5.21 क्विंटल`), deductions, and whole-rupee trader labour.
+  - Added "प्रिंट करें" button alongside Share on `BuyTransactionReceiptScreen`, `SellTransactionReceiptScreen`, `ReceiptPreviewScreen`, and `ReceiptScaffold`.
+  - Tested: `ReceiptHtmlRendererTest` (3 passing), `ReceiptPrintIntegrationTest` (3 passing).
+  - Verified live on `emulator-5554`: Tapping "प्रिंट करें" on Buy Slip #2 and Sell Bill #1 launches `com.android.printspooler/.ui.PrintActivity` with `copies 1, paper size ISO A5, preview_page 1/1`. Screenshots: `scratch/test_evidence/print_dialog_a5.png` and `scratch/test_evidence/print_dialog_sell_a5.png`.
+- **Input Audit Group B (P2) (`input-audit-medium-low`)**:
+  - Created reusable `MandiKeyboard` presets (`Name`, `Note`, `Search`, `Phone`, `Pin`, `Identifier`, `Whole`, `Decimal`).
+  - **Settings**: Applied `MandiKeyboard.Decimal` to all 5 trade rates in `TradeSettingsDialog`; applied `MandiKeyboard.Name` and `MandiKeyboard.Identifier` to Shop Profile edit fields.
+  - **Daily Cash Register**: Applied `MandiKeyboard.Decimal` to Cash In/Out, Opening Cash Float, and Cash to Home amount inputs; `MandiKeyboard.Note` to notes; `MandiKeyboard.Whole` to denomination counts in `DayClosingSheet`.
+  - **Lend & Repay**: Applied `MandiKeyboard.Decimal` + `singleLine = true` to Loan Amount, Interest Rate, Weight; `MandiKeyboard.Whole` to Bags; `MandiKeyboard.Name` to Commodity; `MandiKeyboard.Note` to Notes; `MandiKeyboard.Search` to Search box in `LendTransactionsListScreen`; `MandiKeyboard.Decimal` to Repay Loan dialog.
+  - **Expense**: Applied `MandiKeyboard.Name` to Description; `MandiKeyboard.Decimal` + `singleLine = true` to Amount; `MandiKeyboard.Note` to Notes.
+  - **Stock**: Applied `MandiKeyboard.Search` to search box; `MandiKeyboard.Whole` to Physical Bags and Farmer Custody; `MandiKeyboard.Decimal` to Bag Weight.
+  - Tested: `GroupBInputAuditTest` (2 passing).
+  - Verified live on `emulator-5554`: `TradeSettingsDialog` rate fields open numeric decimal keyboard (`inputType=0x2002`); Galla "नकद जमा" opens numeric decimal keyboard (`inputType=0x2002`). Screenshots: `scratch/test_evidence/settings_trade_rates_keyboard.png` and `scratch/test_evidence/cash_in_decimal_keyboard.png`.
+- **Regression Testing**:
+  - Multiplatform JVM test suites pass: `./gradlew jvmTest` (BUILD SUCCESSFUL).
+  - Backend pytest passes: 130 passed in 18.35s.
+- **Trackers**:
+  - `print-all-bills` marked `passing`.
+  - `input-audit-medium-low` evidence updated with Group B completions.
+

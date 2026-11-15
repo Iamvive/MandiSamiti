@@ -7,6 +7,7 @@ import androidx.core.view.WindowCompat
 import com.appwork.mandisamiti.data.auth.AndroidSessionStore
 import com.appwork.mandisamiti.data.auth.AuthApi
 import com.appwork.mandisamiti.data.auth.mandiHttpClient
+import com.appwork.mandisamiti.platform.ReceiptPrinter
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.platform.apiBaseUrl
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
         }
         ttsManager = SoundboxTtsManager(applicationContext)
         val whatsAppShareManager = WhatsAppShareManager(applicationContext)
+        val receiptPrinter = ReceiptPrinter(this)
         val sessionStore = AndroidSessionStore(applicationContext)
         if (sessionStore.current() == null) {
             val existingShop = database.appDatabaseQueries.getShopProfile().executeAsOneOrNull()
@@ -45,7 +47,8 @@ class MainActivity : ComponentActivity() {
                 whatsAppShareManager = whatsAppShareManager,
                 sessionStore = sessionStore,
                 authApi = authApi,
-                syncScheduler = syncScheduler
+                syncScheduler = syncScheduler,
+                receiptPrinter = receiptPrinter
             )
         }
     }

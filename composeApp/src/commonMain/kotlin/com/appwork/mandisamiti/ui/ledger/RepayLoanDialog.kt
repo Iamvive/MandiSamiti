@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -92,7 +94,7 @@ fun RepayLoanDialog(
                     value = amountInput,
                     onValueChange = { v -> amountInput = v.filter { it.isDigit() }.take(9) },
                     label = { Text(if (isEnglish) "Amount received (₹)" else "प्राप्त राशि (₹)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = MandiKeyboard.Decimal,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -103,7 +105,7 @@ fun RepayLoanDialog(
                     supportingText = if (interestChanged) {
                         { Text((if (isEnglish) "Calculated " else "हिसाब से ") + rupees(calculatedInterestPaisa), color = MandiTextMuted) }
                     } else null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = MandiKeyboard.Decimal.copy(imeAction = ImeAction.Done),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

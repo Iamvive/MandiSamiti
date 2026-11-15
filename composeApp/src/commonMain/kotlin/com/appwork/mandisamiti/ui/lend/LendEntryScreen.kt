@@ -59,6 +59,7 @@ import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.MandiFlatTextField
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import com.appwork.mandisamiti.ui.components.MandiPartyLookupField
 import com.appwork.mandisamiti.ui.components.NewPartyConfirmDialog
 import com.appwork.mandisamiti.ui.components.TypedPartyCheck
@@ -314,7 +315,8 @@ fun LendEntryScreen(
                     value = formState.amountRupees,
                     onValueChange = { formState.amountRupees = it },
                     label = { Text(if (isEnglish) "Loan Amount (₹) *" else "उधार राशि (रु) *") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    keyboardOptions = MandiKeyboard.Decimal,
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -322,7 +324,8 @@ fun LendEntryScreen(
                     onValueChange = { formState.rateInput = it },
                     label = { Text(if (isEnglish) "Interest rate (% per month)" else "ब्याज दर (% प्रति माह)") },
                     isError = formState.parsedRate == null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    keyboardOptions = MandiKeyboard.Decimal,
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
@@ -330,7 +333,7 @@ fun LendEntryScreen(
                     value = formState.commodityName,
                     onValueChange = { formState.commodityName = it },
                     label = { Text(if (isEnglish) "Crop / Commodity Name (e.g. Wheat, Gram) *" else "जिंस / फसल का नाम (उदा. गेहूं, चना) *") },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                    keyboardOptions = MandiKeyboard.Name,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -339,14 +342,16 @@ fun LendEntryScreen(
                         value = formState.bagsCount,
                         onValueChange = { formState.bagsCount = it },
                         label = { Text(if (isEnglish) "Bags Count" else "बोरी संख्या") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardOptions = MandiKeyboard.Whole,
+                        singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = formState.weightKg,
                         onValueChange = { formState.weightKg = it },
                         label = { Text(if (isEnglish) "Total Weight (kg) *" else "कुल वजन (किग्रा) *") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                        keyboardOptions = MandiKeyboard.Decimal,
+                        singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -418,10 +423,12 @@ fun LendEntryScreen(
             }
 
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                keyboardOptions = MandiKeyboard.Note,
                 value = formState.notes,
                 onValueChange = { formState.notes = it },
                 label = { Text(if (isEnglish) "Notes / Details (Optional)" else "टिप्पणी / विवरण (वैकल्पिक)") },
+                minLines = 2,
+                maxLines = 4,
                 modifier = Modifier.fillMaxWidth()
             )
 

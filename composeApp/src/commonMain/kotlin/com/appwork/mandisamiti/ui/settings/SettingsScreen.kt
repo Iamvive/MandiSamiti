@@ -70,6 +70,7 @@ import androidx.compose.material3.OutlinedTextField
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TradeSettings
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 
 @Composable
 fun SettingsScreen(
@@ -132,6 +133,7 @@ fun SettingsScreen(
                         onValueChange = { editShopName = it },
                         label = { Text(if (isEnglish) "Shop Name *" else "दुकान का नाम *") },
                         singleLine = true,
+                        keyboardOptions = MandiKeyboard.Name,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -139,6 +141,7 @@ fun SettingsScreen(
                         onValueChange = { editOwnerName = it },
                         label = { Text(if (isEnglish) "Owner Name *" else "मालिक का नाम *") },
                         singleLine = true,
+                        keyboardOptions = MandiKeyboard.Name,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -146,6 +149,7 @@ fun SettingsScreen(
                         onValueChange = { editMandiName = it },
                         label = { Text(if (isEnglish) "Mandi Name *" else "मंडी का नाम *") },
                         singleLine = true,
+                        keyboardOptions = MandiKeyboard.Name,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -153,6 +157,7 @@ fun SettingsScreen(
                         onValueChange = { editAddress = it },
                         label = { Text(if (isEnglish) "Address (Optional)" else "दुकान का पता (वैकल्पिक)") },
                         singleLine = true,
+                        keyboardOptions = MandiKeyboard.Name,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -168,6 +173,7 @@ fun SettingsScreen(
                         supportingText = gstinError?.let { err -> { Text(err, color = MandiRedPayable, fontSize = 11.sp) } },
                         label = { Text(if (isEnglish) "GSTIN (15 chars, Optional)" else "जीएसटीआईएन (15 अक्षर, वैकल्पिक)") },
                         singleLine = true,
+                        keyboardOptions = MandiKeyboard.Identifier,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -175,6 +181,7 @@ fun SettingsScreen(
                         onValueChange = { editLicenceNo = it },
                         label = { Text(if (isEnglish) "Mandi Licence No. (Optional)" else "मंडी लाइसेंस नं. (वैकल्पिक)") },
                         singleLine = true,
+                        keyboardOptions = MandiKeyboard.Identifier,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -266,7 +273,7 @@ fun SettingsScreen(
                         color = MandiTextSecondary
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = editFarmerCommInput,
                         onValueChange = { editFarmerCommInput = it },
                         label = { Text(if (isEnglish) "Farmer Commission (%)" else "किसान आढ़त (%)") },
@@ -274,7 +281,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = editBuyerCommInput,
                         onValueChange = { editBuyerCommInput = it },
                         label = { Text(if (isEnglish) "Merchant Commission (%)" else "व्यापारी आढ़त (%)") },
@@ -282,7 +289,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = editCustomerCommInput,
                         onValueChange = { editCustomerCommInput = it },
                         label = { Text(if (isEnglish) "Customer Commission (%)" else "ग्राहक आढ़त (%)") },
@@ -290,7 +297,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = editLabourInput,
                         onValueChange = { editLabourInput = it },
                         label = { Text(if (isEnglish) "Labour Charge (₹ per bag)" else "हम्माली / पल्लेदारी (₹ प्रति बोरी)") },
@@ -298,7 +305,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = editTraderLabourInput,
                         onValueChange = { editTraderLabourInput = it },
                         label = { Text(if (isEnglish) "Trader Labour (₹ per quintal)" else "व्यापारी हम्माली (₹ प्रति क्विंटल)") },

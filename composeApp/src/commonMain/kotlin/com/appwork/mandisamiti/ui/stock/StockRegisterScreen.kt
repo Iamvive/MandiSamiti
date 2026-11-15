@@ -55,6 +55,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -978,7 +979,7 @@ private fun StockReconciliationSheet(
                     value = physicalBagsInput,
                     onValueChange = { physicalBagsInput = it.filter { ch -> ch.isDigit() } },
                     label = { Text(if (isEnglish) "Physical Bags" else "गोदाम में असली बोरी") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    keyboardOptions = MandiKeyboard.Whole,
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1083,7 +1084,7 @@ private fun StockReconciliationSheet(
                     value = bagWeightInput,
                     onValueChange = { bagWeightInput = it.filter { ch -> ch.isDigit() } },
                     label = { Text(if (isEnglish) "Bag Weight (Kg)" else "बोरी वजन (कि.ग्रा.)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    keyboardOptions = MandiKeyboard.Decimal,
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1099,7 +1100,7 @@ private fun StockReconciliationSheet(
                     value = farmerCustodyInput,
                     onValueChange = { farmerCustodyInput = it.filter { ch -> ch.isDigit() } },
                     label = { Text(if (isEnglish) "Farmer Custody (Bags)" else "किसान अमानत (बोरी)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardOptions = MandiKeyboard.Whole.copy(imeAction = ImeAction.Done),
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(

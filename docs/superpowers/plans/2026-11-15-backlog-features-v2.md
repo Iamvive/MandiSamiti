@@ -1,6 +1,6 @@
 # MandiSamiti Backlog Features (v2) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implement Milestone 5 (Receipt Printing on A5 via expect/actual `ReceiptPrinter` and UI Print buttons on every receipt) and Input Audit Group B (Lend, Expense, Stock, Daily Cash Register, and Settings keyboard/input ergonomics and validation).
 
@@ -98,7 +98,7 @@ composeApp/
 - Produces: `ReceiptPrinter.printHtml(jobName: String, htmlContent: String)`
 - Consumes: Platform context on Android (`Context.PRINT_SERVICE`), `UIPrintInteractionController` on iOS.
 
-- [ ] **Step 1: Write common expect class `ReceiptPrinter`**
+- [x] **Step 1: Write common expect class `ReceiptPrinter`**
   ```kotlin
   package com.appwork.mandisamiti.platform
 
@@ -107,24 +107,24 @@ composeApp/
   }
   ```
 
-- [ ] **Step 2: Implement Android `actual class ReceiptPrinter`**
+- [x] **Step 2: Implement Android `actual class ReceiptPrinter`**
   - Use `android.print.PrintManager` and a hidden `android.webkit.WebView`.
   - On `onPageFinished`, create print adapter via `webView.createPrintDocumentAdapter(jobName)`.
   - Configure `PrintAttributes` with `PrintAttributes.MediaSize.ISO_A5`.
   - Handle main-thread dispatching safely.
 
-- [ ] **Step 3: Implement iOS `actual class ReceiptPrinter`**
+- [x] **Step 3: Implement iOS `actual class ReceiptPrinter`**
   - Use `platform.UIKit.UIPrintInteractionController.sharedPrintController()`.
   - Set `UIMarkupTextPrintFormatter(htmlContent)`.
   - Present print sheet animated.
 
-- [ ] **Step 4: Implement JVM `actual class ReceiptPrinter`**
+- [x] **Step 4: Implement JVM `actual class ReceiptPrinter`**
   - Provide a safe stub for JVM/desktop and tests (`println` logging or capturing last printed HTML for test assertions).
 
-- [ ] **Step 5: Instantiate and wire in `MainActivity.kt`, `main.kt`, and `App.kt`**
+- [x] **Step 5: Instantiate and wire in `MainActivity.kt`, `main.kt`, and `App.kt`**
   - Pass `receiptPrinter: ReceiptPrinter` into `App(...)`.
 
-- [ ] **Step 6: Verify compilation across platforms**
+- [x] **Step 6: Verify compilation across platforms**
   - Run `./gradlew :composeApp:compileKotlinJvm :composeApp:compileDebugKotlinAndroid`.
 
 ---
@@ -138,12 +138,12 @@ composeApp/
 - Produces: `ReceiptHtmlRenderer.renderBuyReceiptHtml(entry: BuyEntry, shop: ShopProfile, farmerName: String): String`
 - Produces: `ReceiptHtmlRenderer.renderSellReceiptHtml(entry: SellEntry, shop: ShopProfile, buyerName: String): String`
 
-- [ ] **Step 1: Write unit tests in `ReceiptHtmlRendererTest.kt`**
+- [x] **Step 1: Write unit tests in `ReceiptHtmlRendererTest.kt`**
   - Test Buy receipt HTML includes shop name, GSTIN, licence, equation `10 × 50 + 21 = 5.21 क्विंटल × ₹2,000`, gross, deductions, and A5 CSS `@page { size: A5 portrait; }`.
   - Test Sell receipt HTML includes trader labour per quintal and whole-rupee total.
   - Run test to ensure it fails before implementation.
 
-- [ ] **Step 2: Implement `ReceiptHtmlRenderer.kt`**
+- [x] **Step 2: Implement `ReceiptHtmlRenderer.kt`**
   - Clean HTML5 template with inline CSS for print styling:
     ```html
     <style>
@@ -158,7 +158,7 @@ composeApp/
     ```
   - Map `BuyEntry` and `SellEntry` fields into the table template.
 
-- [ ] **Step 3: Run unit tests and confirm pass**
+- [x] **Step 3: Run unit tests and confirm pass**
   - Run `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.slip.ReceiptHtmlRendererTest"`.
 
 ---
@@ -176,23 +176,23 @@ composeApp/
 - `BuyTransactionReceiptScreen`: Add Print button in bottom action bar.
 - `SellTransactionReceiptScreen`: Wire `onPrint` callback to print bill HTML.
 
-- [ ] **Step 1: Update `ReceiptParts.kt` (`ReceiptScaffold`)**
+- [x] **Step 1: Update `ReceiptParts.kt` (`ReceiptScaffold`)**
   - Add `onPrint: (() -> Unit)? = null` and `printLabel: String = "प्रिंट करें"`.
   - Place Print button next to Share in a two-column `Row` or stacked bar with vector icon `Icons.Default.Print`.
 
-- [ ] **Step 2: Update `BuyTransactionReceiptScreen.kt`**
+- [x] **Step 2: Update `BuyTransactionReceiptScreen.kt`**
   - In bottom action bar, add Print button calling `onPrint(slipHtml)`.
 
-- [ ] **Step 3: Update `SellTransactionReceiptScreen.kt`**
+- [x] **Step 3: Update `SellTransactionReceiptScreen.kt`**
   - Pass `onPrint = { onPrint(billHtml) }` to `ReceiptScaffold`.
 
-- [ ] **Step 4: Update `ReceiptPreviewScreen.kt`**
+- [x] **Step 4: Update `ReceiptPreviewScreen.kt`**
   - Add Print button in the action row.
 
-- [ ] **Step 5: Wire print lambdas in `App.kt`**
+- [x] **Step 5: Wire print lambdas in `App.kt`**
   - Connect screen `onPrint` events to `receiptPrinter.printHtml(jobName, html)`.
 
-- [ ] **Step 6: Write integration test in `ReceiptPrintIntegrationTest.kt`**
+- [x] **Step 6: Write integration test in `ReceiptPrintIntegrationTest.kt`**
   - Verify that invoking the print callbacks passes non-empty HTML containing A5 CSS and correct amounts.
   - Run `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.print.*"`.
 
@@ -204,7 +204,7 @@ composeApp/
 **Files:**
 - Create: `composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/components/MandiKeyboard.kt`
 
-- [ ] **Step 1: Define `MandiKeyboard` presets object**
+- [x] **Step 1: Define `MandiKeyboard` presets object**
   ```kotlin
   package com.appwork.mandisamiti.ui.components
 
@@ -269,9 +269,9 @@ composeApp/
 - Edit Shop Profile dialog: Shop Name, Owner Name, Mandi Name, Address $\rightarrow$ `MandiKeyboard.Name`; GSTIN and Licence No $\rightarrow$ `MandiKeyboard.Identifier` (Ascii, autoCorrect=false, uppercase).
 - All single-line fields have `singleLine = true`.
 
-- [ ] **Step 1: Apply `MandiKeyboard.Decimal` to all 5 rate inputs in `SettingsScreen.kt`**
-- [ ] **Step 2: Apply `MandiKeyboard.Identifier` to GSTIN & licence fields in Shop Profile edit dialog**
-- [ ] **Step 3: Verify with unit test in `SettingsShopProfileEditTest.kt`**
+- [x] **Step 1: Apply `MandiKeyboard.Decimal` to all 5 rate inputs in `SettingsScreen.kt`**
+- [x] **Step 2: Apply `MandiKeyboard.Identifier` to GSTIN & licence fields in Shop Profile edit dialog**
+- [x] **Step 3: Verify with unit test in `SettingsShopProfileEditTest.kt`**
 
 ---
 
@@ -289,10 +289,10 @@ composeApp/
 - Physical cash count: `MandiKeyboard.Whole`.
 - Reason / Note fields: `MandiKeyboard.Note`, `singleLine = true`.
 
-- [ ] **Step 1: Update Cash In & Cash Out dialogs with `MandiKeyboard.Decimal` and `singleLine = true`**
-- [ ] **Step 2: Update Opening Cash Float & Cash to Home dialogs with `MandiKeyboard.Decimal`**
-- [ ] **Step 3: Update Day Close denomination counts with `MandiKeyboard.Whole`**
-- [ ] **Step 4: Verify with unit tests in `DailyRegisterViewModelTest.kt`**
+- [x] **Step 1: Update Cash In & Cash Out dialogs with `MandiKeyboard.Decimal` and `singleLine = true`**
+- [x] **Step 2: Update Opening Cash Float & Cash to Home dialogs with `MandiKeyboard.Decimal`**
+- [x] **Step 3: Update Day Close denomination counts with `MandiKeyboard.Whole`**
+- [x] **Step 4: Verify with unit tests in `DailyRegisterViewModelTest.kt`**
 
 ---
 
@@ -318,10 +318,10 @@ composeApp/
   - Amount received: `singleLine = true`, `MandiKeyboard.Decimal`, `imeAction = ImeAction.Next`.
   - Interest: `singleLine = true`, `MandiKeyboard.Decimal`, `imeAction = ImeAction.Done`.
 
-- [ ] **Step 1: Update `LendEntryScreen.kt` fields with `singleLine = true` and `MandiKeyboard` presets**
-- [ ] **Step 2: Update `LendTransactionsListScreen.kt` search box and return dialogs**
-- [ ] **Step 3: Update `RepayLoanDialog.kt` amount and interest inputs**
-- [ ] **Step 4: Verify with `LendFlowTest.kt` and `RepayPreviewTest.kt`**
+- [x] **Step 1: Update `LendEntryScreen.kt` fields with `singleLine = true` and `MandiKeyboard` presets**
+- [x] **Step 2: Update `LendTransactionsListScreen.kt` search box and return dialogs**
+- [x] **Step 3: Update `RepayLoanDialog.kt` amount and interest inputs**
+- [x] **Step 4: Verify with `LendFlowTest.kt` and `RepayPreviewTest.kt`**
 
 ---
 
@@ -339,27 +339,27 @@ composeApp/
   - Godown search: `singleLine = true`, `MandiKeyboard.Search`, `KeyboardActions(onSearch = { keyboardController?.hide() })`.
   - Stock adjustment dialog (bags & weight): `singleLine = true`, `MandiKeyboard.Decimal`.
 
-- [ ] **Step 1: Update `ExpenseEntryScreen.kt` with `singleLine = true` and `MandiKeyboard` presets**
-- [ ] **Step 2: Update `StockRegisterScreen.kt` search and adjustment dialog inputs**
-- [ ] **Step 3: Add `GroupBInputAuditTest.kt` verifying all audited fields reject multi-line Enter and specify numeric/decimal types**
-- [ ] **Step 4: Run `./gradlew :composeApp:jvmTest`**
+- [x] **Step 1: Update `ExpenseEntryScreen.kt` with `singleLine = true` and `MandiKeyboard` presets**
+- [x] **Step 2: Update `StockRegisterScreen.kt` search and adjustment dialog inputs**
+- [x] **Step 3: Add `GroupBInputAuditTest.kt` verifying all audited fields reject multi-line Enter and specify numeric/decimal types**
+- [x] **Step 4: Run `./gradlew :composeApp:jvmTest`**
 
 ---
 
 ## Phase 3: Verification & Emulator Delivery
 
 ### Task 3.1: Full Automated Test Suite Verification
-- [ ] Run `./gradlew :core-domain:jvmTest :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest`.
-- [ ] Run backend pytest: `cd backend && PYTHONPATH=. .venv/bin/pytest`.
-- [ ] Confirm all tests pass.
+- [x] Run `./gradlew :core-domain:jvmTest :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest`.
+- [x] Run backend pytest: `cd backend && PYTHONPATH=. .venv/bin/pytest`.
+- [x] Confirm all tests pass.
 
 ### Task 3.2: Live Emulator Verification (`emulator-5554`)
-- [ ] Build & install debug APK: `./gradlew :composeApp:installDebug`.
-- [ ] **Verify Print (M5)**:
+- [x] Build & install debug APK: `./gradlew :composeApp:installDebug`.
+- [x] **Verify Print (M5)**:
   - Open Buy Slip #2. Verify **"प्रिंट करें"** button is present beside Share. Tap it; confirm Android print framework dialog appears configured for A5.
   - Open Sell Bill #1. Verify **"प्रिंट करें"** button is present beside Share. Tap it; confirm Android print framework dialog appears.
   - Capture screenshot of print dialog.
-- [ ] **Verify Input Audit Group B**:
+- [x] **Verify Input Audit Group B**:
   - Open Settings $\rightarrow$ tap "दरें बदलें": verify numeric keypad opens for rates (not letters keyboard).
   - Open Galla $\rightarrow$ tap "नकद जमा": verify numeric decimal keypad opens.
   - Open Lend $\rightarrow$ tap New Loan: verify single-line numeric inputs.
@@ -368,8 +368,8 @@ composeApp/
   - Capture layout dumps and screenshots.
 
 ### Task 3.3: Sync Trackers & Commit
-- [ ] Update `FEATURES.json`:
+- [x] Update `FEATURES.json`:
   - `print-all-bills`: update status to `passing` with emulator evidence.
   - `input-audit-medium-low`: update evidence with Group B audited screens.
-- [ ] Append entry to `PROGRESS.md` with test evidence, numbers, and screenshot references.
-- [ ] Git commit cleanly following CLAUDE.md contract.
+- [x] Append entry to `PROGRESS.md` with test evidence, numbers, and screenshot references.
+- [x] Git commit cleanly following CLAUDE.md contract.

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import com.appwork.mandisamiti.ui.theme.*
 
 /** Day-closing bottom sheet. Input state is owned by the screen (it is keyed on the selected date). */
@@ -81,7 +82,7 @@ internal fun DayClosingSheet(
                 value = cashInput,
                 onValueChange = onCashInputChange,
                 readOnly = useDenominations,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = MandiKeyboard.Whole,
                 isError = cashInput.isNotEmpty() && countedRs == null,
                 label = { Text(if (isEnglish) "Counted cash ₹" else "गिनी हुई नकदी ₹") },
                 singleLine = true,
@@ -145,7 +146,7 @@ internal fun DayClosingSheet(
                                         onValueChange = { onDenominationChange(denomination, it) },
                                         label = { Text("₹$denomination × " + if (isEnglish) "qty" else "संख्या", fontSize = 9.sp) },
                                         singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        keyboardOptions = MandiKeyboard.Whole,
                                         modifier = Modifier.width(82.dp).heightIn(min = 40.dp),
                                         textStyle = androidx.compose.ui.text.TextStyle(
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -188,6 +189,7 @@ internal fun DayClosingSheet(
                     value = reason,
                     onValueChange = onReasonChange,
                     label = { Text(if (isEnglish) "Reason (optional)" else "कारण (वैकल्पिक)") },
+                    keyboardOptions = MandiKeyboard.Note,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

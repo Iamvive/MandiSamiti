@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.ExpenseCategory
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import com.appwork.mandisamiti.domain.model.ExpenseEntry
 import com.appwork.mandisamiti.domain.model.ExpensePaymentMode
 import com.appwork.mandisamiti.platform.MandiBackHandler
@@ -134,6 +135,7 @@ fun ExpenseEntryScreen(
                 onValueChange = { description = it },
                 label = { Text(if (isEnglish) "Expense Description *" else "खर्च का विवरण *") },
                 singleLine = true,
+                keyboardOptions = MandiKeyboard.Name,
                 isError = description.isBlank() && amount.isNotBlank(),
                 supportingText = {
                     Text(if (isEnglish) "This label will appear in Galla Rokad." else "यह नाम गल्ला रोकड़ में दिखेगा।")
@@ -145,7 +147,8 @@ fun ExpenseEntryScreen(
                 value = amount,
                 onValueChange = { amount = it },
                 label = { Text(if (isEnglish) "Expense Amount (₹) *" else "खर्च राशि (रु) *") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = MandiKeyboard.Decimal,
+                singleLine = true,
                 isError = amount.isNotBlank() && parsedAmount <= 0L,
                 supportingText = if (amount.isNotBlank() && parsedAmount <= 0L) {
                     { Text(if (isEnglish) "Enter an amount greater than zero." else "राशि शून्य से अधिक दर्ज करें।") }
@@ -157,7 +160,9 @@ fun ExpenseEntryScreen(
                 value = note,
                 onValueChange = { note = it },
                 label = { Text(if (isEnglish) "Note (Optional)" else "विवरण / टिप्पणी (वैकल्पिक)") },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                keyboardOptions = MandiKeyboard.Note.copy(imeAction = ImeAction.Done),
+                minLines = 2,
+                maxLines = 4,
                 modifier = Modifier.fillMaxWidth()
             )
 

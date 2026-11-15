@@ -18,7 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -129,8 +132,10 @@ fun LendTransactionsListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            val keyboardController = LocalSoftwareKeyboardController.current
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                keyboardOptions = MandiKeyboard.Search,
+                keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
                 singleLine = true,
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -439,7 +444,8 @@ private fun RepaymentBottomSheet(
                     onValueChange = { amountText = it },
                     label = { Text("वापसी राशि (रु) *") },
                     isError = isOverAmount,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = MandiKeyboard.Decimal,
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (isOverAmount) {
@@ -470,7 +476,8 @@ private fun RepaymentBottomSheet(
                         value = bagsText,
                         onValueChange = { bagsText = it },
                         label = { Text("बोरी संख्या") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = MandiKeyboard.Whole,
+                        singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
@@ -478,7 +485,8 @@ private fun RepaymentBottomSheet(
                         onValueChange = { weightText = it },
                         label = { Text("वापसी वजन (किग्रा) *") },
                         isError = isOverWeight,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
+                        singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -492,10 +500,11 @@ private fun RepaymentBottomSheet(
             }
 
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                keyboardOptions = MandiKeyboard.Note,
                 value = note,
                 onValueChange = { note = it },
                 label = { Text("नोट / विवरण (वैकल्पिक)") },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 

@@ -42,6 +42,7 @@ import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.platform.apiBaseUrl
+import com.appwork.mandisamiti.platform.ReceiptPrinter
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
 import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.platform.rememberCameraSlipPicker
@@ -58,6 +59,7 @@ import com.appwork.mandisamiti.ui.register.DailyRegisterViewModel
 import com.appwork.mandisamiti.ui.settings.LogoutResult
 import com.appwork.mandisamiti.ui.settings.LogoutUseCase
 import com.appwork.mandisamiti.ui.settings.logoutBlockedMessage
+import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
 import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncViewModel
@@ -124,6 +126,7 @@ fun App(
     sessionStore: SessionStore,
     authApi: AuthApi,
     syncScheduler: SyncScheduler = remember { NoOpSyncScheduler() },
+    receiptPrinter: ReceiptPrinter? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val shopRepo = remember { OfflineFirstShopProfileRepository(database) }
@@ -429,6 +432,13 @@ fun App(
                         deal = screen.deal,
                         whatsAppShareManager = whatsAppShareManager,
                         ttsManager = ttsManager,
+                        onPrint = receiptPrinter?.let { printer ->
+                            {
+                                val job = "सौदा_${screen.deal.id.takeLast(6)}"
+                                val html = ReceiptHtmlRenderer.renderDealReceiptHtml(screen.deal, profile, screen.farmer, screen.buyer)
+                                printer.printHtml(job, html)
+                            }
+                        },
                         onNavigateBack = { currentScreen = Screen.Home }
                     )
                 }
@@ -677,6 +687,12 @@ fun App(
                         }
                     },
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onPrint = receiptPrinter?.let { printer ->
+                        { html ->
+                            val job = "पर्चा_${screen.id.takeLast(6)}"
+                            printer.printHtml(job, html)
+                        }
+                    },
                     onEdit = { currentScreen = Screen.BuyEntry(it) },
                     onNewBuy = { currentScreen = Screen.BuyEntry(null) },
                     isEnglish = tradeSettings?.isEnglish ?: false,
@@ -851,6 +867,12 @@ fun App(
                         }
                     },
                     onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onPrint = receiptPrinter?.let { printer ->
+                        { html ->
+                            val job = "बिल_${screen.id.takeLast(6)}"
+                            printer.printHtml(job, html)
+                        }
+                    },
                     onEdit = { currentScreen = Screen.SellEntry(it) },
                     onBack = { currentScreen = screen.backTarget() }
                 )

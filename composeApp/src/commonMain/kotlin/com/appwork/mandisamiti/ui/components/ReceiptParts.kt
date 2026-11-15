@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,6 +57,8 @@ fun ReceiptScaffold(
     shareLabel: String,
     onShare: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onPrint: (() -> Unit)? = null,
+    printLabel: String = "प्रिंट करें",
     content: @Composable () -> Unit
 ) {
     Scaffold(
@@ -85,7 +89,49 @@ fun ReceiptScaffold(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             content()
-            if (onShare != null) {
+            if (onPrint != null && onShare != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onPrint,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiSurface,
+                            contentColor = MandiTextPrimary
+                        ),
+                        border = BorderStroke(1.dp, MandiBorder)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(printLabel, modifier = Modifier.padding(start = 6.dp))
+                    }
+                    Button(
+                        onClick = onShare,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiPrimaryAction,
+                            contentColor = MandiPrimaryActionText
+                        )
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(shareLabel, modifier = Modifier.padding(start = 6.dp))
+                    }
+                }
+            } else if (onPrint != null) {
+                Button(
+                    onClick = onPrint,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MandiSurface,
+                        contentColor = MandiTextPrimary
+                    ),
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(printLabel, modifier = Modifier.padding(start = 8.dp))
+                }
+            } else if (onShare != null) {
                 Button(
                     onClick = onShare,
                     modifier = Modifier.fillMaxWidth().height(48.dp),

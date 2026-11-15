@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -59,6 +60,7 @@ fun ReceiptPreviewScreen(
     deal: Deal,
     whatsAppShareManager: WhatsAppShareManager,
     ttsManager: SoundboxTtsManager,
+    onPrint: (() -> Unit)? = null,
     onNavigateBack: () -> Unit
 ) {
     val formattedSlipText = DigitalSlipRenderer.formatWhatsAppReceiptText(
@@ -95,33 +97,94 @@ fun ReceiptPreviewScreen(
                     .navigationBarsPadding()
                     .padding(14.dp)
             ) {
-                Button(
-                    onClick = {
-                        val recipientPhone = farmer.phone ?: buyer?.phone
-                        whatsAppShareManager.shareText(
-                            text = formattedSlipText,
-                            phoneNumber = recipientPhone
+                if (onPrint != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onPrint,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MandiSurface,
+                                contentColor = MandiTextPrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Print,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = "प्रिंट करें",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val recipientPhone = farmer.phone ?: buyer?.phone
+                                whatsAppShareManager.shareText(
+                                    text = formattedSlipText,
+                                    phoneNumber = recipientPhone
+                                )
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MandiBtnSuccessBg)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = "व्हाट्सएप",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            val recipientPhone = farmer.phone ?: buyer?.phone
+                            whatsAppShareManager.shareText(
+                                text = formattedSlipText,
+                                phoneNumber = recipientPhone
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MandiBtnSuccessBg)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MandiBtnSuccessBg)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(
-                        text = "व्हाट्सएप पर पर्ची भेजें",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(
+                            text = "व्हाट्सएप पर पर्ची भेजें",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         },

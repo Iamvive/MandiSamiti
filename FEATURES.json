@@ -77,7 +77,7 @@
       "id": "input-audit-medium-low",
       "description": "13 Medium and 48 Low input-audit items; search boxes on Khata, Buy, Sell, Stock, Expense, Register",
       "status": "failing",
-      "evidence": "audits/2026-11-09-mandisamiti-input-ux-audit.md in Vivek-K"
+      "evidence": "Group B audit completed across Settings, Daily Cash Register, Lend & Repay, Expense, and Stock using MandiKeyboard presets (Decimal, Whole, Name, Identifier, Search, Note). Verified on emulator-5554 (settings_trade_rates_keyboard.png, cash_in_decimal_keyboard.png) and GroupBInputAuditTest. Group A core trade screens in progress."
     },
     {
       "id": "khata-chips-explained",
@@ -166,8 +166,8 @@
     {
       "id": "print-all-bills",
       "description": "Print option on all bills",
-      "status": "failing",
-      "evidence": "Requested by Vivek 2026-11-15. Not started. Open question: Bluetooth thermal printer or system print/PDF."
+      "status": "passing",
+      "evidence": "ReceiptPrinter expect/actual implemented for Android (PrintManager with ISO A5 media size) and iOS (UIPrintInteractionController), with ReceiptHtmlRenderer generating A5-styled printable HTML. Print button (प्रिंट करें) added alongside Share on BuyTransactionReceiptScreen, SellTransactionReceiptScreen, ReceiptPreviewScreen, and ReceiptScaffold. Verified with ReceiptHtmlRendererTest, ReceiptPrintIntegrationTest, and live on emulator-5554 (A5 print spooler dialog opened from Buy Slip #2 and Sell Bill #1; captured print_dialog_a5.png and print_dialog_sell_a5.png in scratch/test_evidence/)."
     },
     {
       "id": "asal-rename-and-opening-cash-chip",

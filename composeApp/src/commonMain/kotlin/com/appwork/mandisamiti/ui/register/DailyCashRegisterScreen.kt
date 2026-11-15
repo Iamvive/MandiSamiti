@@ -67,6 +67,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -644,7 +645,7 @@ fun DailyCashRegisterScreen(
                     }
 
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = directAmountInput,
                         onValueChange = { directAmountInput = it },
                         label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
@@ -671,7 +672,7 @@ fun DailyCashRegisterScreen(
                         }
                     }
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                        keyboardOptions = MandiKeyboard.Note,
                         value = directRemarksInput,
                         onValueChange = { directRemarksInput = it },
                         label = { Text(if (isEnglish) "Remarks / Note (Optional)" else "विवरण / नोट (वैकल्पिक)") },
@@ -748,7 +749,7 @@ fun DailyCashRegisterScreen(
                         )
                     }
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = openingBalanceInput,
                         onValueChange = { openingBalanceInput = it },
                         label = { Text(if (isEnglish) "Opening Cash Float ₹" else "श्री रोकड़ बाकी ₹") },
@@ -756,7 +757,7 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                        keyboardOptions = MandiKeyboard.Note,
                         value = openingBalanceRemarks,
                         onValueChange = { openingBalanceRemarks = it },
                         label = { Text(if (isEnglish) "Note / Reason (Optional)" else "कारण / नोट (वैकल्पिक)") },
@@ -818,7 +819,7 @@ fun DailyCashRegisterScreen(
                         color = MandiTextSecondary
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = MandiKeyboard.Decimal,
                         value = cashHomeInput,
                         onValueChange = { cashHomeInput = it },
                         label = { Text(if (isEnglish) "Amount ₹" else "निकासी राशि ₹") },
@@ -826,7 +827,7 @@ fun DailyCashRegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                        keyboardOptions = MandiKeyboard.Note,
                         value = cashHomeRemarks,
                         onValueChange = { cashHomeRemarks = it },
                         label = { Text(if (isEnglish) "Note (Optional)" else "विवरण / नोट (वैकल्पिक)") },
