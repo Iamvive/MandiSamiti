@@ -137,7 +137,7 @@ fun StockRegisterScreen(
     partyNames: Map<String, String> = emptyMap(),
     onOpenBuy: (String) -> Unit = {},
     onOpenSell: (String) -> Unit = {},
-    onSaveStockAudit: ((commodityId: String, physicalBags: Long, bagKg: Double, reason: String, farmerCustodyBags: Long) -> Unit)? = null,
+    onSaveStockAudit: ((commodityId: String, physicalBags: Long, bagKg: Double, reason: String, farmerCustodyBags: Long, khaatePhysicalBags: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val bills = remember(buys, sells, partyNames) { buildBills(buys, sells, partyNames) }
@@ -431,8 +431,8 @@ fun StockRegisterScreen(
             initialCrop = auditTargetCrop.ifBlank { stockLines.firstOrNull()?.commodityId ?: "गेहूं" },
             isEnglish = isEnglish,
             onDismiss = { showAuditSheet = false },
-            onSave = { crop, physicalBags, bagKg, reason, custodyBags ->
-                onSaveStockAudit(crop, physicalBags, bagKg, reason, custodyBags)
+            onSave = { crop, physicalBags, bagKg, reason, custodyBags, khaateBags ->
+                onSaveStockAudit(crop, physicalBags, bagKg, reason, custodyBags, khaateBags)
                 showAuditSheet = false
             }
         )
@@ -869,7 +869,7 @@ private fun StockReconciliationSheet(
     initialCrop: String,
     isEnglish: Boolean,
     onDismiss: () -> Unit,
-    onSave: (commodityId: String, physicalBags: Long, bagKg: Double, reason: String, farmerCustodyBags: Long) -> Unit
+    onSave: (commodityId: String, physicalBags: Long, bagKg: Double, reason: String, farmerCustodyBags: Long, khaatePhysicalBags: Long) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedCrop by remember { mutableStateOf(initialCrop) }
@@ -879,6 +879,7 @@ private fun StockReconciliationSheet(
     var physicalBagsInput by remember { mutableStateOf(currentLine?.onHandBags?.toString().orEmpty()) }
     var bagWeightInput by remember { mutableStateOf(defaultBagKg.toInt().toString()) }
     var farmerCustodyInput by remember { mutableStateOf(currentLine?.farmerCustodyBags?.toString().orEmpty()) }
+    var khaateBagsInput by remember { mutableStateOf(currentLine?.khaateOnHandBags?.toString().orEmpty()) }
 
     val reasons = listOf(
         if (isEnglish) "Moisture Shrinkage" else "नमी / सूख वजन कमी",
@@ -949,6 +950,7 @@ private fun StockReconciliationSheet(
                                 val newLine = stockLines.firstOrNull { it.commodityId == crop }
                                 physicalBagsInput = newLine?.onHandBags?.toString().orEmpty()
                                 farmerCustodyInput = newLine?.farmerCustodyBags?.toString().orEmpty()
+                                khaateBagsInput = newLine?.khaateOnHandBags?.toString().orEmpty()
                                 bagWeightInput = (newLine?.standardBagKg ?: if (crop.contains("सरसों")) 70.0 else 50.0).toInt().toString()
                             },
                             label = { Text(crop, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium) },
@@ -1113,6 +1115,25 @@ private fun StockReconciliationSheet(
                 )
             }
 
+            val hasKhaate = currentLine?.let { it.khaateBoughtGrams != 0L || it.khaateSoldGrams != 0L || it.khaateAdjustmentGrams != 0L } == true
+            if (hasKhaate) {
+                OutlinedTextField(
+                    value = khaateBagsInput,
+                    onValueChange = { khaateBagsInput = it.filter { ch -> ch.isDigit() } },
+                    label = { Text(if (isEnglish) "Khaate Bags (separate count)" else "खाते की बोरी (अलग गिनती)") },
+                    keyboardOptions = MandiKeyboard.Whole,
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MandiSurface,
+                        unfocusedContainerColor = MandiSurface,
+                        focusedBorderColor = MandiNavy,
+                        unfocusedBorderColor = MandiBorder
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             Spacer(Modifier.height(4.dp))
 
             // Save Audit Button
@@ -1120,7 +1141,8 @@ private fun StockReconciliationSheet(
                 onClick = {
                     val bagKg = bagWeightInput.toDoubleOrNull() ?: defaultBagKg
                     val custodyBags = farmerCustodyInput.toLongOrNull() ?: 0L
-                    onSave(selectedCrop, physicalBags, bagKg, selectedReason, custodyBags)
+                    val khaateBags = if (hasKhaate) khaateBagsInput.toLongOrNull() ?: 0L else 0L
+                    onSave(selectedCrop, physicalBags, bagKg, selectedReason, custodyBags, khaateBags)
                 },
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(

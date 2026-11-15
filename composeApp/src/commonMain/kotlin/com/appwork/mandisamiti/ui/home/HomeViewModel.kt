@@ -452,7 +452,8 @@ class HomeViewModel(
         physicalBags: Long,
         bagKg: Double,
         reason: String,
-        farmerCustodyBags: Long
+        farmerCustodyBags: Long,
+        khaatePhysicalBags: Long = 0L
     ) {
         viewModelScope.launch {
             val bagWeightGrams = (bagKg * 1000.0).toLong()
@@ -460,6 +461,9 @@ class HomeViewModel(
             val currentLine = _uiState.value.stockLines.firstOrNull { it.commodityId == commodityId }
             val bookGrams = currentLine?.bookOnHandGrams ?: 0L
             val diffGrams = physicalGrams - bookGrams
+            val khaatePhysicalGrams = khaatePhysicalBags * bagWeightGrams
+            val khaateBookGrams = currentLine?.let { it.khaateBoughtGrams - it.khaateSoldGrams } ?: 0L
+            val khaateDiffGrams = khaatePhysicalGrams - khaateBookGrams
 
             val audit = StockAudit(
                 commodityId = commodityId,
@@ -469,7 +473,9 @@ class HomeViewModel(
                 diffGrams = diffGrams,
                 reason = reason,
                 auditedAt = Clock.System.now().toEpochMilliseconds(),
-                farmerCustodyBags = farmerCustodyBags
+                farmerCustodyBags = farmerCustodyBags,
+                khaatePhysicalBags = khaatePhysicalBags,
+                khaateDiffGrams = khaateDiffGrams
             )
 
             stockAuditRepository?.saveAudit(shopId, audit)

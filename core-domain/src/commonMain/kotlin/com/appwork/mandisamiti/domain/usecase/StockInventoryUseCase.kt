@@ -64,7 +64,8 @@ class StockInventoryUseCase(
                 lastAuditedAt = audit?.auditedAt,
                 lastAuditReason = audit?.reason,
                 khaateBoughtGrams = khaateBought,
-                khaateSoldGrams = khaateSold
+                khaateSoldGrams = khaateSold,
+                khaateAdjustmentGrams = audit?.khaateDiffGrams ?: 0L
             )
         }
     }

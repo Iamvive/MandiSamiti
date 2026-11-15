@@ -248,8 +248,8 @@ fun HomeScreen(
                             partyNames = stockPartyNames,
                             onOpenBuy = onNavigateToBuyReceipt,
                             onOpenSell = onNavigateToSellReceipt,
-                            onSaveStockAudit = { commodityId, physicalBags, bagKg, reason, farmerCustodyBags ->
-                                viewModel.saveStockAudit(commodityId, physicalBags, bagKg, reason, farmerCustodyBags)
+                            onSaveStockAudit = { commodityId, physicalBags, bagKg, reason, farmerCustodyBags, khaatePhysicalBags ->
+                                viewModel.saveStockAudit(commodityId, physicalBags, bagKg, reason, farmerCustodyBags, khaatePhysicalBags)
                             }
                         )
                     }
