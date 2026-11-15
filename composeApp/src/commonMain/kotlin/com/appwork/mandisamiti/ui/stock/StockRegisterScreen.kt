@@ -763,6 +763,29 @@ private fun GodownCommodityLedgerCard(
                 }
             }
 
+            // Khaate (spare crop) line, shown only when this crop has khaate movement
+            if (line.khaateBoughtGrams != 0L || line.khaateSoldGrams != 0L) {
+                val khaateNeg = line.isKhaateNegative
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isEnglish) "Khaate" else "खाते",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (khaateNeg) MandiRedText else MandiTextSecondary
+                    )
+                    Text(
+                        text = if (isEnglish) "Khaate: ${line.khaateOnHandBags} $unitLabel" else "खाते: ${line.khaateOnHandBags} $unitLabel",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (khaateNeg) MandiRedText else MandiTextPrimary
+                    )
+                }
+            }
+
             // Farmer Custody notice if present
             if (line.farmerCustodyBags > 0) {
                 Row(
@@ -1120,7 +1143,7 @@ private fun StockReconciliationSheet(
                 OutlinedTextField(
                     value = khaateBagsInput,
                     onValueChange = { khaateBagsInput = it.filter { ch -> ch.isDigit() } },
-                    label = { Text(if (isEnglish) "Khaate Bags (separate count)" else "खाते की बोरी (अलग गिनती)") },
+                    label = { Text(if (isEnglish) "Khaate bags counted" else "खाते बोरी गिनती") },
                     keyboardOptions = MandiKeyboard.Whole,
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
@@ -1267,6 +1290,19 @@ private fun StockBillItemRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (bill.isKhaate) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MandiAmberLight
+                        ) {
+                            Text(
+                                text = if (isEnglish) "Khaate" else "खाते",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MandiAmberDark,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                     Surface(
                         shape = RoundedCornerShape(4.dp),
                         color = MandiSurfaceElevated
@@ -1438,6 +1474,7 @@ private fun formatBags(grams: Long, isEnglish: Boolean): String {
 private data class StockBill(
     val id: String,
     val isBuy: Boolean,
+    val isKhaate: Boolean = false,
     val partyName: String,
     val slip: String,
     val date: String,
@@ -1467,6 +1504,7 @@ private fun buildBills(
                     StockBill(
                         id = e.id,
                         isBuy = true,
+                        isKhaate = e.isKhaate,
                         partyName = names[e.farmerId] ?: e.farmerId,
                         slip = slipLabel(e.slipNo, e.id),
                         date = day(e.entryDate),
@@ -1481,6 +1519,7 @@ private fun buildBills(
                 StockBill(
                     id = e.id,
                     isBuy = true,
+                        isKhaate = e.isKhaate,
                     partyName = names[e.farmerId] ?: e.farmerId,
                     slip = slipLabel(e.slipNo, e.id),
                     date = day(e.entryDate),
@@ -1500,6 +1539,7 @@ private fun buildBills(
                     StockBill(
                         id = e.id,
                         isBuy = false,
+                        isKhaate = e.isKhaate,
                         partyName = names[e.buyerId] ?: e.buyerId,
                         slip = slipLabel(e.slipNo, e.id),
                         date = day(e.entryDate),
@@ -1514,6 +1554,7 @@ private fun buildBills(
                 StockBill(
                     id = e.id,
                     isBuy = false,
+                        isKhaate = e.isKhaate,
                     partyName = names[e.buyerId] ?: e.buyerId,
                     slip = slipLabel(e.slipNo, e.id),
                     date = day(e.entryDate),
