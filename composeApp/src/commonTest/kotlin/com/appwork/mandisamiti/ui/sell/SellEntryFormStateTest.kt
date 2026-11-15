@@ -223,7 +223,7 @@ class SellEntryFormStateTest {
     @Test
     fun merchantTraderLabourCalculatedAndRoundsToWholeRupee() {
         val settings = TradeSettings(
-            traderLabourPaisaPerQuintal = 500L // ₹5 per quintal
+            sellLabourPaisaPerQuintal = 500L // ₹5 per quintal
         )
         val state = SellEntryFormState(settings)
         state.buyerName = "Apex Grains"
@@ -261,7 +261,7 @@ class SellEntryFormStateTest {
     @Test
     fun customerAlsoPaysPerQuintalLabour() {
         val settings = TradeSettings(
-            traderLabourPaisaPerQuintal = 500L
+            sellLabourPaisaPerQuintal = 500L
         )
         val state = SellEntryFormState(settings)
         state.buyerName = "Retail Customer"
@@ -280,7 +280,7 @@ class SellEntryFormStateTest {
 
     @Test
     fun savedSellKeepsExtraWeightAndLabourTotalAndReopensSame() {
-        val settings = TradeSettings(traderLabourPaisaPerQuintal = 500L)
+        val settings = TradeSettings(sellLabourPaisaPerQuintal = 500L)
         val state = SellEntryFormState(settings)
         state.buyerName = "Retail Customer"
         state.updatePhone("9876543210")

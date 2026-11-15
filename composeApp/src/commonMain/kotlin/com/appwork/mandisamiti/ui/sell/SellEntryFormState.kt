@@ -257,7 +257,7 @@ class SellEntryFormState(
         val totalReceivable: Long
 
         // Labour on every sell slip is per quintal (farmer, customer and trader). 0 = rate not set.
-        val traderLabourRate = settings?.traderLabourPaisaPerQuintal ?: 0L
+        val traderLabourRate = settings?.sellLabourPaisaPerQuintal ?: 0L
 
         if (traderLabourRate > 0L) {
             commissionPaisa = MandiMathEngine.percentageOf(gross, commBps)

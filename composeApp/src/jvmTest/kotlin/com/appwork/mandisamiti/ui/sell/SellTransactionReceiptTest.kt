@@ -39,7 +39,7 @@ class SellTransactionReceiptTest {
         assertTrue(billText.contains("10 × 50 + 21 = 5.21 क्विंटल × ₹2,000"), "Must contain slip equation with extra weight")
         assertTrue(billText.contains("मंडी शुल्क एवं उपकर: +₹156.30"), "Must contain mandi tax")
         assertTrue(billText.contains("तुलाई: +₹5.21"), "Must contain tulak")
-        assertTrue(billText.contains("हमाली / मजदूरी: +₹"), "Must contain labour line")
+        assertTrue(billText.contains("मजदूरी: +₹25.29"), "Must contain labour line (remainder after commission, shulk, tulak)")
         assertTrue(billText.contains("कुल देय राशि: ₹10,711"), "Must contain total receivable")
     }
 

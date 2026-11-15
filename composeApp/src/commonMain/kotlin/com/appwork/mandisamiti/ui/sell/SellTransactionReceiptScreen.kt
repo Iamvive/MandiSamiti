@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.ui.slip.slipEquation
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellCropLot
@@ -139,16 +140,11 @@ fun SellTransactionReceiptScreen(
 
             ReceiptDivider()
             ReceiptAmountRow("कुल (${entry.bagsCount} बोरी, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-            if (!isBos) {
-                if (entry.aratPaisa > 0) ReceiptAmountRow("कमीशन", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}")
-                val labourAmt = entry.totalReceivablePaisa - entry.grossPaisa - entry.aratPaisa
-                if (labourAmt > 0) ReceiptAmountRow("मजदूरी", "+ ₹${MandiMathEngine.paisaToRupeesString(labourAmt)}")
-            } else {
-                if (entry.mandiShulkPaisa > 0) ReceiptAmountRow("मंडी प्रभार एवं उपकर (2%)", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}")
-                if (entry.tulakPaisa > 0) ReceiptAmountRow("तुलाई", "+ ₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}")
-                val rest = entry.totalReceivablePaisa - entry.grossPaisa - entry.mandiShulkPaisa - entry.tulakPaisa
-                if (rest > 0) ReceiptAmountRow("हमाली / मजदूरी", "+ ₹${MandiMathEngine.paisaToRupeesString(rest)}")
-            }
+            val amounts = sellSlipAmounts(entry)
+            if (amounts.mandiShulkPaisa > 0) ReceiptAmountRow("मंडी प्रभार एवं उपकर (2%)", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.mandiShulkPaisa)}")
+            if (amounts.commissionPaisa > 0) ReceiptAmountRow("कमीशन", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.commissionPaisa)}")
+            if (amounts.tulakPaisa > 0) ReceiptAmountRow("तुलाई", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.tulakPaisa)}")
+            if (amounts.labourPaisa > 0) ReceiptAmountRow("मजदूरी", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.labourPaisa)}")
             ReceiptDivider()
             ReceiptAmountRow("कुल देय राशि", MandiMathEngine.formatRupees(entry.totalReceivablePaisa), emphasized = true)
         }
@@ -210,10 +206,12 @@ fun buildSellBillText(
         "जिंस: ${entry.commodityId}\n${slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
     }
 
-    val labourAmt = if (!isBos) {
-        entry.totalReceivablePaisa - entry.grossPaisa - entry.aratPaisa
-    } else {
-        entry.totalReceivablePaisa - entry.grossPaisa - entry.mandiShulkPaisa - entry.tulakPaisa
+    val amounts = sellSlipAmounts(entry)
+    val amountLines = buildString {
+        if (amounts.commissionPaisa > 0) appendLine("कमीशन जोड़: +₹${MandiMathEngine.paisaToRupeesString(amounts.commissionPaisa)}")
+        if (amounts.mandiShulkPaisa > 0) appendLine("मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(amounts.mandiShulkPaisa)}")
+        if (amounts.tulakPaisa > 0) appendLine("तुलाई: +₹${MandiMathEngine.paisaToRupeesString(amounts.tulakPaisa)}")
+        if (amounts.labourPaisa > 0) appendLine("मजदूरी: +₹${MandiMathEngine.paisaToRupeesString(amounts.labourPaisa)}")
     }
 
     return """
@@ -226,7 +224,7 @@ $lotsText
 कुल बोरी: ${entry.bagsCount}
 कुल वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल
 कुल असल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
-${if (!isBos && entry.aratPaisa > 0) "कमीशन जोड़: +₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}\n" else ""}${if (isBos && entry.mandiShulkPaisa > 0) "मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}\n" else ""}${if (isBos && entry.tulakPaisa > 0) "तुलाई: +₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}\n" else ""}${if (labourAmt > 0) "हमाली / मजदूरी: +₹${MandiMathEngine.paisaToRupeesString(labourAmt)}\n" else ""}--------------------
+$amountLines--------------------
 *कुल देय राशि: ${MandiMathEngine.formatRupees(entry.totalReceivablePaisa)}*
     """.trimIndent()
 }

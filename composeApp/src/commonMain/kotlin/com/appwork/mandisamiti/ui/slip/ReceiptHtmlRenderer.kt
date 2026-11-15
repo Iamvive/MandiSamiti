@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.slip
 
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.BuyCropLot
 import com.appwork.mandisamiti.domain.model.BuyEntry
@@ -376,11 +377,7 @@ object ReceiptHtmlRenderer {
         val licenceNo = shop?.licenceNo
         val phone = shop?.phoneNumber ?: ""
 
-        val labourAmt = if (!isBos) {
-            entry.totalReceivablePaisa - entry.grossPaisa - entry.aratPaisa
-        } else {
-            entry.totalReceivablePaisa - entry.grossPaisa - entry.mandiShulkPaisa - entry.tulakPaisa
-        }
+        val amounts = sellSlipAmounts(entry)
 
         return buildString {
             appendLine("<!DOCTYPE html>")
@@ -476,31 +473,31 @@ object ReceiptHtmlRenderer {
             appendLine("<td class=\"text-right\">₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}</td>")
             appendLine("</tr>")
 
-            if (!isBos && entry.aratPaisa > 0L) {
+            if (amounts.commissionPaisa > 0L) {
                 appendLine("<tr>")
                 appendLine("<td>कमीशन जोड़:</td>")
-                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(entry.aratPaisa)}</td>")
+                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(amounts.commissionPaisa)}</td>")
                 appendLine("</tr>")
             }
 
-            if (isBos && entry.mandiShulkPaisa > 0L) {
+            if (amounts.mandiShulkPaisa > 0L) {
                 appendLine("<tr>")
                 appendLine("<td>मंडी शुल्क एवं उपकर:</td>")
-                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(entry.mandiShulkPaisa)}</td>")
+                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(amounts.mandiShulkPaisa)}</td>")
                 appendLine("</tr>")
             }
 
-            if (isBos && entry.tulakPaisa > 0L) {
+            if (amounts.tulakPaisa > 0L) {
                 appendLine("<tr>")
                 appendLine("<td>तुलाई:</td>")
-                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(entry.tulakPaisa)}</td>")
+                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(amounts.tulakPaisa)}</td>")
                 appendLine("</tr>")
             }
 
-            if (labourAmt > 0L) {
+            if (amounts.labourPaisa > 0L) {
                 appendLine("<tr>")
-                appendLine("<td>हमाली / मजदूरी:</td>")
-                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(labourAmt)}</td>")
+                appendLine("<td>मजदूरी:</td>")
+                appendLine("<td class=\"text-right\">+ ₹${MandiMathEngine.paisaToRupeesString(amounts.labourPaisa)}</td>")
                 appendLine("</tr>")
             }
 

@@ -329,7 +329,7 @@ fun SettingsScreen(
                                 buyerCommissionBps = buyerBps,
                                 customerCommissionBps = customerBps,
                                 defaultLabourPaisa = labourPaisa,
-                                traderLabourPaisaPerQuintal = traderLabourPaisa
+                                sellLabourPaisaPerQuintal = traderLabourPaisa
                             )
                         )
                         showEditTradeSettingsDialog = false
@@ -570,8 +570,8 @@ fun SettingsScreen(
                             color = MandiTextSecondary
                         )
                         Text(
-                            text = if (uiState.tradeSettings.traderLabourPaisaPerQuintal > 0L) {
-                                "₹${MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.traderLabourPaisaPerQuintal)} / क्विंटल"
+                            text = if (uiState.tradeSettings.sellLabourPaisaPerQuintal > 0L) {
+                                "₹${MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.sellLabourPaisaPerQuintal)} / क्विंटल"
                             } else {
                                 if (isEnglish) "Not set" else "लागू नहीं"
                             },
@@ -594,8 +594,8 @@ fun SettingsScreen(
                                 editBuyerCommInput = MandiMathEngine.paisaToInputString(uiState.tradeSettings.buyerCommissionBps)
                                 editCustomerCommInput = MandiMathEngine.paisaToInputString(uiState.tradeSettings.customerCommissionBps)
                                 editLabourInput = MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.defaultLabourPaisa)
-                                editTraderLabourInput = if (uiState.tradeSettings.traderLabourPaisaPerQuintal > 0L) {
-                                    MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.traderLabourPaisaPerQuintal)
+                                editTraderLabourInput = if (uiState.tradeSettings.sellLabourPaisaPerQuintal > 0L) {
+                                    MandiMathEngine.paisaToRupeesString(uiState.tradeSettings.sellLabourPaisaPerQuintal)
                                 } else ""
                                 showEditTradeSettingsDialog = true
                             }

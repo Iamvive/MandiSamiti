@@ -31,7 +31,7 @@ class OfflineFirstTradeSettingsRepository(
             queries.setSyncMetadataLong(KEY_BUYER_COMM_BPS, settings.buyerCommissionBps)
             queries.setSyncMetadataLong(KEY_CUSTOMER_COMM_BPS, settings.customerCommissionBps)
             queries.setSyncMetadataLong(KEY_LABOUR_PAISA, settings.defaultLabourPaisa)
-            queries.setSyncMetadataLong(KEY_TRADER_LABOUR_PAISA, settings.traderLabourPaisaPerQuintal)
+            queries.setSyncMetadataLong(KEY_TRADER_LABOUR_PAISA, settings.sellLabourPaisaPerQuintal)
             queries.setSyncMetadataLong(KEY_IS_ENGLISH, if (settings.isEnglish) 1L else 0L)
         }
         _settingsFlow.value = settings
@@ -49,7 +49,7 @@ class OfflineFirstTradeSettingsRepository(
             buyerCommissionBps = buyerBps,
             customerCommissionBps = customerBps,
             defaultLabourPaisa = labourPaisa,
-            traderLabourPaisaPerQuintal = traderLabourPaisa,
+            sellLabourPaisaPerQuintal = traderLabourPaisa,
             isEnglish = isEnglish
         )
     }

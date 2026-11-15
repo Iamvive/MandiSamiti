@@ -32,7 +32,7 @@ data class SellMathInput(
     val receivedPaisa: Long,
     val extraWeightGrams: Long = 0L,
     /** Trader (Vyapaari) labour rate per quintal; 0 = no labour line. */
-    val traderLabourPaisaPerQuintal: Long = 0L,
+    val sellLabourPaisaPerQuintal: Long = 0L,
 )
 
 data class SellMathResult(
@@ -84,10 +84,10 @@ object BuySellMath {
         val bos = input.billMode == BillMode.BILL_OF_SUPPLY
         val arat = MandiMathEngine.percentageOf(gross, input.aratBps)
         val shulk = if (bos) MandiMathEngine.percentageOf(gross, MANDI_SHULK_BPS) else 0L
-        if (input.traderLabourPaisaPerQuintal > 0L) {
+        if (input.sellLabourPaisaPerQuintal > 0L) {
             // Trader sale: tulak stays at its default, labour absorbs the rounding to a whole rupee.
             val tulak = if (bos) input.tulakPaisaOverride ?: defaultTulakPaisa(grams) else defaultTulakPaisa(grams)
-            val labour = MandiMathEngine.grossAmountPaisa(grams, input.traderLabourPaisaPerQuintal)
+            val labour = MandiMathEngine.grossAmountPaisa(grams, input.sellLabourPaisaPerQuintal)
             val raw = gross + arat + tulak + shulk + labour
             val total = (raw + PAISA_PER_RUPEE / 2).floorDiv(PAISA_PER_RUPEE) * PAISA_PER_RUPEE
             return SellMathResult(grams, gross, arat, tulak, shulk, total, total - input.receivedPaisa, labour + (total - raw))

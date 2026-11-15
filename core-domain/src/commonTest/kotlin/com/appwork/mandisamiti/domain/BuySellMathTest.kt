@@ -50,7 +50,7 @@ class BuySellMathTest {
     fun traderLabourAbsorbsRoundingHalfUp() {
         // 1 qtl at Rs 1,000; Cash Memo tulak Rs 1; labour L paisa. raw total = 100_100 + L
         fun total(l: Long) = BuySellMath.calculateSell(
-            SellMathInput(1, 100_000, 100_000, normal, 0, null, 0, traderLabourPaisaPerQuintal = l)
+            SellMathInput(1, 100_000, 100_000, normal, 0, null, 0, sellLabourPaisaPerQuintal = l)
         )
         val down = total(49)
         assertEquals(100_100, down.totalReceivablePaisa)
@@ -66,7 +66,7 @@ class BuySellMathTest {
         // 5.21 qtl, Rs 2,000, labour Rs 5/qtl, arat 1%, BoS: whole-rupee total, labour takes the paise
         val r = BuySellMath.calculateSell(
             SellMathInput(10, 50_000, 200_000, bos, 100, null, 0,
-                extraWeightGrams = 21_000, traderLabourPaisaPerQuintal = 500)
+                extraWeightGrams = 21_000, sellLabourPaisaPerQuintal = 500)
         )
         assertEquals(0L, r.totalReceivablePaisa % 100)
         assertEquals(r.grossPaisa + r.aratPaisa + r.tulakPaisa + r.mandiShulkPaisa + r.labourPaisa, r.totalReceivablePaisa)

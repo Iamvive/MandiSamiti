@@ -300,3 +300,11 @@ Newest entry at the bottom. One entry per session: date, AI, what changed, what 
   - `print-all-bills` marked `passing`.
   - `input-audit-medium-low` evidence updated with Group B completions.
 
+
+## 2026-11-15 (Claude Code): C3 cleanup (labour rename, receipt rows)
+- Renamed the Kotlin field `traderLabourPaisaPerQuintal` to `sellLabourPaisaPerQuintal` (TradeSettings, BuySellMath, form state, settings screen, repository, tests). The stored settings key `trade_settings_trader_labour_paisa` is unchanged, so existing values carry over.
+- New `sellSlipAmounts(entry)` in `core-domain/.../domain/math/SellSlipAmounts.kt`. Labour is the remainder after stored commission, shulk and tulak, because labour is not stored on `SellEntry`.
+- Sell slip rows (screen, WhatsApp text, print HTML) now use the same breakdown: शुल्क / कमीशन / तुलाई / मजदूरी, one row each when non-zero. Bill of Supply no longer hides commission inside the labour row. Old Cash Memo entries show their tulak field as "तुलाई" and no labour row; totals are unchanged.
+- Tests: `SellSlipAmountsTest` (4 cases), `SellTransactionReceiptTest` label updated to `मजदूरी: +₹25.29`.
+- Evidence: `./gradlew :core-domain:jvmTest :composeApp:jvmTest` ran 332 tests, 1 failed: `HomeViewModelTest.testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked`, the known flaky test. Rerun alone: passes.
+- Not verified on device. Left: the entry form's live preview still says "हमाली / मजदूरी" (SellEntryScreen, labour line); it is not a receipt, so it is not changed here.

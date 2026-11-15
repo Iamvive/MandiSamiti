@@ -8,6 +8,6 @@ data class TradeSettings(
     val buyerCommissionBps: Long = 150L,    // MERCHANT buyer rate, 1.5% default (basis points)
     val customerCommissionBps: Long = 150L, // CUSTOMER buyer rate, 1.5% default (basis points)
     val defaultLabourPaisa: Long = 1000L,   // ₹10 per bag default (shop sheet)
-    val traderLabourPaisaPerQuintal: Long = 0L, // trader Sell labour per quintal; 0 = not set (no default)
+    val sellLabourPaisaPerQuintal: Long = 0L, // trader Sell labour per quintal; 0 = not set (no default)
     val isEnglish: Boolean = false
 )
