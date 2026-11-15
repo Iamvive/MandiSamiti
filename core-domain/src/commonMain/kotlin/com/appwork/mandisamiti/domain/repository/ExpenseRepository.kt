@@ -17,4 +17,9 @@ interface ExpenseRepository {
     suspend fun stockTotals(shopId: String): StockTotals
 }
 
-data class StockTotals(val boughtGramsByCommodity: Map<String, Long>, val soldGramsByCommodity: Map<String, Long>)
+data class StockTotals(
+    val boughtGramsByCommodity: Map<String, Long>,
+    val soldGramsByCommodity: Map<String, Long>,
+    val khaateBoughtGramsByCommodity: Map<String, Long> = emptyMap(),
+    val khaateSoldGramsByCommodity: Map<String, Long> = emptyMap()
+)

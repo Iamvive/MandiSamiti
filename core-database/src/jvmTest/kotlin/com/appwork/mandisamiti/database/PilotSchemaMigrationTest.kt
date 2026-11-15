@@ -212,7 +212,7 @@ class PilotSchemaMigrationTest {
 
     private companion object {
         const val PRE_PILOT_VERSION = 6L
-        const val CURRENT_SCHEMA_VERSION = 13L
+        const val CURRENT_SCHEMA_VERSION = 14L
 
         val TABLES = listOf(
             "shopProfileEntity",

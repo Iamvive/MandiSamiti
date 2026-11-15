@@ -181,6 +181,7 @@ CREATE TABLE buyEntryEntity (
     is_void INTEGER NOT NULL DEFAULT 0,
     void_reason TEXT,
     payment_mode TEXT NOT NULL DEFAULT 'CASH',
+    is_khaate INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(farmer_id) REFERENCES partyEntity(id),
     FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
 );
@@ -220,6 +221,7 @@ CREATE TABLE sellEntryEntity (
     is_void INTEGER NOT NULL DEFAULT 0,
     void_reason TEXT,
     payment_mode TEXT NOT NULL DEFAULT 'CASH',
+    is_khaate INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(buyer_id) REFERENCES partyEntity(id),
     FOREIGN KEY(commodity_id) REFERENCES commodityEntity(id)
 );
@@ -324,7 +326,7 @@ UPDATE shopProfileEntity SET is_sound_enabled = ?, updated_at = ? WHERE id = ?;
 
 -- Party Queries
 getAllParties:
-SELECT * FROM partyEntity WHERE shop_id = ? AND is_deleted = 0 ORDER BY name ASC;
+SELECT * FROM partyEntity WHERE shop_id = ? AND is_deleted = 0 AND id NOT LIKE 'khaate-%' ORDER BY name ASC;
 
 getPartyById:
 SELECT * FROM partyEntity WHERE id = ? AND is_deleted = 0;
@@ -435,10 +437,10 @@ SELECT
         COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
         +
         -- 7. Sell Entries where party is BUYER: Buyer owes shop (+)
-        COALESCE((SELECT SUM(total_receivable_paisa - received_paisa) FROM sellEntryEntity WHERE buyer_id = p.id AND is_deleted = 0 AND is_void = 0), 0)
+        COALESCE((SELECT SUM(total_receivable_paisa - received_paisa) FROM sellEntryEntity WHERE buyer_id = p.id AND is_deleted = 0 AND is_void = 0 AND is_khaate = 0), 0)
         -
         -- 8. Buy Entries where party is FARMER: Shop owes farmer (-)
-        COALESCE((SELECT SUM(net_payable_paisa - paid_paisa) FROM buyEntryEntity WHERE farmer_id = p.id AND is_deleted = 0 AND is_void = 0), 0)
+        COALESCE((SELECT SUM(net_payable_paisa - paid_paisa) FROM buyEntryEntity WHERE farmer_id = p.id AND is_deleted = 0 AND is_void = 0 AND is_khaate = 0), 0)
         +
         -- 9. Lend Entries (MONEY) where party owes shop (+)
         COALESCE((SELECT SUM(amount_paisa) FROM lendEntryEntity WHERE party_id = p.id AND lend_type = 'MONEY' AND is_deleted = 0 AND is_void = 0), 0)
@@ -476,6 +478,10 @@ DELETE FROM partyEntity WHERE id = ? AND sync_status = 1;
 insertPartyIfAbsent:
 INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+ensureKhaatePartyRow:
+INSERT OR IGNORE INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
+VALUES (?, ?, ?, NULL, NULL, ?, NULL, NULL, NULL, NULL, ?, ?, 0, 0);
 
 insertPartyFromServer:
 INSERT INTO partyEntity(id, shop_id, name, phone, village, party_type, monthly_interest_rate, photo_uri, gstin, mandi_license, created_at, updated_at, is_deleted, sync_status)
@@ -710,8 +716,8 @@ INSERT OR REPLACE INTO buyEntryEntity(
     id, shop_id, farmer_id, commodity_id, entry_date, bags_count, weight_per_bag_grams, extra_weight_grams,
     total_weight_grams, rate_paisa_per_quintal, commission_bps, labour_per_bag_paisa, advance_paid_paisa,
     gross_paisa, commission_paisa, labour_paisa, net_payable_paisa, paid_paisa, vehicle_number, slip_number, slip_no, remarks,
-    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason, is_khaate
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 nextBuySlipNo:
 SELECT COALESCE(MAX(slip_no), 0) + 1 FROM buyEntryEntity WHERE shop_id = ?;
@@ -727,8 +733,8 @@ INSERT OR REPLACE INTO sellEntryEntity(
     id, shop_id, buyer_id, commodity_id, entry_date, bill_mode, party_kind, gstin, bags_count, weight_per_bag_grams,
     total_weight_grams, rate_paisa_per_quintal, arat_bps, tulak_paisa, gross_paisa, arat_paisa, mandi_shulk_paisa,
     total_receivable_paisa, received_paisa, balance_due_paisa, vehicle_number, invoice_number, slip_no, remarks,
-    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    created_at, updated_at, is_deleted, sync_status, revision, is_void, void_reason, is_khaate
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 nextSellSlipNo:
 SELECT COALESCE(MAX(slip_no), 0) + 1 FROM sellEntryEntity WHERE shop_id = ?;
@@ -841,12 +847,14 @@ INSERT OR IGNORE INTO expenseEntryEntity(
 
 -- Godown stock: grams bought and sold per commodity (void and deleted rows excluded)
 getStockBuyTotals:
-SELECT commodity_id, COALESCE(SUM(total_weight_grams), 0) AS grams
-FROM buyEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 GROUP BY commodity_id;
+SELECT commodity_id, is_khaate, COALESCE(SUM(total_weight_grams), 0) AS grams
+FROM buyEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0
+GROUP BY commodity_id, is_khaate;
 
 getStockSellTotals:
-SELECT commodity_id, COALESCE(SUM(total_weight_grams), 0) AS grams
-FROM sellEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0 GROUP BY commodity_id;
+SELECT commodity_id, is_khaate, COALESCE(SUM(total_weight_grams), 0) AS grams
+FROM sellEntryEntity WHERE shop_id = ? AND is_deleted = 0 AND is_void = 0
+GROUP BY commodity_id, is_khaate;
 
 -- Sync outbox
 getPendingSyncBuyEntries:
