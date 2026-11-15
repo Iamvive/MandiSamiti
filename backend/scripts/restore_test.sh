@@ -37,8 +37,10 @@ gunzip -c "$WORK/dump.sql.gz" | docker exec -i "$CT" psql -U postgres -d restore
 EXPECTED=$(gunzip -c "$WORK/dump.sql.gz" | grep -c '^CREATE TABLE' || true)
 ACTUAL=$(docker exec "$CT" psql -U postgres -d restore -Atc "select count(*) from information_schema.tables where table_schema='public'")
 ALEMBIC=$(docker exec "$CT" psql -U postgres -d restore -Atc "select count(*) from alembic_version")
+SALES=$(docker exec "$CT" psql -U postgres -d restore -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name='sell_entries'")
 ROWS=$(docker exec "$CT" psql -U postgres -d restore -Atc "select coalesce(sum(n_live_tup),0) from pg_stat_user_tables")
 
 [ "$EXPECTED" -ge 1 ] && [ "$ACTUAL" -ge "$EXPECTED" ] || { echo "restore-test: FAIL tables expected $EXPECTED, restored $ACTUAL" >&2; exit 1; }
 [ "$ALEMBIC" -eq 1 ] || { echo "restore-test: FAIL alembic_version rows = $ALEMBIC (want 1)" >&2; exit 1; }
+[ "$SALES" -eq 1 ] || { echo "restore-test: FAIL sell_entries table missing after restore" >&2; exit 1; }
 echo "restore-test ok: $NAME ($ACTUAL tables, alembic row present, ~$ROWS rows)"
