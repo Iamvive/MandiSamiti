@@ -363,3 +363,53 @@ Plan: `docs/superpowers/plans/2026-11-16-spare-crop-khaate.md` (main checkout). 
 ### Verification
 - `git log --oneline -7` on spare-crop-khaate shows 40716c7 down to 5de9b06.
 - Not committed in this entry: this PROGRESS.md update is uncommitted until Vivek asks for a commit.
+
+## 2026-11-16 (Antigravity): spare-crop (khaate) feature, Task 6 evidence & minors, Tasks 4 & 5 tests, Tasks 7 to 10 completed (branch khaate-finish)
+Handoff plan: `docs/superpowers/plans/2026-11-16-khaate-finish-antigravity-handoff.md`.
+Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: Built, device check pending).
+
+### Commits on khaate-finish:
+- `202bbf0`: `fix(mandisamiti): khaate Godown device polish and tests` (Task 6 device evidence & polish)
+  - Captured on-device screenshots in light, dark, and 390dp (`docs/testing/screenshots/khaate/`).
+  - Polished Godown card layout: deduplicated "खाते" label, aligned NGDL token text secondary.
+  - Added unit tests: `StockRegisterCardTest` and `StockBillKhaateChipTest`.
+- `97bbe2b`: `test(mandisamiti): save-path khaate diff formula and multi-variety stock tests` (Tasks 4 & 5 tests)
+  - Added unit test `StockAuditFormulaTest` verifying `khaateDiffGrams` calculation on audit save.
+  - Added unit test `StockRepositoryMultiVarietyKhaateTest` verifying multi-variety khaate isolation.
+- `696f52c`: `feat(mandisamiti): mohari rows in day-end close-out` (Task 7)
+  - Wired `khaateBuyAsalPaisa` and `khaateSellAsalPaisa` in `BahiDayPageBuilder.kt` and `DailyRegisterViewModel.kt`.
+  - Added "मोहरी खरीद (असल)" / "Mohari buy (Asal)" and "मोहरी बिक्री (असल)" / "Mohari sell (Asal)" in `DayClosingSheet.kt`.
+  - Added localized strings in `values/strings.xml` and `values-en/strings.xml`.
+  - Added unit test `BahiDayMohariTest`.
+  - Captured live emulator screenshots: `t7-closeout-mohari-light-390.png` and `t7-closeout-mohari-dark-390.png` showing zero cash impact.
+- `e495bed`: `feat(mandisamiti): edit and void for khaate entries` (Task 8)
+  - Added `KhaateEditVoidTest` verifying revisions write audit history, reverse stock, preserve zero charges; void restores stock.
+  - Created reusable `KhaateChip` component in `KhaateToggle.kt`.
+  - Replaced raw party UUIDs with "खाते" / "Khaate" + `KhaateChip` in `BuyTransactionsListScreen`, `SellTransactionsListScreen`, and `ParchiListScreen`.
+- `ed606d7`: `feat(backend): sync is_khaate on buy and sell entries` (Task 9)
+  - Added `is_khaate` column to backend `BuyEntry` and `SellEntry` models and schemas with Alembic migration `0007_add_is_khaate.py`.
+  - Added `is_khaate` mapping in `SyncEngine.kt` and `SyncDto.kt`; updated `insertBuyEntryIfAbsent` and `insertSellEntryIfAbsent` in `AppDatabase.sq`.
+  - Pytest: 132/132 tests green including `test_sync_khaate.py` round-trip and Alembic migration test.
+
+### Verification:
+- Backend test suite: 132/132 passed (`PYTHONPATH=. .venv/bin/pytest`).
+- Android JVM test suite: `./gradlew :core-domain:jvmTest :composeApp:jvmTest --rerun-tasks` BUILD SUCCESSFUL (354 tests, 0 failures).
+- Feature tracker: `python3 scripts/check_tracker.py` -> `tracker ok (30 features)`.
+- Live emulator evidence: Captured screenshots in `docs/testing/screenshots/khaate/`:
+  - `t6-godown-wheat-light-390.png`, `t6-godown-wheat-dark-390.png`
+  - `t6-audit-dialog-wheat-light-390.png`, `t6-audit-dialog-wheat-dark-390.png`
+  - `t6-movement-wheat-chips-light-390.png`
+  - `t7-closeout-mohari-light-390.png`, `t7-closeout-mohari-dark-390.png`
+
+### Pending / Unverified:
+- Device sign-off by Vivek on physical phone or emulator:
+  1. Khaate buy 5 bags Gehu.
+  2. Khaate sell 8 bags (warning displays, saves, stock line -3).
+  3. Godown displays two lines (crop + khaate).
+  4. Audit displays two counts (crop bags + khaate bags).
+  5. Close-out shows Mohari buy/sell rows.
+  6. Galla cash unchanged.
+  7. Edit then void.
+- Backend deployment of `0007_add_is_khaate` migration to VPS staging/production (needs Vivek's confirmation via `/project-deploy`).
+- Merging `khaate-finish` into `main` (needs Vivek's approval).
+

@@ -1,6 +1,6 @@
 # Spare crop (khaate) entries in Stock (design, draft)
 
-Status: draft from brainstorming. Not built. Needs Vivek's review before writing-plans.
+Status: Built, device check pending
 
 ## Problem
 At day end there is sometimes spare crop that is bought or sold without a real party. Today these have to be forced into a normal Buy or Sell with a party. Vivek wants them recorded directly in Stock, tagged as khaate, with no phone number, no party, no commission and no labour.
