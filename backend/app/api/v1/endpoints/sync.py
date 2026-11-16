@@ -334,6 +334,7 @@ async def sync_push(
                     existing_buy.void_reason = b_in.void_reason
                     existing_buy.revision = b_in.revision
                     existing_buy.is_deleted = b_in.is_deleted
+                    existing_buy.is_khaate = b_in.is_khaate
                     existing_buy.sync_version += 1
                     existing_buy.updated_at = now_ms
                     existing_buy.server_seq = next_seq(shop)
@@ -368,6 +369,7 @@ async def sync_push(
                 void_reason=b_in.void_reason,
                 revision=b_in.revision,
                 is_deleted=b_in.is_deleted,
+                is_khaate=b_in.is_khaate,
                 sync_version=1,
                 created_at=now_ms,
                 updated_at=now_ms,
@@ -412,6 +414,7 @@ async def sync_push(
                     existing_sell.void_reason = s_in.void_reason
                     existing_sell.revision = s_in.revision
                     existing_sell.is_deleted = s_in.is_deleted
+                    existing_sell.is_khaate = s_in.is_khaate
                     existing_sell.sync_version += 1
                     existing_sell.updated_at = now_ms
                     existing_sell.server_seq = next_seq(shop)
@@ -448,6 +451,7 @@ async def sync_push(
                 void_reason=s_in.void_reason,
                 revision=s_in.revision,
                 is_deleted=s_in.is_deleted,
+                is_khaate=s_in.is_khaate,
                 sync_version=1,
                 created_at=now_ms,
                 updated_at=now_ms,

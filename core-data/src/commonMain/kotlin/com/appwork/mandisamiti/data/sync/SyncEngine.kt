@@ -167,7 +167,7 @@ class SyncEngine(
                 gross_paisa = it.gross_paisa, commission_paisa = it.commission_paisa, labour_paisa = it.labour_paisa,
                 net_payable_paisa = it.net_payable_paisa, paid_paisa = it.paid_paisa,
                 vehicle_number = it.vehicle_number, slip_number = it.slip_number, slip_no = it.slip_no, remarks = it.remarks,
-                is_void = it.is_void.toInt(), void_reason = it.void_reason, revision = it.revision.toInt(),
+                is_void = it.is_void.toInt(), void_reason = it.void_reason, is_khaate = it.is_khaate == 1L, revision = it.revision.toInt(),
                 is_deleted = it.is_deleted.toInt(), created_at = it.created_at, updated_at = it.updated_at
             )
         }
@@ -182,7 +182,7 @@ class SyncEngine(
                 total_receivable_paisa = it.total_receivable_paisa, received_paisa = it.received_paisa,
                 balance_due_paisa = it.balance_due_paisa, vehicle_number = it.vehicle_number,
                 invoice_number = it.invoice_number, slip_no = it.slip_no, remarks = it.remarks, is_void = it.is_void.toInt(),
-                void_reason = it.void_reason, revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
+                void_reason = it.void_reason, is_khaate = it.is_khaate == 1L, revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
                 created_at = it.created_at, updated_at = it.updated_at
             )
         }
@@ -437,7 +437,8 @@ class SyncEngine(
                         sync_status = 1L,
                         revision = b.revision.toLong(),
                         is_void = b.is_void.toLong(),
-                        void_reason = b.void_reason
+                        void_reason = b.void_reason,
+                        is_khaate = if (b.is_khaate) 1L else 0L
                     )
                 }
 
@@ -474,7 +475,8 @@ class SyncEngine(
                         sync_status = 1L,
                         revision = s.revision.toLong(),
                         is_void = s.is_void.toLong(),
-                        void_reason = s.void_reason
+                        void_reason = s.void_reason,
+                        is_khaate = if (s.is_khaate) 1L else 0L
                     )
                 }
 

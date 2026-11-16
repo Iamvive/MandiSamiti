@@ -29,6 +29,7 @@ class BuyEntryBase(BaseModel):
 
     is_void: int = 0
     void_reason: Optional[str] = None
+    is_khaate: bool = False
     revision: int = 1
     is_deleted: int = 0
 
@@ -77,6 +78,7 @@ class SellEntryBase(BaseModel):
 
     is_void: int = 0
     void_reason: Optional[str] = None
+    is_khaate: bool = False
     revision: int = 1
     is_deleted: int = 0
 

@@ -1,6 +1,6 @@
 import uuid
 import time
-from sqlalchemy import Column, String, BigInteger, Integer, ForeignKey
+from sqlalchemy import Column, String, BigInteger, Integer, Boolean, ForeignKey, text
 from app.database import Base
 
 class SellEntry(Base):
@@ -35,6 +35,7 @@ class SellEntry(Base):
 
     is_void = Column(Integer, default=0)
     void_reason = Column(String, nullable=True)
+    is_khaate = Column(Boolean, default=False, server_default=text("false"), nullable=False)
     revision = Column(Integer, default=1)
     is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)
