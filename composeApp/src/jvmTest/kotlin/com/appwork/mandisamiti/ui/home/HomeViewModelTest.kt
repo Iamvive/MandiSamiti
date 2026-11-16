@@ -540,4 +540,54 @@ class HomeViewModelTest {
         assertEquals(true, state.outlierEntry?.isBuy)
         assertEquals("20.0 qtl @ ₹60 लाख/qtl", state.outlierEntry?.description)
     }
+
+    @Test
+    fun saveStockAuditComputesKhaateDiffFormulaCorrectly() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val expenseRepo = com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database)
+
+        class CapturingAuditRepo : com.appwork.mandisamiti.domain.repository.StockAuditRepository {
+            var savedAudit: com.appwork.mandisamiti.domain.model.StockAudit? = null
+            override suspend fun loadAudits(shopId: String): Map<String, com.appwork.mandisamiti.domain.model.StockAudit> = emptyMap()
+            override suspend fun saveAudit(shopId: String, audit: com.appwork.mandisamiti.domain.model.StockAudit) {
+                savedAudit = audit
+            }
+        }
+
+        val capturingAuditRepo = CapturingAuditRepo()
+        val stockUseCase = com.appwork.mandisamiti.domain.usecase.StockInventoryUseCase(
+            repo = expenseRepo,
+            auditRepo = capturingAuditRepo
+        )
+
+        val testScope = kotlinx.coroutines.CoroutineScope(ioDispatcher)
+        val viewModel = HomeViewModel(
+            shopId = "shop-audit",
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            stockUseCase = stockUseCase,
+            stockAuditRepository = capturingAuditRepo,
+            viewModelScope = testScope,
+            backgroundDispatcher = ioDispatcher
+        )
+
+        viewModel.saveStockAudit(
+            commodityId = "गेहूं",
+            physicalBags = 90L,
+            bagKg = 50.0,
+            reason = "ऑडिट",
+            farmerCustodyBags = 0L,
+            khaatePhysicalBags = 5L
+        )
+        testScheduler.advanceUntilIdle()
+
+        assertNotNull(capturingAuditRepo.savedAudit)
+        val audit = capturingAuditRepo.savedAudit!!
+        assertEquals("गेहूं", audit.commodityId)
+        assertEquals(5L, audit.khaatePhysicalBags)
+        assertEquals(250_000L, audit.khaateDiffGrams)
+    }
 }

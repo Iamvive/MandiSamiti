@@ -94,4 +94,18 @@ class StockInventoryUseCaseTest {
         val repo = FakeStock(StockTotals(emptyMap(), emptyMap(), mapOf("जिंस" to 100_000L), emptyMap()))
         assertEquals(listOf("जिंस"), StockInventoryUseCase(repo).lines("s").map { it.commodityId })
     }
+
+    @Test fun multiVarietyKhaateStockAggregatesAtBaseCommodity() = runTest {
+        val bought = mapOf("गेहूं" to 5_000_000L)
+        val sold = mapOf("गेहूं लोकवान" to 1_000_000L)
+        val khaateBought = mapOf("गेहूं" to 300_000L)
+        val khaateSold = mapOf("गेहूं" to 100_000L)
+        val repo = FakeStock(StockTotals(bought, sold, khaateBought, khaateSold))
+        val line = StockInventoryUseCase(repo).lines("s").single()
+        assertEquals("गेहूं", line.commodityId)
+        assertEquals(300_000L, line.khaateBoughtGrams)
+        assertEquals(100_000L, line.khaateSoldGrams)
+        assertEquals(200_000L, line.khaateOnHandGrams)
+        assertEquals(4L, line.khaateOnHandBags)
+    }
 }
