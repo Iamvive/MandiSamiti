@@ -778,7 +778,7 @@ private fun GodownCommodityLedgerCard(
                         color = if (khaateNeg) MandiRedText else MandiTextSecondary
                     )
                     Text(
-                        text = if (isEnglish) "Khaate: ${line.khaateOnHandBags} $unitLabel" else "खाते: ${line.khaateOnHandBags} $unitLabel",
+                        text = "${line.khaateOnHandBags} $unitLabel",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (khaateNeg) MandiRedText else MandiTextPrimary
@@ -1138,24 +1138,27 @@ private fun StockReconciliationSheet(
                 )
             }
 
-            val hasKhaate = currentLine?.let { it.khaateBoughtGrams != 0L || it.khaateSoldGrams != 0L || it.khaateAdjustmentGrams != 0L } == true
-            if (hasKhaate) {
-                OutlinedTextField(
-                    value = khaateBagsInput,
-                    onValueChange = { khaateBagsInput = it.filter { ch -> ch.isDigit() } },
-                    label = { Text(if (isEnglish) "Khaate bags counted" else "खाते बोरी गिनती") },
-                    keyboardOptions = MandiKeyboard.Whole,
-                    singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MandiSurface,
-                        unfocusedContainerColor = MandiSurface,
-                        focusedBorderColor = MandiNavy,
-                        unfocusedBorderColor = MandiBorder
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            OutlinedTextField(
+                value = khaateBagsInput,
+                onValueChange = {
+                    khaateBagsInput = if (it.startsWith("-")) {
+                        "-" + it.drop(1).filter { ch -> ch.isDigit() }
+                    } else {
+                        it.filter { ch -> ch.isDigit() }
+                    }
+                },
+                label = { Text(if (isEnglish) "Khaate bags counted" else "खाते बोरी गिनती") },
+                keyboardOptions = MandiKeyboard.Whole,
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MandiSurface,
+                    unfocusedContainerColor = MandiSurface,
+                    focusedBorderColor = MandiNavy,
+                    unfocusedBorderColor = MandiBorder
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(Modifier.height(4.dp))
 
@@ -1164,7 +1167,7 @@ private fun StockReconciliationSheet(
                 onClick = {
                     val bagKg = bagWeightInput.toDoubleOrNull() ?: defaultBagKg
                     val custodyBags = farmerCustodyInput.toLongOrNull() ?: 0L
-                    val khaateBags = if (hasKhaate) khaateBagsInput.toLongOrNull() ?: 0L else 0L
+                    val khaateBags = khaateBagsInput.toLongOrNull() ?: 0L
                     onSave(selectedCrop, physicalBags, bagKg, selectedReason, custodyBags, khaateBags)
                 },
                 shape = RoundedCornerShape(10.dp),
@@ -1471,7 +1474,7 @@ private fun formatBags(grams: Long, isEnglish: Boolean): String {
     }
 }
 
-private data class StockBill(
+internal data class StockBill(
     val id: String,
     val isBuy: Boolean,
     val isKhaate: Boolean = false,
@@ -1482,7 +1485,7 @@ private data class StockBill(
     val at: Long
 )
 
-private fun buildBills(
+internal fun buildBills(
     buys: List<BuyEntry>,
     sells: List<SellEntry>,
     names: Map<String, String>
