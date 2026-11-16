@@ -22,6 +22,7 @@
 - `CashDrawer` counts `PaymentMode.CASH` only. Do not change it.
 - Labour on Deal = rate (paisa per quintal) × net quintals via `MandiMathEngine.grossAmountPaisa(netGrams, ratePaisaPerQuintal)`. Existing deals keep stored `labourChargePaisa`.
 - Settings default `sellLabourPaisaPerQuintal` becomes `100L` (₹1) on fresh installs only. Existing stored settings are not rewritten.
+- Defaults confirmed by Vivek 2026-11-16: Mandi shulk 2% (`200` bps), sell commission 1.5% (already `buyerCommissionBps`/`customerCommissionBps` = 150 in `TradeSettings`; no change needed).
 - Mandi shulk field is visible only for Bill of Supply to a merchant. Default 2% (`200` bps). Rows that existed before the migration keep the rate they were actually charged (see Task 2 and the open question at the end).
 - Copy (Hindi, exact): "सप्लाई बिल", "कैश मेमो", "कैश मेमो (Cash Memo)", "हम्माली (₹ प्रति क्विंटल)", "मंडी शुल्क %", "नकद", "बैंक", "बैंक/चेक/UPI: ₹X (नकद में नहीं)", receipt line "मंडी शुल्क (1.5%)".
 - NGDL (`docs/design-system/DESIGN-SYSTEM.md` §2.1 tokens, §5 guardrails): tokens only, contrast 4.5:1 in light and dark, no emoji, vector icons, no horizontal scroll at 390dp, cards use `--ngdl-card-shadow` equivalents already used by neighbouring composables.
@@ -597,7 +598,3 @@ Bahi test in `core-domain/src/commonTest/.../bahi/`: build a day with one bank s
 - **Spec coverage:** §1 labour → Task 7. §2 shulk % → Tasks 1, 6. §3 tags and title → Task 6. §4 settle → Tasks 1, 4, 5. §5 data → Tasks 2, 3. §6 Galla → Task 8. §7 tests → each task's Step 1 (labour 50 qtl, rate 0, old deal; shulk 1.5% / cash memo none / default 2%; bank leaves drawer, cash raises it; no-reference rejected; Bahi difference 0; register tags and cash total). §8 out of scope respected. §9 open item resolved by Vivek (sell only).
 - **Placeholders:** the few `/* ... */` bodies in tests name the exact assertion and the fixture to copy; they are the only spots where helper names must be read from the existing test file first.
 - **Type consistency:** `SettleMethod`, `SellReceiptBuilder.build`, `mandiShulkBps`, `referenceNo`, `bankName`, `DealLabour.resolvePaisa`, `bankInputValid`, `nonCashTotalPaisa`, `modeTag`, `billTypeLabel`, `shulkLabel` are used with the same names in every task.
-
-## Open question for Vivek
-
-The old code charged Mandi shulk at 1.5% (`MANDI_SHULK_BPS = 150`) while the spec says the default is 2%. This plan keeps existing slips at 1.5% (so reprints stay true) and defaults new Bill of Supply slips to 2%, as the spec says. Confirm 2% is the rate you want as the new default.
