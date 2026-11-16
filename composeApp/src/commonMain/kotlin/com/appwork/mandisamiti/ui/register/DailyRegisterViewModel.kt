@@ -278,6 +278,8 @@ class DailyRegisterViewModel(
                     openingPaisa = summary.openingPaisa.coerceAtLeast(0L),
                     closingPaisa = (count?.countedPaisa ?: summary.closingPaisa).coerceAtLeast(0L),
                     entries = bahiEntries,
+                    buys = inputs.buys.filter { it.entryDate in window.startMs until window.endMs },
+                    sells = inputs.sells.filter { it.entryDate in window.startMs until window.endMs },
                 )
                 val creditInPaisa = allTx
                     .filter { !it.isDeleted && !it.isVoid && it.transactionDate >= window.startMs && it.transactionDate < window.endMs && it.paymentMode == PaymentMode.BOOK_ENTRY && it.transactionType == TransactionType.JAMA_RECEIVED }

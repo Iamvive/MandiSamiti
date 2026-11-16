@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.domain.bahi
 
+import com.appwork.mandisamiti.domain.model.BuyEntry
+import com.appwork.mandisamiti.domain.model.SellEntry
+
 enum class BahiSide { LEFT, RIGHT }
 
 enum class BahiPaymentMode {
@@ -61,6 +64,12 @@ data class BahiDayPage(
     val differencePaisa: Long,
     val likelyCauses: List<BahiLikelyCause>,
     val changedAfterClosing: Boolean,
+    val khaateBuyAsalPaisa: Long = 0L,
+    val khaateSellAsalPaisa: Long = 0L,
+    val farmerPayablePaisa: Long = 0L,
+    val buyerReceivablePaisa: Long = 0L,
+    val cashInPaisa: Long = 0L,
+    val cashOutPaisa: Long = 0L,
 ) {
     val isBalanced: Boolean get() = differencePaisa == 0L
 }
@@ -73,6 +82,8 @@ object BahiDayPageBuilder {
         closingPaisa: Long,
         entries: List<BahiDayEntry>,
         closeMismatch: Boolean = false,
+        buys: List<BuyEntry> = emptyList(),
+        sells: List<SellEntry> = emptyList(),
     ): BahiDayPage {
         require(openingPaisa >= 0L && closingPaisa >= 0L)
         require(entries.all { it.amountPaisa >= 0L })
@@ -140,6 +151,13 @@ object BahiDayPageBuilder {
                 }
             }.toList()
 
+        val khaateBuyAsal = buys.filter { !it.isVoid && it.isKhaate }.sumOf { it.grossPaisa }
+        val khaateSellAsal = sells.filter { !it.isVoid && it.isKhaate }.sumOf { it.grossPaisa }
+        val farmerPayable = buys.filter { !it.isVoid && !it.isKhaate }.sumOf { (it.netPayablePaisa - it.paidPaisa).coerceAtLeast(0L) }
+        val buyerReceivable = sells.filter { !it.isVoid && !it.isKhaate }.sumOf { it.balanceDuePaisa.coerceAtLeast(0L) }
+        val cashIn = left.filter { it.kind != BahiEntryKind.OPENING_BALANCE && it.paymentMode.isCash && !it.isVoid }.sumOf { it.amountPaisa }
+        val cashOut = right.filter { it.kind != BahiEntryKind.CLOSING_CASH && it.kind != BahiEntryKind.DAY_CLOSE_DIFF && it.paymentMode.isCash && !it.isVoid }.sumOf { it.amountPaisa }
+
         return BahiDayPage(
             dateEpochDay = dateEpochDay,
             left = left,
@@ -149,6 +167,12 @@ object BahiDayPageBuilder {
             differencePaisa = leftTotal - rightTotal,
             likelyCauses = causes,
             changedAfterClosing = entries.any { it.savedAfterClose },
+            khaateBuyAsalPaisa = khaateBuyAsal,
+            khaateSellAsalPaisa = khaateSellAsal,
+            farmerPayablePaisa = farmerPayable,
+            buyerReceivablePaisa = buyerReceivable,
+            cashInPaisa = cashIn,
+            cashOutPaisa = cashOut,
         )
     }
 

@@ -64,6 +64,8 @@
     <string name="total_cash_out">Total Cash Paid</string>
     <string name="total_traded_volume">Total Volume (Quintals)</string>
     <string name="galla_balance">Cash Drawer Balance</string>
+    <string name="mohari_buy_asal">Mohari buy (Asal)</string>
+    <string name="mohari_sell_asal">Mohari sell (Asal)</string>
 
     <!-- WhatsApp Share -->
     <string name="share_whatsapp_btn">Share Slip on WhatsApp</string>

@@ -64,6 +64,8 @@
     <string name="total_cash_out">कुल नकद गया</string>
     <string name="total_traded_volume">कुल बिका माल (क्विंटल)</string>
     <string name="galla_balance">गल्ला शेष रोकड़</string>
+    <string name="mohari_buy_asal">मोहरी खरीद (असल)</string>
+    <string name="mohari_sell_asal">मोहरी बिक्री (असल)</string>
 
     <!-- WhatsApp Share -->
     <string name="share_whatsapp_btn">व्हाट्सएप पर पर्ची भेजें</string>
