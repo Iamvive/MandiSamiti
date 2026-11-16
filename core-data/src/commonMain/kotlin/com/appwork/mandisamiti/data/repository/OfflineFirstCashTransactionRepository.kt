@@ -156,7 +156,11 @@ class OfflineFirstCashTransactionRepository(
                                 revision = lendEntity.revision + 1L,
                                 is_void = lendEntity.is_void,
                                 void_reason = lendEntity.void_reason,
-                                monthly_interest_rate = lendEntity.monthly_interest_rate
+                                monthly_interest_rate = lendEntity.monthly_interest_rate,
+                                direction = lendEntity.direction,
+                                kind = lendEntity.kind,
+                                receiver_name = lendEntity.receiver_name,
+                                receiver_phone = lendEntity.receiver_phone
                             )
                             cascadeRevision(lendEntity.shop_id, lendEntity.id, "LEND", lendEntity.revision + 1L, "EDIT", null, now)
                         }
@@ -222,6 +226,7 @@ class OfflineFirstCashTransactionRepository(
             void_reason = transaction.voidReason?.name,
             source_entry_type = transaction.sourceEntryType,
             source_entry_id = transaction.sourceEntryId,
+            lend_id = transaction.lendId,
         )
     }
 
@@ -246,6 +251,7 @@ class OfflineFirstCashTransactionRepository(
             voidReason = void_reason?.let { VoidReason.valueOf(it) },
             sourceEntryType = source_entry_type,
             sourceEntryId = source_entry_id,
+            lendId = lend_id,
         )
     }
 }

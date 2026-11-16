@@ -43,4 +43,5 @@ data class CashTransaction(
     /** 'BUY' or 'SELL' plus the slip id when this payment belongs to a slip; null for every other row. */
     val sourceEntryType: String? = null,
     val sourceEntryId: String? = null,
+    val lendId: String? = null,
 )

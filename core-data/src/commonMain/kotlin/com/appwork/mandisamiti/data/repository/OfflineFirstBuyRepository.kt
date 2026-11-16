@@ -118,7 +118,7 @@ class OfflineFirstBuyRepository(
                         voice_note_uri = row.voiceNoteUri, remarks = row.remarks, created_at = row.createdAt,
                         updated_at = row.updatedAt, is_deleted = 0L, sync_status = 0L, revision = 1L,
                         is_void = 0L, void_reason = null,
-                        source_entry_type = row.sourceEntryType, source_entry_id = row.sourceEntryId,
+                        source_entry_type = row.sourceEntryType, source_entry_id = row.sourceEntryId, lend_id = row.lendId,
                     )
                     queries.insertRevision(
                         id = IdGenerator.newId(), shop_id = row.shopId, entry_id = row.id, entry_kind = "CASH",

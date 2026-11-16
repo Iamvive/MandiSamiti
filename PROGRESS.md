@@ -363,3 +363,9 @@ Plan: `docs/superpowers/plans/2026-11-16-spare-crop-khaate.md` (main checkout). 
 ### Verification
 - `git log --oneline -7` on spare-crop-khaate shows 40716c7 down to 5de9b06.
 - Not committed in this entry: this PROGRESS.md update is uncommitted until Vivek asks for a commit.
+
+## 2026-11-16 (Codex, GPT-6): Udhaar rewrite started (branch udhaar-rewrite)
+- Task 0: checked out `udhaar-rewrite-plan`, created `udhaar-rewrite` per Vivek's setup instruction. Baseline `./gradlew :core-domain:jvmTest :core-data:jvmTest :composeApp:jvmTest`: 596 tests (97 core-domain, 145 core-data, 354 composeApp), 0 failures, errors, or skips.
+- Task 1: added GIVEN/TAKEN direction, LOAN/PESGI/CASH kind, receiver note and cash-to-loan link to the domain and local schema; added migration `14.sqm`; updated persistence mappers and all query insert call sites. Added `UdhaarSchemaRoundTripTest` and updated the rate-default regression to verify interest is off by default.
+- Evidence: the new round-trip test first failed at compile time on missing fields, then passed. `./gradlew :core-domain:jvmTest :core-data:jvmTest` passed: 243 tests (97 + 146), 0 failures.
+- Next: Task 2, pure oldest-first allocation. Device verification, full suite and Task 13 logging remain pending.
