@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.ui.components.MandiChip
@@ -35,6 +36,23 @@ fun khaateShortWarningText(isEnglish: Boolean) =
 fun KhaateToggleRow(isKhaate: Boolean, isEnglish: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MandiChip(label = khaateToggleLabel(isEnglish), selected = isKhaate, onClick = { onChange(!isKhaate) })
+    }
+}
+
+@Composable
+fun KhaateChip(isEnglish: Boolean = false, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MandiAmberLight,
+        modifier = modifier,
+    ) {
+        Text(
+            text = if (isEnglish) "Khaate" else "खाते",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MandiAmberDark,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
     }
 }
 

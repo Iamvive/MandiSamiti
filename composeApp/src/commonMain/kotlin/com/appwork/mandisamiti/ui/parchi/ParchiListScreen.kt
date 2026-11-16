@@ -653,7 +653,11 @@ private fun KisaanSlipCard(
     onSettleCash: (() -> Unit)? = null,
     isEnglish: Boolean
 ) {
-    val displayFarmerName = farmerName.ifBlank { if (isEnglish) "Farmer" else "किसान" }
+    val displayFarmerName = if (buy.isKhaate) {
+        if (isEnglish) "Khaate" else "खाते"
+    } else {
+        farmerName.ifBlank { if (isEnglish) "Farmer" else "किसान" }
+    }
     val cropLabel = buy.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
     val quintals = MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)
     val rateRupees = buy.ratePaisaPerQuintal / 100
@@ -696,6 +700,9 @@ private fun KisaanSlipCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        if (buy.isKhaate) {
+                            com.appwork.mandisamiti.ui.khaate.KhaateChip(isEnglish = isEnglish)
+                        }
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = MandiSurfaceElevated
@@ -727,6 +734,7 @@ private fun KisaanSlipCard(
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = when {
+                            buy.isKhaate -> MandiAmberLight
                             isFullyPaid -> MandiGreenLight
                             buy.paidPaisa > 0 -> MandiAmberLight
                             else -> MandiRedLight
@@ -734,6 +742,7 @@ private fun KisaanSlipCard(
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
                             when {
+                                buy.isKhaate -> MandiAmberBorder
                                 isFullyPaid -> MandiGreenBorder
                                 buy.paidPaisa > 0 -> MandiAmberBorder
                                 else -> MandiRedBorder
@@ -742,12 +751,14 @@ private fun KisaanSlipCard(
                     ) {
                         Text(
                             text = when {
+                                buy.isKhaate -> if (isEnglish) "Mohari (Asal)" else "मोहरी (असल)"
                                 isFullyPaid -> if (isEnglish) "✓ Paid" else "✓ चुक्ता"
                                 else -> if (isEnglish) "Due ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}" else "बाकी ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}"
                             },
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = when {
+                                buy.isKhaate -> MandiAmberDark
                                 isFullyPaid -> MandiGreenText
                                 buy.paidPaisa > 0 -> MandiAmberDark
                                 else -> MandiRedText
@@ -759,7 +770,7 @@ private fun KisaanSlipCard(
             }
 
             // Bottom Action Row if unpaid / partial
-            if (!isFullyPaid && onSettleCash != null) {
+            if (!buy.isKhaate && !isFullyPaid && onSettleCash != null) {
                 HorizontalDivider(color = MandiBorder, thickness = 1.dp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -815,7 +826,11 @@ private fun VyapariSlipCard(
     // Slip amount WITHOUT majdoori and commission:
     // This is grossPaisa (base weight x rate), excluding arat, mandi shulk and tulak
     val baseValueWithoutChargesPaisa = sell.grossPaisa
-    val displayBuyerName = buyerName.ifBlank { if (isEnglish) "Buyer" else "व्यापारी" }
+    val displayBuyerName = if (sell.isKhaate) {
+        if (isEnglish) "Khaate" else "खाते"
+    } else {
+        buyerName.ifBlank { if (isEnglish) "Buyer" else "व्यापारी" }
+    }
     val cropLabel = sell.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
     val quintals = MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)
     val rateRupees = sell.ratePaisaPerQuintal / 100
@@ -842,14 +857,22 @@ private fun VyapariSlipCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = displayBuyerName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = displayBuyerName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (sell.isKhaate) {
+                            com.appwork.mandisamiti.ui.khaate.KhaateChip(isEnglish = isEnglish)
+                        }
+                    }
                     Text(
                         text = "पर्चा #${slipLabel(sell.slipNo, sell.id)}",
                         style = MaterialTheme.typography.bodySmall,
@@ -908,6 +931,7 @@ private fun VyapariSlipCard(
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = when {
+                        sell.isKhaate -> MandiAmberLight
                         isFullyReceived -> MandiGreenLight
                         sell.receivedPaisa > 0 -> MandiAmberLight
                         else -> MandiRedLight
@@ -915,6 +939,7 @@ private fun VyapariSlipCard(
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
                         when {
+                            sell.isKhaate -> MandiAmberBorder
                             isFullyReceived -> MandiGreenBorder
                             sell.receivedPaisa > 0 -> MandiAmberBorder
                             else -> MandiRedBorder
@@ -923,12 +948,14 @@ private fun VyapariSlipCard(
                 ) {
                     Text(
                         text = when {
+                            sell.isKhaate -> if (isEnglish) "Mohari (Asal)" else "मोहरी (असल)"
                             isFullyReceived -> if (isEnglish) "✓ Received" else "✓ चुक्ता"
                             else -> if (isEnglish) "Due ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}" else "बाकी ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = when {
+                            sell.isKhaate -> MandiAmberDark
                             isFullyReceived -> MandiGreenText
                             sell.receivedPaisa > 0 -> MandiAmberDark
                             else -> MandiRedText
@@ -938,7 +965,7 @@ private fun VyapariSlipCard(
                 }
             }
 
-            if (!isFullyReceived && onSettleCash != null) {
+            if (!sell.isKhaate && !isFullyReceived && onSettleCash != null) {
                 HorizontalDivider(color = MandiBorder, thickness = 1.dp)
                 Button(
                     onClick = onSettleCash,

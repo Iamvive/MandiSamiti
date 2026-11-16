@@ -67,12 +67,13 @@ fun SellTransactionsListScreen(
 
     val filteredEntries = entries
         .filter { !it.isVoid }
-        .filter { !filterOnlyDue || it.balanceDuePaisa > 0 }
+        .filter { !filterOnlyDue || (!it.isKhaate && it.balanceDuePaisa > 0) }
         .filter {
             if (searchQuery.isBlank()) return@filter true
+            val buyer = if (it.isKhaate) "खाते" else (partyNamesById[it.buyerId] ?: it.buyerId)
             BilingualSearchEngine.matchesAny(
                 searchQuery,
-                partyNamesById[it.buyerId] ?: it.buyerId,
+                buyer,
                 it.slipNo?.toString(),
                 it.invoiceNumber,
             )
@@ -187,34 +188,44 @@ private fun SellEntryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = buyerName.ifBlank { "खरीदार" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = if (entry.isKhaate) "खाते" else buyerName.ifBlank { "खरीदार" },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (entry.isKhaate) {
+                            com.appwork.mandisamiti.ui.khaate.KhaateChip()
+                        }
+                    }
                     Text(
                         text = "बिल #${slipLabel(entry.slipNo, entry.id)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (entry.billMode == com.appwork.mandisamiti.domain.model.BillMode.BILL_OF_SUPPLY) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("सप्लाई बिल") },
-                        colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                if (!entry.isKhaate) {
+                    if (entry.billMode == com.appwork.mandisamiti.domain.model.BillMode.BILL_OF_SUPPLY) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("सप्लाई बिल") },
+                            colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
                         )
-                    )
-                } else {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text(if (entry.partyKind == com.appwork.mandisamiti.domain.model.SellPartyKind.MERCHANT) "व्यापारी" else "ग्राहक") },
-                        colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    } else {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(if (entry.partyKind == com.appwork.mandisamiti.domain.model.SellPartyKind.MERCHANT) "व्यापारी" else "ग्राहक") },
+                            colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         )
-                    )
+                    }
                 }
             }
             Row(
@@ -227,7 +238,7 @@ private fun SellEntryCard(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "देय: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}",
+                    text = if (entry.isKhaate) "असल: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}" else "देय: ₹${MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)}",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary

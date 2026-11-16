@@ -70,9 +70,10 @@ fun BuyTransactionsListScreen(
             if (entry.isVoid) return@filter false
             if (searchQuery.isBlank()) return@filter true
             val village = extractVillage(entry.remarks)
+            val farmerName = if (entry.isKhaate) "खाते" else (partyNamesById[entry.farmerId] ?: entry.farmerId)
             BilingualSearchEngine.matchesAny(
                 searchQuery,
-                partyNamesById[entry.farmerId] ?: entry.farmerId,
+                farmerName,
                 village,
                 entry.slipNo?.toString(),
                 entry.slipNumber,
@@ -166,8 +167,8 @@ private fun BuyEntryCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
 ) {
-    val displayFarmerName = farmerName.ifBlank { "किसान" }
-    val village = extractVillage(entry.remarks)
+    val displayFarmerName = if (entry.isKhaate) "खाते" else farmerName.ifBlank { "किसान" }
+    val village = if (entry.isKhaate) null else extractVillage(entry.remarks)
 
     Card(
         modifier = Modifier
@@ -189,11 +190,19 @@ private fun BuyEntryCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = displayFarmerName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = displayFarmerName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (entry.isKhaate) {
+                            com.appwork.mandisamiti.ui.khaate.KhaateChip()
+                        }
+                    }
                     val subtitleParts = buildList {
                         if (!village.isNullOrBlank()) add("गाँव: $village")
                         add("पर्चा #${slipLabel(entry.slipNo, entry.id)}")
@@ -206,7 +215,9 @@ private fun BuyEntryCard(
                         )
                     }
                 }
-                StatusChip(status = entry.paymentStatus)
+                if (!entry.isKhaate) {
+                    StatusChip(status = entry.paymentStatus)
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
