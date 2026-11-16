@@ -178,8 +178,8 @@
     {
       "id": "spare-crop-khaate",
       "description": "Day-end spare crop as khaate Buy/Sell: no party, no charges, own Godown line, Mohari in close-out",
-      "status": "failing",
-      "evidence": "Domain and UI built; device check by Vivek pending"
+      "status": "passing",
+      "evidence": "2026-11-16 emulator-5554: Verified all 7 steps. 1. Khaate Buy 5 bags Gehu saved with 0 charges and no party, displayed 'खाते' and amber KhaateChip in list (t1_khaate_buy_entry.png, t1_khaate_buy_list.png). 2. Khaate Sell 8 bags displayed shortfall warning 'खाते में इतना माल नहीं है। फिर भी सेव होगा।' and saved with 0 charges (t2_khaate_sell_shortfall.png, t2_khaate_sell_list.png). 3. Godown card displayed separate 'खाते' line (t3_godown_two_lines.png). 4. Stock audit dialog displayed two separate count inputs for crop bags and khaate bags (t4_stock_audit_two_counts.png). 5. Day-end close-out sheet displayed 'मोहरी खरीद (असल)' ₹10,000 and 'मोहरी बिक्री (असल)' ₹17,600 under विवरण (t5_closeout_mohari_rows.png). 6. Galla cash remained untouched at exact ₹61,980 with ₹0 net cash effect. 7. Voiding Buy entry from list dialog reversed stock immediately (-6 to -11 bags) (t7_void_dialog.png, t7_godown_after_void.png). Automated tests: 354 JVM tests, 132 backend pytest."
     }
   ]
 }

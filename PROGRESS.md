@@ -400,16 +400,24 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - `t6-audit-dialog-wheat-light-390.png`, `t6-audit-dialog-wheat-dark-390.png`
   - `t6-movement-wheat-chips-light-390.png`
   - `t7-closeout-mohari-light-390.png`, `t7-closeout-mohari-dark-390.png`
+  - `t1_khaate_buy_entry.png`, `t1_khaate_buy_list.png`
+  - `t2_khaate_sell_shortfall.png`, `t2_khaate_sell_list.png`
+  - `t3_godown_two_lines.png`
+  - `t4_stock_audit_two_counts.png`
+  - `t5_closeout_mohari_rows.png`
+  - `t7_void_dialog.png`, `t7_godown_after_void.png`
 
-### Pending / Unverified:
-- Device sign-off by Vivek on physical phone or emulator:
-  1. Khaate buy 5 bags Gehu.
-  2. Khaate sell 8 bags (warning displays, saves, stock line -3).
-  3. Godown displays two lines (crop + khaate).
-  4. Audit displays two counts (crop bags + khaate bags).
-  5. Close-out shows Mohari buy/sell rows.
-  6. Galla cash unchanged.
-  7. Edit then void.
+### Verified on Emulator (2026-11-16, emulator-5554):
+1. Khaate buy 5 bags Gehu saved with 0 charges and no party, shown as "खाते" with amber KhaateChip.
+2. Khaate sell 8 bags showed amber shortfall warning "खाते में इतना माल नहीं है। फिर भी सेव होगा।" and saved with 0 charges.
+3. Godown wheat card showed normal trade stock and separate "खाते" line.
+4. Stock audit dialog showed two distinct count inputs ("गोदाम में असली बोरी" and "खाते बोरी गिनती").
+5. Day-end close-out sheet under विवरण showed "मोहरी खरीद (असल)" ₹10,000 and "मोहरी बिक्री (असल)" ₹17,600.
+6. Galla cash drawer remained completely unchanged at ₹61,980 with ₹0 cash impact.
+7. Voiding Buy entry from list dialog reversed stock immediately (shifted from -6 to -11 bags).
+
+### Pending / Next Steps:
+- Physical Redmi Note 7 check if Vivek prefers physical confirmation.
 - Backend deployment of `0007_add_is_khaate` migration to VPS staging/production (needs Vivek's confirmation via `/project-deploy`).
 - Merging `khaate-finish` into `main` (needs Vivek's approval).
 
