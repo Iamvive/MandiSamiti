@@ -26,6 +26,15 @@ class LendTransactionUseCaseTest {
         override suspend fun getLendEntryById(id: String): LendEntry? = lends[id]
         override suspend fun getSettlements(lendId: String): List<LendSettlement> =
             settlements.filter { it.lendId == lendId && !it.isVoid }
+        override suspend fun getLoansForParty(shopId: String, partyId: String, direction: LendDirection): List<LendEntry> =
+            lends.values.filter { it.shopId == shopId && it.partyId == partyId && it.direction == direction && !it.isVoid && it.lendType == LendType.MONEY }
+        override suspend fun settleAll(items: List<Pair<LendSettlement, List<CashTransaction>>>) {
+            items.forEach { (settlement, rows) -> settle(settlement, rows) }
+        }
+        override suspend fun saveLoanWithCash(entry: LendEntry, cash: CashTransaction) {
+            saveLendEntry(entry)
+            this.cash += cash
+        }
 
         override suspend fun editSettlement(settlementId: String, newAmountPaisa: Long, newSettledAt: Long, monthlyRatePercent: Double): com.appwork.mandisamiti.domain.math.RepaymentEditPlan =
             throw UnsupportedOperationException()

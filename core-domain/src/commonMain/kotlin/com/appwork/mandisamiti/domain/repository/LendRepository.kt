@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.domain.repository
 
 import com.appwork.mandisamiti.domain.model.*
+import com.appwork.mandisamiti.domain.model.LendDirection
 import kotlinx.coroutines.flow.Flow
 
 interface LendRepository {
@@ -8,6 +9,9 @@ interface LendRepository {
     fun getSettlementsStream(shopId: String): Flow<List<LendSettlement>>
     suspend fun getLendEntryById(id: String): LendEntry?
     suspend fun getSettlements(lendId: String): List<LendSettlement>
+    suspend fun getLoansForParty(shopId: String, partyId: String, direction: LendDirection): List<LendEntry>
+    suspend fun settleAll(items: List<Pair<LendSettlement, List<CashTransaction>>>)
+    suspend fun saveLoanWithCash(entry: LendEntry, cash: CashTransaction)
     suspend fun saveLendEntry(entry: LendEntry)
     /**
      * Records a repayment and moves the lend to PARTIAL or SETTLED in one transaction.

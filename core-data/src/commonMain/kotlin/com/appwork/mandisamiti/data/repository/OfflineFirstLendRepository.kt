@@ -13,6 +13,7 @@ import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.LendEntry
+import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
@@ -48,6 +49,50 @@ class OfflineFirstLendRepository(
 
     override suspend fun getSettlements(lendId: String): List<LendSettlement> = withContext(ioDispatcher) {
         queries.getLendSettlementsByLend(lendId).executeAsList().map { it.toDomain() }
+    }
+
+    override suspend fun getLoansForParty(shopId: String, partyId: String, direction: LendDirection): List<LendEntry> =
+        withContext(ioDispatcher) {
+            queries.getLendEntriesByShop(shopId).executeAsList().asSequence()
+                .map { it.toDomain() }
+                .filter { it.partyId == partyId && it.direction == direction && it.lendType == LendType.MONEY && !it.isVoid }
+                .toList()
+        }
+
+    override suspend fun settleAll(items: List<Pair<LendSettlement, List<CashTransaction>>>) = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction { items.forEach { (settlement, cashEntries) -> settleInTransaction(settlement, cashEntries, now) } }
+    }
+
+    override suspend fun saveLoanWithCash(entry: LendEntry, cash: CashTransaction) = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val slipNo = queries.getLendEntryById(entry.id).executeAsOneOrNull()?.slip_no
+                ?: entry.slipNo
+                ?: queries.nextLendSlipNo(entry.shopId).executeAsOne()
+            val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
+            insertOrReplace(created)
+            recordLendRevision(created, "CREATE", created.updatedAt)
+            if (entry.partyId.isNotBlank()) {
+                queries.insertPartyIfAbsent(
+                    id = entry.partyId,
+                    shop_id = entry.shopId,
+                    name = entry.partyId,
+                    phone = null,
+                    village = null,
+                    party_type = "FARMER",
+                    monthly_interest_rate = null,
+                    photo_uri = null,
+                    gstin = null,
+                    mandi_license = null,
+                    created_at = created.createdAt,
+                    updated_at = created.updatedAt,
+                    is_deleted = 0L,
+                    sync_status = 0L,
+                )
+            }
+            insertCashEntry(cash.copy(shopId = created.shopId, partyId = created.partyId, lendId = created.id), now)
+        }
     }
 
     override suspend fun saveLendEntry(entry: LendEntry) = withContext(ioDispatcher) {
