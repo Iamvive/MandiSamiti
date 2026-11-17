@@ -402,7 +402,8 @@ class SyncEngine(
                         is_void = t.is_void.toLong(),
                         void_reason = t.void_reason,
                         source_entry_type = t.source_entry_type,
-                        source_entry_id = t.source_entry_id
+                        source_entry_id = t.source_entry_id,
+                        lend_id = null
                     )
                 }
 
@@ -503,7 +504,11 @@ class SyncEngine(
                         revision = l.revision.toLong(),
                         is_void = l.is_void.toLong(),
                         void_reason = l.void_reason,
-                        monthly_interest_rate = l.monthly_interest_rate
+                        monthly_interest_rate = l.monthly_interest_rate,
+                        direction = "GIVEN",
+                        kind = "LOAN",
+                        receiver_name = null,
+                        receiver_phone = null
                     )
                 }
 

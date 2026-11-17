@@ -1,0 +1,206 @@
+package com.appwork.mandisamiti.domain.usecase
+
+import com.appwork.mandisamiti.domain.math.AllocationResult
+import com.appwork.mandisamiti.domain.math.LoanPayment
+import com.appwork.mandisamiti.domain.math.OpenLoan
+import com.appwork.mandisamiti.domain.math.RuralInterestEngine
+import com.appwork.mandisamiti.domain.math.UdhaarAllocator
+import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.LendDirection
+import com.appwork.mandisamiti.domain.model.LendEntry
+import com.appwork.mandisamiti.domain.model.LendKind
+import com.appwork.mandisamiti.domain.model.LendSettlement
+import com.appwork.mandisamiti.domain.model.LendStatus
+import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.repository.LendRepository
+
+class UdhaarOverpaymentException(val totalDuePaisa: Long) : IllegalArgumentException("Payment is above the amount due")
+
+data class UdhaarLoanForm(
+    val shopId: String,
+    val partyId: String,
+    val direction: LendDirection,
+    val amountPaisa: Long,
+    val date: Long,
+    val kind: LendKind = LendKind.LOAN,
+    val monthlyRatePercent: Double = 0.0,
+    val receiverName: String? = null,
+    val receiverPhone: String? = null,
+)
+
+enum class CashSide { GAVE, GOT }
+
+sealed interface PlainCashResult {
+    data class Repaid(val parts: List<LoanPayment>) : PlainCashResult
+    data class NewLoan(val loan: LendEntry) : PlainCashResult
+}
+
+class UdhaarUseCase(
+    private val repo: LendRepository,
+    private val newId: () -> String,
+    private val nowMillis: () -> Long,
+) {
+    suspend fun createLoan(form: UdhaarLoanForm): LendEntry {
+        require(form.amountPaisa > 0L) { "Amount must be above zero" }
+        require(form.monthlyRatePercent >= 0.0) { "Interest rate cannot be negative" }
+        val now = nowMillis()
+        val loan = LendEntry(
+            id = newId(),
+            shopId = form.shopId,
+            partyId = form.partyId,
+            lendType = LendType.MONEY,
+            entryDate = form.date,
+            amountPaisa = form.amountPaisa,
+            status = LendStatus.OPEN,
+            createdAt = now,
+            updatedAt = now,
+            monthlyRatePercent = form.monthlyRatePercent,
+            direction = form.direction,
+            kind = form.kind,
+            receiverName = form.receiverName?.trim()?.takeIf { form.direction == LendDirection.GIVEN && it.isNotEmpty() },
+            receiverPhone = form.receiverPhone?.trim()?.takeIf { form.direction == LendDirection.GIVEN && it.isNotEmpty() },
+        )
+        val transactionType = when (form.direction) {
+            LendDirection.GIVEN -> TransactionType.UDHAR_GIVEN
+            LendDirection.TAKEN -> TransactionType.JAMA_RECEIVED
+        }
+        val cash = CashTransaction(
+            id = newId(),
+            shopId = form.shopId,
+            partyId = form.partyId,
+            transactionType = transactionType,
+            amountPaisa = form.amountPaisa,
+            paymentMode = PaymentMode.CASH,
+            transactionDate = form.date,
+            remarks = "उधार [LEND:${loan.id}]",
+            createdAt = now,
+            updatedAt = now,
+            sourceEntryId = null,
+            lendId = loan.id,
+        )
+        repo.saveLoanWithCash(loan, cash)
+        return loan
+    }
+
+    suspend fun repay(
+        shopId: String,
+        partyId: String,
+        direction: LendDirection,
+        paymentPaisa: Long,
+        paidAt: Long,
+        mode: PaymentMode = PaymentMode.CASH,
+        remarks: String? = null,
+    ): List<LoanPayment> {
+        require(paymentPaisa > 0L) { "Payment must be above zero" }
+        val loans = openLoans(shopId, partyId, direction, paidAt)
+        val allocation = UdhaarAllocator.allocate(loans, paymentPaisa)
+        if (allocation is AllocationResult.Over) throw UdhaarOverpaymentException(allocation.totalDuePaisa)
+        allocation as AllocationResult.Ok
+
+        val items = allocation.parts.map { part ->
+            val loan = repo.getLendEntryById(part.lendId) ?: throw IllegalArgumentException("Loan ${part.lendId} does not exist")
+            val settlementId = newId()
+            val amount = part.principalPaisa + part.interestPaisa
+            val settlement = LendSettlement(
+                id = settlementId,
+                shopId = loan.shopId,
+                lendId = loan.id,
+                settledAt = paidAt,
+                amountPaisa = amount,
+                createdAt = nowMillis(),
+                updatedAt = nowMillis(),
+                principalPaisa = part.principalPaisa,
+                interestPaisa = part.interestPaisa,
+                calculatedInterestPaisa = part.interestPaisa,
+            )
+            val rows = buildList {
+                if (part.principalPaisa > 0L) add(
+                    cashRow(loan, settlementId, part.principalPaisa, paidAt, mode, remarks, principalType(direction))
+                )
+                if (part.interestPaisa > 0L) add(
+                    cashRow(loan, settlementId, part.interestPaisa, paidAt, mode, remarks, interestType(direction))
+                )
+            }
+            settlement to rows
+        }
+        repo.settleAll(items)
+        return allocation.parts
+    }
+
+    suspend fun plainCash(
+        shopId: String,
+        partyId: String,
+        side: CashSide,
+        amountPaisa: Long,
+        date: Long,
+    ): PlainCashResult {
+        require(amountPaisa > 0L) { "Amount must be above zero" }
+        val opposite = if (side == CashSide.GAVE) LendDirection.TAKEN else LendDirection.GIVEN
+        val loans = openLoans(shopId, partyId, opposite, date)
+        if (loans.any { it.outstandingPrincipalPaisa + it.interestDuePaisa > 0L }) {
+            return PlainCashResult.Repaid(repay(shopId, partyId, opposite, amountPaisa, date))
+        }
+        val direction = if (side == CashSide.GAVE) LendDirection.GIVEN else LendDirection.TAKEN
+        return PlainCashResult.NewLoan(createLoan(UdhaarLoanForm(
+            shopId = shopId,
+            partyId = partyId,
+            direction = direction,
+            amountPaisa = amountPaisa,
+            date = date,
+            kind = LendKind.CASH,
+        )))
+    }
+
+    private suspend fun openLoans(shopId: String, partyId: String, direction: LendDirection, nowMs: Long): List<OpenLoan> =
+        repo.getLoansForParty(shopId, partyId, direction).mapNotNull { loan ->
+            if (loan.isVoid || loan.lendType != LendType.MONEY) return@mapNotNull null
+            val settlements = repo.getSettlements(loan.id).filter { !it.isVoid }
+            val principal = (loan.amountPaisa - settlements.sumOf { effectivePrincipal(it) }).coerceAtLeast(0L)
+            val interest = RuralInterestEngine.interestDue(
+                principalPaisa = loan.amountPaisa,
+                monthlyRatePercent = loan.monthlyRatePercent,
+                lentAtMs = loan.entryDate,
+                settlements = settlements,
+                nowMs = nowMs,
+            )
+            OpenLoan(loan.id, loan.entryDate, principal, interest)
+        }
+
+    private fun effectivePrincipal(settlement: LendSettlement): Long =
+        if (settlement.principalPaisa == 0L && settlement.interestPaisa == 0L) settlement.amountPaisa else settlement.principalPaisa
+
+    private fun principalType(direction: LendDirection) = when (direction) {
+        LendDirection.GIVEN -> TransactionType.JAMA_RECEIVED
+        LendDirection.TAKEN -> TransactionType.UDHAR_GIVEN
+    }
+
+    private fun interestType(direction: LendDirection) = when (direction) {
+        LendDirection.GIVEN -> TransactionType.INTEREST_RECEIVED
+        LendDirection.TAKEN -> TransactionType.UDHAR_GIVEN
+    }
+
+    private fun cashRow(
+        loan: LendEntry,
+        settlementId: String,
+        amountPaisa: Long,
+        date: Long,
+        mode: PaymentMode,
+        note: String?,
+        type: TransactionType,
+    ) = CashTransaction(
+        id = newId(),
+        shopId = loan.shopId,
+        partyId = loan.partyId,
+        transactionType = type,
+        amountPaisa = amountPaisa,
+        paymentMode = mode,
+        transactionDate = date,
+        remarks = "${note?.trim()?.takeIf { it.isNotEmpty() } ?: "उधार वापसी"} [SETTLE:$settlementId:${loan.id}]",
+        createdAt = nowMillis(),
+        updatedAt = nowMillis(),
+        sourceEntryId = null,
+        lendId = loan.id,
+    )
+}

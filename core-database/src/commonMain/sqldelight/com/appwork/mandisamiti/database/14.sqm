@@ -1,0 +1,6 @@
+ALTER TABLE lendEntryEntity ADD COLUMN direction TEXT NOT NULL DEFAULT 'GIVEN';
+ALTER TABLE lendEntryEntity ADD COLUMN kind TEXT NOT NULL DEFAULT 'LOAN';
+ALTER TABLE lendEntryEntity ADD COLUMN receiver_name TEXT;
+ALTER TABLE lendEntryEntity ADD COLUMN receiver_phone TEXT;
+ALTER TABLE cashTransactionEntity ADD COLUMN lend_id TEXT;
+CREATE INDEX idx_tx_lend ON cashTransactionEntity(lend_id);

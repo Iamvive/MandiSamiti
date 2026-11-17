@@ -13,6 +13,7 @@ import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.LendEntry
+import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendStatus
 import com.appwork.mandisamiti.domain.model.LendType
@@ -48,6 +49,50 @@ class OfflineFirstLendRepository(
 
     override suspend fun getSettlements(lendId: String): List<LendSettlement> = withContext(ioDispatcher) {
         queries.getLendSettlementsByLend(lendId).executeAsList().map { it.toDomain() }
+    }
+
+    override suspend fun getLoansForParty(shopId: String, partyId: String, direction: LendDirection): List<LendEntry> =
+        withContext(ioDispatcher) {
+            queries.getLendEntriesByShop(shopId).executeAsList().asSequence()
+                .map { it.toDomain() }
+                .filter { it.partyId == partyId && it.direction == direction && it.lendType == LendType.MONEY && !it.isVoid }
+                .toList()
+        }
+
+    override suspend fun settleAll(items: List<Pair<LendSettlement, List<CashTransaction>>>) = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction { items.forEach { (settlement, cashEntries) -> settleInTransaction(settlement, cashEntries, now) } }
+    }
+
+    override suspend fun saveLoanWithCash(entry: LendEntry, cash: CashTransaction) = withContext(ioDispatcher) {
+        val now = clock.now().toEpochMilliseconds()
+        database.transaction {
+            val slipNo = queries.getLendEntryById(entry.id).executeAsOneOrNull()?.slip_no
+                ?: entry.slipNo
+                ?: queries.nextLendSlipNo(entry.shopId).executeAsOne()
+            val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
+            insertOrReplace(created)
+            recordLendRevision(created, "CREATE", created.updatedAt)
+            if (entry.partyId.isNotBlank()) {
+                queries.insertPartyIfAbsent(
+                    id = entry.partyId,
+                    shop_id = entry.shopId,
+                    name = entry.partyId,
+                    phone = null,
+                    village = null,
+                    party_type = "FARMER",
+                    monthly_interest_rate = null,
+                    photo_uri = null,
+                    gstin = null,
+                    mandi_license = null,
+                    created_at = created.createdAt,
+                    updated_at = created.updatedAt,
+                    is_deleted = 0L,
+                    sync_status = 0L,
+                )
+            }
+            insertCashEntry(cash.copy(shopId = created.shopId, partyId = created.partyId, lendId = created.id), now)
+        }
     }
 
     override suspend fun saveLendEntry(entry: LendEntry) = withContext(ioDispatcher) {
@@ -144,7 +189,8 @@ class OfflineFirstLendRepository(
             payment_mode = tx.paymentMode.name, transaction_date = tx.transactionDate,
             voice_note_uri = tx.voiceNoteUri, remarks = tx.remarks, created_at = tx.createdAt,
             updated_at = tx.updatedAt, is_deleted = 0L, sync_status = tx.syncStatus.toLong(),
-            revision = tx.revision.toLong(), is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null
+            revision = tx.revision.toLong(), is_void = 0L, void_reason = null, source_entry_type = null,
+            source_entry_id = null, lend_id = tx.lendId
         )
         queries.insertRevision(
             id = IdGenerator.newId(), shop_id = tx.shopId, entry_id = tx.id, entry_kind = "CASH",
@@ -186,7 +232,8 @@ class OfflineFirstLendRepository(
                             payment_mode = tx.payment_mode, transaction_date = tx.transaction_date,
                             voice_note_uri = tx.voice_note_uri, remarks = "$rem [LEND:$id]",
                             created_at = tx.created_at, updated_at = now, is_deleted = tx.is_deleted,
-                            sync_status = 0L, revision = tx.revision + 1L, is_void = 0L, void_reason = null, source_entry_type = tx.source_entry_type, source_entry_id = tx.source_entry_id
+                            sync_status = 0L, revision = tx.revision + 1L, is_void = 0L, void_reason = null,
+                            source_entry_type = tx.source_entry_type, source_entry_id = tx.source_entry_id, lend_id = tx.lend_id
                         )
                         queries.insertRevision(
                             id = IdGenerator.newId(), shop_id = tx.shop_id, entry_id = tx.id, entry_kind = "CASH",
@@ -285,6 +332,7 @@ class OfflineFirstLendRepository(
                 updated_at = now, is_deleted = row.is_deleted, sync_status = 0L, revision = row.revision + 1L,
                 is_void = if (void) 1L else 0L, void_reason = if (void) "REPAYMENT_EDITED" else null,
                 source_entry_type = row.source_entry_type, source_entry_id = row.source_entry_id,
+                lend_id = row.lend_id,
             )
             queries.insertRevision(
                 id = IdGenerator.newId(), shop_id = row.shop_id, entry_id = row.id, entry_kind = "CASH",
@@ -355,7 +403,8 @@ class OfflineFirstLendRepository(
                 sync_status = 0L,
                 revision = txEntity.revision + 1L,
                 is_void = 1L,
-                void_reason = reason.name, source_entry_type = null, source_entry_id = null
+                void_reason = reason.name, source_entry_type = txEntity.source_entry_type,
+                source_entry_id = txEntity.source_entry_id, lend_id = txEntity.lend_id
             )
             queries.insertRevision(
                 id = IdGenerator.newId(),
@@ -408,6 +457,10 @@ class OfflineFirstLendRepository(
             is_void = if (entry.isVoid) 1L else 0L,
             void_reason = entry.voidReason,
             monthly_interest_rate = entry.monthlyRatePercent,
+            direction = entry.direction.name,
+            kind = entry.kind.name,
+            receiver_name = entry.receiverName,
+            receiver_phone = entry.receiverPhone,
         )
     }
 
@@ -460,6 +513,10 @@ class OfflineFirstLendRepository(
         voidReason = void_reason,
         monthlyRatePercent = monthly_interest_rate,
         syncStatus = sync_status,
+        direction = com.appwork.mandisamiti.domain.model.LendDirection.valueOf(direction),
+        kind = com.appwork.mandisamiti.domain.model.LendKind.valueOf(kind),
+        receiverName = receiver_name,
+        receiverPhone = receiver_phone,
     )
 
     private fun LendSettlementEntity.toDomain(): LendSettlement = LendSettlement(
