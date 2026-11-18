@@ -103,6 +103,11 @@ sealed interface Screen {
     data object SubscriptionContact : Screen
 }
 
+/** Sell slip deposit: live JAMA_RECEIVED rows that are not udhaar repayments (lendId null). */
+internal fun sellDepositPaisa(cash: List<com.appwork.mandisamiti.domain.model.CashTransaction>): Long =
+    cash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED && it.lendId == null }
+        .sumOf { it.amountPaisa }
+
 fun Screen.backTarget(): Screen = when (this) {
     is Screen.BuyEntry -> Screen.BuyList
     is Screen.BuyPayment -> Screen.BuyReceipt(entryId, returnScreen)
@@ -548,7 +553,7 @@ fun App(
                         buyForm.setLoan(lendIdMarker, totalPrincipal, totalInterest, hasPesgi)
                     }
                     val partyCash = cashRepo.getTransactionsByPartyStream(loanPartyId).first()
-                    val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED && it.lendId == null }.sumOf { it.amountPaisa }
+                    val deposit = sellDepositPaisa(partyCash)
                     buyForm.setDeposit(deposit)
                 }
                 BuyEntryScreen(
@@ -824,7 +829,7 @@ fun App(
 
                     if (buyerPartyId != null) {
                         val partyCash = cashRepo.getTransactionsByPartyStream(buyerPartyId).first()
-                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED && it.lendId == null }.sumOf { it.amountPaisa }
+                        val deposit = sellDepositPaisa(partyCash)
                         sellForm.setDeposit(deposit)
                     } else {
                         sellForm.setDeposit(0L)
