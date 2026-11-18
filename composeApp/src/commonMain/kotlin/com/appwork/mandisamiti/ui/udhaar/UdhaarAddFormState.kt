@@ -18,11 +18,9 @@ fun isSameOrPastDay(
     todayMs: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Boolean {
-    if (dateMs <= todayMs) return true
+    val pickedDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(timeZone).date
     val todayDate = Instant.fromEpochMilliseconds(todayMs).toLocalDateTime(timeZone).date
-    val pickedUtcDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(TimeZone.UTC).date
-    val pickedLocalDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(timeZone).date
-    return pickedUtcDate <= todayDate || pickedLocalDate <= todayDate
+    return pickedDate <= todayDate
 }
 
 class UdhaarAddFormState(

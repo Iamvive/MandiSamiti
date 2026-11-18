@@ -565,3 +565,28 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified:
   - Physical Redmi Note 7 device check (tested on emulator-5554 reference device at density 443 / 390dp).
 - Next: Task 9 (Kisaan khata layout and plain cash routing).
+
+## 2026-11-18, Gemini / Antigravity (Task 8b: repay date bound and dialog state fixes)
+- Fixed Item 1 (day comparison in `isSameOrAfterDay` & `isSameOrPastDay`):
+  - In `UdhaarRepayFormState.kt`, removed the either-zone check (`pickedUtcDate >= minDate || pickedLocalDate >= minDate`) and `if (dateMs >= minDateMs) return true` bypass which allowed dates before the loan to slip through in negative timezones. `isSameOrAfterDay` now strictly compares local calendar dates: `pickedDate >= minDate`.
+  - Added `normalisePickerDate(utcMillis, timeZone)` to convert the Material DatePicker's UTC midnight epoch millis to start-of-day epoch millis in the local timezone, and `localInstantToPickerUtc(instantMs, timeZone)` for the reverse round-trip.
+  - Checked `isSameOrPastDay` in `UdhaarAddFormState.kt`: identified the same dual-zone bug (`pickedUtcDate <= todayDate || pickedLocalDate <= todayDate`), and updated it to compare local calendar dates only (`pickedDate <= todayDate`). Normalised date picker selection in `UdhaarAddSheet.kt`.
+- Fixed Item 2 (typed amount and date preserved across dialog stream updates):
+  - In `UdhaarPersonScreen.kt`, rebuilt `UdhaarRepayFormState` once per dialog session (`remember { ... }` instead of keying on `uiState.totalDuePaisa`).
+  - Added `LaunchedEffect(uiState.totalDuePaisa, uiState.minDateMs)` to feed updated dues and `minDateMs` into the state.
+  - If the picked date is not today, recomputed due via `viewModel.computeDueAt(formState.dateMs)` instead of overwriting with `uiState.totalDuePaisa`.
+  - Tracked and cancelled `computeJob` on each new date pick or stream recomputation to guarantee the latest date pick wins and prevent stale async `computeDueAt` results from overwriting newer user selections.
+  - `minDateMs` in `UdhaarRepayFormState` converted to `mutableStateOf` to reactively revalidate date inputs upon external loan updates.
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-data`: 166 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:composeApp`: 400 tests (0 failures, +8 new tests across `UdhaarRepayFormStateTest` and `UdhaarAddFormStateTest`)
+  - Total: 687 tests passing (0 failures).
+- Device check on `emulator-5554` (staging `http://64.227.142.180:8060`, 390dp):
+  - Item 1 verified: Picked 14 Nov on Monty (loan on 15 Nov); save button disabled and "तारीख उधार की तारीख से पहले नहीं हो सकती" displayed in Light and Dark modes.
+  - Item 2 verified: Typed 2500 in repay dialog, modified loan row in SQLite; verified typed text and picked date preserved without resetting.
+  - Cleaned up all test rows and deleted test screenshots from device and working tree.
+- Unverified:
+  - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
+- Next: Task 9 (Kisaan khata layout and plain cash routing).

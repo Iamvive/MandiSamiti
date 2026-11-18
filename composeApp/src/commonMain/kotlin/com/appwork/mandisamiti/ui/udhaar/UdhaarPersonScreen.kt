@@ -51,6 +51,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +87,7 @@ import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
@@ -622,7 +624,7 @@ fun UdhaarRepayDialog(
     onSaved: () -> Unit,
 ) {
     val todayMs = remember { Clock.System.now().toEpochMilliseconds() }
-    val formState = remember(uiState.totalDuePaisa, todayMs, uiState.minDateMs) {
+    val formState = remember {
         UdhaarRepayFormState(
             totalDuePaisa = uiState.totalDuePaisa,
             todayMs = todayMs,
@@ -630,20 +632,39 @@ fun UdhaarRepayDialog(
         )
     }
     val coroutineScope = rememberCoroutineScope()
+    var computeJob by remember { mutableStateOf<Job?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
 
+    LaunchedEffect(uiState.totalDuePaisa, uiState.minDateMs) {
+        formState.minDateMs = uiState.minDateMs
+        val isToday = isSameDay(formState.dateMs, formState.todayMs)
+        if (isToday) {
+            formState.updateTotalDue(uiState.totalDuePaisa)
+        } else {
+            computeJob?.cancel()
+            computeJob = coroutineScope.launch {
+                val due = viewModel.computeDueAt(formState.dateMs)
+                formState.updateTotalDue(due.totalDuePaisa)
+            }
+        }
+    }
+
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = formState.dateMs)
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = localInstantToPickerUtc(formState.dateMs)
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { pickedMs ->
-                        formState.dateMs = pickedMs
-                        coroutineScope.launch {
-                            val due = viewModel.computeDueAt(pickedMs)
+                    datePickerState.selectedDateMillis?.let { utcMs ->
+                        val localMs = normalisePickerDate(utcMs)
+                        formState.dateMs = localMs
+                        computeJob?.cancel()
+                        computeJob = coroutineScope.launch {
+                            val due = viewModel.computeDueAt(localMs)
                             formState.updateTotalDue(due.totalDuePaisa)
                         }
                     }

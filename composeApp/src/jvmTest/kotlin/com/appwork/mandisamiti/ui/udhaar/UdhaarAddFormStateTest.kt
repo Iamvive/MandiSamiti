@@ -4,6 +4,13 @@ import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.lend.LendPartyResolver
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -273,5 +280,43 @@ class UdhaarAddFormStateTest {
         assertFalse(state.isValid)
         assertEquals("Enter valid interest rate (above 0 up to 100)", state.validationReason(isEnglish = true))
         assertEquals("मान्य ब्याज दर दर्ज करें (0 से अधिक और 100 तक)", state.validationReason(isEnglish = false))
+    }
+
+    @Test
+    fun isSameOrPastDayInKolkataAndLosAngeles() {
+        val kolkata = TimeZone.of("Asia/Kolkata")
+        val todayKolkataMs = LocalDateTime(2026, 11, 12, 12, 0).toInstant(kolkata).toEpochMilliseconds()
+
+        // Yesterday: valid
+        val yesterdayKolkataMs = LocalDate(2026, 11, 11).atStartOfDayIn(kolkata).toEpochMilliseconds()
+        assertTrue(isSameOrPastDay(yesterdayKolkataMs, todayKolkataMs, kolkata), "Yesterday must be valid in Kolkata")
+
+        // Today: valid
+        val todayStartKolkataMs = LocalDate(2026, 11, 12).atStartOfDayIn(kolkata).toEpochMilliseconds()
+        assertTrue(isSameOrPastDay(todayStartKolkataMs, todayKolkataMs, kolkata), "Today must be valid in Kolkata")
+
+        // Tomorrow: invalid
+        val tomorrowKolkataMs = LocalDate(2026, 11, 13).atStartOfDayIn(kolkata).toEpochMilliseconds()
+        assertFalse(isSameOrPastDay(tomorrowKolkataMs, todayKolkataMs, kolkata), "Tomorrow must be invalid in Kolkata")
+
+        // In a positive offset timezone like Asia/Tokyo (UTC+9) where tomorrow morning is today in UTC:
+        val tokyo = TimeZone.of("Asia/Tokyo")
+        val todayTokyoMs = LocalDateTime(2026, 11, 12, 12, 0).toInstant(tokyo).toEpochMilliseconds()
+        // Tomorrow at 02:00 in Tokyo is 12 Nov 17:00 in UTC. Must be INVALID because local day is 13 Nov.
+        val tomorrowEarlyTokyoMs = LocalDateTime(2026, 11, 13, 2, 0).toInstant(tokyo).toEpochMilliseconds()
+        assertFalse(isSameOrPastDay(tomorrowEarlyTokyoMs, todayTokyoMs, tokyo), "Tomorrow early morning in Tokyo must be invalid even if its UTC date is today")
+
+        // In America/Los_Angeles (UTC-8)
+        val la = TimeZone.of("America/Los_Angeles")
+        val todayLaMs = LocalDateTime(2026, 11, 12, 12, 0).toInstant(la).toEpochMilliseconds()
+
+        val yesterdayLaMs = LocalDate(2026, 11, 11).atStartOfDayIn(la).toEpochMilliseconds()
+        assertTrue(isSameOrPastDay(yesterdayLaMs, todayLaMs, la), "Yesterday must be valid in LA")
+
+        val todayLaLateMs = LocalDateTime(2026, 11, 12, 23, 0).toInstant(la).toEpochMilliseconds()
+        assertTrue(isSameOrPastDay(todayLaLateMs, todayLaMs, la), "Today late evening must be valid in LA")
+
+        val tomorrowLaMs = LocalDate(2026, 11, 13).atStartOfDayIn(la).toEpochMilliseconds()
+        assertFalse(isSameOrPastDay(tomorrowLaMs, todayLaMs, la), "Tomorrow must be invalid in LA")
     }
 }

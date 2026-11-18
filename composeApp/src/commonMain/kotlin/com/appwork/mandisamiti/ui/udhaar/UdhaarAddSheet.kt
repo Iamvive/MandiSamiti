@@ -616,10 +616,10 @@ fun UdhaarAddSheet(
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.dateMs,
+            initialSelectedDateMillis = localInstantToPickerUtc(state.dateMs),
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                    isSameOrPastDay(utcTimeMillis, state.todayMs)
+                    isSameOrPastDay(normalisePickerDate(utcTimeMillis), state.todayMs)
             }
         )
         DatePickerDialog(
@@ -627,7 +627,7 @@ fun UdhaarAddSheet(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { pickedDayMs ->
-                        state.dateMs = pickedDayMs
+                        state.dateMs = normalisePickerDate(pickedDayMs)
                     }
                     showDatePicker = false
                 }) {

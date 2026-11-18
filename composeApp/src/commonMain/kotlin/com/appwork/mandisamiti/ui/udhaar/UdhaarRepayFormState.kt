@@ -8,6 +8,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.usecase.UdhaarOverpaymentException
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 
 fun isSameOrAfterDay(
@@ -15,18 +16,44 @@ fun isSameOrAfterDay(
     minDateMs: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Boolean {
-    if (dateMs >= minDateMs) return true
+    val pickedDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(timeZone).date
     val minDate = Instant.fromEpochMilliseconds(minDateMs).toLocalDateTime(timeZone).date
-    val pickedUtcDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(TimeZone.UTC).date
-    val pickedLocalDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(timeZone).date
-    return pickedUtcDate >= minDate || pickedLocalDate >= minDate
+    return pickedDate >= minDate
+}
+
+fun normalisePickerDate(
+    utcMillis: Long,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Long {
+    val date = Instant.fromEpochMilliseconds(utcMillis).toLocalDateTime(TimeZone.UTC).date
+    return date.atStartOfDayIn(timeZone).toEpochMilliseconds()
+}
+
+fun localInstantToPickerUtc(
+    instantMs: Long,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Long {
+    val localDate = Instant.fromEpochMilliseconds(instantMs).toLocalDateTime(timeZone).date
+    return localDate.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
+}
+
+fun isSameDay(
+    dateMs: Long,
+    otherMs: Long,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Boolean {
+    val d1 = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(timeZone).date
+    val d2 = Instant.fromEpochMilliseconds(otherMs).toLocalDateTime(timeZone).date
+    return d1 == d2
 }
 
 class UdhaarRepayFormState(
-    var totalDuePaisa: Long,
+    totalDuePaisa: Long,
     val todayMs: Long,
-    val minDateMs: Long? = null,
+    minDateMs: Long? = null,
 ) {
+    var totalDuePaisa by mutableStateOf(totalDuePaisa)
+    var minDateMs by mutableStateOf(minDateMs)
     var amountRupees by mutableStateOf("")
     var dateMs by mutableStateOf(todayMs)
     private var serverOverpaymentDue by mutableStateOf<Long?>(null)
@@ -35,7 +62,10 @@ class UdhaarRepayFormState(
         get() = MandiMathEngine.parseRupeesToPaisa(amountRupees)
 
     val isDateValid: Boolean
-        get() = isSameOrPastDay(dateMs, todayMs) && (minDateMs == null || isSameOrAfterDay(dateMs, minDateMs))
+        get() {
+            val min = minDateMs
+            return isSameOrPastDay(dateMs, todayMs) && (min == null || isSameOrAfterDay(dateMs, min))
+        }
 
     fun onOverpayment(e: UdhaarOverpaymentException) {
         totalDuePaisa = e.totalDuePaisa
@@ -68,7 +98,8 @@ class UdhaarRepayFormState(
         if (!isSameOrPastDay(dateMs, todayMs)) {
             return if (isEnglish) "Date cannot be in the future" else "भविष्य की तारीख अमान्य है"
         }
-        if (minDateMs != null && !isSameOrAfterDay(dateMs, minDateMs)) {
+        val min = minDateMs
+        if (min != null && !isSameOrAfterDay(dateMs, min)) {
             return if (isEnglish) "Date cannot be before the loan date" else "तारीख उधार की तारीख से पहले नहीं हो सकती"
         }
         return null
