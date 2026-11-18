@@ -108,7 +108,7 @@ class PartyLedgerViewModelTest {
         partyRepo.getPartyBalanceStream(farmerId).test {
             val balance = awaitItem()
             assertNotNull(balance)
-            assertEquals(507500L, balance.balancePaisa) // ₹5,000 + ₹75 interest = ₹5,075
+            assertEquals(0L, balance.slipBalancePaisa) // plain cash and interest are outside the slip balance (Task 9 routes cash)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -133,13 +133,13 @@ class PartyLedgerViewModelTest {
             dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
             viewModelScope = backgroundScope
         )
-        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() && it.balancePaisa == 500_000L }.ledgerItems.single()
+        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() }.ledgerItems.single()
 
         viewModel.voidEntry(item, VoidReason.WRONG_ENTRY)
 
         val after = viewModel.uiState.first { state ->
             // balance and list come from separate streams, so wait for both to reflect the void
-            state.balancePaisa == 0L && (state.ledgerItems.singleOrNull() as? LedgerItem.CashItem)?.transaction?.isVoid == true
+            (state.ledgerItems.singleOrNull() as? LedgerItem.CashItem)?.transaction?.isVoid == true
         }
         val listed = after.ledgerItems.single() as LedgerItem.CashItem
         assertTrue(listed.transaction.isVoid)
@@ -187,14 +187,14 @@ class PartyLedgerViewModelTest {
             viewModelScope = backgroundScope
         )
 
-        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() && it.balancePaisa == -1250000L }.ledgerItems.single()
+        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() && it.slipBalancePaisa == -1250000L }.ledgerItems.single()
         assertTrue(item is LedgerItem.BuyItem)
         assertEquals(false, (item as LedgerItem.BuyItem).buy.isVoid)
 
         viewModel.voidEntry(item, VoidReason.WRONG_ENTRY)
 
         val after = viewModel.uiState.first { state ->
-            state.balancePaisa == 0L && (state.ledgerItems.singleOrNull() as? LedgerItem.BuyItem)?.buy?.isVoid == true
+            state.slipBalancePaisa == 0L && (state.ledgerItems.singleOrNull() as? LedgerItem.BuyItem)?.buy?.isVoid == true
         }
         val listed = after.ledgerItems.single() as LedgerItem.BuyItem
         assertTrue(listed.buy.isVoid)

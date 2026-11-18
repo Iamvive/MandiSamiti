@@ -94,6 +94,6 @@ class KhaateStockQueriesTest {
             )
         )
         val bal = db.appDatabaseQueries.getPartyBalance(Khaate.partyId(shop)).executeAsOne()
-        assertEquals(0L, bal.balance_paisa ?: 0L)
+        assertEquals(0L, bal.slip_balance_paisa ?: 0L)
     }
 }

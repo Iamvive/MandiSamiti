@@ -188,9 +188,10 @@ fun PartyLedgerScreen(
                 )
             }
             // Running Balance Hero Banner
-            val isReceivable = uiState.balancePaisa > 0
-            val isPayable = uiState.balancePaisa < 0
-            val balanceAmount = if (uiState.balancePaisa < 0) -uiState.balancePaisa else uiState.balancePaisa
+            val headerBalance = uiState.slipBalancePaisa + (uiState.udhaarGivenPaisa - uiState.udhaarTakenPaisa) // interim until Task 9 splits the header
+            val isReceivable = headerBalance > 0
+            val isPayable = headerBalance < 0
+            val balanceAmount = if (headerBalance < 0) -headerBalance else headerBalance
 
             Card(
                 modifier = Modifier
@@ -1315,7 +1316,7 @@ fun PartyLedgerScreen(
 
     // Desi Interest Modal (Clean UI)
     if (uiState.isInterestDialogOpen) {
-        val principal = if (uiState.balancePaisa > 0) uiState.balancePaisa else 0L
+        val principal = if (uiState.udhaarGivenPaisa > 0) uiState.udhaarGivenPaisa else 0L
         val rate = interestRateInput.toDoubleOrNull() ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT
         val days = interestDaysInput.toIntOrNull() ?: 30
         val interestResult = RuralInterestEngine.calculateAccruedInterestByDays(principal, rate, days)

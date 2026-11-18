@@ -304,7 +304,7 @@ class HomeViewModel(
                             if (balance != null) {
                                 val currentList = _uiState.value.allParties.toMutableList()
                                 val index = currentList.indexOfFirst { it.party.id == party.id }
-                                val pWithB = PartyWithBalance(party, balance.balancePaisa)
+                                val pWithB = PartyWithBalance(party, balance.slipBalancePaisa + balance.udhaarNetPaisa) // slip + udhaar net until the Udhaar card (Task 11)
                                 if (index >= 0) {
                                     currentList[index] = pWithB
                                 } else {

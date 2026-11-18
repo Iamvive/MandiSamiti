@@ -30,6 +30,10 @@ class DuplicatePhoneException(val existing: Party) :
 
 data class PartyBalance(
     val party: Party,
-    val balancePaisa: Long, // Positive = लेना है (Receivable), Negative = देना है (Payable)
+    val slipBalancePaisa: Long, // Slips only: positive = लेना है (they owe us), negative = देना है (we owe them)
+    val udhaarGivenPaisa: Long, // Udhaar principal still owed to us
+    val udhaarTakenPaisa: Long, // Udhaar principal we still owe them
     val lastTransactionDate: Long?
-)
+) {
+    val udhaarNetPaisa: Long get() = udhaarGivenPaisa - udhaarTakenPaisa
+}

@@ -213,8 +213,8 @@ object DemoSimulator {
         val buyerBal = partyRepo.getPartyBalanceStream(buyer.id).first()
 
         println("📈 [ताज़ा पार्टी बैलेंस - Real-time Ledger]:")
-        println("  • रमेश कुमार (किसान): ₹${MandiMathEngine.paisaToRupeesString(farmerBal?.balancePaisa ?: 0L)} (${if ((farmerBal?.balancePaisa ?: 0L) >= 0) "देना है 🟢" else "लेना है 🔴"})")
-        println("  • सुरेश चंद (व्यापारी): ₹${MandiMathEngine.paisaToRupeesString(buyerBal?.balancePaisa ?: 0L)} (${if ((buyerBal?.balancePaisa ?: 0L) >= 0) "लेना है 🔴" else "देना है 🟢"})\n")
+        println("  • रमेश कुमार (किसान): ₹${MandiMathEngine.paisaToRupeesString(farmerBal?.slipBalancePaisa ?: 0L)} (${if ((farmerBal?.slipBalancePaisa ?: 0L) >= 0) "देना है 🟢" else "लेना है 🔴"})")
+        println("  • सुरेश चंद (व्यापारी): ₹${MandiMathEngine.paisaToRupeesString(buyerBal?.slipBalancePaisa ?: 0L)} (${if ((buyerBal?.slipBalancePaisa ?: 0L) >= 0) "लेना है 🔴" else "देना है 🟢"})\n")
 
         println("--------------------------------------------------------------------------------")
         println("▶ SCENE 4: देसी ब्याज गणना (Rural Simple Interest Engine — सैकड़ा दर)")

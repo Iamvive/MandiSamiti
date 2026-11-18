@@ -134,6 +134,6 @@ class LendEntryRepositoryTest {
         assertEquals("FARMER", party.party_type)
 
         val balance = db.appDatabaseQueries.getPartyBalance("कैलाश किसान").executeAsOne()
-        assertEquals(1_000_000L, balance.balance_paisa)
+        assertEquals(1_000_000L, balance.udhaar_given_paisa)
     }
 }

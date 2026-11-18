@@ -170,7 +170,7 @@ class PartyLedgerBalanceF01Test {
         // F14: Expense is a shop expense and does NOT link to party X's balance
         // Net: -12,200 + 5,000 - 5,000 = -12,200 (F14: expense payee no longer posts to the party account)
         val initialBalance = partyRepo.getPartyBalanceStream(partyId).first()
-        assertEquals(-1_220_000L, initialBalance?.balancePaisa)
+        assertEquals(-1_220_000L, initialBalance?.slipBalancePaisa)
 
         // Now void every entry for X
         buyRepo.voidBuyEntry(buyId, VoidReason.WRONG_ENTRY)
@@ -181,7 +181,7 @@ class PartyLedgerBalanceF01Test {
         // Verify balance after voiding:
         // Must be exactly ₹0
         val finalBalance = partyRepo.getPartyBalanceStream(partyId).first()
-        assertEquals(0L, finalBalance?.balancePaisa)
+        assertEquals(0L, finalBalance?.slipBalancePaisa)
     }
 
     @Test
@@ -241,7 +241,7 @@ class PartyLedgerBalanceF01Test {
         )
 
         // Balance must be +₹10,000
-        assertEquals(1_000_000L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(1_000_000L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
 
         // 2. Partial Repay ₹4,000 (400,000 paisa)
         val settle1Id = "settle-y-1"
@@ -273,7 +273,7 @@ class PartyLedgerBalanceF01Test {
         )
 
         // Balance must be +₹6,000 (10,000 - 4,000)
-        assertEquals(600_000L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(600_000L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
         assertEquals(LendStatus.PARTIAL, lendRepo.getLendEntryById(lendId)?.status)
 
         // 3. Full Repay remaining ₹6,000 (600,000 paisa)
@@ -306,7 +306,7 @@ class PartyLedgerBalanceF01Test {
         )
 
         // Balance must be ₹0 and loan SETTLED
-        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
         assertEquals(LendStatus.SETTLED, lendRepo.getLendEntryById(lendId)?.status)
 
         // 4. Void Repay 2: voiding the second repayment cash transaction
@@ -317,7 +317,7 @@ class PartyLedgerBalanceF01Test {
         assertEquals(1, settlementsAfterVoid.size) // getSettlements only returns is_void = 0
         assertEquals(400_000L, settlementsAfterVoid.first().amountPaisa)
         assertEquals(LendStatus.PARTIAL, lendRepo.getLendEntryById(lendId)?.status)
-        assertEquals(600_000L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(600_000L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
 
         // 5. Void the lend entry
         lendRepo.voidLendEntry(lendId, VoidReason.WRONG_ENTRY)
@@ -327,7 +327,7 @@ class PartyLedgerBalanceF01Test {
         assertEquals(true, lendEntry?.isVoid)
         assertEquals(0, lendRepo.getSettlements(lendId).size)
         assertEquals(true, cashRepo.getTransactionsByPartyStream(partyId).first().all { it.isVoid })
-        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
     }
 
     private val now get() = fixedNow.toEpochMilliseconds()
@@ -352,7 +352,7 @@ class PartyLedgerBalanceF01Test {
             LendSettlement(id = "settle-r4", shopId = shopId, lendId = "lend-r4", settledAt = now, amountPaisa = 200_000L, createdAt = now, updatedAt = now),
             listOf(cash("tx-repay-r4", partyId, TransactionType.JAMA_RECEIVED, 200_000L, "उधार वापसी जमा [SETTLE:settle-r4:lend-r4]")),
         )
-        assertEquals(300_000L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(300_000L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
 
         cashRepo.voidTransaction("tx-lend-r4", VoidReason.WRONG_ENTRY)
 
@@ -361,7 +361,7 @@ class PartyLedgerBalanceF01Test {
         val cashRows = cashRepo.getTransactionsByPartyStream(partyId).first()
         assertEquals(2, cashRows.size)
         assertEquals(true, cashRows.all { it.isVoid })
-        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.balancePaisa)
+        assertEquals(0L, partyRepo.getPartyBalanceStream(partyId).first()?.udhaarGivenPaisa)
         assertEquals(0L, cashRows.filter { !it.isVoid }.sumOf { it.amountPaisa }) // cash drawer
     }
 

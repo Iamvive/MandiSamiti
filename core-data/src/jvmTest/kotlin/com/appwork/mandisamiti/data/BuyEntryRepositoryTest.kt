@@ -98,6 +98,6 @@ class BuyEntryRepositoryTest {
         assertEquals("FARMER", party.party_type)
 
         val balance = db.appDatabaseQueries.getPartyBalance("राधे श्याम").executeAsOne()
-        assertEquals(-3_758_000L, balance.balance_paisa)
+        assertEquals(-3_758_000L, balance.slip_balance_paisa)
     }
 }

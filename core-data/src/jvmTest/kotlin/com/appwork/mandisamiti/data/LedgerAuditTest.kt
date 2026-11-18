@@ -67,11 +67,11 @@ class LedgerAuditTest {
         val repo = OfflineFirstDealRepository(db, clock = clock)
         partyRepo.saveParty(farmer())
         repo.saveDeal(deal())
-        assertEquals(-100_000L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.balancePaisa)
+        assertEquals(-100_000L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.slipBalancePaisa)
 
         repo.voidDeal("deal-1", VoidReason.WEIGHING_ERROR)
 
-        assertEquals(0L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.balancePaisa)
+        assertEquals(0L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.slipBalancePaisa)
         val listed = repo.getDealsByFarmerStream("farmer-1").first().single()
         assertTrue(listed.isVoid)
         assertEquals(VoidReason.WEIGHING_ERROR, listed.voidReason)
@@ -102,11 +102,11 @@ class LedgerAuditTest {
                 transactionDate = 1_000L, createdAt = 1_000L, updatedAt = 1_000L
             )
         )
-        assertEquals(500_000L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.balancePaisa)
+        assertEquals(0L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.slipBalancePaisa) // plain cash is outside the slip balance (Task 9 routes it)
 
         cashRepo.voidTransaction("tx-1", VoidReason.WRONG_ENTRY)
 
-        assertEquals(0L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.balancePaisa)
+        assertEquals(0L, partyRepo.getPartyBalanceStream("farmer-1").first()!!.slipBalancePaisa)
         assertTrue(cashRepo.getTransactionsByPartyStream("farmer-1").first().single().isVoid)
         assertEquals(
             listOf("CREATE", "VOID"),

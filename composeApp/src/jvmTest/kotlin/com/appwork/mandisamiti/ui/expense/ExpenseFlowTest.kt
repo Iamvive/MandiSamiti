@@ -353,7 +353,7 @@ class ExpenseFlowTest {
 
         // Initial balance should be 0
         val initialBalance = db.appDatabaseQueries.getPartyBalance(partyId).executeAsOneOrNull()
-        assertEquals(0L, initialBalance?.balance_paisa ?: 0L)
+        assertEquals(0L, initialBalance?.slip_balance_paisa ?: 0L)
 
         // Record an expense paid to Ramesh (free text payee)
         val expense = ExpenseEntry(
@@ -404,6 +404,6 @@ class ExpenseFlowTest {
 
         // Party balance must remain strictly 0 (neither EXPENSE_HAMMALI nor [EXPENSE:...] affects party balance)
         val afterExpenseBalance = db.appDatabaseQueries.getPartyBalance(partyId).executeAsOneOrNull()
-        assertEquals(0L, afterExpenseBalance?.balance_paisa ?: 0L)
+        assertEquals(0L, afterExpenseBalance?.slip_balance_paisa ?: 0L)
     }
 }

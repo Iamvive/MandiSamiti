@@ -171,14 +171,14 @@ class MandiSamitiE2ETest {
         partyRepo.getPartyBalanceStream(farmerId).test {
             val balance = awaitItem()
             assertNotNull(balance)
-            assertEquals(-settlement.netFarmerPayablePaisa, balance.balancePaisa) // Negative = देना है
+            assertEquals(-settlement.netFarmerPayablePaisa, balance.slipBalancePaisa) // Negative = देना है
             cancelAndIgnoreRemainingEvents()
         }
 
         partyRepo.getPartyBalanceStream(buyerId).test {
             val balance = awaitItem()
             assertNotNull(balance)
-            assertEquals(settlement.netBuyerReceivablePaisa, balance.balancePaisa) // Positive = लेना है
+            assertEquals(settlement.netBuyerReceivablePaisa, balance.slipBalancePaisa) // Positive = लेना है
             cancelAndIgnoreRemainingEvents()
         }
 

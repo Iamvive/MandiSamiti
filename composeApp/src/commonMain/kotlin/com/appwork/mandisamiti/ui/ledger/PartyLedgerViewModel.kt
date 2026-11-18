@@ -83,7 +83,9 @@ data class OpenLoanInfo(
 data class PartyLedgerUiState(
     val party: Party? = null,
     val isSoundEnabled: Boolean = true,
-    val balancePaisa: Long = 0L,
+    val slipBalancePaisa: Long = 0L,
+    val udhaarGivenPaisa: Long = 0L,
+    val udhaarTakenPaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
     val openLoans: List<OpenLoanInfo> = emptyList(),
     val loansInfoById: Map<String, OpenLoanInfo> = emptyMap(),
@@ -145,7 +147,11 @@ class PartyLedgerViewModel(
         partyRepository.getPartyBalanceStream(partyId)
             .onEach { balance ->
                 if (balance != null) {
-                    _uiState.value = _uiState.value.copy(balancePaisa = balance.balancePaisa)
+                    _uiState.value = _uiState.value.copy(
+                        slipBalancePaisa = balance.slipBalancePaisa,
+                        udhaarGivenPaisa = balance.udhaarGivenPaisa,
+                        udhaarTakenPaisa = balance.udhaarTakenPaisa,
+                    )
                 }
             }
             .launchIn(viewModelScope)
@@ -415,7 +421,7 @@ class PartyLedgerViewModel(
     }
 
     fun openInterestDialog() {
-        val principal = _uiState.value.balancePaisa
+        val principal = _uiState.value.udhaarGivenPaisa
         if (principal > 0L) {
             val interest = RuralInterestEngine.calculateAccruedInterestByDays(
                 principalPaisa = principal,

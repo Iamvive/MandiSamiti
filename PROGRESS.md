@@ -432,3 +432,12 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Changes: Synchronized project state.
 - Evidence: 609 JVM tests passed, 132 backend tests passed, staging deployed to 64.227.142.180:8060
 - Next: Continue implementation and feature verification.
+
+## 2026-11-18 (Claude Code, Sonnet 5.5): Udhaar rewrite Task 4, separate slip and udhaar balances
+- Resumed the plan at Task 4 (Tasks 0 to 3 were already on `main`: 9cfbbd8, 640c03e, 6fc2b56).
+- `getPartyBalance` now returns `slip_balance_paisa` (deals, sell and buy entries only), `udhaar_given_paisa` and `udhaar_taken_paisa`. `PartyBalance.balancePaisa` removed; `udhaarNetPaisa` added. Plain cash and interest rows no longer move any balance (Task 9 routes plain cash).
+- Interim choices, to revisit: ledger header and Home party list show slip + udhaar net until Task 9 (header) and Task 11 (Home Udhaar card). Plan said Home uses slip only; kept the combined number so Home receivable totals do not drop lent money.
+- Old tests split, not weakened: lend lifecycle and Pilot invariant tests assert `udhaar_given_paisa`; tests built on raw cash rows now assert the slip balance is unchanged; `BuyCheckoutTest` asserts slip -4,830 and udhaar 2,300 separately.
+- Evidence: new `PartyBalanceSplitTest` (5 cases, incl. slip payment never changes udhaar). `./gradlew :core-domain:jvmTest :core-data:jvmTest :core-database:jvmTest :composeApp:jvmTest`: 634 tests, 0 failures, 0 errors, 0 skipped.
+- Not verified: no emulator check yet; no UI change beyond the header number.
+- Next: Task 5 (ledger tag rule), then Task 6 (Udhaar landing page).

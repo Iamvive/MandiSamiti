@@ -42,7 +42,9 @@ class OfflineFirstPartyRepository(
                 if (party != null) {
                     PartyBalance(
                         party = party,
-                        balancePaisa = row.balance_paisa ?: 0L,
+                        slipBalancePaisa = row.slip_balance_paisa ?: 0L,
+                        udhaarGivenPaisa = row.udhaar_given_paisa ?: 0L,
+                        udhaarTakenPaisa = row.udhaar_taken_paisa ?: 0L,
                         lastTransactionDate = null
                     )
                 } else null

@@ -86,7 +86,7 @@ class PilotRepositoryMoneyInvariantTest {
         assertEquals(100_000L, split.loanPaisa)
         assertEquals(20_000L, split.interestPaisa)
         assertEquals(50_000L, split.generalPaisa)
-        assertEquals(-50_000L, fixture.balance(), "only the general jama may leave a credit after principal is cleared")
+        assertEquals(0L, fixture.balance(), "udhaar principal clears to zero; the overflow is a plain cash row outside udhaar (Task 9 routes it)")
     }
 
     @Test
@@ -181,7 +181,7 @@ class PilotRepositoryMoneyInvariantTest {
         val useCase: LendTransactionUseCase,
         val lend: LendEntry,
     ) {
-        fun balance() = database.appDatabaseQueries.getPartyBalance(PARTY_ID).executeAsOne().balance_paisa ?: 0L
+        fun balance() = database.appDatabaseQueries.getPartyBalance(PARTY_ID).executeAsOne().udhaar_given_paisa ?: 0L
     }
 
     private fun seedShop(database: AppDatabase) {
@@ -223,7 +223,7 @@ class PilotRepositoryMoneyInvariantTest {
     private fun moneyTotals(database: AppDatabase): List<Long> {
         val q = database.appDatabaseQueries
         return listOf(
-            q.getPartyBalance(PARTY_ID).executeAsOne().balance_paisa ?: 0L,
+            q.getPartyBalance(PARTY_ID).executeAsOne().udhaar_given_paisa ?: 0L,
             q.getBuyEntryById("buy-1").executeAsOne().net_payable_paisa,
             q.getSellEntryById("sell-1").executeAsOne().total_receivable_paisa,
             q.getLendEntryById("lend-1").executeAsOne().amount_paisa,

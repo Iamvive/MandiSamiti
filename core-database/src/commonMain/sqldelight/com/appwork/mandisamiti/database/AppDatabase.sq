@@ -423,37 +423,22 @@ SELECT
     p.name AS party_name,
     p.village AS party_village,
     p.party_type AS party_type,
+    -- Slip balance: deals, sell entries and buy entries only. Udhaar (lend) money never enters this column.
     (
-        -- 1. Cash Advances given to party (+) (excluding rows linked to a slip, whose paid_paisa already counts them in term 8; excluding those tagged as lend advances or shop expenses)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'UDHAR_GIVEN' AND is_deleted = 0 AND is_void = 0 AND source_entry_id IS NULL AND (remarks IS NULL OR (remarks NOT LIKE 'उधार ऋण%' AND remarks NOT LIKE '%[LEND:%' AND remarks NOT LIKE 'LEND%' AND remarks NOT LIKE '%[EXPENSE:%'))), 0)
-        +
-        -- 2. Interest added to party (+)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'INTEREST_ADDED' AND is_deleted = 0 AND is_void = 0), 0)
-        -
-        -- 3. Cash Received from party (-) (excluding loan repayments to avoid double counting with term 10)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'JAMA_RECEIVED' AND is_deleted = 0 AND is_void = 0 AND source_entry_id IS NULL AND (remarks IS NULL OR (remarks NOT LIKE 'उधार वापसी%' AND remarks NOT LIKE '%[SETTLE:%' AND remarks NOT LIKE 'LEND_REPAY%'))), 0)
-        -
-        -- 4. Discounts given to party (-)
-        COALESCE((SELECT SUM(amount_paisa) FROM cashTransactionEntity WHERE party_id = p.id AND transaction_type = 'DISCOUNT_GIVEN' AND is_deleted = 0 AND is_void = 0), 0)
-        +
-        -- 5. Deals where party is BUYER: Buyer owes shop (+)
         COALESCE((SELECT SUM(net_buyer_receivable_paisa) FROM dealEntity WHERE buyer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
-        -
-        -- 6. Deals where party is FARMER: Shop owes farmer (-)
-        COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
-        +
-        -- 7. Sell Entries where party is BUYER: Buyer owes shop (+)
-        COALESCE((SELECT SUM(total_receivable_paisa - received_paisa) FROM sellEntryEntity WHERE buyer_id = p.id AND is_deleted = 0 AND is_void = 0 AND is_khaate = 0), 0)
-        -
-        -- 8. Buy Entries where party is FARMER: Shop owes farmer (-)
-        COALESCE((SELECT SUM(net_payable_paisa - paid_paisa) FROM buyEntryEntity WHERE farmer_id = p.id AND is_deleted = 0 AND is_void = 0 AND is_khaate = 0), 0)
-        +
-        -- 9. Lend Entries (MONEY) where party owes shop (+)
-        COALESCE((SELECT SUM(amount_paisa) FROM lendEntryEntity WHERE party_id = p.id AND lend_type = 'MONEY' AND is_deleted = 0 AND is_void = 0), 0)
-        -
-        -- 10. Lend Settlements (-): principal only; interest never reduces what the party owes. Legacy rows (no split) count in full.
-        COALESCE((SELECT SUM(CASE WHEN s.principal_paisa != 0 OR s.interest_paisa != 0 THEN s.principal_paisa ELSE s.amount_paisa END) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND s.is_void = 0 AND l.is_void = 0 AND l.is_deleted = 0), 0)
-    ) AS balance_paisa
+        - COALESCE((SELECT SUM(net_farmer_payable_paisa) FROM dealEntity WHERE farmer_id = p.id AND deal_status = 'SETTLED' AND is_deleted = 0 AND is_void = 0), 0)
+        + COALESCE((SELECT SUM(total_receivable_paisa - received_paisa) FROM sellEntryEntity WHERE buyer_id = p.id AND is_deleted = 0 AND is_void = 0 AND is_khaate = 0), 0)
+        - COALESCE((SELECT SUM(net_payable_paisa - paid_paisa) FROM buyEntryEntity WHERE farmer_id = p.id AND is_deleted = 0 AND is_void = 0 AND is_khaate = 0), 0)
+    ) AS slip_balance_paisa,
+    -- Udhaar principal still owed to us (GIVEN) and still owed by us (TAKEN). Interest never reduces principal.
+    (
+    COALESCE((SELECT SUM(l.amount_paisa) FROM lendEntryEntity l WHERE l.party_id = p.id AND l.direction = 'GIVEN' AND l.lend_type = 'MONEY' AND l.is_deleted = 0 AND l.is_void = 0), 0)
+    - COALESCE((SELECT SUM(CASE WHEN s.principal_paisa != 0 OR s.interest_paisa != 0 THEN s.principal_paisa ELSE s.amount_paisa END) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND l.direction = 'GIVEN' AND l.lend_type = 'MONEY' AND s.is_void = 0 AND l.is_void = 0 AND l.is_deleted = 0), 0)
+    ) AS udhaar_given_paisa,
+    (
+    COALESCE((SELECT SUM(l.amount_paisa) FROM lendEntryEntity l WHERE l.party_id = p.id AND l.direction = 'TAKEN' AND l.lend_type = 'MONEY' AND l.is_deleted = 0 AND l.is_void = 0), 0)
+    - COALESCE((SELECT SUM(CASE WHEN s.principal_paisa != 0 OR s.interest_paisa != 0 THEN s.principal_paisa ELSE s.amount_paisa END) FROM lendSettlementEntity s JOIN lendEntryEntity l ON s.lend_id = l.id WHERE l.party_id = p.id AND l.direction = 'TAKEN' AND l.lend_type = 'MONEY' AND s.is_void = 0 AND l.is_void = 0 AND l.is_deleted = 0), 0)
+    ) AS udhaar_taken_paisa
 FROM partyEntity p
 WHERE p.id = ? AND p.is_deleted = 0;
 

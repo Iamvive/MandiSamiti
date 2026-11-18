@@ -133,11 +133,11 @@ class DatabaseTest {
 
         // Check Farmer Balance: Shop owes farmer ₹95,090 -> Balance is -9,509,000 paisa
         val farmerBalance = queries.getPartyBalance(farmerId).executeAsOne()
-        assertEquals(-9_509_000L, farmerBalance.balance_paisa)
+        assertEquals(-9_509_000L, farmerBalance.slip_balance_paisa)
 
         // Check Buyer Balance: Buyer owes shop ₹99,298 -> Balance is +9,929,800 paisa
         val buyerBalance = queries.getPartyBalance(buyerId).executeAsOne()
-        assertEquals(9_929_800L, buyerBalance.balance_paisa)
+        assertEquals(9_929_800L, buyerBalance.slip_balance_paisa)
 
         // 5. Pay Farmer ₹50,000 cash (Cash Out / Udhar)
         queries.insertCashTransaction(
@@ -158,9 +158,10 @@ class DatabaseTest {
             revision = 1L, is_void = 0L, void_reason = null, source_entry_type = null, source_entry_id = null, lend_id = null
         )
 
-        // Farmer balance should now be -9,509,000 + 5,000,000 = -4,509,000 paisa (Shop still owes ₹45,090)
+        // A plain cash row (no slip, no loan) no longer moves the slip balance; Task 9 routes it to a loan or a slip.
         val updatedFarmerBalance = queries.getPartyBalance(farmerId).executeAsOne()
-        assertEquals(-4_509_000L, updatedFarmerBalance.balance_paisa)
+        assertEquals(-9_509_000L, updatedFarmerBalance.slip_balance_paisa)
+        assertEquals(0L, updatedFarmerBalance.udhaar_given_paisa)
 
         // 6. Test Outbox Sync Queries
         val pendingDeals = queries.getPendingSyncDeals().executeAsList()
@@ -192,7 +193,7 @@ class DatabaseTest {
             created_at = 2L, updated_at = 2L, is_deleted = 0L, sync_status = 0L,
             revision = 2L, is_void = 1L, void_reason = "WRONG_ENTRY", source_entry_type = null, source_entry_id = null, lend_id = null
         )
-        assertEquals(500_000L, q.getPartyBalance("farmer-1").executeAsOne().balance_paisa)
+        assertEquals(0L, q.getPartyBalance("farmer-1").executeAsOne().slip_balance_paisa) // plain cash is outside the slip balance; void-loan case lives in PartyBalanceSplitTest
 
         q.insertRevision(
             id = "rev-1", shop_id = "shop-1", entry_id = "tx-2", entry_kind = "CASH",
@@ -256,6 +257,6 @@ class DatabaseTest {
         assertEquals(1L, deal.revision)
         assertEquals(0L, deal.is_void)
         assertEquals(1L, q.getCashTransactionById("tx-1").executeAsOne().revision)
-        assertEquals(preBalance, q.getPartyBalance("farmer-1").executeAsOne().balance_paisa)
+        assertEquals(preBalance - 1_000_000L, q.getPartyBalance("farmer-1").executeAsOne().slip_balance_paisa) // v1 rule counted the Rs 10,000 plain cash row; slip balance does not
     }
 }

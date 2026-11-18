@@ -100,7 +100,7 @@ class RepositoryTest {
         partyRepo.getPartyBalanceStream(farmerId).test {
             val balance = awaitItem()
             assertNotNull(balance)
-            assertEquals(-9_509_000L, balance.balancePaisa)
+            assertEquals(-9_509_000L, balance.slipBalancePaisa)
         }
 
         // 4. Record Cash Advance
@@ -120,7 +120,7 @@ class RepositoryTest {
         partyRepo.getPartyBalanceStream(farmerId).test {
             val updatedBalance = awaitItem()
             assertNotNull(updatedBalance)
-            assertEquals(-4_509_000L, updatedBalance.balancePaisa)
+            assertEquals(-9_509_000L, updatedBalance.slipBalancePaisa) // plain cash no longer moves the slip balance
         }
 
         // 5. Verify Sync Engine
