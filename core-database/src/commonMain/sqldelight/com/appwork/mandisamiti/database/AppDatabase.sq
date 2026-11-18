@@ -362,6 +362,9 @@ WHERE id = ?;
 getPartyByPhone:
 SELECT * FROM partyEntity WHERE shop_id = ? AND phone = ? AND is_deleted = 0 LIMIT 1;
 
+getPartyByPhoneAny:
+SELECT * FROM partyEntity WHERE shop_id = ? AND phone = ? LIMIT 1;
+
 softDeleteParty:
 UPDATE partyEntity SET is_deleted = 1, updated_at = ?, sync_status = 0 WHERE id = ?;
 

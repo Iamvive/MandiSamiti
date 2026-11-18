@@ -1,6 +1,9 @@
 package com.appwork.mandisamiti.ui.udhaar
 
 import com.appwork.mandisamiti.domain.model.LendDirection
+import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.ui.lend.LendPartyResolver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -209,5 +212,66 @@ class UdhaarAddFormStateTest {
         val formWithPhone = state.toForm(shopId = "shop1", partyId = "party1")
         assertEquals("Suresh", formWithPhone.receiverName)
         assertEquals("9876543211", formWithPhone.receiverPhone)
+    }
+
+    @Test
+    fun fix2_partyToSaveRenamesExistingPartyOnlyWhenNameDiffersPreservingVillage() {
+        val existing = Party(
+            id = "p1",
+            shopId = "shop1",
+            name = "Old Farmer",
+            phone = "9876543210",
+            village = "Rampur",
+            partyType = PartyType.FARMER,
+            createdAt = 1000L,
+            updatedAt = 1000L,
+        )
+
+        // Same name: returns null (no redundant write)
+        val noChange = LendPartyResolver.partyToSave(
+            name = "Old Farmer",
+            phone = "9876543210",
+            village = existing.village,
+            shopId = "shop1",
+            existing = existing,
+            now = 2000L,
+        )
+        assertNull(noChange, "When name is unchanged, partyToSave must return null")
+
+        // Changed name: returns existing party updated with new name and preserved village
+        val changed = LendPartyResolver.partyToSave(
+            name = "New Farmer Name",
+            phone = "9876543210",
+            village = existing.village,
+            shopId = "shop1",
+            existing = existing,
+            now = 2000L,
+        )
+        assertNotNull(changed)
+        assertEquals("p1", changed.id)
+        assertEquals("New Farmer Name", changed.name)
+        assertEquals("Rampur", changed.village)
+        assertEquals(2000L, changed.updatedAt)
+        assertEquals(0, changed.syncStatus)
+
+        // Notice condition (willRename)
+        val willRenameSame = existing.name != "Old Farmer".trim()
+        assertFalse(willRenameSame)
+        val willRenameDiff = existing.name != "New Farmer Name".trim()
+        assertTrue(willRenameDiff)
+    }
+
+    @Test
+    fun fix3_interestRateValidationMessageSaysAbove0UpTo100() {
+        val state = UdhaarAddFormState(direction = LendDirection.GIVEN, todayMs = todayMs)
+        state.updatePhone("9876543210")
+        state.name = "Ramesh Kumar"
+        state.amountRupees = "5000"
+        state.interestOn = true
+        state.rateInput = "0"
+
+        assertFalse(state.isValid)
+        assertEquals("Enter valid interest rate (above 0 up to 100)", state.validationReason(isEnglish = true))
+        assertEquals("मान्य ब्याज दर दर्ज करें (0 से अधिक और 100 तक)", state.validationReason(isEnglish = false))
     }
 }

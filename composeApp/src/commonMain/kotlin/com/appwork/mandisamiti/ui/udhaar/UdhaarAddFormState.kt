@@ -113,7 +113,7 @@ class UdhaarAddFormState(
             return if (isEnglish) "Date cannot be in the future" else "भविष्य की तारीख अमान्य है"
         }
         if (interestOn && parsedRate == null) {
-            return if (isEnglish) "Enter valid interest rate (0 to 100)" else "मान्य ब्याज दर दर्ज करें (0 से 100)"
+            return if (isEnglish) "Enter valid interest rate (above 0 up to 100)" else "मान्य ब्याज दर दर्ज करें (0 से अधिक और 100 तक)"
         }
         if (direction == LendDirection.GIVEN && giveToOther) {
             if (receiverName.trim().isBlank()) {

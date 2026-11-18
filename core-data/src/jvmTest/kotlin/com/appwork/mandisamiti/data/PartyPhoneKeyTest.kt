@@ -10,8 +10,10 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PartyPhoneKeyTest {
     private fun party(id: String, phone: String?) = Party(
@@ -61,5 +63,44 @@ class PartyPhoneKeyTest {
         repo.saveParty(party("one", "9876543210").copy(name = "Renamed", updatedAt = 2L))
 
         assertEquals("Renamed", repo.getPartyById("one")?.name)
+    }
+
+    @Test
+    fun deletedPartyRestoredReusesExistingRow() = runTest {
+        val repo = OfflineFirstPartyRepository(createTestDatabase())
+        repo.saveParty(party("first", "9876543210"))
+        repo.deleteParty("first")
+
+        repo.saveParty(party("first", "9876543210").copy(name = "Restored Party", updatedAt = 2L))
+
+        val party = repo.getPartyById("first")
+        assertNotNull(party)
+        assertEquals("Restored Party", party.name)
+        assertFalse(party.isDeleted)
+    }
+
+    @Test
+    fun deletedPartyFoundOnlyWhenIncludeDeletedIsTrue() = runTest {
+        val repo = OfflineFirstPartyRepository(createTestDatabase())
+        repo.saveParty(party("p1", "9876543210"))
+        repo.deleteParty("p1")
+
+        assertNull(repo.getPartyByPhone("shop", "9876543210"))
+        val found = repo.getPartyByPhone("shop", "9876543210", includeDeleted = true)
+        assertNotNull(found)
+        assertEquals("p1", found.id)
+        assertTrue(found.isDeleted)
+    }
+
+    @Test
+    fun newPartyWithSamePhoneAsDeletedPartyThrowsDuplicatePhoneException() = runTest {
+        val repo = OfflineFirstPartyRepository(createTestDatabase())
+        repo.saveParty(party("first", "9876543210"))
+        repo.deleteParty("first")
+
+        val err = assertFailsWith<DuplicatePhoneException> {
+            repo.saveParty(party("second", "9876543210"))
+        }
+        assertEquals("first", err.existing.id)
     }
 }

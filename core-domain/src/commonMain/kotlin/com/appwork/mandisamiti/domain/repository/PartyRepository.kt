@@ -9,6 +9,8 @@ interface PartyRepository {
     fun getPartyBalanceStream(partyId: String): Flow<PartyBalance?>
     suspend fun getPartyById(partyId: String): Party?
     suspend fun getPartyByPhone(shopId: String, phone: String): Party?
+    suspend fun getPartyByPhone(shopId: String, phone: String, includeDeleted: Boolean): Party? =
+        if (!includeDeleted) getPartyByPhone(shopId, phone) else null
     suspend fun saveParty(party: Party)
     suspend fun deleteParty(partyId: String)
 

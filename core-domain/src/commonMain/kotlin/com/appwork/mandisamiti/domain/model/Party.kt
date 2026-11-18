@@ -28,6 +28,9 @@ data class Party(
 class DuplicatePhoneException(val existing: Party) :
     IllegalArgumentException("Phone already belongs to ${existing.name}")
 
+class KhataPartyPhoneException(val party: Party) :
+    IllegalArgumentException("Phone belongs to Khata account ${party.name}")
+
 data class PartyBalance(
     val party: Party,
     val slipBalancePaisa: Long, // Slips only: positive = लेना है (they owe us), negative = देना है (we owe them)

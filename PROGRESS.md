@@ -500,3 +500,30 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Physical Redmi Note 7 device check (tested on emulator-5554 reference device).
   - Desktop-width layout not verified (focused on 390dp mobile reference).
 - Next: Task 8 (Person udhaar screen / Khata detail).
+
+## 2026-11-18 (Gemini / Antigravity): Udhaar rewrite Task 7b, deleted party restore & review fixes
+- Fix 1 (Edge Case 13 - deleted party restore by phone):
+  - Added `getPartyByPhoneAny` query to `AppDatabase.sq` (`SELECT * FROM partyEntity WHERE shop_id = ? AND phone = ? LIMIT 1;`).
+  - Updated `PartyRepository` and `OfflineFirstPartyRepository` to support `getPartyByPhone(shopId, phone, includeDeleted: Boolean)`.
+  - In `OfflineFirstPartyRepository.saveParty`, changed lookup to `queries.getPartyByIdAny(party.id)` so existing soft-deleted rows invoke `updateParty` with `is_deleted = 0` (restoring the party and marking `sync_status = 0`) instead of crashing with duplicate key violation on `insertParty`. Checked duplicate phone lookup against `getPartyByPhoneAny` so conflicting attempts to create a new party ID with a deleted party's phone throw typed `DuplicatePhoneException`.
+  - In `UdhaarLandingViewModel.saveLoan`, when no active party matches the phone, looked up party including deleted rows. If found, restored it (`isDeleted = false`, updated timestamp, `syncStatus = 0`, keeping stored `village`, typed name winning), saved via `partyRepository.saveParty`, and reused the restored party ID for the loan.
+  - Guarded against `khaate-%` match: if matching party ID starts with `khaate-`, blocked with `KhataPartyPhoneException` ("This number belongs to a Khata account" / "यह नंबर खाता (Khata) अकाउंट का है").
+  - Sanitized error display in `UdhaarAddSheet`: mapped `KhataPartyPhoneException` to localized warning, mapped any generic save failure to friendly localized message while logging exception details to console (never leaks raw SQLite exceptions to the user).
+- Fix 2 (Edge Case 2 - party rename behavior):
+  - Confirmed via unit test that `LendPartyResolver.partyToSave` updates party name while preserving `existing.village` when the user edits the name (`willRename` warning notice is displayed in UI), and returns `null` (no redundant write) when the name is unchanged.
+  - Fixed `UdhaarLandingViewModel.saveLoan` to pass `matchingParty.village` instead of `null` when saving existing parties, ensuring existing village data is never wiped out.
+- Fix 3 (Interest rate copy & test count correction):
+  - Updated interest rate error message from "0 to 100" to "above 0 up to 100" ("0 से अधिक और 100 तक") in both English and Hindi in `UdhaarAddFormState.kt` and `UdhaarAddSheet.kt`.
+  - Accurately reported test counts from module `build/test-results/jvmTest/*.xml`:
+    - `:core-domain`: 109 tests
+    - `:core-data`: 163 tests (was 160, +3 new tests in `PartyPhoneKeyTest`)
+    - `:core-database`: 12 tests
+    - `:composeApp`: 385 tests (was 379, +2 new tests in `UdhaarAddFormStateTest`, +4 new tests in `UdhaarSaveLoanTest`)
+    - Total: 669 tests passing (was 660 baseline).
+- Emulator verification on `emulator-5554` (staging `http://64.227.142.180:8060`, 390dp):
+  - Created a party via the add sheet with phone `9876500009` (TestFarmer, ₹1,200).
+  - Soft-deleted the party row in SQLite (`is_deleted = 1`).
+  - Added new udhaar with the same phone `9876500009` and new name `RestoredFarmer` (₹2,500).
+  - Verified in SQLite that exactly 1 party row exists, `is_deleted = 0`, name updated to `RestoredFarmer`, sync_status = 0, and the loan points to that party ID. Verified loan appears in the "उधार दिया" tab.
+  - Cleaned up: deleted all test loans, cash transactions, and party rows from staging SQLite database.
+- Next: Task 8 (Person udhaar screen / Khata detail).

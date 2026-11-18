@@ -448,7 +448,7 @@ fun UdhaarAddSheet(
                             modifier = Modifier.fillMaxWidth(),
                             isError = state.parsedRate == null,
                             supportingText = if (state.parsedRate == null) {
-                                { Text(if (isEnglish) "Enter valid rate (0.1 to 100)" else "मान्य दर दर्ज करें (0.1 से 100)", color = MandiRedPayable) }
+                                { Text(if (isEnglish) "Enter valid rate (above 0 up to 100)" else "मान्य दर दर्ज करें (0 से अधिक और 100 तक)", color = MandiRedPayable) }
                             } else null,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MandiBorderActive,
@@ -574,7 +574,15 @@ fun UdhaarAddSheet(
                     onSave(state) { result ->
                         isSaving = false
                         result.onFailure { e ->
-                            errorMessage = e.message ?: if (isEnglish) "Failed to save" else "सेव करने में विफल"
+                            errorMessage = when (e) {
+                                is com.appwork.mandisamiti.domain.model.KhataPartyPhoneException -> {
+                                    if (isEnglish) "This number belongs to a Khata account" else "यह नंबर खाता (Khata) अकाउंट का है"
+                                }
+                                else -> {
+                                    println("Failed to save udhaar loan: ${e.message}")
+                                    if (isEnglish) "Failed to save loan. Please try again." else "उधार सेव करने में विफल। कृपया पुनः प्रयास करें।"
+                                }
+                            }
                         }
                     }
                 },

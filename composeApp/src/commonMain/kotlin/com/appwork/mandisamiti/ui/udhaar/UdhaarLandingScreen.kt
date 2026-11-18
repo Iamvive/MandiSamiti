@@ -60,8 +60,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
+import com.appwork.mandisamiti.domain.model.KhataPartyPhoneException
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
 import com.appwork.mandisamiti.domain.usecase.UdhaarUseCase
@@ -155,19 +157,51 @@ class UdhaarLandingViewModel(
             val parties = partyRepository.getPartiesStream(effectiveShopId).first()
             val matchingParty = LendPartyResolver.existing(parties, state.selectedPartyId, state.phone)
             val nowMs = Clock.System.now().toEpochMilliseconds()
-            val partyToSave = LendPartyResolver.partyToSave(
-                name = state.name,
-                phone = state.phone,
-                village = null,
-                shopId = effectiveShopId,
-                existing = matchingParty,
-                now = nowMs,
-            )
-            val resolvedPartyId = if (partyToSave != null) {
-                partyRepository.saveParty(partyToSave)
-                partyToSave.id
+            val resolvedPartyId = if (matchingParty != null) {
+                val partyToSave = LendPartyResolver.partyToSave(
+                    name = state.name,
+                    phone = state.phone,
+                    village = matchingParty.village,
+                    shopId = effectiveShopId,
+                    existing = matchingParty,
+                    now = nowMs,
+                )
+                if (partyToSave != null) {
+                    partyRepository.saveParty(partyToSave)
+                }
+                matchingParty.id
             } else {
-                matchingParty?.id ?: state.selectedPartyId ?: throw IllegalStateException("Unable to resolve party")
+                val normPhone = normalizePhone(state.phone)
+                val anyParty = if (normPhone != null) {
+                    partyRepository.getPartyByPhone(effectiveShopId, normPhone, includeDeleted = true)
+                } else null
+
+                if (anyParty != null) {
+                    if (anyParty.id.startsWith("khaate-")) {
+                        throw KhataPartyPhoneException(anyParty)
+                    }
+                    val restoredParty = anyParty.copy(
+                        name = state.name.trim(),
+                        phone = normPhone,
+                        village = anyParty.village,
+                        isDeleted = false,
+                        updatedAt = nowMs,
+                        syncStatus = 0,
+                    )
+                    partyRepository.saveParty(restoredParty)
+                    restoredParty.id
+                } else {
+                    val newParty = LendPartyResolver.partyToSave(
+                        name = state.name,
+                        phone = state.phone,
+                        village = null,
+                        shopId = effectiveShopId,
+                        existing = null,
+                        now = nowMs,
+                    ) ?: throw IllegalStateException("Unable to resolve party")
+                    partyRepository.saveParty(newParty)
+                    newParty.id
+                }
             }
 
             val loanForm = state.toForm(effectiveShopId, resolvedPartyId)

@@ -55,17 +55,26 @@ class OfflineFirstPartyRepository(
         queries.getPartyById(partyId).executeAsOneOrNull()?.toDomain()
     }
 
-    override suspend fun getPartyByPhone(shopId: String, phone: String): Party? = withContext(ioDispatcher) {
-        normalizePhone(phone)?.let { queries.getPartyByPhone(shopId, it).executeAsOneOrNull()?.toDomain() }
+    override suspend fun getPartyByPhone(shopId: String, phone: String): Party? =
+        getPartyByPhone(shopId, phone, includeDeleted = false)
+
+    override suspend fun getPartyByPhone(shopId: String, phone: String, includeDeleted: Boolean): Party? = withContext(ioDispatcher) {
+        normalizePhone(phone)?.let { normPhone ->
+            if (includeDeleted) {
+                queries.getPartyByPhoneAny(shopId, normPhone).executeAsOneOrNull()?.toDomain()
+            } else {
+                queries.getPartyByPhone(shopId, normPhone).executeAsOneOrNull()?.toDomain()
+            }
+        }
     }
 
     override suspend fun saveParty(party: Party) = withContext(ioDispatcher) {
         val phone = normalizePhone(party.phone)
         database.transaction {
-            val duplicate = phone?.let { queries.getPartyByPhone(party.shopId, it).executeAsOneOrNull()?.toDomain() }
+            val duplicate = phone?.let { queries.getPartyByPhoneAny(party.shopId, it).executeAsOneOrNull()?.toDomain() }
             if (duplicate != null && duplicate.id != party.id) throw DuplicatePhoneException(duplicate)
 
-            if (queries.getPartyById(party.id).executeAsOneOrNull() == null) {
+            if (queries.getPartyByIdAny(party.id).executeAsOneOrNull() == null) {
                 queries.insertParty(
                     id = party.id, shop_id = party.shopId, name = party.name, phone = phone,
                     village = party.village, party_type = party.partyType.name,
