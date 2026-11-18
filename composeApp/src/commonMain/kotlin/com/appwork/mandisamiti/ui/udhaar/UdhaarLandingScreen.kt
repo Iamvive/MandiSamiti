@@ -32,6 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -40,9 +42,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,9 +61,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.model.LendDirection
+import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
+import com.appwork.mandisamiti.domain.usecase.UdhaarUseCase
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.lend.LendPartyResolver
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
@@ -88,12 +101,14 @@ data class UdhaarTabData(
 data class UdhaarLandingUiState(
     val diya: UdhaarTabData,
     val liya: UdhaarTabData,
+    val parties: List<Party> = emptyList(),
 )
 
 class UdhaarLandingViewModel(
     private val shopId: String?,
     private val lendRepository: LendRepository,
     private val partyRepository: PartyRepository,
+    val udhaarUseCase: UdhaarUseCase? = null,
     coroutineScope: CoroutineScope? = null,
 ) {
     private val scope = coroutineScope ?: CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -126,10 +141,41 @@ class UdhaarLandingViewModel(
                     totalPrincipalPaisa = liyaRows.sumOf { it.principalDuePaisa },
                     totalInterestPaisa = liyaRows.sumOf { it.interestDuePaisa },
                 ),
+                parties = parties,
             )
         }.onEach { state ->
             _uiState.value = state
         }.launchIn(scope)
+    }
+
+    suspend fun saveLoan(state: UdhaarAddFormState): Result<Unit> {
+        val effectiveShopId = shopId ?: return Result.failure(IllegalStateException("No shop selected"))
+        val useCase = udhaarUseCase ?: return Result.failure(IllegalStateException("UdhaarUseCase not available"))
+        return try {
+            val parties = partyRepository.getPartiesStream(effectiveShopId).first()
+            val matchingParty = LendPartyResolver.existing(parties, state.selectedPartyId, state.phone)
+            val nowMs = Clock.System.now().toEpochMilliseconds()
+            val partyToSave = LendPartyResolver.partyToSave(
+                name = state.name,
+                phone = state.phone,
+                village = null,
+                shopId = effectiveShopId,
+                existing = matchingParty,
+                now = nowMs,
+            )
+            val resolvedPartyId = if (partyToSave != null) {
+                partyRepository.saveParty(partyToSave)
+                partyToSave.id
+            } else {
+                matchingParty?.id ?: state.selectedPartyId ?: throw IllegalStateException("Unable to resolve party")
+            }
+
+            val loanForm = state.toForm(effectiveShopId, resolvedPartyId)
+            useCase.createLoan(loanForm)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
 
@@ -138,15 +184,26 @@ class UdhaarLandingViewModel(
 fun UdhaarLandingScreen(
     viewModel: UdhaarLandingViewModel,
     isEnglish: Boolean,
+    initialPage: Int = 0,
+    onPageChanged: (Int) -> Unit = {},
     onPartyClick: (partyId: String) -> Unit,
-    onAddClick: () -> Unit,
+    onAddClick: () -> Unit = {},
     onBack: () -> Unit,
+    onLoanSaved: () -> Unit = {},
 ) {
     MandiBackHandler(enabled = true) { onBack() }
 
     val uiState by viewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showAddSheet by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            onPageChanged(page)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -176,9 +233,10 @@ fun UdhaarLandingScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onAddClick, // TODO(task7)
+                onClick = { showAddSheet = true },
                 containerColor = MandiPrimaryAction,
                 contentColor = MandiPrimaryActionText,
                 shape = RoundedCornerShape(14.dp),
@@ -321,6 +379,28 @@ fun UdhaarLandingScreen(
             }
         }
     }
+
+    if (showAddSheet) {
+        val currentDirection = if (pagerState.currentPage == 0) LendDirection.GIVEN else LendDirection.TAKEN
+        UdhaarAddSheet(
+            direction = currentDirection,
+            parties = uiState?.parties.orEmpty(),
+            isEnglish = isEnglish,
+            onDismiss = { showAddSheet = false },
+            onSave = { formState, onComplete ->
+                coroutineScope.launch {
+                    val result = viewModel.saveLoan(formState)
+                    onComplete(result)
+                    result.onSuccess {
+                        showAddSheet = false
+                        onLoanSaved()
+                        val msg = if (isEnglish) "Loan recorded successfully" else "उधार सफलतापूर्वक दर्ज किया गया"
+                        snackbarHostState.showSnackbar(msg)
+                    }
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -404,8 +484,9 @@ private fun UdhaarPersonRowItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    val displayName = row.name ?: if (isEnglish) "Unknown" else "अज्ञात"
                     Text(
-                        text = row.name,
+                        text = displayName,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.SemiBold,
                             color = MandiTextPrimary

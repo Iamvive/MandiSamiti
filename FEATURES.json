@@ -186,6 +186,12 @@
       "description": "Udhaar landing page (Task 6): Diya and Liya horizontal pager, total cards, person rows with interest chip, honest empty states, and add FAB",
       "status": "passing",
       "evidence": "2026-11-18 (Gemini / Antigravity, emulator-5554, staging http://64.227.142.180:8060): Verified in Light and Dark themes at 390dp reference width (density 443). Real taps verified: tab switch tap, horizontal swipe between Diya and Liya tabs, row tap opening PartyLedger and back navigation, add button opening LendEntry and back navigation. Zero writes to real data. Screenshots saved under docs/testing/screenshots/udhaar/ as t6-landing-diya-light-390.png, t6-landing-liya-light-390.png, t6-landing-diya-dark-390.png, t6-landing-liya-dark-390.png. Edge case 15: staging PostgreSQL has 0 grain loans (count=0 in lend_entries WHERE lend_type = 'GRAIN'); DashboardKpis and HomeViewModel filter lendType == MONEY. 14 new tests in UdhaarRowsTest; full suite passing with 652 JVM tests across all 4 modules (109 core-domain, 160 core-data, 12 core-database, 371 composeApp)."
+    },
+    {
+      "id": "udhaar-add-form",
+      "description": "Short udhaar add form bottom sheet (Task 7): Direction B phone-first borrower lookup, name, whole rupees amount capped at 9,99,99,999, date picker with UTC-local calendar match, interest toggle with monthly rate, GIVEN-only give-to-other toggle with receiver name/phone, single UdhaarUseCase.createLoan transaction, double-tap guard, and instant reactive list update",
+      "status": "passing",
+      "evidence": "2026-11-18 (Gemini / Antigravity, emulator-5554, staging http://64.227.142.180:8060): Verified in Light and Dark themes at 390dp (density 443). Three loan additions verified end-to-end: (1) Interest off (Rs 1,500), (2) Interest on at 2% (Rs 2,000, interest chip displayed), (3) Give to other with 31-character name 'Rameshwar Prasad Suryavanshi Ji' (Rs 3,000 to Ravi Brother 9876500004). Step 0 review fixes verified: selected tab survives back-navigation via App rememberSaveable, 'Unknown' localized fallback. 30-character name wraps cleanly at 390dp without horizontal scroll. No flash of empty text on loading (CircularProgressIndicator shown while uiState is null). Test loans and parties cleaned up afterwards from staging SQLite. 8 new tests in UdhaarAddFormStateTest; full suite passing with 844 tests (0 failures) across core-domain, core-data, core-database, composeApp. Screenshots saved to docs/testing/screenshots/udhaar/t7-add-<off|on|receiver>-<light|dark>-390.png."
     }
   ]
 }

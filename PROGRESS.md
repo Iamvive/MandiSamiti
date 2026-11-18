@@ -461,3 +461,42 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Edge case 15 (grain loans): checked staging PostgreSQL database (`mandisamiti_staging_db`); `SELECT count(*) FROM lend_entries WHERE lend_type = 'GRAIN'` returned 0 (only 1 loan exists, which is MONEY). Verified `DashboardKpis.kt` and `HomeViewModel.kt` already only include `LendType.MONEY`. Home totals and KPIs never reached grain loans anyway, and no real grain loans exist on staging.
 - Unverified: Physical device check on Redmi Note 7 (tested on emulator-5554 at 390dp reference width); add sheet (deferred to Task 7).
 - Next: Task 7 (short add form / sheet).
+
+## 2026-11-18 (Gemini / Antigravity): Udhaar rewrite Task 7, short add form bottom sheet & Task 6 review fixes
+- Completed Step 0 review fixes:
+  - Tab state survived across back navigation: added `var lendListSelectedTab by rememberSaveable { mutableStateOf(0) }` in `App.kt`, passed as `initialPage` to `UdhaarLandingScreen`, and tracked via `snapshotFlow { pagerState.currentPage }`. Tab selection outlives the screen when navigating to party ledger or Home and returning.
+  - Hard-coded "अज्ञात" removed: `UdhaarPersonRow.name` made nullable (`String?`), pure row builder stores null for missing/blank names, localization fallback ("Unknown" in English, "अज्ञात" in Hindi) handled by UI, and `edgeCase6` test updated in `UdhaarRowsTest.kt`.
+  - Verified loading state: `CircularProgressIndicator` shown while `uiState == null`, zero empty text flash on first frame.
+- Implemented Task 7:
+  - `UdhaarAddFormState.kt`: Direction B phone-first validation (10 digits mandatory), name trimmed, amount in whole rupees capped at 9,99,99,999 (leading zeros accepted), calendar day date validation (`isSameOrPastDay` matches UTC midnight DatePicker output with local device calendar day), interest toggle (monthly rate via `parseLoanRate`, zeroed when off), and give-to-other toggle (GIVEN only, receiver name mandatory, receiver phone optional 10-digit).
+  - `UdhaarAddFormStateTest.kt`: 8 unit tests covering all plan cases and edge cases 1, 3, 4, 5, 6, 7, 8, 9 (all 8 pass).
+  - `LendPartyResolver.kt`: added overload `partyToSave(name, phone, village, shopId, existing, now)` and delegated old method. Decision: new parties saved with `village = null` (village will be captured by the new Khata flow).
+  - Single save transaction: calls `UdhaarUseCase.createLoan` only (atomic `saveLoanWithCash` writes loan and cash transaction together). Party write occurs first before loan creation to prevent orphan loans.
+  - `UdhaarAddSheet.kt`: ModalBottomSheet with NGDL styling, IME inset keyboard avoidance, date picker dialog, interest toggle with monthly rate, GIVEN-only give to other toggle, suggestions chips, double-tap prevention, and error banner.
+  - `UdhaarLandingScreen.kt` & `App.kt`: FAB opens `UdhaarAddSheet` with active tab direction (`LendDirection.GIVEN` or `LendDirection.TAKEN`). On save, one-time sync scheduled, sheet closes, snackbar displayed, and list updates reactively. Old `TODO(task7)` route removed.
+  - Old route note: `Screen.LendEntry` remains in repo, reached from Home (`onNavigateToLend`, `App.kt:313`); left alone for Vivek to decide in Task 11.
+- Evidence:
+  - Total test count: 844 tests passing, 0 failures, 0 errors, 0 skipped across core-domain, core-data, core-database, composeApp.
+  - Emulator verification on `emulator-5554` (Android 15, staging `http://64.227.142.180:8060`, density 443 at 390dp):
+    - Light and Dark modes tested for all 3 cases.
+    - Case 1: Interest off (Rs 1,500), saved, reactive list update confirmed.
+    - Case 2: Interest on at 2% (Rs 2,000), saved, "ब्याज" chip displayed in list.
+    - Case 3: Give to other (Rs 3,000 to Ravi Brother 9876500004), 31-character name "Rameshwar Prasad Suryavanshi Ji" verified wrapping cleanly with no horizontal scroll.
+    - Verified loading state: `CircularProgressIndicator` shown while `uiState == null`, zero empty text flash.
+    - Verified tab survival across back navigation.
+    - All test parties, loans, and cash transactions deleted from staging SQLite (`mandisamiti.db`) afterwards.
+  - Screenshots:
+    `docs/testing/screenshots/udhaar/t7-add-off-light-390.png`
+    `docs/testing/screenshots/udhaar/t7-add-off-dark-390.png`
+    `docs/testing/screenshots/udhaar/t7-add-on-light-390.png`
+    `docs/testing/screenshots/udhaar/t7-add-on-dark-390.png`
+    `docs/testing/screenshots/udhaar/t7-add-receiver-light-390.png`
+    `docs/testing/screenshots/udhaar/t7-add-receiver-dark-390.png`
+- Answer to Edge Case 13 (deleted or shop-owner phone):
+  - SQLite table `partyEntity` has a `UNIQUE INDEX idx_party_shop_phone ON partyEntity(shop_id, phone)`.
+  - When a party has `is_deleted = 1`, trying to insert a new party with the same phone causes an SQLite UNIQUE constraint failure.
+  - Decision implemented: when phone matches an existing party (including soft-deleted), `LendPartyResolver.existing` treats it as a match, shows the name, does not silently revive it, and does not create a duplicate. Flagged to Vivek for Khata flow design.
+- Unverified:
+  - Physical Redmi Note 7 device check (tested on emulator-5554 reference device).
+  - Desktop-width layout not verified (focused on 390dp mobile reference).
+- Next: Task 8 (Person udhaar screen / Khata detail).

@@ -9,7 +9,7 @@ import com.appwork.mandisamiti.domain.model.Party
 
 data class UdhaarPersonRow(
     val partyId: String,
-    val name: String,
+    val name: String?,
     val village: String?,
     val principalDuePaisa: Long,
     val interestDuePaisa: Long,
@@ -64,7 +64,7 @@ fun buildUdhaarRows(
 
         if (totalPrincipalDue + totalInterestDue > 0L) {
             val party = partyMap[partyId]
-            val name = party?.name?.ifBlank { "अज्ञात" } ?: "अज्ञात"
+            val name = party?.name?.takeIf { it.isNotBlank() }
             val village = party?.village
             rows.add(
                 UdhaarPersonRow(
@@ -81,6 +81,6 @@ fun buildUdhaarRows(
 
     return rows.sortedWith(
         compareByDescending<UdhaarPersonRow> { it.principalDuePaisa + it.interestDuePaisa }
-            .thenBy { it.name }
+            .thenBy { it.name.orEmpty() }
     )
 }

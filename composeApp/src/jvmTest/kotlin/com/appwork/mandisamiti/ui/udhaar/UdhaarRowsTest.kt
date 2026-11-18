@@ -11,6 +11,7 @@ import com.appwork.mandisamiti.domain.model.PartyType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UdhaarRowsTest {
@@ -230,7 +231,7 @@ class UdhaarRowsTest {
         assertEquals(10_000L, deletedRow.principalDuePaisa)
 
         val unknownRow = rows.first { it.partyId == "p_unknown" }
-        assertEquals("अज्ञात", unknownRow.name)
+        assertNull(unknownRow.name)
         assertEquals(15_000L, unknownRow.principalDuePaisa)
     }
 

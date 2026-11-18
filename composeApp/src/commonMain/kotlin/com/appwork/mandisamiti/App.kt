@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.appwork.mandisamiti.data.auth.AuthApi
 import com.appwork.mandisamiti.data.auth.AuthRepository
@@ -146,6 +147,13 @@ fun App(
             { kotlinx.datetime.Clock.System.now().toEpochMilliseconds() },
         )
     }
+    val udhaarUseCase = remember {
+        com.appwork.mandisamiti.domain.usecase.UdhaarUseCase(
+            lendRepo,
+            { com.appwork.mandisamiti.domain.id.IdGenerator.newId() },
+            { kotlinx.datetime.Clock.System.now().toEpochMilliseconds() },
+        )
+    }
     val expenseRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstExpenseRepository(database) }
     val quotaRepo = remember { com.appwork.mandisamiti.data.repository.QuotaRepository(database, sessionStore, baseUrl = apiBaseUrl) }
     val stockAuditRepo = remember { com.appwork.mandisamiti.data.repository.OfflineFirstStockAuditRepository(database) }
@@ -175,6 +183,7 @@ fun App(
     var session by remember { mutableStateOf(sessionStore.current()) }
     var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register()) }
     var signOutInFlight by remember { mutableStateOf(false) }
+    var lendListSelectedTab by rememberSaveable { mutableStateOf(0) }
 
     MandiSamitiTheme {
         val activeSession = session
@@ -1011,18 +1020,18 @@ fun App(
             is Screen.LendList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 val udhaarViewModel = remember(shopId) {
-                    UdhaarLandingViewModel(shopId, lendRepo, partyRepo)
+                    UdhaarLandingViewModel(shopId, lendRepo, partyRepo, udhaarUseCase)
                 }
                 UdhaarLandingScreen(
                     viewModel = udhaarViewModel,
                     isEnglish = tradeSettings?.isEnglish ?: false,
+                    initialPage = lendListSelectedTab,
+                    onPageChanged = { lendListSelectedTab = it },
                     onPartyClick = { partyId ->
                         currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList)
                     },
-                    onAddClick = {
-                        currentScreen = Screen.LendEntry // TODO(task7)
-                    },
-                    onBack = { currentScreen = Screen.Home }
+                    onBack = { currentScreen = Screen.Home },
+                    onLoanSaved = { syncScheduler.scheduleOneTimeSync() }
                 )
             }
             is Screen.ExpenseEntry -> {

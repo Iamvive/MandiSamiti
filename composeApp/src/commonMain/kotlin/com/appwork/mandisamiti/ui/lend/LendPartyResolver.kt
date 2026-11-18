@@ -37,29 +37,47 @@ object LendPartyResolver {
         existing: Party?,
         now: Long,
         newId: String = IdGenerator.newId(),
+    ): Party? = partyToSave(
+        name = form.partyName,
+        phone = form.phone,
+        village = form.village,
+        shopId = shopId,
+        existing = existing,
+        now = now,
+        newId = newId,
+    )
+
+    fun partyToSave(
+        name: String,
+        phone: String?,
+        village: String?,
+        shopId: String,
+        existing: Party?,
+        now: Long,
+        newId: String = IdGenerator.newId(),
     ): Party? {
-        val name = form.partyName.trim()
-        val phone = form.phone.ifBlank { null }
-        val village = MandiValidators.sanitizeVillage(form.village).ifBlank { null }
+        val trimmedName = name.trim()
+        val sanitizedPhone = phone?.ifBlank { null }
+        val sanitizedVillage = village?.let { MandiValidators.sanitizeVillage(it).ifBlank { null } }
         if (existing == null) {
             return Party(
                 id = newId,
                 shopId = shopId,
-                name = name,
-                phone = phone,
-                village = village,
+                name = trimmedName,
+                phone = sanitizedPhone,
+                village = sanitizedVillage,
                 partyType = PartyType.FARMER,
                 createdAt = now,
                 updatedAt = now,
             )
         }
-        if (existing.name == name && existing.phone == phone && existing.village == village) {
+        if (existing.name == trimmedName && existing.phone == sanitizedPhone && existing.village == sanitizedVillage) {
             return null
         }
         return existing.copy(
-            name = name,
-            phone = phone,
-            village = village,
+            name = trimmedName,
+            phone = sanitizedPhone,
+            village = sanitizedVillage,
             updatedAt = now,
             syncStatus = 0
         )
