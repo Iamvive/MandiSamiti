@@ -164,4 +164,63 @@ class UdhaarUseCaseTest {
         assertEquals(10_000L, exception.totalDuePaisa)
         assertEquals(rowsBefore, f.cashRows().size)
     }
+
+    @Test
+    fun totalDueReturnsPrincipalAndAccruedInterestAtGivenDate() = runTest {
+        val f = fixture(testScheduler)
+        f.useCase.createLoan(form(
+            amountPaisa = 1_000_000L,
+            date = fixedNow - 30L * day,
+            monthlyRatePercent = 2.0,
+        ))
+        val dueAtNow = f.useCase.totalDue("shop", "party", LendDirection.GIVEN, fixedNow)
+        assertEquals(1_000_000L, dueAtNow.principalPaisa)
+        assertEquals(20_000L, dueAtNow.interestPaisa)
+        assertEquals(1_020_000L, dueAtNow.totalPaisa)
+
+        // At earlier date (only 15 days elapsed), interest is half (10,000L)
+        val dueEarlier = f.useCase.totalDue("shop", "party", LendDirection.GIVEN, fixedNow - 15L * day)
+        assertEquals(1_000_000L, dueEarlier.principalPaisa)
+        assertEquals(10_000L, dueEarlier.interestPaisa)
+        assertEquals(1_010_000L, dueEarlier.totalPaisa)
+    }
+
+    @Test
+    fun edgeCase5_partialPaymentOfOlderLoanOnlyTouchesOlderLoan() = runTest {
+        val f = fixture(testScheduler)
+        val older = f.useCase.createLoan(form(amountPaisa = 100_000L, date = 1000L))
+        val newer = f.useCase.createLoan(form(amountPaisa = 200_000L, date = 2000L))
+
+        // Pay 40,000L (< older amount of 100,000L)
+        val parts = f.useCase.repay("shop", "party", LendDirection.GIVEN, 40_000L, fixedNow)
+        assertEquals(1, parts.size)
+        assertEquals(older.id, parts.single().lendId)
+        assertEquals(40_000L, parts.single().principalPaisa)
+
+        // Only older loan has a settlement row; newer loan has none
+        assertEquals(1, f.repository.getSettlements(older.id).size)
+        assertTrue(f.repository.getSettlements(newer.id).isEmpty())
+
+        // Check total due remaining: older has 60,000L left, newer has 200,000L -> total 260,000L
+        val due = f.useCase.totalDue("shop", "party", LendDirection.GIVEN, fixedNow)
+        assertEquals(260_000L, due.totalPaisa)
+    }
+
+    @Test
+    fun edgeCase6_payingExactTotalLeavesZeroDue() = runTest {
+        val f = fixture(testScheduler)
+        f.useCase.createLoan(form(amountPaisa = 100_000L, date = 1000L))
+        f.useCase.createLoan(form(amountPaisa = 200_000L, date = 2000L))
+
+        val dueBefore = f.useCase.totalDue("shop", "party", LendDirection.GIVEN, fixedNow)
+        assertEquals(300_000L, dueBefore.totalPaisa)
+
+        // Pay exact rest
+        f.useCase.repay("shop", "party", LendDirection.GIVEN, 300_000L, fixedNow)
+
+        val dueAfter = f.useCase.totalDue("shop", "party", LendDirection.GIVEN, fixedNow)
+        assertEquals(0L, dueAfter.principalPaisa)
+        assertEquals(0L, dueAfter.interestPaisa)
+        assertEquals(0L, dueAfter.totalPaisa)
+    }
 }

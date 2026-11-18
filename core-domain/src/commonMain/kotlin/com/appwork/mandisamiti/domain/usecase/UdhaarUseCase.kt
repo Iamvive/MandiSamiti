@@ -18,6 +18,14 @@ import com.appwork.mandisamiti.domain.repository.LendRepository
 
 class UdhaarOverpaymentException(val totalDuePaisa: Long) : IllegalArgumentException("Payment is above the amount due")
 
+data class UdhaarDue(
+    val principalPaisa: Long,
+    val interestPaisa: Long,
+) {
+    val totalPaisa: Long get() = principalPaisa + interestPaisa
+    val totalDuePaisa: Long get() = totalPaisa
+}
+
 data class UdhaarLoanForm(
     val shopId: String,
     val partyId: String,
@@ -82,6 +90,19 @@ class UdhaarUseCase(
         )
         repo.saveLoanWithCash(loan, cash)
         return loan
+    }
+
+    suspend fun totalDue(
+        shopId: String,
+        partyId: String,
+        direction: LendDirection,
+        atMs: Long,
+    ): UdhaarDue {
+        val loans = openLoans(shopId, partyId, direction, atMs)
+        return UdhaarDue(
+            principalPaisa = loans.sumOf { it.outstandingPrincipalPaisa },
+            interestPaisa = loans.sumOf { it.interestDuePaisa },
+        )
     }
 
     suspend fun repay(

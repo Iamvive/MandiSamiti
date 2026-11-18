@@ -220,7 +220,7 @@ fun UdhaarLandingScreen(
     isEnglish: Boolean,
     initialPage: Int = 0,
     onPageChanged: (Int) -> Unit = {},
-    onPartyClick: (partyId: String) -> Unit,
+    onPartyClick: (partyId: String, direction: LendDirection) -> Unit,
     onAddClick: () -> Unit = {},
     onBack: () -> Unit,
     onLoanSaved: () -> Unit = {},
@@ -404,7 +404,10 @@ fun UdhaarLandingScreen(
                                 UdhaarPersonRowItem(
                                     row = row,
                                     isEnglish = isEnglish,
-                                    onClick = { onPartyClick(row.partyId) }
+                                    onClick = {
+                                        val direction = if (isDiya) LendDirection.GIVEN else LendDirection.TAKEN
+                                        onPartyClick(row.partyId, direction)
+                                    }
                                 )
                             }
                         }

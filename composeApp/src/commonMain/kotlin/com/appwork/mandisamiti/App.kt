@@ -66,6 +66,9 @@ import com.appwork.mandisamiti.ui.sync.FirstSyncScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncViewModel
 import com.appwork.mandisamiti.ui.udhaar.UdhaarLandingScreen
 import com.appwork.mandisamiti.ui.udhaar.UdhaarLandingViewModel
+import com.appwork.mandisamiti.ui.udhaar.UdhaarPersonScreen
+import com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel
+import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
 import com.appwork.mandisamiti.ui.settings.StartupLanguage
 import com.appwork.mandisamiti.ui.settings.startupLanguage
@@ -93,6 +96,7 @@ sealed interface Screen {
     data object LendEntry : Screen
     data class GrainLendEntry(val returnScreen: Screen = Screen.LendEntry) : Screen
     data object LendList : Screen
+    data class UdhaarPerson(val partyId: String, val direction: LendDirection) : Screen
     data class ExpenseEntry(val existingId: String? = null) : Screen
     data object ExpenseList : Screen
     data object StockSheet : Screen
@@ -110,6 +114,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.LendEntry -> Screen.LendList
     is Screen.GrainLendEntry -> returnScreen
     is Screen.LendList -> Screen.Home
+    is Screen.UdhaarPerson -> Screen.LendList
     is Screen.ExpenseEntry -> if (existingId != null) Screen.ExpenseList else Screen.Home
     is Screen.ExpenseList -> Screen.ExpenseEntry()
     is Screen.StockSheet -> Screen.Home
@@ -1027,11 +1032,30 @@ fun App(
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     initialPage = lendListSelectedTab,
                     onPageChanged = { lendListSelectedTab = it },
-                    onPartyClick = { partyId ->
-                        currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList)
+                    onPartyClick = { partyId, direction ->
+                        currentScreen = Screen.UdhaarPerson(partyId, direction)
                     },
                     onBack = { currentScreen = Screen.Home },
                     onLoanSaved = { syncScheduler.scheduleOneTimeSync() }
+                )
+            }
+            is Screen.UdhaarPerson -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val personViewModel = remember(shopId, screen.partyId, screen.direction) {
+                    UdhaarPersonViewModel(
+                        partyId = screen.partyId,
+                        direction = screen.direction,
+                        shopId = shopId,
+                        lendRepository = lendRepo,
+                        partyRepository = partyRepo,
+                        udhaarUseCase = udhaarUseCase,
+                    )
+                }
+                UdhaarPersonScreen(
+                    viewModel = personViewModel,
+                    isEnglish = tradeSettings?.isEnglish ?: false,
+                    onBack = { currentScreen = screen.backTarget() },
+                    onRepaymentSaved = { syncScheduler.scheduleOneTimeSync() }
                 )
             }
             is Screen.ExpenseEntry -> {

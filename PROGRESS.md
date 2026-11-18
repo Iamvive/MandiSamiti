@@ -527,3 +527,41 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Verified in SQLite that exactly 1 party row exists, `is_deleted = 0`, name updated to `RestoredFarmer`, sync_status = 0, and the loan points to that party ID. Verified loan appears in the "उधार दिया" tab.
   - Cleaned up: deleted all test loans, cash transactions, and party rows from staging SQLite database.
 - Next: Task 8 (Person udhaar screen / Khata detail).
+
+## 2026-11-18 (Gemini / Antigravity): Udhaar rewrite Task 8, person screen and oldest-first repayment
+- Pure state TDD:
+  - Created `UdhaarRepayFormStateTest.kt` covering blank/zero/negative/non-numeric amount, amount exceeding due date amount, exact due amount, future date rejection, minDate lower bound rejection, and `onOverpayment` error message updates. Confirmed failing before implementation.
+  - Implemented `UdhaarRepayFormState.kt` supporting date validation (UTC/local day match, future date guard, minDate lower bound), 2 decimal place inputs via `MandiMathEngine.parseRupeesToPaisa`, and reactive error message computation.
+- Core use case & oldest-first allocation:
+  - Added `totalDue(shopId, partyId, direction, atMs): UdhaarDue` to `UdhaarUseCase.kt` to compute principal and accrued interest at any given date.
+  - Added unit tests in `UdhaarUseCaseTest.kt` verifying `totalDue`, oldest-first loan payment allocation (`edgeCase5_partialPaymentOfOlderLoanOnlyTouchesOlderLoan`), and exact rest payment leaving zero due (`edgeCase6_payingExactTotalLeavesZeroDue`).
+- Screen & ViewModel implementation:
+  - Implemented `UdhaarPersonViewModel.kt` observing `getLendEntriesStream`, `getSettlementsStream`, and `getPartiesStream`, computing principal and interest per loan and across all open loans, exposing `minDateMs` (max entryDate of open loans), and supporting repayment edit preview/save and settlement history lookup.
+  - Implemented `UdhaarPersonScreen.kt` with NGDL tokens and vector icons: TopAppBar with back arrow, header card (name with localized "Unknown"/"अज्ञात" fallback, village, phone), balance card ("बाकी ₹X" with "+ ब्याज ₹Y (कुल ₹Z)", or "चुकता" in `MandiGreenReceivable` when balance is 0), nested loan list with date, amount, "पेशगी" chip for `LendKind.PESGI`, receiver name when set, interest rate, and sub-list of settlements (principal/interest breakdown, "रद्द" muted chip if void, edit and history buttons).
+  - Implemented `UdhaarRepayDialog` with total due banner, "पूरा चुकाएँ" / "Pay full" chip, decimal-supporting amount field with prefix "₹ ", date picker, and double-tap guard on save. Hidden when person is settled.
+  - Routed `Screen.UdhaarPerson(partyId, direction)` in `App.kt` with back navigation returning to `Screen.LendList` (preserving active tab).
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-data`: 166 tests (0 failures, +3 new tests in `UdhaarUseCaseTest`)
+  - `:core-database`: 12 tests (0 failures)
+  - `:composeApp`: 392 tests (0 failures, +7 new tests in `UdhaarRepayFormStateTest`)
+  - Total: 679 tests passing (0 failures).
+- Device verification on `emulator-5554` (staging `http://64.227.142.180:8060`, 390dp):
+  - `part`: Added 2 loans for Ramesh on different dates (10 Nov 2026 ₹5,000, 18 Nov 2026 ₹3,000). Paid partial amount of ₹2,000. Verified in SQLite that exactly 1 settlement was created against the older Loan 1 only (`principal_paisa=200000`, `interest_paisa=0`), with Loan 2 untouched.
+  - `rest`: Paid remaining ₹6,000 using "पूरा चुकाएँ" chip. UI updated to "चुकता", repay button was hidden, full loan and repayment history remained visible. On back, Ramesh left the landing open list. Verified in SQLite: Loan 1 received remaining ₹3,000 and Loan 2 received ₹3,000.
+  - `over`: Attempted to pay ₹60,000 (above ₹50,100 due). Message "बाकी सिर्फ ₹50,100 है" displayed and save button was disabled. Confirmed 0 settlements written to DB.
+  - `interest`: Interest-on loan Monty showed "+ ब्याज ₹100 (कुल ₹50,100)".
+  - Back navigation verified to preserve active tab. Cleaned up all test party, loans, and settlements from SQLite.
+  - 8 screenshots saved under `docs/testing/screenshots/udhaar/`:
+    `t8-person-interest-light-390.png`, `t8-person-interest-dark-390.png`,
+    `t8-person-over-light-390.png`, `t8-person-over-dark-390.png`,
+    `t8-person-part-light-390.png`, `t8-person-part-dark-390.png`,
+    `t8-person-rest-light-390.png`, `t8-person-rest-dark-390.png`.
+- Findings for Decisions & Edge Cases:
+  - Decimals decision: `RuralInterestEngine.calculateAccruedInterestByDays` divides by `300_000L`, producing fractional rupees with odd paise. Therefore, repay amount accepts up to 2 decimal places via `MandiMathEngine.parseRupeesToPaisa`, and "पूरा चुकाएँ" chip fills the exact due.
+  - Edge case 15 (voiding settlements): In current code, `voidEntry` only voids `LedgerItem.DealItem`, `CashItem`, `BuyItem`, `SellItem`, and `LendItem`. There is no `voidSettlement` method in `LendRepository` or SQLite DAOs. Voiding cannot be done without rewriting the data layer or voiding the whole loan. In `UdhaarPersonScreen`, settlements with `isVoid == true` are displayed muted with "रद्द" (Cancelled) and excluded from balance calculations, but no independent settlement void action is added.
+  - Loading state: Centered `CircularProgressIndicator` spinner displayed while `uiState == null`; never flashes empty state.
+  - 30-character name: Uses responsive wrapping at 390dp without truncation or horizontal scrolling.
+- Unverified:
+  - Physical Redmi Note 7 device check (tested on emulator-5554 reference device at density 443 / 390dp).
+- Next: Task 9 (Kisaan khata layout and plain cash routing).
