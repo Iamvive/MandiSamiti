@@ -69,7 +69,10 @@ sealed interface LedgerItem {
     data class CashItem(
         val transaction: CashTransaction,
         override val timestamp: Long = transaction.transactionDate
-    ) : LedgerItem
+    ) : LedgerItem {
+        /** Slip, loan, or null for plain cash. */
+        val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? get() = com.appwork.mandisamiti.domain.ledger.ledgerTagFor(transaction)
+    }
 }
 
 data class OpenLoanInfo(

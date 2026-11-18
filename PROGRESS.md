@@ -441,3 +441,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: new `PartyBalanceSplitTest` (5 cases, incl. slip payment never changes udhaar). `./gradlew :core-domain:jvmTest :core-data:jvmTest :core-database:jvmTest :composeApp:jvmTest`: 634 tests, 0 failures, 0 errors, 0 skipped.
 - Not verified: no emulator check yet; no UI change beyond the header number.
 - Next: Task 5 (ledger tag rule), then Task 6 (Udhaar landing page).
+
+## 2026-11-18 (Claude Code, Haiku 5.5): Udhaar rewrite Task 5, ledger tag rule
+- Added `LedgerTag` (Slip or Udhaar) and `ledgerTagFor(cash)` in `domain/ledger/`. A row with both a slip and a loan link is tagged as a slip.
+- `PartyLedgerViewModel.LedgerItem.CashItem.tag` exposes the tag. `PartyLedgerScreen` shows a small bordered chip on cash rows: "पर्ची #<slipNo>" (or "पर्ची" when the slip has no number) for slip rows, "उधार" for loan-linked rows. Loan cards get no chip, since they already read as loans.
+- Evidence: `LedgerTagTest` 4 of 4 pass. Full run `./gradlew :core-domain:jvmTest :core-data:jvmTest :core-database:jvmTest :composeApp:jvmTest`: 638 tests, 0 failures, 0 errors, 0 skipped.
+- Not verified: no emulator check of the chip yet (light and dark, 390dp).
+- Next: Task 6, udhaar landing page (replaces LendList).

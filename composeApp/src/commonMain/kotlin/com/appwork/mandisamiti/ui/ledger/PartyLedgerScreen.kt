@@ -131,6 +131,17 @@ fun PartyLedgerScreen(
     var historySettlement by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.LendSettlement?>(null) }
 
     var voidTarget by remember { mutableStateOf<LedgerItem?>(null) }
+    val slipNoById = remember(uiState.ledgerItems) {
+        buildMap<String, Long> {
+            uiState.ledgerItems.forEach { li ->
+                when (li) {
+                    is LedgerItem.BuyItem -> li.buy.slipNo?.let { put(li.buy.id, it) }
+                    is LedgerItem.SellItem -> li.sell.slipNo?.let { put(li.sell.id, it) }
+                    else -> Unit
+                }
+            }
+        }
+    }
     var lendEditTarget by remember { mutableStateOf<LedgerItem.LendItem?>(null) }
     var cashEditTarget by remember { mutableStateOf<LedgerItem.CashItem?>(null) }
     var cashEditAmount by remember { mutableStateOf("") }
@@ -419,6 +430,8 @@ fun PartyLedgerScreen(
 
                                 isEnglish = isEnglish,
                                 transaction = item.transaction,
+                                tag = item.tag,
+                                slipNo = (item.tag as? com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip)?.let { slipNoById[it.slipId] },
                                 onLongPress = { voidTarget = item }
                             )
                         }
@@ -1593,6 +1606,8 @@ private fun FintechDealCard(
 private fun FintechCashCard(
     isEnglish: Boolean,
     transaction: com.appwork.mandisamiti.domain.model.CashTransaction,
+    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag?,
+    slipNo: Long?,
     onLongPress: () -> Unit
 ) {
     val isVoid = transaction.isVoid
@@ -1652,6 +1667,23 @@ private fun FintechCashCard(
                                 contentDescription = "Pending Local",
                                 tint = MandiTextMuted,
                                 modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        if (tag != null) {
+                            val chipText = when (tag) {
+                                is com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip ->
+                                    if (slipNo != null) (if (isEnglish) "Slip #$slipNo" else "पर्ची #$slipNo") else (if (isEnglish) "Slip" else "पर्ची")
+                                com.appwork.mandisamiti.domain.ledger.LedgerTag.Udhaar -> if (isEnglish) "Loan" else "उधार"
+                            }
+                            Text(
+                                text = chipText,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiTextMuted,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .border(1.dp, MandiBorder, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
