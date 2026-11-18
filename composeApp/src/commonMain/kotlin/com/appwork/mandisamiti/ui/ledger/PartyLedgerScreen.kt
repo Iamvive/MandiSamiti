@@ -17,13 +17,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Calculate
@@ -36,6 +40,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +48,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,6 +60,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -70,12 +81,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.validation.MandiValidators
 import kotlinx.datetime.Clock
+import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
+import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.domain.usecase.CashSide
+import com.appwork.mandisamiti.ui.udhaar.LoanCardItem
+import com.appwork.mandisamiti.ui.udhaar.UdhaarPersonUiState
+import com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel
+import com.appwork.mandisamiti.ui.udhaar.UdhaarRepayDialog
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.components.PhoneNeededBadge
 import com.appwork.mandisamiti.ui.theme.MandiAccent
@@ -114,19 +132,43 @@ fun PartyLedgerScreen(
     onOpenBuyReceipt: (String) -> Unit = {},
     onOpenSellReceipt: (String) -> Unit = {},
     isEnglish: Boolean = false,
+    udhaarPersonViewModelFactory: ((LendDirection) -> UdhaarPersonViewModel)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val party = uiState.party
 
-    var showCashEntryType by remember { mutableStateOf<TransactionType?>(null) }
-    var cashAmountInput by remember { mutableStateOf("") }
-    var cashRemarksInput by remember { mutableStateOf("") }
+    var showPlainCashSide by rememberSaveable { mutableStateOf<String?>(null) }
+    var plainCashAmountInput by rememberSaveable { mutableStateOf("") }
+    var plainCashRemarksInput by rememberSaveable { mutableStateOf("") }
 
-    var showApplyToLoanDialog by remember { mutableStateOf(false) }
-    var pendingCashAmount by remember { mutableStateOf(0L) }
-    var pendingCashRemarks by remember { mutableStateOf("") }
-    var selectedLoanIdForRepay by remember { mutableStateOf<String?>(null) }
-    var repayDialogLoanId by remember { mutableStateOf<String?>(null) }
+    val givenPersonViewModel = remember(party?.id, viewModel.shopId) {
+        if (viewModel.lendRepository != null) {
+            udhaarPersonViewModelFactory?.invoke(LendDirection.GIVEN)
+                ?: UdhaarPersonViewModel(
+                    partyId = viewModel.partyId,
+                    direction = LendDirection.GIVEN,
+                    shopId = viewModel.shopId,
+                    lendRepository = viewModel.lendRepository,
+                    partyRepository = viewModel.partyRepository,
+                    udhaarUseCase = viewModel.udhaarUseCase
+                )
+        } else null
+    }
+
+    val takenPersonViewModel = remember(party?.id, viewModel.shopId) {
+        if (viewModel.lendRepository != null) {
+            udhaarPersonViewModelFactory?.invoke(LendDirection.TAKEN)
+                ?: UdhaarPersonViewModel(
+                    partyId = viewModel.partyId,
+                    direction = LendDirection.TAKEN,
+                    shopId = viewModel.shopId,
+                    lendRepository = viewModel.lendRepository,
+                    partyRepository = viewModel.partyRepository,
+                    udhaarUseCase = viewModel.udhaarUseCase
+                )
+        } else null
+    }
+
     var editingSettlement by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.LendSettlement?>(null) }
     var historySettlement by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.LendSettlement?>(null) }
 
@@ -147,17 +189,6 @@ fun PartyLedgerScreen(
     var cashEditAmount by remember { mutableStateOf("") }
     var cashEditRemarks by remember { mutableStateOf("") }
 
-    // Leaving the apply-to-loan dialog without a choice must not lose the deposit: reopen the entry form as typed.
-    val backToCashDialog = {
-        showApplyToLoanDialog = false
-        showCashEntryType = TransactionType.JAMA_RECEIVED
-        cashAmountInput = pendingCashAmount.toString()
-        cashRemarksInput = pendingCashRemarks
-    }
-
-    var interestRateInput by remember { mutableStateOf("2") }
-    var interestDaysInput by remember { mutableStateOf("30") }
-
     var showEditPartyDialog by remember { mutableStateOf(false) }
     var editNameInput by remember { mutableStateOf("") }
     var editVillageInput by remember { mutableStateOf("") }
@@ -166,6 +197,17 @@ fun PartyLedgerScreen(
     var editMandiLicenseInput by remember { mutableStateOf("") }
 
     var showSettlementDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            if (event is PartyLedgerEvent.TransactionRecorded) {
+                showPlainCashSide = null
+                plainCashAmountInput = ""
+                plainCashRemarksInput = ""
+                viewModel.clearError()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -198,49 +240,145 @@ fun PartyLedgerScreen(
                     modifier = Modifier.padding(start = 14.dp, top = 10.dp),
                 )
             }
-            // Running Balance Hero Banner
-            val headerBalance = uiState.slipBalancePaisa + (uiState.udhaarGivenPaisa - uiState.udhaarTakenPaisa) // interim until Task 9 splits the header
-            val isReceivable = headerBalance > 0
-            val isPayable = headerBalance < 0
-            val balanceAmount = if (headerBalance < 0) -headerBalance else headerBalance
 
-            Card(
+            // Two balance cards side by side
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MandiSurface),
-                border = CardDefaults.outlinedCardBorder().copy(
-                    brush = androidx.compose.ui.graphics.SolidColor(MandiBorder)
-                )
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val statusText = when {
-                    isReceivable -> if (isEnglish) "To receive" else "लेना है"
-                    isPayable -> if (isEnglish) "To pay" else "देना है"
+                // 1. Slip balance card (पर्चियों का बाकी)
+                val slip = uiState.slipBalancePaisa
+                val isSlipReceivable = slip > 0L
+                val isSlipPayable = slip < 0L
+                val absSlip = if (slip < 0L) -slip else slip
+                val slipStatusText = when {
+                    isSlipReceivable -> if (isEnglish) "To receive" else "लेना है"
+                    isSlipPayable -> if (isEnglish) "To pay" else "देना है"
                     else -> if (isEnglish) "Settled" else "हिसाब चुकता"
                 }
-                val statusColor = when {
-                    isReceivable -> MandiGreenReceivable
-                    isPayable -> MandiRedPayable
+                val slipStatusColor = when {
+                    isSlipReceivable -> MandiGreenReceivable
+                    isSlipPayable -> MandiRedPayable
                     else -> MandiTextPrimary
                 }
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+
+                Card(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MandiSurface),
+                    border = BorderStroke(1.dp, MandiBorder)
                 ) {
-                    Text(
-                        text = statusText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = statusColor
-                    )
-                    Text(
-                        text = "₹${MandiMathEngine.paisaToRupeesString(balanceAmount)}",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = statusColor,
-                        maxLines = 1
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Slip Balance" else "पर्चियों का बाकी",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextSecondary,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "₹${MandiMathEngine.paisaToRupeesString(absSlip)}",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = slipStatusColor,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = slipStatusText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = slipStatusColor
+                        )
+                    }
+                }
+
+                // 2. Udhaar balance card (उधार बाकी)
+                val bothNonZero = uiState.udhaarGivenPaisa > 0L && uiState.udhaarTakenPaisa > 0L
+                Card(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MandiSurface),
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Udhaar Balance" else "उधार बाकी",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextSecondary,
+                            maxLines = 1
+                        )
+                        if (bothNonZero) {
+                            Text(
+                                text = "${if (isEnglish) "Given: " else "दिया: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarGivenPaisa)}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiGreenReceivable,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "${if (isEnglish) "Taken: " else "लिया: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarTakenPaisa)}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiRedPayable,
+                                maxLines = 1
+                            )
+                        } else if (uiState.udhaarGivenPaisa > 0L) {
+                            Text(
+                                text = "₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarGivenPaisa)}",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiGreenReceivable,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = if (isEnglish) "Given (To receive)" else "दिया (लेना है)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MandiGreenReceivable
+                            )
+                        } else if (uiState.udhaarTakenPaisa > 0L) {
+                            Text(
+                                text = "₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarTakenPaisa)}",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiRedPayable,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = if (isEnglish) "Taken (To pay)" else "लिया (देना है)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MandiRedPayable
+                            )
+                        } else {
+                            Text(
+                                text = "₹0",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiTextPrimary,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = if (isEnglish) "No udhaar" else "कोई उधार नहीं",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MandiTextMuted
+                            )
+                        }
+                    }
                 }
             }
 
@@ -280,17 +418,17 @@ fun PartyLedgerScreen(
                 }
             }
 
-            // Quick Action Buttons (Direction B Final Layout)
+            // Quick Action Buttons
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Primary Settle Action Button (हिसाब चुकता)
                 Button(
                     onClick = { showSettlementDialog = true },
-                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MandiPrimaryAction,
                         contentColor = MandiPrimaryActionText
@@ -305,7 +443,7 @@ fun PartyLedgerScreen(
                     )
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(
-                        text = if (isEnglish) "Settle (Hisab Chukta)" else "हिसाब चुकता",
+                        text = if (isEnglish) "Settle Slips (Hisab Chukta)" else "हिसाब चुकता (पर्ची)",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = MandiPrimaryActionText
@@ -317,46 +455,44 @@ fun PartyLedgerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FintechActionButton(
-                        label = if (isEnglish) "Received" else "जमा मिला",
+                        label = if (isEnglish) "Money Received" else "रुपये मिले",
                         icon = Icons.Default.ArrowDownward,
                         color = MandiGreenReceivable,
                         backgroundColor = MandiGreenLight,
                         borderColor = MandiGreenBorder,
                         textColor = MandiGreenText,
-                        onClick = { showCashEntryType = TransactionType.JAMA_RECEIVED },
+                        onClick = {
+                            viewModel.clearError()
+                            showPlainCashSide = "GOT"
+                        },
                         modifier = Modifier.weight(1f)
                     )
                     FintechActionButton(
-                        label = if (isEnglish) "Paid" else "भुगतान दिया",
+                        label = if (isEnglish) "Money Paid" else "रुपये दिए",
                         icon = Icons.Default.ArrowUpward,
                         color = MandiRedPayable,
                         backgroundColor = MandiRedLight,
                         borderColor = MandiRedBorder,
                         textColor = MandiRedText,
-                        onClick = { showCashEntryType = TransactionType.UDHAR_GIVEN },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FintechActionButton(
-                        label = if (isEnglish) "Interest" else "ब्याज हिसाब",
-                        icon = Icons.Default.Calculate,
-                        color = MandiTextPrimary,
-                        backgroundColor = MandiSurfaceElevated,
-                        borderColor = MandiBorder,
-                        textColor = MandiTextPrimary,
                         onClick = {
-                            val oldest = uiState.openLoans.minByOrNull { it.lend.entryDate }
-                            if (oldest != null) {
-                                val ms = Clock.System.now().toEpochMilliseconds() - oldest.lend.entryDate
-                                interestDaysInput = (ms / 86_400_000L).coerceAtLeast(1L).toString()
-                                interestRateInput = oldest.monthlyRatePercent.toString()
-                            } else {
-                                interestRateInput = RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT.toString()
-                            }
-                            viewModel.openInterestDialog()
+                            viewModel.clearError()
+                            showPlainCashSide = "GAVE"
                         },
                         modifier = Modifier.weight(1f)
                     )
                 }
+            }
+
+            // Udhaar Section: shown only when the party has loans in either direction
+            val hasUdhaar = uiState.udhaarGivenPaisa > 0L || uiState.udhaarTakenPaisa > 0L || uiState.openLoans.isNotEmpty()
+            if (hasUdhaar) {
+                PartyUdhaarSection(
+                    uiState = uiState,
+                    givenViewModel = givenPersonViewModel,
+                    takenViewModel = takenPersonViewModel,
+                    isEnglish = isEnglish,
+                    onRefresh = { viewModel.loadPartyData() }
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -387,18 +523,18 @@ fun PartyLedgerScreen(
                     when (item) {
                         is LedgerItem.BuyItem -> {
                             FintechBuyCard(
-
                                 isEnglish = isEnglish,
                                 buy = item.buy,
+                                tag = item.tag,
                                 onOpenReceipt = { onOpenBuyReceipt(item.buy.id) },
                                 onLongPress = { voidTarget = item }
                             )
                         }
                         is LedgerItem.SellItem -> {
                             FintechSellCard(
-
                                 isEnglish = isEnglish,
                                 sell = item.sell,
+                                tag = item.tag,
                                 onOpenReceipt = { onOpenSellReceipt(item.sell.id) },
                                 onLongPress = { voidTarget = item }
                             )
@@ -409,6 +545,7 @@ fun PartyLedgerScreen(
                                 isEnglish = isEnglish,
                                 lend = item.lend,
                                 loanInfo = matchingLoan,
+                                tag = item.tag,
                                 onEditRepayment = { editingSettlement = it },
                                 onShowRepaymentHistory = { historySettlement = it },
                                 onLongPress = { voidTarget = item }
@@ -416,10 +553,10 @@ fun PartyLedgerScreen(
                         }
                         is LedgerItem.DealItem -> {
                             FintechDealCard(
-
                                 isEnglish = isEnglish,
                                 deal = item.deal,
                                 isBuyerLedger = party?.partyType == PartyType.BUYER,
+                                tag = item.tag,
                                 onShareSlip = { onShareWhatsAppReceipt(item.deal.id) },
                                 onEditDeal = { onEditDeal(item.deal.id) },
                                 onLongPress = { voidTarget = item }
@@ -699,15 +836,19 @@ fun PartyLedgerScreen(
         )
     }
 
-    // Cash Entry Dialog (Clean Fintech Modal)
-    if (showCashEntryType != null) {
-        val txnType = showCashEntryType!!
-        val isDeposit = txnType == TransactionType.JAMA_RECEIVED
+    // Plain Cash Entry Dialog (Routed through UdhaarUseCase.plainCash)
+    if (showPlainCashSide != null) {
+        val isGot = showPlainCashSide == "GOT"
         AlertDialog(
-            onDismissRequest = { showCashEntryType = null },
+            onDismissRequest = {
+                showPlainCashSide = null
+                plainCashAmountInput = ""
+                plainCashRemarksInput = ""
+                viewModel.clearError()
+            },
             title = {
                 Text(
-                    text = if (isDeposit) if (isEnglish) "Record cash received" else "नकद जमा प्राप्त दर्ज करें" else if (isEnglish) "Record cash paid" else "नकद भुगतान दिया दर्ज करें",
+                    text = if (isGot) (if (isEnglish) "Money Received" else "रुपये मिले") else (if (isEnglish) "Money Paid" else "रुपये दिए"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = MandiTextPrimary
@@ -716,51 +857,50 @@ fun PartyLedgerScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        value = cashAmountInput,
-                        onValueChange = { cashAmountInput = it },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        value = plainCashAmountInput,
+                        onValueChange = {
+                            plainCashAmountInput = it.filter(Char::isDigit)
+                            viewModel.clearError()
+                        },
                         label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                        value = cashRemarksInput,
-                        onValueChange = { cashRemarksInput = it },
+                        value = plainCashRemarksInput,
+                        onValueChange = { plainCashRemarksInput = it },
                         label = { Text(if (isEnglish) "Note (optional)" else "विवरण / नोट (वैकल्पिक)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (uiState.error != null) {
+                        Text(
+                            text = uiState.error ?: "",
+                            color = MandiRedText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             },
             confirmButton = {
+                val amount = plainCashAmountInput.toLongOrNull() ?: 0L
                 Button(
                     onClick = {
-                        val amount = cashAmountInput.toLongOrNull() ?: 0L
-                        if (amount > 0L) {
-                            if (isDeposit && uiState.openLoans.isNotEmpty()) {
-                                pendingCashAmount = amount
-                                pendingCashRemarks = cashRemarksInput
-                                selectedLoanIdForRepay = uiState.openLoans.first().lend.id
-                                showApplyToLoanDialog = true
-                                showCashEntryType = null
-                                cashAmountInput = ""
-                                cashRemarksInput = ""
-                            } else {
-                                viewModel.recordCashEntry(
-                                    transactionType = txnType,
-                                    amountRs = amount,
-                                    paymentMode = PaymentMode.CASH,
-                                    remarks = cashRemarksInput.ifBlank { null }
-                                )
-                                showCashEntryType = null
-                                cashAmountInput = ""
-                                cashRemarksInput = ""
-                            }
+                        if (amount > 0L && !uiState.isSaving) {
+                            val side = if (isGot) CashSide.GOT else CashSide.GAVE
+                            viewModel.onPlainCash(
+                                side = side,
+                                amountPaisa = amount * 100L,
+                                note = plainCashRemarksInput.ifBlank { null }
+                            )
                         }
                     },
+                    enabled = amount > 0L && !uiState.isSaving,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDeposit) MandiBtnSuccessBg else MandiBtnDangerBg,
+                        containerColor = if (isGot) MandiBtnSuccessBg else MandiBtnDangerBg,
                         contentColor = Color.White
                     )
                 ) {
@@ -768,169 +908,19 @@ fun PartyLedgerScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCashEntryType = null }) {
+                TextButton(onClick = {
+                    showPlainCashSide = null
+                    plainCashAmountInput = ""
+                    plainCashRemarksInput = ""
+                    viewModel.clearError()
+                }) {
                     Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             }
         )
     }
 
-    if (showApplyToLoanDialog) {
-        val totalOutstandingPaisa = uiState.openLoans.sumOf { it.outstandingPaisa }
-        val totalOutstandingRs = totalOutstandingPaisa / 100L
-        val selectedLoan = uiState.openLoans.find { it.lend.id == selectedLoanIdForRepay } ?: uiState.openLoans.firstOrNull()
-        val selectedLoanOutstandingRs = (selectedLoan?.outstandingPaisa ?: 0L) / 100L
-        val canApplyToLoan = selectedLoan != null && (pendingCashAmount * 100L <= selectedLoan.outstandingPaisa)
-
-        AlertDialog(
-            onDismissRequest = backToCashDialog,
-            title = {
-                Text(
-                    text = if (isEnglish) "Deduct from loan?" else "उधार ऋण में काटें?",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = MandiTextPrimary
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = if (isEnglish) "Total outstanding loan for this party is ₹${MandiMathEngine.formatIndianGrouping(totalOutstandingRs)}. Amount entered: ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}" else "इस खातेदार का कुल उधार बकाया ₹${MandiMathEngine.formatIndianGrouping(totalOutstandingRs)} है। दर्ज राशि: ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}",
-                        fontSize = 14.sp,
-                        color = MandiTextSecondary
-                    )
-
-                    if (uiState.openLoans.size > 1) {
-                        Text(
-                            text = if (isEnglish) "Choose the loan to deduct from:" else "ऋण चुनें जिसमें काटना है:",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MandiTextPrimary
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            uiState.openLoans.forEach { loanInfo ->
-                                val isSelected = loanInfo.lend.id == selectedLoanIdForRepay
-                                val loanOutstandingRs = loanInfo.outstandingPaisa / 100L
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) MandiGreenLight else MandiSurface)
-                                        .border(1.dp, if (isSelected) MandiGreenBorder else MandiBorder, RoundedCornerShape(8.dp))
-                                        .clickable { selectedLoanIdForRepay = loanInfo.lend.id }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = if (isEnglish) "Loan: ₹${MandiMathEngine.formatIndianGrouping(loanInfo.lend.amountPaisa / 100L)}" else "ऋण: ₹${MandiMathEngine.formatIndianGrouping(loanInfo.lend.amountPaisa / 100L)}",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MandiTextPrimary
-                                        )
-                                        Text(
-                                            text = if (isEnglish) "Outstanding: ₹${MandiMathEngine.formatIndianGrouping(loanOutstandingRs)}" else "बकाया: ₹${MandiMathEngine.formatIndianGrouping(loanOutstandingRs)}",
-                                            fontSize = 12.sp,
-                                            color = MandiGreenReceivable
-                                        )
-                                    }
-                                    RadioButton(
-                                        selected = isSelected,
-                                        onClick = { selectedLoanIdForRepay = loanInfo.lend.id }
-                                    )
-                                }
-                            }
-                        }
-                    } else if (selectedLoan != null) {
-                        Text(
-                            text = if (isEnglish) "Outstanding loan: ₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}" else "बकाया ऋण: ₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MandiGreenReceivable
-                        )
-                    }
-
-                    if (selectedLoan != null && pendingCashAmount * 100L > selectedLoan.outstandingPaisa) {
-                        Text(
-                            text = if (isEnglish) "Note: the amount entered (₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}) is more than this loan's outstanding (₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}). To clear the loan, deduct only the outstanding amount, or record a normal deposit." else "ध्यान दें: दर्ज राशि (₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount)}) इस ऋण के बकाया (₹${MandiMathEngine.formatIndianGrouping(selectedLoanOutstandingRs)}) से अधिक है। यदि पूरा ऋण चुकता करना है तो बकाया राशि जितनी ही काटें, या सामान्य जमा करें।",
-                            fontSize = 12.sp,
-                            color = MandiRedPayable
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            if (selectedLoan != null && canApplyToLoan) {
-                                repayDialogLoanId = selectedLoan.lend.id
-                                showApplyToLoanDialog = false
-                            }
-                        },
-                        enabled = canApplyToLoan,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MandiBtnSuccessBg,
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text(if (isEnglish) "Deduct from loan" else "उधार में काटें", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-
-                    if (selectedLoan != null && !canApplyToLoan) {
-                        val loanRs = selectedLoanOutstandingRs
-                        Button(
-                            onClick = {
-                                repayDialogLoanId = selectedLoan.lend.id
-                                showApplyToLoanDialog = false
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MandiBtnSuccessBg,
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Text(
-                                (if (isEnglish) "₹${MandiMathEngine.formatIndianGrouping(loanRs)} to loan, ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount - loanRs)} normal deposit" else "₹${MandiMathEngine.formatIndianGrouping(loanRs)} उधार में, ₹${MandiMathEngine.formatIndianGrouping(pendingCashAmount - loanRs)} सामान्य जमा"),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.recordCashEntry(
-                                transactionType = TransactionType.JAMA_RECEIVED,
-                                amountRs = pendingCashAmount,
-                                paymentMode = PaymentMode.CASH,
-                                remarks = pendingCashRemarks.ifBlank { null }
-                            )
-                            showApplyToLoanDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (isEnglish) "Record as normal deposit" else "सामान्य जमा करें", color = MandiTextPrimary, fontWeight = FontWeight.Medium)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = backToCashDialog,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (isEnglish) "Go back" else "वापस जाएँ", color = MandiTextSecondary)
-                }
-            }
-        )
-    }
-
-    // Settlement Modal (हिसाब चुकता - Direction B Final)
+    // Settlement Modal (हिसाब चुकता - Slips only)
     if (showSettlementDialog) {
         val nonVoidBuys = uiState.ledgerItems.filterIsInstance<LedgerItem.BuyItem>()
             .map { it.buy }
@@ -938,20 +928,17 @@ fun PartyLedgerScreen(
         val nonVoidSells = uiState.ledgerItems.filterIsInstance<LedgerItem.SellItem>()
             .map { it.sell }
             .filter { !it.isVoid && it.balanceDuePaisa > 0 }
-        val openLoans = uiState.openLoans.filter { it.outstandingPaisa > 0 }
 
         var selectedTargetType by remember {
             mutableStateOf(
                 when {
                     nonVoidBuys.isNotEmpty() -> "BUY"
-                    openLoans.isNotEmpty() -> "LOAN"
                     nonVoidSells.isNotEmpty() -> "SELL"
                     else -> "NONE"
                 }
             )
         }
         var selectedBuyId by remember { mutableStateOf(nonVoidBuys.firstOrNull()?.id) }
-        var selectedLoanId by remember { mutableStateOf(openLoans.firstOrNull()?.lend?.id) }
         var selectedSellId by remember { mutableStateOf(nonVoidSells.firstOrNull()?.id) }
         var isFullSettle by remember { mutableStateOf(true) }
         var partialAmountInput by remember { mutableStateOf("") }
@@ -959,7 +946,6 @@ fun PartyLedgerScreen(
 
         val activeTargetMaxPaisa = when (selectedTargetType) {
             "BUY" -> nonVoidBuys.find { it.id == selectedBuyId }?.let { it.netPayablePaisa - it.paidPaisa } ?: 0L
-            "LOAN" -> openLoans.find { it.lend.id == selectedLoanId }?.let { it.outstandingPaisa + it.interestDuePaisa } ?: 0L
             "SELL" -> nonVoidSells.find { it.id == selectedSellId }?.balanceDuePaisa ?: 0L
             else -> 0L
         }
@@ -985,15 +971,15 @@ fun PartyLedgerScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (nonVoidBuys.isEmpty() && openLoans.isEmpty() && nonVoidSells.isEmpty()) {
+                    if (nonVoidBuys.isEmpty() && nonVoidSells.isEmpty()) {
                         Text(
-                            text = if (isEnglish) "No pending slips or loans to settle for this party." else "इस खातेदार की कोई बकाया पर्ची या ऋण नहीं है।",
+                            text = if (isEnglish) "No pending slips to settle for this party." else "इस खातेदार की कोई बकाया पर्ची नहीं है।",
                             color = MandiTextSecondary,
                             fontSize = 14.sp
                         )
                     } else {
                         Text(
-                            text = if (isEnglish) "Choose slip or loan to settle:" else "चुकता करने के लिए पर्ची या ऋण चुनें:",
+                            text = if (isEnglish) "Choose slip to settle:" else "चुकता करने के लिए पर्ची चुनें:",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MandiTextPrimary
@@ -1045,51 +1031,7 @@ fun PartyLedgerScreen(
                                 }
                             }
 
-                            // 2. Open Loans
-                            openLoans.forEach { loan ->
-                                val totalDue = loan.outstandingPaisa + loan.interestDuePaisa
-                                val isSelected = selectedTargetType == "LOAN" && selectedLoanId == loan.lend.id
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .border(
-                                            width = if (isSelected) 2.dp else 1.dp,
-                                            color = if (isSelected) MandiPrimaryAction else MandiBorder,
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .background(if (isSelected) MandiSurfaceElevated else MandiSurface)
-                                        .clickable {
-                                            selectedTargetType = "LOAN"
-                                            selectedLoanId = loan.lend.id
-                                        }
-                                        .padding(10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = if (isEnglish) "Loan #${slipLabel(loan.lend.slipNo, loan.lend.id)}" else "उधार #${slipLabel(loan.lend.slipNo, loan.lend.id)}",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MandiTextPrimary
-                                        )
-                                        Text(
-                                            text = if (loan.interestDuePaisa > 0) (if (isEnglish) "With interest (We receive)" else "ब्याज सहित (हमें लेना है)") else (if (isEnglish) "Principal (We receive)" else "मूलधन (हमें लेना है)"),
-                                            fontSize = 11.sp,
-                                            color = MandiTextSecondary
-                                        )
-                                    }
-                                    Text(
-                                        text = "₹${MandiMathEngine.paisaToRupeesString(totalDue)}",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MandiGreenReceivable
-                                    )
-                                }
-                            }
-
-                            // 3. Sell Slips
+                            // 2. Sell Slips
                             nonVoidSells.forEach { sell ->
                                 val due = sell.balanceDuePaisa
                                 val isSelected = selectedTargetType == "SELL" && selectedSellId == sell.id
@@ -1186,7 +1128,6 @@ fun PartyLedgerScreen(
                         // Cash Impact Strip
                         val cashDirectionText = when (selectedTargetType) {
                             "BUY" -> if (isEnglish) "Cash goes OUT of Galla (paid to farmer)" else "गल्ले से नकद निकलेगा (किसान को भुगतान)"
-                            "LOAN" -> if (isEnglish) "Cash comes INTO Galla (loan repayment)" else "गल्ले में नकद आएगा (उधार वापसी)"
                             "SELL" -> if (isEnglish) "Cash comes INTO Galla (received from buyer)" else "गल्ले में नकद आएगा (व्यापारी से वसूली)"
                             else -> ""
                         }
@@ -1231,20 +1172,6 @@ fun PartyLedgerScreen(
                                     )
                                 }
                             }
-                            "LOAN" -> {
-                                selectedLoanId?.let { loanId ->
-                                    val loanInfo = openLoans.find { it.lend.id == loanId }
-                                    val interestDue = loanInfo?.interestDuePaisa ?: 0L
-                                    val interestPaid = minOf(settlementAmountPaisa, interestDue)
-                                    viewModel.repayLoan(
-                                        lendId = loanId,
-                                        paymentPaisa = settlementAmountPaisa,
-                                        interestPaisa = interestPaid,
-                                        calculatedInterestPaisa = interestDue,
-                                        note = settlementNote.ifBlank { null }
-                                    )
-                                }
-                            }
                             "SELL" -> {
                                 selectedSellId?.let { sellId ->
                                     viewModel.settleSellSlip(
@@ -1274,32 +1201,6 @@ fun PartyLedgerScreen(
         )
     }
 
-    repayDialogLoanId?.let { loanId ->
-        val loanInfo = uiState.openLoans.find { it.lend.id == loanId }
-        if (loanInfo == null) {
-            repayDialogLoanId = null
-        } else {
-            RepayLoanDialog(
-                outstandingPrincipalPaisa = loanInfo.outstandingPaisa,
-                calculatedInterestPaisa = loanInfo.interestDuePaisa,
-                monthlyRatePercent = loanInfo.monthlyRatePercent,
-                isEnglish = isEnglish,
-                initialAmountRs = pendingCashAmount,
-                onConfirm = { paymentPaisa, interestPaisa, calculatedPaisa ->
-                    viewModel.repayLoan(
-                        lendId = loanId,
-                        paymentPaisa = paymentPaisa,
-                        interestPaisa = interestPaisa,
-                        calculatedInterestPaisa = calculatedPaisa,
-                        note = pendingCashRemarks.ifBlank { null }
-                    )
-                    repayDialogLoanId = null
-                },
-                onDismiss = { repayDialogLoanId = null }
-            )
-        }
-    }
-
     editingSettlement?.let { s ->
         // The loan's own rate; settled loans are not in openLoans but can still be edited.
         val rate = uiState.loansInfoById[s.lendId]?.monthlyRatePercent
@@ -1324,101 +1225,6 @@ fun PartyLedgerScreen(
             history = uiState.repaymentHistory,
             isEnglish = isEnglish,
             onDismiss = { viewModel.clearRepaymentEdit(); historySettlement = null },
-        )
-    }
-
-    // Desi Interest Modal (Clean UI)
-    if (uiState.isInterestDialogOpen) {
-        val principal = if (uiState.udhaarGivenPaisa > 0) uiState.udhaarGivenPaisa else 0L
-        val rate = interestRateInput.toDoubleOrNull() ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT
-        val days = interestDaysInput.toIntOrNull() ?: 30
-        val interestResult = RuralInterestEngine.calculateAccruedInterestByDays(principal, rate, days)
-
-        AlertDialog(
-            onDismissRequest = { viewModel.closeInterestDialog() },
-            title = {
-                Text(
-                    text = if (isEnglish) "Interest calculation (rate per hundred)" else "देसी ब्याज हिसाब (सैकड़ा दर)",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = MandiTextPrimary
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = if (isEnglish) "Principal: ₹${MandiMathEngine.paisaToRupeesString(principal)}" else "मूलधन: ₹${MandiMathEngine.paisaToRupeesString(principal)}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiAmberDark
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            value = interestRateInput,
-                            onValueChange = { interestRateInput = it },
-                            label = { Text(if (isEnglish) "Rate (% per month)" else "दर (% प्रति माह)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            value = interestDaysInput,
-                            onValueChange = { interestDaysInput = it },
-                            label = { Text(if (isEnglish) "Days" else "दिन") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MandiNeutralLight)
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(if (isEnglish) "Interest amount:" else "ब्याज राशि:", fontSize = 13.sp, color = MandiTextSecondary)
-                            Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.accruedInterestPaisa)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MandiGreenReceivable)
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(if (isEnglish) "Total due:" else "कुल देय:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
-                            Text("₹${MandiMathEngine.paisaToRupeesString(interestResult.totalPayablePaisa)}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MandiAmberDark)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (interestResult.accruedInterestPaisa > 0) {
-                            viewModel.recordCalculatedInterest(interestResult)
-                        } else {
-                            viewModel.closeInterestDialog()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MandiPrimaryAction,
-                        contentColor = MandiPrimaryActionText
-                    )
-                ) {
-                    Text(if (isEnglish) "Add interest to account" else "ब्याज खाते में जोड़ें", color = MandiPrimaryActionText, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.closeInterestDialog() }) {
-                    Text(if (isEnglish) "Close" else "बंद करें", color = MandiTextSecondary)
-                }
-            }
         )
     }
 }
@@ -1462,11 +1268,229 @@ private fun FintechActionButton(
 }
 
 @Composable
+private fun LedgerTagChip(
+    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag?,
+    slipNo: Long?,
+    isEnglish: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (tag == null) return
+    val chipText = when (tag) {
+        is com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip ->
+            if (slipNo != null) (if (isEnglish) "Slip #$slipNo" else "पर्ची #$slipNo") else (if (isEnglish) "Slip" else "पर्ची")
+        com.appwork.mandisamiti.domain.ledger.LedgerTag.Udhaar -> if (isEnglish) "Udhaar" else "उधार"
+    }
+    Text(
+        text = chipText,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MandiTextMuted,
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .border(1.dp, MandiBorder, RoundedCornerShape(6.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun PartyUdhaarSection(
+    uiState: PartyLedgerUiState,
+    givenViewModel: UdhaarPersonViewModel?,
+    takenViewModel: UdhaarPersonViewModel?,
+    isEnglish: Boolean,
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit = {}
+) {
+    if (givenViewModel == null || takenViewModel == null) return
+    val givenState by givenViewModel.uiState.collectAsState()
+    val takenState by takenViewModel.uiState.collectAsState()
+
+    val totalGivenLoans = givenState?.loans?.size ?: 0
+    val totalTakenLoans = takenState?.loans?.size ?: 0
+    if (totalGivenLoans == 0 && totalTakenLoans == 0) return
+
+    val initialPage = if (totalGivenLoans == 0 && totalTakenLoans > 0) 1 else 0
+    val pagerState = rememberPagerState(initialPage = initialPage) { 2 }
+    val coroutineScope = rememberCoroutineScope()
+    var showRepayForDirection by rememberSaveable { mutableStateOf<LendDirection?>(null) }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MandiSurface),
+        border = BorderStroke(1.dp, MandiBorder)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Tab Row: दिया (Given) / लिया (Taken)
+            TabRow(
+                selectedTabIndex = pagerState.currentPage,
+                containerColor = MandiSurface,
+                contentColor = MandiPrimaryAction,
+                indicator = { tabPositions ->
+                    if (pagerState.currentPage < tabPositions.size) {
+                        TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                            color = MandiPrimaryAction
+                        )
+                    }
+                },
+                divider = {},
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
+            ) {
+                val tabs = listOf(
+                    if (isEnglish) "Given ($totalGivenLoans)" else "दिया ($totalGivenLoans)",
+                    if (isEnglish) "Taken ($totalTakenLoans)" else "लिया ($totalTakenLoans)"
+                )
+                tabs.forEachIndexed { index, title ->
+                    val isSelected = pagerState.currentPage == index
+                    Tab(
+                        selected = isSelected,
+                        onClick = {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MandiTextPrimary else MandiTextSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
+                    )
+                }
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth()
+            ) { page ->
+                val isGiven = page == 0
+                val personState = if (isGiven) givenState else takenState
+                val activeVm = if (isGiven) givenViewModel else takenViewModel
+
+                if (personState == null) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MandiPrimaryAction)
+                    }
+                } else if (personState.loans.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (isGiven) {
+                                if (isEnglish) "No loans given" else "कोई उधार दिया नहीं है"
+                            } else {
+                                if (isEnglish) "No loans taken" else "कोई उधार लिया नहीं है"
+                            },
+                            fontSize = 13.sp,
+                            color = MandiTextMuted
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Header with Due and Repay Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "${if (isEnglish) "Due: " else "बाकी: "}₹${MandiMathEngine.paisaToRupeesString(personState.totalDuePaisa)}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isGiven) MandiGreenReceivable else MandiRedPayable
+                                )
+                                if (personState.interestDuePaisa > 0L) {
+                                    Text(
+                                        text = "+ ${if (isEnglish) "Interest: " else "ब्याज: "}₹${MandiMathEngine.paisaToRupeesString(personState.interestDuePaisa)}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MandiAmberDark
+                                    )
+                                }
+                            }
+
+                            if (!personState.isSettled) {
+                                Button(
+                                    onClick = { showRepayForDirection = personState.direction },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MandiPrimaryAction,
+                                        contentColor = MandiPrimaryActionText
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    val btnLabel = if (personState.direction == LendDirection.GIVEN) {
+                                        if (isEnglish) "Repay (Got)" else "पैसे मिले"
+                                    } else {
+                                        if (isEnglish) "Repay (Paid)" else "पैसे दिए"
+                                    }
+                                    Text(btnLabel, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MandiPrimaryActionText)
+                                }
+                            }
+                        }
+
+                        // Loans list
+                        personState.loans.forEach { loanItem ->
+                            LoanCardItem(
+                                item = loanItem,
+                                isEnglish = isEnglish,
+                                isGiven = isGiven,
+                                onEditRepayment = { settlement ->
+                                    activeVm.startRepaymentEdit(settlement)
+                                },
+                                onViewHistory = { settlementId ->
+                                    activeVm.loadRepaymentHistory(settlementId)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Repay dialog triggered from udhaar section
+    if (showRepayForDirection != null) {
+        val isGiven = showRepayForDirection == LendDirection.GIVEN
+        val targetState = if (isGiven) givenState else takenState
+        val targetVm = if (isGiven) givenViewModel else takenViewModel
+        if (targetState != null) {
+            UdhaarRepayDialog(
+                uiState = targetState,
+                isEnglish = isEnglish,
+                viewModel = targetVm,
+                onDismiss = { showRepayForDirection = null },
+                onSaved = {
+                    showRepayForDirection = null
+                    onRefresh()
+                }
+            )
+        }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun FintechDealCard(
     isEnglish: Boolean,
     deal: com.appwork.mandisamiti.domain.model.Deal,
     isBuyerLedger: Boolean = false,
+    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onShareSlip: () -> Unit,
     onEditDeal: () -> Unit = {},
     onLongPress: () -> Unit
@@ -1508,6 +1532,7 @@ private fun FintechDealCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    LedgerTagChip(tag = tag, slipNo = null, isEnglish = isEnglish)
                     if (deal.syncStatus == 1) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
@@ -1669,23 +1694,7 @@ private fun FintechCashCard(
                                 modifier = Modifier.size(14.dp)
                             )
                         }
-                        if (tag != null) {
-                            val chipText = when (tag) {
-                                is com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip ->
-                                    if (slipNo != null) (if (isEnglish) "Slip #$slipNo" else "पर्ची #$slipNo") else (if (isEnglish) "Slip" else "पर्ची")
-                                com.appwork.mandisamiti.domain.ledger.LedgerTag.Udhaar -> if (isEnglish) "Loan" else "उधार"
-                            }
-                            Text(
-                                text = chipText,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MandiTextMuted,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .border(1.dp, MandiBorder, RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                        LedgerTagChip(tag = tag, slipNo = slipNo, isEnglish = isEnglish)
                     }
                     if (!remarks.isNullOrBlank()) {
                         Text(
@@ -1726,6 +1735,7 @@ private fun FintechCashCard(
 private fun FintechBuyCard(
     isEnglish: Boolean,
     buy: com.appwork.mandisamiti.domain.model.BuyEntry,
+    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onOpenReceipt: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -1775,6 +1785,7 @@ private fun FintechBuyCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    LedgerTagChip(tag = tag, slipNo = buy.slipNo, isEnglish = isEnglish)
                     if (buy.revision > 1) {
                         Text(
                             text = if (isEnglish) "Revised" else "संशोधित",
@@ -1883,6 +1894,7 @@ private fun FintechBuyCard(
 private fun FintechSellCard(
     isEnglish: Boolean,
     sell: com.appwork.mandisamiti.domain.model.SellEntry,
+    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onOpenReceipt: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -1932,6 +1944,7 @@ private fun FintechSellCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    LedgerTagChip(tag = tag, slipNo = sell.slipNo, isEnglish = isEnglish)
                     if (sell.revision > 1) {
                         Text(
                             text = if (isEnglish) "Revised" else "संशोधित",
@@ -2041,6 +2054,7 @@ private fun FintechLendCard(
     isEnglish: Boolean,
     lend: com.appwork.mandisamiti.domain.model.LendEntry,
     loanInfo: OpenLoanInfo? = null,
+    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onEditRepayment: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onShowRepaymentHistory: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onLongPress: () -> Unit
@@ -2091,6 +2105,7 @@ private fun FintechLendCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
+                    LedgerTagChip(tag = tag, slipNo = null, isEnglish = isEnglish)
                 }
 
                 Text(

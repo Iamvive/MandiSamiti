@@ -590,3 +590,33 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified:
   - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
 - Next: Task 9 (Kisaan khata layout and plain cash routing).
+
+## 2026-11-18, Gemini / Antigravity (Task 9: Kisaan khata with separate slip and udhaar balances)
+- What was built and verified:
+  - Separate Balance Cards: Removed the legacy single header balance sum (`slipBalancePaisa + (given - taken)`). Replaced with two side-by-side cards: "पर्चियों का बाकी" (slip balance) and "उधार बाकी" (udhaar balance). Slip card retains honest लेना है / देना है colour rule and ₹0 state; udhaar card displays separate दिया and लिया figures when both exist, or "कोई उधार नहीं" / ₹0 when none.
+  - Dedicated Party Udhaar Section: Embedded a party-scoped `HorizontalPager` with "दिया" and "लिया" tabs beneath the balance cards, displaying active loans via Task 8's `LoanCardItem` and wiring Task 8's oldest-first `UdhaarRepayDialog`. The section honest-hides when party has 0 open loans in both directions.
+  - Ledger Tagging (`ledgerTagFor`): Rendered `LedgerTagChip` on all ledger row types (`FintechBuyCard`, `FintechSellCard`, `FintechLendCard`, `FintechDealCard`, `FintechCashCard`) with either "पर्ची #n" or "उधार", never both.
+  - Plain Cash Routing: Routed "रुपये दिए" and "रुपये मिले" through `UdhaarUseCase.plainCash(shopId, partyId, side, amountPaisa, date)`. Overpayments against opposite loans throw `UdhaarOverpaymentException` and set an error message in UI state without modifying SQLite.
+  - Removed Legacy Elements: Removed discount button and `DISCOUNT_GIVEN` write path; removed "ब्याज जोड़ें" button, `openInterestDialog`, `closeInterestDialog`, and `recordCalculatedInterest`; removed old "LOAN" branch in "हिसाब चुकता" dialog (settlement modal now handles buy/sell slips only); removed `repayLoan` and `RepayLoanDialog` usage from Khata.
+- Edge Case Decisions:
+  - Edge Case 2 rule: Both balance cards ("पर्चियों का बाकी" and "उधार बाकी") are always shown side-by-side at the top of Khata for visual symmetry and predictability. If the party has only slips, udhaar card displays "कोई उधार नहीं" / ₹0. If the party has only udhaar, slip card displays "हिसाब चुकता" / ₹0. The horizontal pager udhaar section underneath is hidden when total udhaar loans = 0.
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-data`: 166 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:composeApp`: 407 tests (0 failures, +7 new TDD tests in `PartyLedgerViewModelTest`)
+  - Total: 694 tests passing (0 failures).
+- Device verification on `emulator-5554` (staging `http://64.227.142.180:8060`, 390dp reference width, density 443):
+  - Verified on farmer Monty (`1f017e35-5e30-4e73-b900-23d986db64fe`), who has a Buy Slip (Slip #1, ₹12,000 due) and an open loan (₹50,000):
+    - Slip card: "पर्चियों का बाकी", "₹12,000", "देना है"
+    - Udhaar card: "उधार बाकी", "₹50,000", "दिया (लेना है)"
+    - Action buttons: "हिसाब चुकता (पर्ची)", "रुपये मिले", "रुपये दिए"
+    - Udhaar section: TabRow ("दिया (1)", "लिया (0)"), "बाकी: ₹50,000", "पैसे मिले" repay action, loan card with tag chip
+    - Ledger rows: "खरीद पर्ची #1" and cash entries with "पर्ची #1" tag chip
+  - Screenshots saved under `docs/testing/screenshots/udhaar/`:
+    `t9-khata-light-390.png`, `t9-khata-dark-390.png`.
+- Grep proof and cleanup:
+  - `RepayLoanDialog.kt`: Retained solely for `LendTransactionsListScreen.kt` legacy `MoneyRepayHost` (which remains until Task 13 per plan line 522). Grep proof confirms zero references in `PartyLedgerScreen.kt` and `PartyLedgerViewModel.kt`.
+- Unverified:
+  - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
+- Next: Task 10 (Buy slip loan deduction).

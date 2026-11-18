@@ -203,16 +203,6 @@ class MandiSamitiE2ETest {
             )
             val event = awaitItem()
             assertTrue(event is PartyLedgerEvent.TransactionRecorded)
-
-            // Monthly interest: ₹75
-            val interestCalc = RuralInterestEngine.calculateAccruedInterestByDays(
-                principalPaisa = 500000L,
-                monthlyRatePercent = 1.5,
-                elapsedDays = 30
-            )
-            ledgerViewModel.recordCalculatedInterest(interestCalc)
-            val intEvent = awaitItem()
-            assertTrue(intEvent is PartyLedgerEvent.TransactionRecorded)
             cancelAndIgnoreRemainingEvents()
         }
 

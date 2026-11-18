@@ -411,6 +411,7 @@ fun App(
                         buyRepository = buyRepo,
                         sellRepository = sellRepo,
                         lendRepository = lendRepo,
+                        udhaarUseCase = udhaarUseCase,
                         syncScheduler = syncScheduler,
                         viewModelScope = coroutineScope
                     )
@@ -434,6 +435,16 @@ fun App(
                     onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
                     onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
                     isEnglish = tradeSettings?.isEnglish ?: false,
+                    udhaarPersonViewModelFactory = { direction ->
+                        com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel(
+                            partyId = screen.partyId,
+                            direction = direction,
+                            shopId = shopId,
+                            lendRepository = lendRepo,
+                            partyRepository = partyRepo,
+                            udhaarUseCase = udhaarUseCase,
+                        )
+                    }
                 )
             }
 

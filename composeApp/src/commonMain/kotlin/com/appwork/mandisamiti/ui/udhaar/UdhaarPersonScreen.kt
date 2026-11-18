@@ -397,7 +397,7 @@ private fun PersonBalanceCard(
 }
 
 @Composable
-private fun LoanCardItem(
+internal fun LoanCardItem(
     item: UdhaarLoanWithSettlements,
     isEnglish: Boolean,
     isGiven: Boolean,

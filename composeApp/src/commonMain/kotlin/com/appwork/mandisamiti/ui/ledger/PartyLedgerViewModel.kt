@@ -45,33 +45,42 @@ import kotlinx.datetime.Clock
 
 sealed interface LedgerItem {
     val timestamp: Long
+    val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? get() = null
 
     data class BuyItem(
         val buy: BuyEntry,
         override val timestamp: Long = buy.entryDate
-    ) : LedgerItem
+    ) : LedgerItem {
+        override val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag get() = com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip("BUY", buy.id)
+    }
 
     data class SellItem(
         val sell: SellEntry,
         override val timestamp: Long = sell.entryDate
-    ) : LedgerItem
+    ) : LedgerItem {
+        override val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag get() = com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip("SELL", sell.id)
+    }
 
     data class LendItem(
         val lend: LendEntry,
         override val timestamp: Long = lend.createdAt
-    ) : LedgerItem
+    ) : LedgerItem {
+        override val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag get() = com.appwork.mandisamiti.domain.ledger.LedgerTag.Udhaar
+    }
 
     data class DealItem(
         val deal: Deal,
         override val timestamp: Long = deal.dealDate
-    ) : LedgerItem
+    ) : LedgerItem {
+        override val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag get() = com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip("DEAL", deal.id)
+    }
 
     data class CashItem(
         val transaction: CashTransaction,
         override val timestamp: Long = transaction.transactionDate
     ) : LedgerItem {
         /** Slip, loan, or null for plain cash. */
-        val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? get() = com.appwork.mandisamiti.domain.ledger.ledgerTagFor(transaction)
+        override val tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? get() = com.appwork.mandisamiti.domain.ledger.ledgerTagFor(transaction)
     }
 }
 
@@ -89,6 +98,7 @@ data class PartyLedgerUiState(
     val slipBalancePaisa: Long = 0L,
     val udhaarGivenPaisa: Long = 0L,
     val udhaarTakenPaisa: Long = 0L,
+    val udhaarNetPaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
     val openLoans: List<OpenLoanInfo> = emptyList(),
     val loansInfoById: Map<String, OpenLoanInfo> = emptyMap(),
@@ -108,19 +118,66 @@ sealed interface PartyLedgerEvent {
 }
 
 class PartyLedgerViewModel(
-    private val shopId: String,
-    private val partyId: String,
-    private val partyRepository: PartyRepository,
-    private val cashRepository: CashTransactionRepository,
-    private val dealRepository: DealRepository,
-    private val shopProfileRepository: ShopProfileRepository,
-    private val ttsManager: SoundboxTtsManager,
-    private val buyRepository: BuyRepository? = null,
-    private val sellRepository: SellRepository? = null,
-    private val lendRepository: LendRepository? = null,
-    private val syncScheduler: SyncScheduler = NoOpSyncScheduler(),
+    val shopId: String,
+    val partyId: String,
+    val partyRepository: PartyRepository,
+    val cashRepository: CashTransactionRepository,
+    val dealRepository: DealRepository,
+    val shopProfileRepository: ShopProfileRepository,
+    val ttsManager: SoundboxTtsManager,
+    val buyRepository: BuyRepository? = null,
+    val sellRepository: SellRepository? = null,
+    val lendRepository: LendRepository? = null,
+    val udhaarUseCase: com.appwork.mandisamiti.domain.usecase.UdhaarUseCase? = null,
+    val syncScheduler: SyncScheduler = NoOpSyncScheduler(),
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
+
+    fun onPlainCash(
+        side: com.appwork.mandisamiti.domain.usecase.CashSide,
+        amountPaisa: Long,
+        dateMs: Long = Clock.System.now().toEpochMilliseconds(),
+        note: String? = null,
+    ) {
+        val useCase = udhaarUseCase ?: return
+        if (amountPaisa <= 0L) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true, error = null)
+            try {
+                useCase.plainCash(
+                    shopId = shopId,
+                    partyId = partyId,
+                    side = side,
+                    amountPaisa = amountPaisa,
+                    date = dateMs
+                )
+                val party = _uiState.value.party ?: partyRepository.getPartyById(partyId)
+                val partyName = party?.name ?: ""
+                val amountRs = amountPaisa / 100L
+                val speech = when (side) {
+                    com.appwork.mandisamiti.domain.usecase.CashSide.GAVE -> "${partyName} को ₹${MandiMathEngine.formatIndianGrouping(amountRs)} दिए"
+                    com.appwork.mandisamiti.domain.usecase.CashSide.GOT -> "${partyName} से ₹${MandiMathEngine.formatIndianGrouping(amountRs)} प्राप्त हुए"
+                }
+                ttsManager.speak(speech, _uiState.value.isSoundEnabled)
+                _uiState.value = _uiState.value.copy(isSaving = false)
+                _events.emit(PartyLedgerEvent.TransactionRecorded(speech))
+                syncScheduler.scheduleOneTimeSync()
+            } catch (e: com.appwork.mandisamiti.domain.usecase.UdhaarOverpaymentException) {
+                val dueRs = e.totalDuePaisa / 100L
+                val msg = "बाकी सिर्फ ₹${MandiMathEngine.formatIndianGrouping(dueRs)} है"
+                _uiState.value = _uiState.value.copy(isSaving = false, error = msg)
+                _events.emit(PartyLedgerEvent.Error(msg))
+            } catch (e: Exception) {
+                val msg = e.message ?: "त्रुटि हुई"
+                _uiState.value = _uiState.value.copy(isSaving = false, error = msg)
+                _events.emit(PartyLedgerEvent.Error(msg))
+            }
+        }
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
 
     private val _uiState = MutableStateFlow(PartyLedgerUiState())
     val uiState: StateFlow<PartyLedgerUiState> = _uiState.asStateFlow()
@@ -132,7 +189,7 @@ class PartyLedgerViewModel(
         loadPartyData()
     }
 
-    private fun loadPartyData() {
+    fun loadPartyData() {
         shopProfileRepository.getShopProfileStream()
             .onEach { profile ->
                 if (profile != null) {
@@ -154,6 +211,7 @@ class PartyLedgerViewModel(
                         slipBalancePaisa = balance.slipBalancePaisa,
                         udhaarGivenPaisa = balance.udhaarGivenPaisa,
                         udhaarTakenPaisa = balance.udhaarTakenPaisa,
+                        udhaarNetPaisa = balance.udhaarNetPaisa,
                     )
                 }
             }
@@ -423,28 +481,6 @@ class PartyLedgerViewModel(
         _uiState.value = _uiState.value.copy(isCashDialogOpen = false)
     }
 
-    fun openInterestDialog() {
-        val principal = _uiState.value.udhaarGivenPaisa
-        if (principal > 0L) {
-            val interest = RuralInterestEngine.calculateAccruedInterestByDays(
-                principalPaisa = principal,
-                monthlyRatePercent = _uiState.value.openLoans.minByOrNull { it.lend.entryDate }?.monthlyRatePercent
-                    ?: RuralInterestEngine.DEFAULT_MONTHLY_RATE_PERCENT,
-                elapsedDays = 30
-            )
-            _uiState.value = _uiState.value.copy(
-                isInterestDialogOpen = true,
-                calculatedInterest = interest
-            )
-        } else {
-            _uiState.value = _uiState.value.copy(isInterestDialogOpen = true)
-        }
-    }
-
-    fun closeInterestDialog() {
-        _uiState.value = _uiState.value.copy(isInterestDialogOpen = false)
-    }
-
     fun recordCashEntry(
         transactionType: TransactionType,
         amountRs: Long,
@@ -487,37 +523,6 @@ class PartyLedgerViewModel(
 
             ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
             _uiState.value = _uiState.value.copy(isSaving = false, isCashDialogOpen = false)
-            _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
-        }
-    }
-
-    fun recordCalculatedInterest(interestResult: InterestCalculation) {
-        val now = Clock.System.now().toEpochMilliseconds()
-
-        val tx = CashTransaction(
-            id = IdGenerator.newId(),
-            shopId = shopId,
-            partyId = partyId,
-            transactionType = TransactionType.INTEREST_ADDED,
-            amountPaisa = interestResult.accruedInterestPaisa,
-            paymentMode = PaymentMode.CASH,
-            transactionDate = now,
-            remarks = "देसी ब्याज (${interestResult.monthlyRatePercent}% / माह, ${interestResult.daysElapsed} दिन)",
-            createdAt = now,
-            updatedAt = now
-        )
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true)
-            cashRepository.recordTransaction(tx)
-            syncScheduler.scheduleOneTimeSync()
-
-            val partyName = _uiState.value.party?.name ?: partyRepository.getPartyById(partyId)?.name ?: "खाता"
-            val formattedAmount = MandiMathEngine.paisaToRupeesString(interestResult.accruedInterestPaisa)
-            val speechText = "$partyName, ₹$formattedAmount ब्याज खाते में जोड़ा गया।"
-
-            ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
-            _uiState.value = _uiState.value.copy(isSaving = false, isInterestDialogOpen = false)
             _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
         }
     }
