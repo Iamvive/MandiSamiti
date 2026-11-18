@@ -33,6 +33,7 @@ WHERE shop_id = :shopId
   AND transaction_date < :purchaseMillis
   AND is_deleted = 0
   AND is_void = 0
+  AND lend_id IS NULL
   AND (remarks IS NULL OR remarks NOT LIKE '%[BUY:%')
 ORDER BY transaction_date ASC;
 

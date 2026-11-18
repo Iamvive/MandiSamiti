@@ -684,4 +684,45 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
     `t11-home-light-390.png`, `t11-home-dark-390.png`.
 - Unverified:
   - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
-- Next: Udhaar rewrite complete.
+- Next: Task 11b (Void buy slip reverses loan cut, exclude loan rows from deposit and advances).
+
+## 2026-11-18, Gemini / Antigravity (Task 11b: Void buy slip reverses loan cut, exclude loan rows from deposit and advances)
+- What was built and verified:
+  - Fix 1 (Void Buy Slip Reverses Loan Cut):
+    - Atomic reversal in `OfflineFirstBuyRepository.voidBuyEntry`: when voiding a buy slip, looks up all cut cash transactions (`BOOK_ENTRY` cash rows) associated with the slip using `[BUYCUT:${entry.id}]` or legacy fallback (`"पर्ची #$slipNo से कटौती"`).
+    - For each cut cash transaction: voids the cash row with revision entry (`CASH`, `VOID`), voids the associated `LendSettlement` with revision entry (`LEND_SETTLEMENT`, `VOID`), and recomputes the parent loan's status in the same database transaction.
+    - Added `OfflineFirstLendRepository.voidSettlementInTransaction` and `recomputeLendStatusInTransaction`: re-evaluates all live (non-void) settlements for the loan. If remaining repaid is 0, restores status to `OPEN` (or `PARTIAL` if partially repaid), updates revision (`LEND`, `UPDATE`), and sets `sync_status = 0`.
+    - Preserved Galla cash drawer invariant: voided cut cash rows keep `source_entry_id = null`.
+    - Added `[BUYCUT:${entry.id}]` tag to `saveBuyCheckout` cut cash rows for robust future correlation.
+    - Added reversal confirmation alert in `PartyLedgerScreen.kt` void confirmation dialog when voiding a slip with udhaar cut: displays `"इस पर्ची की उधार कटौती (₹X) भी वापस हो जाएगी।"` in `MandiOrangeLend` (`14.sp`, `FontWeight.SemiBold`).
+  - Fix 2 (Sell Slip Deposit Leak Fix):
+    - In `App.kt:827`, added `&& it.lendId == null` to the `JAMA_RECEIVED` sum filter for buyer slip cash deposits to prevent udhaar repayments from inflating the deposit total.
+  - Fix 3 (Advances Query Leak Investigation & Fix):
+    - Confirmed leak: `getUnlinkedFarmerAdvancesBefore` in `BahiDayQueries.sq` was selecting `transaction_type = 'UDHAR_GIVEN'` where `remarks NOT LIKE '%[BUY:%'`. Since udhaar loan cash rows have `remarks = 'उधार [LEND:...]'`, they leaked into unlinked farmer advances.
+    - Fixed by adding `AND lend_id IS NULL` to `getUnlinkedFarmerAdvancesBefore` in `BahiDayQueries.sq`.
+- New unit tests added in `BuyLoanCutTest.kt`:
+  - `voidBuyEntryReversesLoanCutAndRestoresLoanToOpen`
+  - `voidBuyEntryWithTwoLoansRestoresBothToLiveStatus`
+  - `voidBuyEntryWithPartialRepaymentRestoresLoanToPartial`
+  - `findCutCashTransactionsForBuyMatchesBothTagAndFallbackRemark`
+  - `voidBuyEntryWithoutCutLeavesLoansUntouched`
+  - `voidBuyEntryCutCashTransactionsKeepNullSourceEntryId`
+  - `getUnlinkedFarmerAdvancesBeforeExcludesUdhaarLoanRows`
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:core-data`: 179 tests (0 failures, +7 new tests in `BuyLoanCutTest`)
+  - `:composeApp`: 411 tests (0 failures)
+  - Total: 711 tests passing (0 failures).
+- Device verification on `emulator-5554` (staging `http://64.227.142.180:8060`, Android 15, 390dp reference width, density 443):
+  - Farmer Monty (`1f017e35-5e30-4e73-b900-23d986db64fe`) with Loan 1 (Rs 50,000 @ 2.0%) and Loan 2 (Rs 5,000 @ 0%).
+  - Cut Rs 52,000 on Buy Slip #4 (settling Loan 1 Rs 50,100, partially settling Loan 2 Rs 1,900).
+  - Long-pressed Slip #4 on Party Ledger screen; verified void confirmation dialog displayed reversal text: `"इस पर्ची की उधार कटौती (₹52,000) भी वापस हो जाएगी।"`.
+  - Confirmed void with reason `"गलत प्रविष्टि"`.
+  - SQLite verified: `buyEntryEntity.is_void = 1`, all 2 `lendSettlementEntity` rows `is_void = 1`, both Loan 1 and Loan 2 reverted to `status = 'OPEN'`, and all 3 cut `cashTransactionEntity` rows `is_void = 1` with `source_entry_id = null`.
+  - Khata UI verified: Slip #4 tagged `रद्द · गलत प्रविष्टि`, `पर्चियों का बाकी` restored to `₹12,000`, `उधार बाकी` restored to `₹55,100`, Loan 1 and Loan 2 restored to full principal and interest.
+  - Screenshots saved under `docs/testing/screenshots/udhaar/`:
+    `t11b-void-confirm-light-390.png`, `t11b-void-confirm-dark-390.png`, `t11b-khata-after-void-light-390.png`.
+- Unverified:
+  - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
+- Next: Task 12 (Sync protocol and backend schema verification).

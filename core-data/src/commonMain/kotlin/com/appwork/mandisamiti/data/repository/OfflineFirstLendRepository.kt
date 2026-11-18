@@ -420,6 +420,73 @@ class OfflineFirstLendRepository(
         }
     }
 
+    /** Voids a single settlement and recomputes the lend status. Must run inside the caller's DB transaction. */
+    internal fun voidSettlementInTransaction(settlementId: String, reason: VoidReason, now: Long) {
+        val sEntity = queries.getLendSettlementById(settlementId).executeAsOneOrNull() ?: return
+        if (sEntity.is_void == 1L) return
+        val s = sEntity.toDomain()
+        val voidedSettlement = s.copy(
+            isVoid = true,
+            voidReason = reason.name,
+            revision = s.revision + 1,
+            updatedAt = now,
+            syncStatus = 0
+        )
+        queries.voidLendSettlement(reason.name, voidedSettlement.revision, now, s.id)
+        queries.insertRevision(
+            id = IdGenerator.newId(),
+            shop_id = voidedSettlement.shopId,
+            entry_id = voidedSettlement.id,
+            entry_kind = "LEND_SETTLEMENT",
+            revision = voidedSettlement.revision,
+            change_kind = "VOID",
+            snapshot_json = json.encodeToString(LendSettlement.serializer(), voidedSettlement),
+            void_reason = voidedSettlement.voidReason,
+            changed_at = now,
+        )
+        recomputeLendStatusInTransaction(s.lendId, now)
+    }
+
+    /** Recomputes lend status (OPEN / PARTIAL / SETTLED) based on live settlements. Must run inside caller's DB transaction. */
+    internal fun recomputeLendStatusInTransaction(lendId: String, now: Long) {
+        val lend = queries.getLendEntryById(lendId).executeAsOneOrNull()?.toDomain() ?: return
+        if (lend.isVoid) return
+
+        val liveSettlements = queries.getLendSettlementsByLend(lendId).executeAsList()
+            .map { it.toDomain() }
+            .filter { !it.isVoid }
+
+        val newStatus = when (lend.lendType) {
+            LendType.MONEY -> {
+                val repaidAmount = liveSettlements.sumOf { it.principalPaisa }
+                when {
+                    repaidAmount >= lend.amountPaisa -> LendStatus.SETTLED
+                    repaidAmount > 0L -> LendStatus.PARTIAL
+                    else -> LendStatus.OPEN
+                }
+            }
+            LendType.GRAIN -> {
+                val repaidGrams = liveSettlements.sumOf { it.weightGrams }
+                when {
+                    repaidGrams >= lend.weightGrams -> LendStatus.SETTLED
+                    repaidGrams > 0L -> LendStatus.PARTIAL
+                    else -> LendStatus.OPEN
+                }
+            }
+        }
+
+        if (newStatus != lend.status) {
+            val updatedLend = lend.copy(
+                status = newStatus,
+                revision = lend.revision + 1,
+                updatedAt = now,
+                syncStatus = 0
+            )
+            insertOrReplace(updatedLend)
+            recordLendRevision(updatedLend, "EDIT", now)
+        }
+    }
+
     private fun recordLendRevision(entry: LendEntry, changeKind: String, at: Long) {
         queries.insertRevision(
             id = IdGenerator.newId(),

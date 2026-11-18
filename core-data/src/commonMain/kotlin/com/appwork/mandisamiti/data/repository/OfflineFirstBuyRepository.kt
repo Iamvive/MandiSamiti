@@ -4,6 +4,7 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.BuyEntryEntity
+import com.appwork.mandisamiti.database.CashTransactionEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.AllocationResult
 import com.appwork.mandisamiti.domain.math.UdhaarAllocator
@@ -29,6 +30,7 @@ class OfflineFirstBuyRepository(
     private val database: AppDatabase,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val clock: Clock = Clock.System,
+    private val lendRepo: OfflineFirstLendRepository = OfflineFirstLendRepository(database, ioDispatcher, clock),
 ) : BuyRepository {
 
     private val queries = database.appDatabaseQueries
@@ -155,7 +157,7 @@ class OfflineFirstBuyRepository(
                                         amountPaisa = part.principalPaisa,
                                         paymentMode = PaymentMode.BOOK_ENTRY,
                                         transactionDate = now,
-                                        remarks = "पर्ची #$slipNo से कटौती [SETTLE:$settlementId:${loan.id}]",
+                                        remarks = "पर्ची #$slipNo से कटौती [SETTLE:$settlementId:${loan.id}] [BUYCUT:${entry.id}]",
                                         createdAt = now,
                                         updatedAt = now,
                                         sourceEntryId = null,
@@ -173,7 +175,7 @@ class OfflineFirstBuyRepository(
                                         amountPaisa = part.interestPaisa,
                                         paymentMode = PaymentMode.BOOK_ENTRY,
                                         transactionDate = now,
-                                        remarks = "पर्ची #$slipNo से कटौती [SETTLE:$settlementId:${loan.id}]",
+                                        remarks = "पर्ची #$slipNo से कटौती [SETTLE:$settlementId:${loan.id}] [BUYCUT:${entry.id}]",
                                         createdAt = now,
                                         updatedAt = now,
                                         sourceEntryId = null,
@@ -247,6 +249,73 @@ class OfflineFirstBuyRepository(
             )
             insertOrReplace(voided)
             recordRevision(voided, "VOID", now)
+
+            val cutCashRows = findCutCashTransactionsForBuy(current)
+            cutCashRows.forEach { txEntity ->
+                queries.insertCashTransaction(
+                    id = txEntity.id,
+                    shop_id = txEntity.shop_id,
+                    party_id = txEntity.party_id,
+                    deal_id = txEntity.deal_id,
+                    transaction_type = txEntity.transaction_type,
+                    amount_paisa = txEntity.amount_paisa,
+                    payment_mode = txEntity.payment_mode,
+                    transaction_date = txEntity.transaction_date,
+                    voice_note_uri = txEntity.voice_note_uri,
+                    remarks = txEntity.remarks,
+                    created_at = txEntity.created_at,
+                    updated_at = now,
+                    is_deleted = txEntity.is_deleted,
+                    sync_status = 0L,
+                    revision = txEntity.revision + 1L,
+                    is_void = 1L,
+                    void_reason = reason.name,
+                    source_entry_type = txEntity.source_entry_type,
+                    source_entry_id = txEntity.source_entry_id,
+                    lend_id = txEntity.lend_id
+                )
+                queries.insertRevision(
+                    id = IdGenerator.newId(),
+                    shop_id = txEntity.shop_id,
+                    entry_id = txEntity.id,
+                    entry_kind = "CASH",
+                    revision = txEntity.revision + 1L,
+                    change_kind = "VOID",
+                    snapshot_json = "",
+                    void_reason = reason.name,
+                    changed_at = now
+                )
+            }
+
+            val settlementIds = cutCashRows.mapNotNull { row ->
+                row.remarks?.let { rem ->
+                    Regex("""\[SETTLE:([^:]+):""").find(rem)?.groupValues?.get(1)
+                }
+            }.distinct()
+
+            settlementIds.forEach { settleId ->
+                lendRepo.voidSettlementInTransaction(settleId, reason, now)
+            }
+
+            val affectedLendIds = (cutCashRows.mapNotNull { it.lend_id } +
+                settlementIds.mapNotNull { queries.getLendSettlementById(it).executeAsOneOrNull()?.lend_id }).distinct()
+
+            affectedLendIds.forEach { lendId ->
+                lendRepo.recomputeLendStatusInTransaction(lendId, now)
+            }
+        }
+    }
+
+    fun findCutCashTransactionsForBuy(entry: BuyEntry): List<CashTransactionEntity> {
+        val tagged = queries.getCashTransactionsByTag("[BUYCUT:${entry.id}]").executeAsList()
+        val nonVoidTagged = tagged.filter { it.is_void == 0L }
+        if (nonVoidTagged.isNotEmpty()) return nonVoidTagged
+
+        val slipNo = entry.slipNo ?: return emptyList()
+        return queries.getCashTransactionsByParty(entry.farmerId).executeAsList().filter {
+            it.payment_mode == PaymentMode.BOOK_ENTRY.name &&
+            it.remarks?.contains("पर्ची #$slipNo से कटौती") == true &&
+            it.is_void == 0L
         }
     }
 

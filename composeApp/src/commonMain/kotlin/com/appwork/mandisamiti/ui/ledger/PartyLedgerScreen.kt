@@ -113,6 +113,7 @@ import com.appwork.mandisamiti.ui.theme.MandiGreenText
 import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiNeutralLight
 import com.appwork.mandisamiti.ui.theme.MandiNeutralText
+import com.appwork.mandisamiti.ui.theme.MandiOrangeLend
 import com.appwork.mandisamiti.ui.theme.MandiRedBorder
 import com.appwork.mandisamiti.ui.theme.MandiRedLight
 import com.appwork.mandisamiti.ui.theme.MandiRedPayable
@@ -737,12 +738,40 @@ fun PartyLedgerScreen(
     }
 
     voidTarget?.let { target ->
+        val cutPaisa = remember(target, uiState.ledgerItems) {
+            if (target is LedgerItem.BuyItem) {
+                val buy = target.buy
+                val buyIdTag = "[BUYCUT:${buy.id}]"
+                val slipNo = buy.slipNo
+                uiState.ledgerItems
+                    .filterIsInstance<LedgerItem.CashItem>()
+                    .map { it.transaction }
+                    .filter { tx ->
+                        !tx.isVoid &&
+                        tx.paymentMode == PaymentMode.BOOK_ENTRY &&
+                        (tx.remarks?.contains(buyIdTag) == true ||
+                            (slipNo != null && tx.remarks?.contains("पर्ची #$slipNo से कटौती") == true))
+                    }
+                    .sumOf { it.amountPaisa }
+            } else {
+                0L
+            }
+        }
         AlertDialog(
             onDismissRequest = { voidTarget = null },
             title = { Text(if (isEnglish) "Cancel this entry?" else "प्रविष्टि रद्द करें?", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (isEnglish) "The cancelled entry stays visible in the account but is removed from the totals." else "रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
+                    if (cutPaisa > 0L) {
+                        val formattedCut = MandiMathEngine.formatRupees(cutPaisa)
+                        Text(
+                            text = if (isEnglish) "Loan deduction of $formattedCut will also be reversed." else "इस पर्ची की उधार कटौती ($formattedCut) भी वापस हो जाएगी।",
+                            color = MandiOrangeLend,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
                     val remarksTag = (target as? LedgerItem.CashItem)?.transaction?.remarks.orEmpty()
                     val isLinkedCash = remarksTag.contains("[LEND:") || remarksTag.contains("[EXPENSE:") || remarksTag.contains("[SETTLE:")
                     if (target is LedgerItem.CashItem && !isLinkedCash) {

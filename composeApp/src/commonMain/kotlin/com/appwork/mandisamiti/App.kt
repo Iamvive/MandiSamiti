@@ -824,7 +824,7 @@ fun App(
 
                     if (buyerPartyId != null) {
                         val partyCash = cashRepo.getTransactionsByPartyStream(buyerPartyId).first()
-                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED }.sumOf { it.amountPaisa }
+                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED && it.lendId == null }.sumOf { it.amountPaisa }
                         sellForm.setDeposit(deposit)
                     } else {
                         sellForm.setDeposit(0L)
