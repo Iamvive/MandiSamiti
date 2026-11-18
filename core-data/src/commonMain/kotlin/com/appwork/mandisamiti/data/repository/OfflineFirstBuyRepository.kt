@@ -5,12 +5,18 @@ import app.cash.sqldelight.coroutines.mapToList
 import com.appwork.mandisamiti.database.AppDatabase
 import com.appwork.mandisamiti.database.BuyEntryEntity
 import com.appwork.mandisamiti.domain.id.IdGenerator
+import com.appwork.mandisamiti.domain.math.AllocationResult
+import com.appwork.mandisamiti.domain.math.UdhaarAllocator
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.PaymentMode
+import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.BuyRepository
+import com.appwork.mandisamiti.domain.usecase.UdhaarOverpaymentException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -69,17 +75,20 @@ class OfflineFirstBuyRepository(
      * One transaction for a new Buy slip: the party (created, renamed or updated), the slip, and each
      * cash row linked to the slip. Anything that throws rolls all of it back. Sync picks the rows up
      * through their pending status. [BuyEntry.paidPaisa] must equal the cash rows, so the slip and Galla agree.
+     * When [loanCutPaisa] > 0, allocates across the farmer's GIVEN loans oldest first, writing settlements
+     * and BOOK_ENTRY cash rows.
      */
     suspend fun saveBuyCheckout(
         entry: BuyEntry,
         party: Party?,
         payments: List<CashTransaction>,
-        loanCut: LendSettlement? = null,
+        loanCutPaisa: Long = 0L,
     ) =
         withContext(ioDispatcher) {
-            // A loan cut is an offset on the slip: it counts as paid but moves no drawer cash (no cash row).
-            val cut = loanCut?.let { it.principalPaisa + it.interestPaisa } ?: 0L
-            require(entry.paidPaisa == payments.sumOf { it.amountPaisa } + cut) { "Slip paid must equal its cash rows plus the loan cut" }
+            require(loanCutPaisa >= 0L) { "Loan cut must be non-negative" }
+            require(entry.paidPaisa == payments.sumOf { it.amountPaisa } + loanCutPaisa) {
+                "Slip paid must equal its cash rows plus the loan cut"
+            }
             database.transaction {
                 if (party != null) {
                     if (queries.getPartyById(party.id).executeAsOneOrNull() == null) {
@@ -104,10 +113,79 @@ class OfflineFirstBuyRepository(
                 val created = entry.copy(slipNo = slipNo, revision = 1, syncStatus = 0)
                 insertOrReplace(created)
                 recordRevision(created, "CREATE", created.updatedAt)
-                if (loanCut != null) {
-                    OfflineFirstLendRepository(database, ioDispatcher, clock)
-                        .settleInTransaction(loanCut, emptyList(), clock.now().toEpochMilliseconds())
+
+                val now = clock.now().toEpochMilliseconds()
+                if (loanCutPaisa > 0L) {
+                    val lendRepo = OfflineFirstLendRepository(database, ioDispatcher, clock)
+                    val partyId = party?.id?.takeIf { it.isNotBlank() } ?: entry.farmerId
+                    val (loans, openLoans) = lendRepo.getOpenMoneyLoansInTransaction(
+                        shopId = entry.shopId,
+                        partyId = partyId,
+                        direction = LendDirection.GIVEN,
+                        nowMs = now
+                    )
+                    val allocation = UdhaarAllocator.allocate(openLoans, loanCutPaisa)
+                    if (allocation is AllocationResult.Over) {
+                        throw UdhaarOverpaymentException(allocation.totalDuePaisa)
+                    }
+                    allocation as AllocationResult.Ok
+                    for (part in allocation.parts) {
+                        val loan = loans.first { it.id == part.lendId }
+                        val settlementId = IdGenerator.newId()
+                        val settlement = LendSettlement(
+                            id = settlementId,
+                            shopId = loan.shopId,
+                            lendId = loan.id,
+                            settledAt = now,
+                            amountPaisa = part.principalPaisa + part.interestPaisa,
+                            createdAt = now,
+                            updatedAt = now,
+                            principalPaisa = part.principalPaisa,
+                            interestPaisa = part.interestPaisa,
+                            calculatedInterestPaisa = part.interestPaisa,
+                        )
+                        val cashRows = buildList {
+                            if (part.principalPaisa > 0L) {
+                                add(
+                                    CashTransaction(
+                                        id = IdGenerator.newId(),
+                                        shopId = loan.shopId,
+                                        partyId = loan.partyId,
+                                        transactionType = TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = part.principalPaisa,
+                                        paymentMode = PaymentMode.BOOK_ENTRY,
+                                        transactionDate = now,
+                                        remarks = "पर्ची #$slipNo से कटौती [SETTLE:$settlementId:${loan.id}]",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryId = null,
+                                        lendId = loan.id,
+                                    )
+                                )
+                            }
+                            if (part.interestPaisa > 0L) {
+                                add(
+                                    CashTransaction(
+                                        id = IdGenerator.newId(),
+                                        shopId = loan.shopId,
+                                        partyId = loan.partyId,
+                                        transactionType = TransactionType.INTEREST_RECEIVED,
+                                        amountPaisa = part.interestPaisa,
+                                        paymentMode = PaymentMode.BOOK_ENTRY,
+                                        transactionDate = now,
+                                        remarks = "पर्ची #$slipNo से कटौती [SETTLE:$settlementId:${loan.id}]",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryId = null,
+                                        lendId = loan.id,
+                                    )
+                                )
+                            }
+                        }
+                        lendRepo.settleInTransaction(settlement, cashRows, now)
+                    }
                 }
+
                 payments.forEach { p ->
                     require(p.amountPaisa > 0) { "Payment must be positive" }
                     val row = p.copy(revision = 1, syncStatus = 0, sourceEntryType = "BUY", sourceEntryId = entry.id)

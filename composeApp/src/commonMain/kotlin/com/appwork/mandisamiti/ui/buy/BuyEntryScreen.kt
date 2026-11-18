@@ -701,7 +701,11 @@ fun BuyEntryScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isEnglish) "Open loan" else "पुराना उधार",
+                            text = if (isEnglish) {
+                                if (state.loanDeposit.hasPesgi) "Open loan / advance" else "Open loan"
+                            } else {
+                                if (state.loanDeposit.hasPesgi) "पुराना उधार / पेशगी" else "पुराना उधार"
+                            },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MandiTextPrimary
@@ -725,7 +729,7 @@ fun BuyEntryScreenContent(
                     MandiFlatTextField(
                         value = state.loanDeposit.loanCutText,
                         onValueChange = { actions.onLoanCutChange(it) },
-                        label = if (isEnglish) "Cut from loan (₹)" else "उधार से काटें (रु)",
+                        label = if (isEnglish) "Cut from loan (₹)" else if (state.loanDeposit.hasPesgi) "पेशगी / उधार से काटें (रु)" else "उधार से काटें (रु)",
                         placeholder = "0",
                         isError = state.loanDeposit.loanCutError != null,
                         errorMessage = state.loanDeposit.loanCutError,

@@ -492,7 +492,40 @@ class OfflineFirstLendRepository(
         return this
     }
 
-    private fun LendEntryEntity.toDomain(): LendEntry = LendEntry(
+    internal fun getOpenMoneyLoansInTransaction(
+        shopId: String,
+        partyId: String,
+        direction: LendDirection,
+        nowMs: Long
+    ): Pair<List<LendEntry>, List<com.appwork.mandisamiti.domain.math.OpenLoan>> {
+        val loans = queries.getLendEntriesByShop(shopId).executeAsList()
+            .map { it.toDomain() }
+            .filter { it.partyId == partyId && it.direction == direction && it.lendType == LendType.MONEY && !it.isVoid }
+            .sortedBy { it.entryDate }
+        val openLoans = loans.mapNotNull { loan ->
+            val settlements = queries.getLendSettlementsByLend(loan.id).executeAsList()
+                .map { it.toDomain() }
+                .filter { !it.isVoid }
+            val principal = (loan.amountPaisa - settlements.sumOf {
+                if (it.principalPaisa == 0L && it.interestPaisa == 0L) it.amountPaisa else it.principalPaisa
+            }).coerceAtLeast(0L)
+            val interest = if (principal > 0L) {
+                com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
+                    principalPaisa = loan.amountPaisa,
+                    monthlyRatePercent = loan.monthlyRatePercent,
+                    lentAtMs = loan.entryDate,
+                    settlements = settlements,
+                    nowMs = nowMs
+                )
+            } else 0L
+            if (principal > 0L || interest > 0L) {
+                com.appwork.mandisamiti.domain.math.OpenLoan(loan.id, loan.entryDate, principal, interest)
+            } else null
+        }
+        return loans to openLoans
+    }
+
+    internal fun LendEntryEntity.toDomain(): LendEntry = LendEntry(
         id = id,
         shopId = shop_id,
         partyId = party_id,
@@ -519,7 +552,7 @@ class OfflineFirstLendRepository(
         receiverPhone = receiver_phone,
     )
 
-    private fun LendSettlementEntity.toDomain(): LendSettlement = LendSettlement(
+    internal fun LendSettlementEntity.toDomain(): LendSettlement = LendSettlement(
         id = id,
         shopId = shop_id,
         lendId = lend_id,

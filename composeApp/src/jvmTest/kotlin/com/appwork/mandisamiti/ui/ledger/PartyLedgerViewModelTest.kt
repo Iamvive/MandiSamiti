@@ -945,5 +945,87 @@ class PartyLedgerViewModelTest {
             assertTrue(item is LedgerItem.CashItem)
         }
     }
+
+    @Test
+    fun testPartB_udhaarCardNumberEqualsUdhaarSectionHeaderNumberWithInterest() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val buyRepo = OfflineFirstBuyRepository(database, ioDispatcher = ioDispatcher)
+        val sellRepo = OfflineFirstSellRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+        var idCounter = 0
+        val nowMs = 100_000_000L
+        val udhaarUseCase = UdhaarUseCase(lendRepo, { "id-${++idCounter}" }, { nowMs })
+
+        val shopId = "test-shop-1"
+        val partyId = "farmer-interest-1"
+        partyRepo.saveParty(
+            Party(
+                id = partyId,
+                shopId = shopId,
+                name = "रामू किसान",
+                phone = "9876543210",
+                village = "गाँव",
+                partyType = PartyType.FARMER,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        // GIVEN loan of Rs 10,000 at 2.0% monthly interest, 30 days old (30 * 86_400_000 ms)
+        val entryDate = nowMs - 30L * 86_400_000L
+        lendRepo.saveLendEntry(
+            LendEntry(
+                id = "lend-interest-1",
+                shopId = shopId,
+                partyId = partyId,
+                lendType = LendType.MONEY,
+                direction = LendDirection.GIVEN,
+                amountPaisa = 1_000_000L,
+                monthlyRatePercent = 2.0,
+                entryDate = entryDate,
+                createdAt = entryDate,
+                updatedAt = entryDate
+            )
+        )
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = shopId,
+            partyId = partyId,
+            partyRepository = partyRepo,
+            cashRepository = cashRepo,
+            dealRepository = dealRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            buyRepository = buyRepo,
+            sellRepository = sellRepo,
+            lendRepository = lendRepo,
+            udhaarUseCase = udhaarUseCase,
+            viewModelScope = backgroundScope
+        )
+
+        val personViewModel = com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel(
+            partyId = partyId,
+            direction = LendDirection.GIVEN,
+            shopId = shopId,
+            lendRepository = lendRepo,
+            partyRepository = partyRepo,
+            udhaarUseCase = udhaarUseCase,
+            coroutineScope = backgroundScope
+        )
+
+        val khataState = viewModel.uiState.first { it.udhaarGivenTotalPaisa > 0L }
+        val personState = personViewModel.uiState.first { it != null }!!
+
+        // Headline figure on card equals section header total due
+        assertEquals(personState.totalDuePaisa, khataState.udhaarGivenTotalPaisa)
+        // Subline interest figure on card equals section header interest due
+        assertEquals(personState.interestDuePaisa, khataState.udhaarGivenInterestPaisa)
+        assertTrue(khataState.udhaarGivenInterestPaisa > 0L)
+    }
 }
 

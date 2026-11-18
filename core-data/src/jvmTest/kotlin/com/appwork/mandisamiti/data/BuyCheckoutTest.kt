@@ -52,13 +52,13 @@ class BuyCheckoutTest {
         val db = createTestDatabase()
         loan(db)
         val repo = OfflineFirstBuyRepository(db)
-        repo.saveBuyCheckout(party = party, entry = slip().copy(paidPaisa = 500_000), payments = listOf(cash("c1", 200_000)), loanCut = cut(270_000, 30_000))
+        repo.saveBuyCheckout(party = party, entry = slip().copy(paidPaisa = 500_000), payments = listOf(cash("c1", 200_000)), loanCutPaisa = 300_000L)
         val q = db.appDatabaseQueries
-        // Slip: 9,830 - (2,000 advance + 3,000 cut) = 4,830 owed. Loan: 5,000 - 2,700 = 2,300 owed. Slip owes 4,830 and udhaar owes 2,300, tracked separately.
+        // Slip: 9,830 - (2,000 advance + 3,000 cut) = 4,830 owed. Loan: 5,000 - 3,000 = 2,000 owed. Slip owes 4,830 and udhaar owes 2,000, tracked separately.
         assertEquals(-483_000L, q.getPartyBalance("p1").executeAsOne().slip_balance_paisa)
-        assertEquals(230_000L, q.getPartyBalance("p1").executeAsOne().udhaar_given_paisa)
+        assertEquals(200_000L, q.getPartyBalance("p1").executeAsOne().udhaar_given_paisa)
         assertEquals(com.appwork.mandisamiti.domain.model.LendStatus.PARTIAL, com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(db).getLendEntryById("l1")!!.status)
-        // The cut moves no drawer cash: the only row linked to the slip is the advance.
+        // The advance is the cash payment linked to the slip; loan cut generates a BOOK_ENTRY cash row
         assertEquals(1, q.getCashTransactionById("c1").executeAsList().size)
     }
 
@@ -68,7 +68,7 @@ class BuyCheckoutTest {
         loan(db)
         val repo = OfflineFirstBuyRepository(db)
         assertFailsWith<Exception> {
-            repo.saveBuyCheckout(slip().copy(paidPaisa = 800_000), party, listOf(cash("c1", 200_000)), cut(600_000, 0))
+            repo.saveBuyCheckout(slip().copy(paidPaisa = 800_000), party, listOf(cash("c1", 200_000)), loanCutPaisa = 600_000L)
         }
         assertNull(repo.getBuyEntryById("b1"))
         assertNull(db.appDatabaseQueries.getCashTransactionById("c1").executeAsOneOrNull())

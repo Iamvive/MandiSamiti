@@ -620,3 +620,41 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified:
   - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
 - Next: Task 10 (Buy slip loan deduction).
+
+## 2026-11-18, Gemini / Antigravity (Task 10: Buy slip loan cut and pesgi adjustment, plus Part B khata card number fix)
+- What was built and verified:
+  - Part A: Party-level Loan Cut in Buy Slip (`saveBuyCheckout`):
+    - Replaced single `loanCut: LendSettlement?` parameter with `loanCutPaisa: Long = 0L`.
+    - Allocated across open GIVEN MONEY loans (including PESGI) inside the checkout transaction using `UdhaarAllocator.allocate`, oldest-first, interest before principal.
+    - Wrote atomic `LendSettlement` rows via `OfflineFirstLendRepository.settleInTransaction` and corresponding `BOOK_ENTRY` cash rows (`JAMA_RECEIVED` for principal, `INTEREST_RECEIVED` for interest, remarks `"पर्ची #$slipNo से कटौती [SETTLE:<settlementId>:<lendId>]"`, `lendId` set, `sourceEntryId = null`).
+    - Guarded against overpayment: throws `UdhaarOverpaymentException` and rolls back the slip.
+    - Maintained drawer invariant: cash total (CASH mode) is untouched by loan cut.
+    - Direction filter fix: filtered out TAKEN loans; only GIVEN loans can be cut against farmer buy slips.
+    - Dynamic PESGI label: card displays "पुराना उधार / पेशगी" and "पेशगी / उधार से काटें (रु)" if farmer has any PESGI loan.
+    - Excluded udhaar cash rows from deposit calculation in `App.kt`: filtered `&& it.lendId == null` to prevent udhaar repayments leaking into drawer deposit.
+  - Part B: Kisaan Khata Card Number Agreement:
+    - Added `udhaarGivenTotalPaisa`, `udhaarGivenInterestPaisa`, `udhaarTakenTotalPaisa`, `udhaarTakenInterestPaisa` to `PartyLedgerUiState`, populated via `udhaarUseCase.totalDue`.
+    - Updated `PartyLedgerScreen.kt` udhaar balance card headline to display `totalDue` (principal + interest) with `+ ब्याज ₹X` subline, perfectly matching the udhaar section header number.
+- Edge Case 6 Answer:
+  - Voiding a buy entry via `OfflineFirstBuyRepository.voidBuyEntry(id, reason)` currently only sets `is_void = 1` on the `buyEntryEntity` row. It does NOT void or delete the `LendSettlement` or `BOOK_ENTRY` cash rows, and does NOT roll back the loan status. The loan remains settled or partially settled.
+- Old Assertions Changed in Tests:
+  - In `BuyCheckoutTest.kt`: updated `loanCut = cut(...)` to `loanCutPaisa = 300_000L` / `600_000L`. In line 59, changed expected loan remaining from `230_000L` to `200_000L` because the old test manually fabricated interest on a 0% loan, whereas `UdhaarAllocator` correctly allocates 100% of the Rs 3,000 cut to principal on a 0% interest loan (Rs 5,000 - Rs 3,000 = Rs 2,000 remaining).
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-data`: 172 tests (0 failures, +6 new tests in `BuyLoanCutTest`)
+  - `:core-database`: 12 tests (0 failures)
+  - `:composeApp`: 408 tests (0 failures, +1 new test in `PartyLedgerViewModelTest`)
+  - Total: 701 tests passing (0 failures).
+- Device verification on `emulator-5554` (staging `http://64.227.142.180:8060`, Android 15, 390dp reference width, density 443):
+  - Farmer Monty (`1f017e35-5e30-4e73-b900-23d986db64fe`) with Loan 1 (Rs 50,000 @ 2.0% interest) and Loan 2 (Rs 5,000 @ 0% interest), total due Rs 55,100:
+    - Filled buy slip with 50 bags @ Rs 2,500 (gross Rs 62,500, expenses Rs 940, net Rs 61,560).
+    - Loan card displayed "पुराना उधार" headline "₹55,100", subline "मूल ₹55,000 + ब्याज ₹100".
+    - Entered cut 52000: reactive text showed "पहले ब्याज ₹100, फिर मूल ₹51,900। बाकी मूल ₹3,100।", net due Rs 9,560.
+    - Saved slip #4: verified in SQLite that Slip #4, 2 settlements, and 3 BOOK_ENTRY cash rows were written atomically; drawer cash unaffected.
+    - Verified Khata screen: Udhaar balance card showed "₹3,100" ("दिया (लेना है)"), exactly matching the Udhaar section header "बाकी: ₹3,100". Ledger rows tagged with "पर्ची #4".
+    - Restored all test data cleanly on SQLite.
+  - Screenshots saved under `docs/testing/screenshots/udhaar/`:
+    `t10-buy-cut-light-390.png`, `t10-buy-cut-dark-390.png`, `t10-khata-after-cut-light-390.png`, `t10-khata-after-cut-dark-390.png`.
+- Unverified:
+  - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
+- Next: Task 11 (Home screen KPIs and action buttons).

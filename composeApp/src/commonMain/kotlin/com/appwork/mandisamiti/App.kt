@@ -512,34 +512,44 @@ fun App(
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val buyForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings) }
-                // Loan section: the picked or phone-matched party's oldest open money loan, with interest due as of now.
+                // Loan section: the picked or phone-matched party's open GIVEN money loans, with interest due as of now.
                 val loanPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, buyForm.selectedFarmerId, buyForm.phone)?.id
                 LaunchedEffect(loanPartyId, lends) {
+                    if (loanPartyId == null) {
+                        buyForm.setLoan(null, 0L, 0L, false)
+                        buyForm.setDeposit(0L)
+                        return@LaunchedEffect
+                    }
+                    val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                     val open = lends
-                        .filter { !it.isVoid && it.partyId == loanPartyId && it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
+                        .filter { !it.isVoid && it.partyId == loanPartyId && it.direction == com.appwork.mandisamiti.domain.model.LendDirection.GIVEN && it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
                         .sortedBy { it.entryDate }
-                    var found: Triple<String, Long, Long>? = null
+                    var totalPrincipal = 0L
+                    var totalInterest = 0L
+                    var hasPesgi = false
+                    var anyOpen = false
                     for (lend in open) {
                         val live = lendRepo.getSettlements(lend.id).filter { !it.isVoid }
-                        val principal = (lend.amountPaisa - live.sumOf { it.principalPaisa }).coerceAtLeast(0L)
+                        val principal = (lend.amountPaisa - live.sumOf { if (it.principalPaisa == 0L && it.interestPaisa == 0L) it.amountPaisa else it.principalPaisa }).coerceAtLeast(0L)
                         if (principal <= 0L) continue
+                        anyOpen = true
+                        if (lend.kind == com.appwork.mandisamiti.domain.model.LendKind.PESGI) {
+                            hasPesgi = true
+                        }
                         val rate = lend.monthlyRatePercent
                         val interest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
-                            lend.amountPaisa, rate, lend.entryDate, live, kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                            lend.amountPaisa, rate, lend.entryDate, live, now
                         )
-                        found = Triple(lend.id, principal, interest)
-                        break
+                        totalPrincipal += principal
+                        totalInterest += interest
                     }
-                    if (found?.first != buyForm.loanLendId || found?.second != buyForm.loanPrincipalPaisa || found?.third != buyForm.loanInterestDuePaisa) {
-                        buyForm.setLoan(found?.first, found?.second ?: 0L, found?.third ?: 0L)
+                    val lendIdMarker = if (anyOpen) open.first().id else null
+                    if (lendIdMarker != buyForm.loanLendId || totalPrincipal != buyForm.loanPrincipalPaisa || totalInterest != buyForm.loanInterestDuePaisa || hasPesgi != buyForm.hasPesgi) {
+                        buyForm.setLoan(lendIdMarker, totalPrincipal, totalInterest, hasPesgi)
                     }
-                    if (loanPartyId != null) {
-                        val partyCash = cashRepo.getTransactionsByPartyStream(loanPartyId).first()
-                        val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED }.sumOf { it.amountPaisa }
-                        buyForm.setDeposit(deposit)
-                    } else {
-                        buyForm.setDeposit(0L)
-                    }
+                    val partyCash = cashRepo.getTransactionsByPartyStream(loanPartyId).first()
+                    val deposit = partyCash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED && it.lendId == null }.sumOf { it.amountPaisa }
+                    buyForm.setDeposit(deposit)
                 }
                 BuyEntryScreen(
                     shopId = shopId ?: "",
@@ -568,9 +578,10 @@ fun App(
                                 )
                                 com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) {
                                     buyRepo.saveBuyCheckout(
-                                        entry, party,
-                                        if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
-                                        if (entry.isKhaate) null else buyForm.buildLoanCut(entry.shopId, now),
+                                        entry = entry,
+                                        party = party,
+                                        payments = if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
+                                        loanCutPaisa = if (entry.isKhaate) 0L else buyForm.loanCutPaisa(),
                                     )
                                 }
 

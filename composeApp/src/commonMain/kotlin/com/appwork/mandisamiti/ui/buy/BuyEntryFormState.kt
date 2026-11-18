@@ -131,6 +131,8 @@ class BuyEntryFormState(
         private set
     var loanInterestDuePaisa by mutableStateOf(0L)
         private set
+    var hasPesgi by mutableStateOf(false)
+        private set
     var loanCut by mutableStateOf("")
 
     var depositPaisa by mutableStateOf(0L)
@@ -140,10 +142,11 @@ class BuyEntryFormState(
         depositPaisa = paisa
     }
 
-    fun setLoan(lendId: String?, principalPaisa: Long, interestDuePaisa: Long) {
+    fun setLoan(lendId: String?, principalPaisa: Long, interestDuePaisa: Long, pesgi: Boolean = false) {
         loanLendId = lendId
         loanPrincipalPaisa = principalPaisa
         loanInterestDuePaisa = interestDuePaisa
+        hasPesgi = pesgi
         loanCut = ""
     }
 
@@ -155,7 +158,7 @@ class BuyEntryFormState(
     fun loanCutError(): String? {
         val cut = loanCutPaisa()
         if (cut == 0L) return null
-        if (loanLendId == null) return "इस पार्टी का कोई उधार नहीं है"
+        if (loanPrincipalPaisa + loanInterestDuePaisa == 0L && loanLendId == null) return "इस पार्टी का कोई उधार नहीं है"
         if (cut > loanPrincipalPaisa + loanInterestDuePaisa) return "कटौती बकाया उधार से अधिक है"
         return null
     }

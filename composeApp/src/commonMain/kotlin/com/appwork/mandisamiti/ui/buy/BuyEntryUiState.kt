@@ -100,6 +100,7 @@ data class LoanDepositState(
     val cutToPrincipalPaisa: Long = 0L,
     val depositUseText: String = "",
     val depositUseError: String? = null,
+    val hasPesgi: Boolean = false,
 ) {
     val hasAnything: Boolean get() = loanPrincipalPaisa > 0L || loanInterestDuePaisa > 0L || depositPaisa > 0L
 }

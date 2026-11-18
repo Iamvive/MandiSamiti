@@ -62,6 +62,7 @@ fun BuyEntryFormState.toUiState(): BuyEntryUiState {
             cutToInterestPaisa = split.interestPaisa,
             cutToPrincipalPaisa = split.principalPaisa,
             depositPaisa = depositPaisa,
+            hasPesgi = hasPesgi,
         ),
         advanceText = advancePaid,
         payoutPaisa = agg.payoutPaisa,

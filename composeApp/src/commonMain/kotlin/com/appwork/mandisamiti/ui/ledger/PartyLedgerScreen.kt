@@ -300,7 +300,11 @@ fun PartyLedgerScreen(
                 }
 
                 // 2. Udhaar balance card (उधार बाकी)
-                val bothNonZero = uiState.udhaarGivenPaisa > 0L && uiState.udhaarTakenPaisa > 0L
+                val givenTotal = if (uiState.udhaarGivenTotalPaisa > 0L) uiState.udhaarGivenTotalPaisa else uiState.udhaarGivenPaisa
+                val takenTotal = if (uiState.udhaarTakenTotalPaisa > 0L) uiState.udhaarTakenTotalPaisa else uiState.udhaarTakenPaisa
+                val hasGiven = givenTotal > 0L
+                val hasTaken = takenTotal > 0L
+                val bothNonZero = hasGiven && hasTaken
                 Card(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -321,42 +325,78 @@ fun PartyLedgerScreen(
                             maxLines = 1
                         )
                         if (bothNonZero) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "${if (isEnglish) "Given: " else "दिया: "}₹${MandiMathEngine.paisaToRupeesString(givenTotal)}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiGreenReceivable,
+                                    maxLines = 1
+                                )
+                                if (uiState.udhaarGivenInterestPaisa > 0L) {
+                                    Text(
+                                        text = "+ ${if (isEnglish) "Interest: " else "ब्याज: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarGivenInterestPaisa)}",
+                                        fontSize = 10.sp,
+                                        color = MandiTextSecondary,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "${if (isEnglish) "Taken: " else "लिया: "}₹${MandiMathEngine.paisaToRupeesString(takenTotal)}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiRedPayable,
+                                    maxLines = 1
+                                )
+                                if (uiState.udhaarTakenInterestPaisa > 0L) {
+                                    Text(
+                                        text = "+ ${if (isEnglish) "Interest: " else "ब्याज: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarTakenInterestPaisa)}",
+                                        fontSize = 10.sp,
+                                        color = MandiTextSecondary,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        } else if (hasGiven) {
                             Text(
-                                text = "${if (isEnglish) "Given: " else "दिया: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarGivenPaisa)}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiGreenReceivable,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = "${if (isEnglish) "Taken: " else "लिया: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarTakenPaisa)}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiRedPayable,
-                                maxLines = 1
-                            )
-                        } else if (uiState.udhaarGivenPaisa > 0L) {
-                            Text(
-                                text = "₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarGivenPaisa)}",
+                                text = "₹${MandiMathEngine.paisaToRupeesString(givenTotal)}",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MandiGreenReceivable,
                                 maxLines = 1
                             )
+                            if (uiState.udhaarGivenInterestPaisa > 0L) {
+                                Text(
+                                    text = "+ ${if (isEnglish) "Interest: " else "ब्याज: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarGivenInterestPaisa)}",
+                                    fontSize = 11.sp,
+                                    color = MandiTextSecondary,
+                                    maxLines = 1
+                                )
+                            }
                             Text(
                                 text = if (isEnglish) "Given (To receive)" else "दिया (लेना है)",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MandiGreenReceivable
                             )
-                        } else if (uiState.udhaarTakenPaisa > 0L) {
+                        } else if (hasTaken) {
                             Text(
-                                text = "₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarTakenPaisa)}",
+                                text = "₹${MandiMathEngine.paisaToRupeesString(takenTotal)}",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MandiRedPayable,
                                 maxLines = 1
                             )
+                            if (uiState.udhaarTakenInterestPaisa > 0L) {
+                                Text(
+                                    text = "+ ${if (isEnglish) "Interest: " else "ब्याज: "}₹${MandiMathEngine.paisaToRupeesString(uiState.udhaarTakenInterestPaisa)}",
+                                    fontSize = 11.sp,
+                                    color = MandiTextSecondary,
+                                    maxLines = 1
+                                )
+                            }
                             Text(
                                 text = if (isEnglish) "Taken (To pay)" else "लिया (देना है)",
                                 fontSize = 11.sp,

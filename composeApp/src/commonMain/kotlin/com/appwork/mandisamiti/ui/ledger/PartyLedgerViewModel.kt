@@ -99,6 +99,10 @@ data class PartyLedgerUiState(
     val udhaarGivenPaisa: Long = 0L,
     val udhaarTakenPaisa: Long = 0L,
     val udhaarNetPaisa: Long = 0L,
+    val udhaarGivenTotalPaisa: Long = 0L,
+    val udhaarGivenInterestPaisa: Long = 0L,
+    val udhaarTakenTotalPaisa: Long = 0L,
+    val udhaarTakenInterestPaisa: Long = 0L,
     val ledgerItems: List<LedgerItem> = emptyList(),
     val openLoans: List<OpenLoanInfo> = emptyList(),
     val loansInfoById: Map<String, OpenLoanInfo> = emptyMap(),
@@ -291,10 +295,26 @@ class PartyLedgerViewModel(
             allItems.sortedByDescending { it.timestamp } to (openLends to allLoansInfo)
         }.onEach { (sortedItems, loansPair) ->
             val (openLends, allLoansInfo) = loansPair
+            val nowMs = Clock.System.now().toEpochMilliseconds()
+            val givenDue = udhaarUseCase?.totalDue(shopId, partyId, com.appwork.mandisamiti.domain.model.LendDirection.GIVEN, nowMs)
+            val takenDue = udhaarUseCase?.totalDue(shopId, partyId, com.appwork.mandisamiti.domain.model.LendDirection.TAKEN, nowMs)
+
+            val givenLoans = allLoansInfo.values.filter { it.lend.direction == com.appwork.mandisamiti.domain.model.LendDirection.GIVEN && it.lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
+            val takenLoans = allLoansInfo.values.filter { it.lend.direction == com.appwork.mandisamiti.domain.model.LendDirection.TAKEN && it.lend.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY }
+
+            val fallbackGivenPrincipal = givenLoans.sumOf { it.outstandingPaisa }
+            val fallbackGivenInterest = givenLoans.sumOf { it.interestDuePaisa }
+            val fallbackTakenPrincipal = takenLoans.sumOf { it.outstandingPaisa }
+            val fallbackTakenInterest = takenLoans.sumOf { it.interestDuePaisa }
+
             _uiState.value = _uiState.value.copy(
                 ledgerItems = sortedItems,
                 openLoans = openLends,
-                loansInfoById = allLoansInfo
+                loansInfoById = allLoansInfo,
+                udhaarGivenTotalPaisa = givenDue?.totalDuePaisa ?: (fallbackGivenPrincipal + fallbackGivenInterest),
+                udhaarGivenInterestPaisa = givenDue?.interestPaisa ?: fallbackGivenInterest,
+                udhaarTakenTotalPaisa = takenDue?.totalDuePaisa ?: (fallbackTakenPrincipal + fallbackTakenInterest),
+                udhaarTakenInterestPaisa = takenDue?.interestPaisa ?: fallbackTakenInterest,
             )
         }.launchIn(viewModelScope)
     }
