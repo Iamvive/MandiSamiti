@@ -38,6 +38,8 @@ class SyncEngine(
         const val KEY_NEEDS_LOGIN = "needs_login"
         const val DEFAULT_PAGE_LIMIT = 500
         const val PUSH_BATCH = 100
+        private val KNOWN_DIRECTIONS = setOf("GIVEN", "TAKEN")
+        private val KNOWN_KINDS = setOf("LOAN", "PESGI", "CASH")
     }
 
     suspend fun needsLogin(): Boolean = withContext(ioDispatcher) {
@@ -148,6 +150,7 @@ class SyncEngine(
                 remarks = it.remarks,
                 source_entry_type = it.source_entry_type,
                 source_entry_id = it.source_entry_id,
+                lend_id = it.lend_id,
                 is_void = it.is_void.toInt(),
                 void_reason = it.void_reason,
                 revision = it.revision.toInt(),
@@ -191,7 +194,9 @@ class SyncEngine(
             LendEntrySyncDto(
                 id = it.id, party_id = it.party_id, lend_type = it.lend_type, entry_date = it.entry_date,
                 amount_paisa = it.amount_paisa, commodity_id = it.commodity_id, bags_count = it.bags_count,
-                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, slip_no = it.slip_no, monthly_interest_rate = it.monthly_interest_rate, notes = it.notes,
+                weight_grams = it.weight_grams, expected_return_date = it.expected_return_date, slip_no = it.slip_no, monthly_interest_rate = it.monthly_interest_rate,
+                direction = it.direction, kind = it.kind, receiver_name = it.receiver_name, receiver_phone = it.receiver_phone,
+                notes = it.notes,
                 status = it.status, is_void = it.is_void.toInt(), void_reason = it.void_reason,
                 revision = it.revision.toInt(), is_deleted = it.is_deleted.toInt(),
                 created_at = it.created_at, updated_at = it.updated_at
@@ -403,7 +408,7 @@ class SyncEngine(
                         void_reason = t.void_reason,
                         source_entry_type = t.source_entry_type,
                         source_entry_id = t.source_entry_id,
-                        lend_id = null
+                        lend_id = t.lend_id
                     )
                 }
 
@@ -505,10 +510,11 @@ class SyncEngine(
                         is_void = l.is_void.toLong(),
                         void_reason = l.void_reason,
                         monthly_interest_rate = l.monthly_interest_rate,
-                        direction = "GIVEN",
-                        kind = "LOAN",
-                        receiver_name = null,
-                        receiver_phone = null
+                        // An unknown value from a newer client must not crash toDomain() later; fall back to the defaults.
+                        direction = l.direction.takeIf { it in KNOWN_DIRECTIONS } ?: "GIVEN",
+                        kind = l.kind.takeIf { it in KNOWN_KINDS } ?: "LOAN",
+                        receiver_name = l.receiver_name,
+                        receiver_phone = l.receiver_phone
                     )
                 }
 

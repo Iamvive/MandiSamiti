@@ -110,6 +110,10 @@ class LendEntryBase(BaseModel):
     expected_return_date: Optional[int] = None
     slip_no: Optional[int] = None
     monthly_interest_rate: float = 2.0
+    direction: str = "GIVEN"
+    kind: str = "LOAN"
+    receiver_name: Optional[str] = None
+    receiver_phone: Optional[str] = None
     notes: Optional[str] = None
     status: str = "OPEN"
 

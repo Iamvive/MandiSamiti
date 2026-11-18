@@ -23,6 +23,10 @@ class LendEntry(Base):
     is_void = Column(Integer, default=0)
     void_reason = Column(String, nullable=True)
     monthly_interest_rate = Column(Float, nullable=False, default=2.0, server_default="2.0")
+    direction = Column(String(10), nullable=False, default="GIVEN", server_default="GIVEN")  # GIVEN | TAKEN
+    kind = Column(String(10), nullable=False, default="LOAN", server_default="LOAN")  # LOAN | PESGI | CASH
+    receiver_name = Column(String, nullable=True)
+    receiver_phone = Column(String, nullable=True)
     revision = Column(Integer, default=1)
     is_deleted = Column(Integer, default=0)
     sync_version = Column(Integer, default=1)

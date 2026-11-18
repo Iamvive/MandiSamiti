@@ -222,6 +222,7 @@ async def sync_push(
                     existing_tx.remarks = t_in.remarks
                     existing_tx.source_entry_type = t_in.source_entry_type
                     existing_tx.source_entry_id = t_in.source_entry_id
+                    existing_tx.lend_id = t_in.lend_id
                     existing_tx.is_void = t_in.is_void
                     existing_tx.void_reason = t_in.void_reason
                     existing_tx.revision = t_in.revision
@@ -249,6 +250,7 @@ async def sync_push(
                 remarks=t_in.remarks,
                 source_entry_type=t_in.source_entry_type,
                 source_entry_id=t_in.source_entry_id,
+                lend_id=t_in.lend_id,
                 soundbox_broadcasted=1,
                 is_void=t_in.is_void,
                 void_reason=t_in.void_reason,
@@ -480,6 +482,10 @@ async def sync_push(
                     existing_lend.expected_return_date = l_in.expected_return_date
                     existing_lend.slip_no = l_in.slip_no
                     existing_lend.monthly_interest_rate = l_in.monthly_interest_rate
+                    existing_lend.direction = l_in.direction
+                    existing_lend.kind = l_in.kind
+                    existing_lend.receiver_name = l_in.receiver_name
+                    existing_lend.receiver_phone = l_in.receiver_phone
                     existing_lend.notes = l_in.notes
                     existing_lend.status = l_in.status
                     existing_lend.is_void = l_in.is_void
@@ -506,6 +512,10 @@ async def sync_push(
                 expected_return_date=l_in.expected_return_date,
                 slip_no=l_in.slip_no,
                 monthly_interest_rate=l_in.monthly_interest_rate,
+                direction=l_in.direction,
+                kind=l_in.kind,
+                receiver_name=l_in.receiver_name,
+                receiver_phone=l_in.receiver_phone,
                 notes=l_in.notes,
                 status=l_in.status,
                 is_void=l_in.is_void,

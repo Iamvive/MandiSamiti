@@ -20,6 +20,7 @@ class CashTransaction(Base):
     category = Column(String(50), default="TRADE_PAYMENT")  # TRADE_PAYMENT, EXPENSE, CASH_DEPOSIT, DRAWING
     source_entry_type = Column(String(20), nullable=True)  # BUY | SELL: slip this payment belongs to
     source_entry_id = Column(String, nullable=True)
+    lend_id = Column(String, nullable=True)  # set on udhaar repayment and loan cash rows
     soundbox_broadcasted = Column(Integer, default=0)
     
     is_void = Column(Integer, default=0)

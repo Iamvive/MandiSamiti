@@ -88,3 +88,39 @@ def test_alembic_upgrade_and_downgrade():
     finally:
         if os.path.exists(db_path):
             os.remove(db_path)
+
+
+def test_0008_udhaar_fields_keeps_existing_rows_with_defaults():
+    """Upgrading 0007 -> 0008 keeps lend rows (GIVEN, LOAN, null receiver) and cash rows (null lend_id); downgrade is clean."""
+    from sqlalchemy import text
+
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
+    try:
+        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        cfg = Config(os.path.join(backend_dir, "alembic.ini"))
+        cfg.set_main_option("script_location", os.path.join(backend_dir, "migrations"))
+        cfg.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///{db_path}")
+
+        command.upgrade(cfg, "0007_add_is_khaate")
+        eng = create_engine(f"sqlite:///{db_path}")
+        with eng.begin() as conn:
+            conn.execute(text("INSERT INTO lend_entries (id, shop_id, party_id) VALUES ('old-lend', 'shop-a', 'party-a')"))
+            conn.execute(text(
+                "INSERT INTO cash_transactions (id, shop_id, transaction_type, amount_paisa) "
+                "VALUES ('old-tx', 'shop-a', 'JAMA_RECEIVED', 100)"
+            ))
+
+        command.upgrade(cfg, "0008_udhaar_fields")
+        with eng.connect() as conn:
+            lend = conn.execute(text("SELECT direction, kind, receiver_name, receiver_phone FROM lend_entries WHERE id='old-lend'")).one()
+            assert tuple(lend) == ("GIVEN", "LOAN", None, None)
+            assert conn.execute(text("SELECT lend_id FROM cash_transactions WHERE id='old-tx'")).scalar() is None
+
+        command.downgrade(cfg, "0007_add_is_khaate")
+        cols = {c["name"] for c in inspect(eng).get_columns("lend_entries")}
+        assert not {"direction", "kind", "receiver_name", "receiver_phone"} & cols
+        assert "lend_id" not in {c["name"] for c in inspect(eng).get_columns("cash_transactions")}
+        eng.dispose()
+    finally:
+        os.unlink(db_path)

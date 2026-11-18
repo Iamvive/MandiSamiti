@@ -14,6 +14,7 @@ class CashTransactionBase(BaseModel):
     remarks: Optional[str] = None
     source_entry_type: Optional[str] = None
     source_entry_id: Optional[str] = None
+    lend_id: Optional[str] = None
     
     is_void: int = 0
     void_reason: Optional[str] = None

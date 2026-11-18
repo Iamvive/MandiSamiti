@@ -726,3 +726,14 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified:
   - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
 - Next: Task 12 (Sync protocol and backend schema verification).
+
+## 2026-11-18 · Claude Code (Sonnet 5.5) · Task 12: udhaar sync and backend schema (no deploy)
+- Step 0: moved the sell slip deposit sum in `App.kt` into `sellDepositPaisa()` and added `SellDepositFilterTest` (2 tests; one fails against the pre-fix filter). Commit 4ef1440.
+- Client: `LendEntrySyncDto` gained `direction`, `kind`, `receiver_name`, `receiver_phone`; `CashTransactionSyncDto` gained `lend_id`. `SyncEngine` pushes and pulls all five. The cash pull used to write `lend_id = null` and the lend pull hard-coded `GIVEN`/`LOAN`; both fixed. An unknown `direction` or `kind` from a pull falls back to `GIVEN`/`LOAN` so `toDomain()` cannot crash. The local SQLDelight queries already had every column, no `.sq` change.
+- Backend: migration `0008_udhaar_fields` (down_revision `0007_add_is_khaate`; the plan's `0007` name clashed and was not used), model columns, request/response schemas and `sync.py` push upsert for lend and cash. All new fields have defaults (`GIVEN`, `LOAN`, null).
+- Settlements already store and return `principal_paisa`, `interest_paisa`, `calculated_interest_paisa` (model, schema, `sync.py` lines 536-559).
+- Pydantic schemas use the default `extra` (ignore), so an old server accepts a new client's extra fields. Deploy order is safe either way, but udhaar fields only persist after the backend is deployed.
+- Evidence: `UdhaarWireTest` 7/7; backend `test_sync_udhaar.py` and `test_migrations.py` pass (SQLite), backend suite 140 passed; client modules core-domain 109, core-database 12, core-data 186, composeApp 413 = 720, 0 failures.
+- Task 12 backend change committed, not deployed, pending Vivek's approval.
+- Unverified: VPS deploy, production-database migration (tests use SQLite `batch_alter_table`), real-device sync.
+- Next: Vivek approves the deploy, then a device sync check; Task 13 cleanup (void warning, `snapshot_json`, helper visibility, hardcoded elevation token).
