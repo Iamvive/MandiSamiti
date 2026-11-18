@@ -71,8 +71,9 @@ data class HomeUiState(
     val tradeSettings: com.appwork.mandisamiti.domain.model.TradeSettings = com.appwork.mandisamiti.domain.model.TradeSettings(),
     val totalMarketReceivablePaisa: Long = 0L,
     val totalFarmerPayablePaisa: Long = 0L,
-    val unlinkedLendAmountPaisa: Long = 0L,
-    val unlinkedLendCount: Int = 0,
+    val udhaarGivenTotalPaisa: Long = 0L,
+    val udhaarTakenTotalPaisa: Long = 0L,
+    val isUdhaarLoading: Boolean = true,
     val kpis: DashboardKpis = DashboardKpis(0L, 0L, 0L, 0L, 0L),
     val stockLines: List<StockLine> = emptyList(),
     val searchQuery: String = "",
@@ -115,7 +116,8 @@ class HomeViewModel(
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val onLocalWrite: () -> Unit = {},
     /** Entries saved on this phone that have not reached the server yet; null in tests and previews. */
-    private val pendingSyncCountProvider: (suspend () -> Int)? = null
+    private val pendingSyncCountProvider: (suspend () -> Int)? = null,
+    private val nowMsProvider: () -> Long = { Clock.System.now().toEpochMilliseconds() }
 ) {
 
     private val stockRevision = MutableStateFlow(0L)
@@ -127,6 +129,7 @@ class HomeViewModel(
         observeDashboardData()
         observeQuota()
         observePendingSyncCount()
+        observeUdhaarTotals()
     }
 
     private fun observeQuota() {
@@ -245,16 +248,6 @@ class HomeViewModel(
                 expenses = expenses
             )
         }.onEach { payload ->
-            val partyIds = _uiState.value.allParties.map { it.party.id }.toSet()
-            val unlinkedMoneyLends = payload.lends.filter {
-                !it.isVoid &&
-                it.status != com.appwork.mandisamiti.domain.model.LendStatus.SETTLED &&
-                it.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY &&
-                it.partyId !in partyIds
-            }
-            val unlinkedAmount = unlinkedMoneyLends.sumOf { it.amountPaisa }
-            val unlinkedCount = unlinkedMoneyLends.size
-
             var partyRec = 0L
             _uiState.value.allParties.forEach {
                 if (it.balancePaisa > 0) partyRec += it.balancePaisa
@@ -264,14 +257,49 @@ class HomeViewModel(
                 kpis = payload.kpis,
                 stockLines = payload.lines,
                 outlierEntry = payload.outlier,
-                unlinkedLendAmountPaisa = unlinkedAmount,
-                unlinkedLendCount = unlinkedCount,
-                totalMarketReceivablePaisa = partyRec + unlinkedAmount,
+                totalMarketReceivablePaisa = partyRec,
                 rokdiBalancePaisa = payload.rokdiBalancePaisa,
                 buys = payload.buys,
                 sells = payload.sells,
                 expenses = payload.expenses,
                 lends = payload.lends
+            )
+        }.launchIn(viewModelScope)
+    }
+
+    private fun observeUdhaarTotals() {
+        val lendRepo = lendRepository ?: run {
+            _uiState.value = _uiState.value.copy(isUdhaarLoading = false)
+            return
+        }
+        val lendsFlow = lendRepo.getLendEntriesStream(shopId)
+        val settlementsFlow = lendRepo.getSettlementsStream(shopId)
+        val partiesFlow = partyRepository.getPartiesStream(shopId)
+
+        combine(lendsFlow, settlementsFlow, partiesFlow) { lends, settlements, parties ->
+            val nowMs = nowMsProvider()
+            val diyaRows = com.appwork.mandisamiti.ui.udhaar.buildUdhaarRows(
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+                parties = parties,
+                loans = lends,
+                settlements = settlements,
+                nowMs = nowMs
+            )
+            val liyaRows = com.appwork.mandisamiti.ui.udhaar.buildUdhaarRows(
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.TAKEN,
+                parties = parties,
+                loans = lends,
+                settlements = settlements,
+                nowMs = nowMs
+            )
+            val given = diyaRows.sumOf { it.principalDuePaisa + it.interestDuePaisa }
+            val taken = liyaRows.sumOf { it.principalDuePaisa + it.interestDuePaisa }
+            given to taken
+        }.onEach { (given, taken) ->
+            _uiState.value = _uiState.value.copy(
+                udhaarGivenTotalPaisa = given,
+                udhaarTakenTotalPaisa = taken,
+                isUdhaarLoading = false
             )
         }.launchIn(viewModelScope)
     }
@@ -304,7 +332,7 @@ class HomeViewModel(
                             if (balance != null) {
                                 val currentList = _uiState.value.allParties.toMutableList()
                                 val index = currentList.indexOfFirst { it.party.id == party.id }
-                                val pWithB = PartyWithBalance(party, balance.slipBalancePaisa + balance.udhaarNetPaisa) // slip + udhaar net until the Udhaar card (Task 11)
+                                val pWithB = PartyWithBalance(party, balance.slipBalancePaisa)
                                 if (index >= 0) {
                                     currentList[index] = pWithB
                                 } else {
@@ -322,7 +350,7 @@ class HomeViewModel(
 
                                 _uiState.value = _uiState.value.copy(
                                     allParties = currentList,
-                                    totalMarketReceivablePaisa = rec + _uiState.value.unlinkedLendAmountPaisa,
+                                    totalMarketReceivablePaisa = rec,
                                     totalFarmerPayablePaisa = pay,
                                     filteredParties = filtered,
                                     isLoading = false

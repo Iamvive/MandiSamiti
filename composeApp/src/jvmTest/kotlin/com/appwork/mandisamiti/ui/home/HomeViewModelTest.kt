@@ -449,14 +449,15 @@ class HomeViewModelTest {
             )
         )
 
-        val state = viewModel.uiState.first { it.kpis.totalLendPaisa == lendAmountPaisa && it.totalMarketReceivablePaisa == lendAmountPaisa }
+        val state = viewModel.uiState.first { it.kpis.totalLendPaisa == lendAmountPaisa && it.udhaarGivenTotalPaisa == lendAmountPaisa }
         assertEquals(lendAmountPaisa, state.kpis.totalLendPaisa)
-        assertEquals(lendAmountPaisa, state.totalMarketReceivablePaisa)
+        assertEquals(0L, state.totalMarketReceivablePaisa)
+        assertEquals(lendAmountPaisa, state.udhaarGivenTotalPaisa)
         assertEquals(1, state.allParties.size)
         assertEquals("Kailash Farmer", state.allParties.first().party.name)
-        assertEquals(lendAmountPaisa, state.allParties.first().balancePaisa)
+        assertEquals(0L, state.allParties.first().balancePaisa)
 
-        // 2. Save 1 unlinked lend with empty partyId - reflects honestly as unlinked
+        // 2. Save 1 unlinked lend with empty partyId - included in udhaar given total, but never in slip receivables
         lendRepo.saveLendEntry(
             com.appwork.mandisamiti.domain.model.LendEntry(
                 id = "lend-unlinked",
@@ -471,10 +472,9 @@ class HomeViewModelTest {
             )
         )
 
-        val stateWithUnlinked = viewModel.uiState.first { it.unlinkedLendCount == 1 }
-        assertEquals(500_000L, stateWithUnlinked.unlinkedLendAmountPaisa)
-        assertEquals(1, stateWithUnlinked.unlinkedLendCount)
-        assertEquals(1_500_000L, stateWithUnlinked.totalMarketReceivablePaisa)
+        val stateWithUnlinked = viewModel.uiState.first { it.udhaarGivenTotalPaisa == 1_500_000L }
+        assertEquals(1_500_000L, stateWithUnlinked.udhaarGivenTotalPaisa)
+        assertEquals(0L, stateWithUnlinked.totalMarketReceivablePaisa)
     }
 
     @Test
@@ -589,5 +589,286 @@ class HomeViewModelTest {
         assertEquals("गेहूं", audit.commodityId)
         assertEquals(5L, audit.khaatePhysicalBags)
         assertEquals(250_000L, audit.khaateDiffGrams)
+    }
+
+    @Test
+    fun homeShowsSlipBalanceOnlyAndSeparateUdhaarTotals() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val sellRepo = com.appwork.mandisamiti.data.repository.OfflineFirstSellRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "test-shop"
+        partyRepo.saveParty(
+            Party(
+                id = "buyer-1",
+                shopId = shopId,
+                name = "राजेश गुप्ता",
+                village = "मथुरा",
+                partyType = PartyType.BUYER,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        // Sell slip: Rs 6,000 receivable from buyer
+        sellRepo.saveSellEntry(
+            com.appwork.mandisamiti.domain.model.SellEntry(
+                id = "s-1",
+                shopId = shopId,
+                buyerId = "buyer-1",
+                commodityId = "Wheat",
+                entryDate = 1730000000000L,
+                billMode = com.appwork.mandisamiti.domain.model.BillMode.NORMAL,
+                partyKind = com.appwork.mandisamiti.domain.model.SellPartyKind.CUSTOMER,
+                bagsCount = 2L,
+                weightPerBagGrams = 50_000L,
+                totalWeightGrams = 100_000L,
+                ratePaisaPerQuintal = 600_000L,
+                aratBps = 0L,
+                tulakPaisa = 0L,
+                grossPaisa = 600_000L,
+                aratPaisa = 0L,
+                mandiShulkPaisa = 0L,
+                totalReceivablePaisa = 600_000L,
+                receivedPaisa = 0L,
+                balanceDuePaisa = 600_000L,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        // GIVEN loan: Rs 10,000 (0% interest)
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "l-given",
+                shopId = shopId,
+                partyId = "buyer-1",
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                amountPaisa = 1_000_000L,
+                entryDate = 1730000000000L,
+                monthlyRatePercent = 0.0,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        // TAKEN loan: Rs 2,000 (0% interest)
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "l-taken",
+                shopId = shopId,
+                partyId = "buyer-1",
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.TAKEN,
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                amountPaisa = 200_000L,
+                entryDate = 1730000000000L,
+                monthlyRatePercent = 0.0,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            sellRepository = sellRepo,
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val state = viewModel.uiState.first {
+            it.allParties.isNotEmpty() && it.totalMarketReceivablePaisa > 0L && it.udhaarGivenTotalPaisa > 0L
+        }
+
+        // Slips only: Rs 6,000 receivable, NOT 14,000 (6k slip + 8k net udhaar)
+        assertEquals(600_000L, state.totalMarketReceivablePaisa)
+        assertEquals(0L, state.totalFarmerPayablePaisa)
+        // Separate Udhaar totals: GIVEN Rs 10,000, TAKEN Rs 2,000
+        assertEquals(1_000_000L, state.udhaarGivenTotalPaisa)
+        assertEquals(200_000L, state.udhaarTakenTotalPaisa)
+    }
+
+    @Test
+    fun homeUdhaarGivenTotalIncludesAccruedInterest() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "test-shop"
+        partyRepo.saveParty(
+            Party(
+                id = "p-interest",
+                shopId = shopId,
+                name = "रामू किसान",
+                village = "मथुरा",
+                partyType = PartyType.FARMER,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val nowMs = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        val thirtyDaysAgoMs = nowMs - (30L * 24 * 60 * 60 * 1000L)
+
+        // GIVEN loan: Rs 10,000 at 2.0% monthly rate, 30 days old
+        val loan = com.appwork.mandisamiti.domain.model.LendEntry(
+            id = "loan-interest",
+            shopId = shopId,
+            partyId = "p-interest",
+            direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+            lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+            amountPaisa = 1_000_000L,
+            entryDate = thirtyDaysAgoMs,
+            monthlyRatePercent = 2.0,
+            status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+            createdAt = thirtyDaysAgoMs,
+            updatedAt = thirtyDaysAgoMs
+        )
+        lendRepo.saveLendEntry(loan)
+
+        val expectedInterest = com.appwork.mandisamiti.domain.math.RuralInterestEngine.interestDue(
+            principalPaisa = 1_000_000L,
+            monthlyRatePercent = 2.0,
+            lentAtMs = thirtyDaysAgoMs,
+            settlements = emptyList(),
+            nowMs = nowMs
+        )
+        val expectedTotal = 1_000_000L + expectedInterest
+
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope,
+            nowMsProvider = { nowMs }
+        )
+
+        val state = viewModel.uiState.first { it.udhaarGivenTotalPaisa > 0L }
+        assertEquals(expectedTotal, state.udhaarGivenTotalPaisa)
+
+        // Must match landing page's buildUdhaarRows calculation identically
+        val landingRows = com.appwork.mandisamiti.ui.udhaar.buildUdhaarRows(
+            direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+            parties = listOf(Party(id = "p-interest", shopId = shopId, name = "रामू किसान", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L)),
+            loans = listOf(loan),
+            settlements = emptyList(),
+            nowMs = nowMs
+        )
+        val landingTotal = landingRows.sumOf { it.principalDuePaisa + it.interestDuePaisa }
+        assertEquals(landingTotal, state.udhaarGivenTotalPaisa)
+    }
+
+    @Test
+    fun homeUdhaarTotalsReflectRepaymentSettlementAndExcludesVoidOrSettled() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "test-shop"
+        partyRepo.saveParty(Party(id = "p-test", shopId = shopId, name = "परीक्षण किसान", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L))
+
+        // Loan 1: Rs 10,000 with a settlement of Rs 3,000 -> contributes Rs 7,000
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "loan-1",
+                shopId = shopId,
+                partyId = "p-test",
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                amountPaisa = 1_000_000L,
+                entryDate = 1000L,
+                monthlyRatePercent = 0.0,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.PARTIAL,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+        lendRepo.settle(
+            com.appwork.mandisamiti.domain.model.LendSettlement(
+                id = "settle-1",
+                shopId = shopId,
+                lendId = "loan-1",
+                amountPaisa = 300_000L,
+                principalPaisa = 300_000L,
+                interestPaisa = 0L,
+                settledAt = 2000L,
+                createdAt = 2000L,
+                updatedAt = 2000L
+            ),
+            emptyList()
+        )
+
+        // Loan 2: Rs 5,000 voided -> contributes 0
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "loan-void",
+                shopId = shopId,
+                partyId = "p-test",
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                amountPaisa = 500_000L,
+                entryDate = 1000L,
+                monthlyRatePercent = 0.0,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.OPEN,
+                isVoid = true,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        // Loan 3: Rs 4,000 fully settled -> contributes 0
+        lendRepo.saveLendEntry(
+            com.appwork.mandisamiti.domain.model.LendEntry(
+                id = "loan-settled",
+                shopId = shopId,
+                partyId = "p-test",
+                direction = com.appwork.mandisamiti.domain.model.LendDirection.GIVEN,
+                lendType = com.appwork.mandisamiti.domain.model.LendType.MONEY,
+                amountPaisa = 400_000L,
+                entryDate = 1000L,
+                monthlyRatePercent = 0.0,
+                status = com.appwork.mandisamiti.domain.model.LendStatus.SETTLED,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+        lendRepo.settle(
+            com.appwork.mandisamiti.domain.model.LendSettlement(
+                id = "settle-full",
+                shopId = shopId,
+                lendId = "loan-settled",
+                amountPaisa = 400_000L,
+                principalPaisa = 400_000L,
+                interestPaisa = 0L,
+                settledAt = 2000L,
+                createdAt = 2000L,
+                updatedAt = 2000L
+            ),
+            emptyList()
+        )
+
+        val viewModel = HomeViewModel(
+            shopId = shopId,
+            shopProfileRepository = shopRepo,
+            partyRepository = partyRepo,
+            lendRepository = lendRepo,
+            viewModelScope = backgroundScope
+        )
+
+        val state = viewModel.uiState.first { it.udhaarGivenTotalPaisa > 0L }
+        assertEquals(700_000L, state.udhaarGivenTotalPaisa)
+        assertEquals(0L, state.udhaarTakenTotalPaisa)
     }
 }

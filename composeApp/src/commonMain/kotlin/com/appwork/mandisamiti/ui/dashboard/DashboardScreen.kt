@@ -73,6 +73,7 @@ import com.appwork.mandisamiti.ui.register.drawerChipDate
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
+import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
@@ -174,7 +175,6 @@ fun DashboardScreen(
     // All-Time Totals
     val allTimeBuysGross = remember(uiState.buys) { uiState.buys.filter { !it.isVoid }.sumOf { it.grossPaisa } }
     val allTimeSellsNet = remember(uiState.sells) { uiState.sells.filter { !it.isVoid }.sumOf { it.totalReceivablePaisa } }
-    val allTimeLendsTotal = remember(uiState.lends) { uiState.lends.filter { !it.isVoid }.sumOf { it.amountPaisa } }
     val allTimeExpensesTotal = remember(uiState.expenses) { uiState.expenses.filter { !it.isVoid }.sumOf { it.amountPaisa } }
 
     Scaffold(
@@ -488,9 +488,11 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AllTimeCard(
-                            label = if (isEnglish) "Outstanding Loans" else "कुल उधार",
-                            value = MandiMathEngine.formatRupees(allTimeLendsTotal),
+                        UdhaarCard(
+                            isEnglish = isEnglish,
+                            givenTotalPaisa = uiState.udhaarGivenTotalPaisa,
+                            takenTotalPaisa = uiState.udhaarTakenTotalPaisa,
+                            isLoading = uiState.isUdhaarLoading,
                             onClick = onNavigateToLendList,
                             modifier = Modifier.weight(1f)
                         )
@@ -562,6 +564,76 @@ private fun RecentSlipRow(
                 fontWeight = FontWeight.Bold,
                 color = MandiTextPrimary
             )
+        }
+    }
+}
+
+@Composable
+private fun UdhaarCard(
+    isEnglish: Boolean,
+    givenTotalPaisa: Long,
+    takenTotalPaisa: Long,
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isEnglish) "Udhaar" else "उधार",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MandiTextSecondary
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MandiTextSecondary
+                )
+            }
+            if (isLoading) {
+                Text(
+                    text = "—",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextSecondary
+                )
+            } else if (givenTotalPaisa == 0L && takenTotalPaisa == 0L) {
+                Text(
+                    text = "₹0",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = (if (isEnglish) "Given: " else "दिया: ") + MandiMathEngine.formatRupees(givenTotalPaisa),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiGreenReceivable
+                    )
+                    Text(
+                        text = (if (isEnglish) "Taken: " else "लिया: ") + MandiMathEngine.formatRupees(takenTotalPaisa),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (takenTotalPaisa > 0L) MandiRedPayable else MandiTextSecondary
+                    )
+                }
+            }
         }
     }
 }

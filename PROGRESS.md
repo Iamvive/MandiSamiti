@@ -658,3 +658,30 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified:
   - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
 - Next: Task 11 (Home screen KPIs and action buttons).
+
+## 2026-11-18, Gemini / Antigravity (Task 11: Home udhaar card opens landing page and slip-only market receivables)
+- What was built and verified:
+  - Isolated slip balances from udhaar at the root cause (`HomeViewModel.kt:307`): changed `PartyWithBalance(party, balance.slipBalancePaisa + balance.udhaarNetPaisa)` to `PartyWithBalance(party, balance.slipBalancePaisa)`. Home's `totalMarketReceivablePaisa` and `totalFarmerPayablePaisa` now count slip balances only, with zero udhaar pollution.
+  - Added live Udhaar totals aggregation to `HomeViewModel`: `observeUdhaarTotals()` combines `lendsFlow`, `settlementsFlow`, and `partiesFlow`, reusing `buildUdhaarRows` for both `GIVEN` and `TAKEN` directions with `RuralInterestEngine` accrued interest. Exposed `udhaarGivenTotalPaisa` and `udhaarTakenTotalPaisa` on `HomeUiState`.
+  - Replaced stale all-time "कुल उधार" card in `DashboardScreen.kt`:
+    - Removed `allTimeLendsTotal` (which previously summed raw non-void loan amounts, including settled ones).
+    - Created new `UdhaarCard`: displays label ("उधार" / "Udhaar") with `Icons.AutoMirrored.Filled.ArrowForward` vector icon, loading state placeholder `—`, honest zero state `₹0`, and active state showing live "दिया: ₹X" (in `MandiGreenReceivable`) and "लिया: ₹Y" (in `MandiRedPayable` if > 0 else `MandiTextSecondary`) without text truncation.
+    - Clicking the card navigates directly to `onNavigateToLendList`.
+  - Cleaned up dead unlinked lend code: removed `unlinkedLendAmountPaisa` and `unlinkedLendCount` from `HomeUiState` and `HomeViewModel.kt` (loans now enforce foreign keys and party linkage per Task 4; slip totals never include loans).
+- Existing test assertions updated:
+  - `HomeViewModelTest.testLendEntryReflectedInReceivablesAndHonestSubtitleWhenUnlinked`: updated assertions to expect `totalMarketReceivablePaisa = 0L` (slip balances only) and `udhaarGivenTotalPaisa = lendAmountPaisa` (Rs 10,000, then Rs 15,000 with unlinked lend), removing obsolete `unlinkedLendCount` / `unlinkedLendAmountPaisa` assertions.
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:core-data`: 172 tests (0 failures)
+  - `:composeApp`: 411 tests (0 failures, +3 new tests in `HomeViewModelTest`)
+  - Total: 704 tests passing (0 failures).
+- Device verification on `emulator-5554` (staging `http://64.227.142.180:8060`, Android 15, 390dp reference width, density 443):
+  - Verified on Dashboard that the new Udhaar card displays live totals: "दिया: ₹50,100", "लिया: ₹0", matching the Udhaar landing page totals ("+ ₹100 ब्याज · कुल ₹50,100") exactly.
+  - Tapped the Udhaar card and confirmed it navigates directly to the Udhaar landing page.
+  - Verified Light and Dark themes at 390dp.
+  - Screenshots saved under `docs/testing/screenshots/udhaar/`:
+    `t11-home-light-390.png`, `t11-home-dark-390.png`.
+- Unverified:
+  - Physical Redmi Note 7 (`d93c743`) and desktop width (>600dp) unverified (tested on emulator-5554 reference device at density 443 / 390dp).
+- Next: Udhaar rewrite complete.
