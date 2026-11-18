@@ -448,3 +448,16 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: `LedgerTagTest` 4 of 4 pass. Full run `./gradlew :core-domain:jvmTest :core-data:jvmTest :core-database:jvmTest :composeApp:jvmTest`: 638 tests, 0 failures, 0 errors, 0 skipped.
 - Not verified: no emulator check of the chip yet (light and dark, 390dp).
 - Next: Task 6, udhaar landing page (replaces LendList).
+
+## 2026-11-18 (Gemini / Antigravity): Udhaar rewrite Task 6, landing page with diya and liya pager
+- Implemented `UdhaarPersonRow` and `buildUdhaarRows` in `ui/udhaar/UdhaarRows.kt` with per-loan outstanding calculation, legacy settlement handling (`principalPaisa == 0 && interestPaisa == 0` counts as all principal), zeroed interest at 0 outstanding, rate-based `interestOn`, and stable sorting (total due descending, tie-break name ascending).
+- Added `UdhaarRowsTest.kt` covering plan cases a to g, plus edge cases 1, 2, 4, 5, 6, 8, 9 (14 of 14 tests pass).
+- Note for Vivek (edge case 2): a loan whose principal is fully repaid but interest is unpaid is dropped from the list, matching person ledger behaviour where interest is zeroed when outstanding principal reaches 0.
+- Implemented `UdhaarLandingScreen.kt` and `UdhaarLandingViewModel`: top bar back to Home, NGDL tokens and styling, TabRow ("उधार दिया" / "उधार लिया") over HorizontalPager, total line card with principal and interest details, person rows with "ब्याज" chip and 390dp truncation, honest empty state per tab ("अभी कोई उधार दिया नहीं है" / "अभी कोई उधार लिया नहीं है"), and ExtendedFloatingActionButton "जोड़ें" (temporarily routing to `Screen.LendEntry` before Task 7).
+- Wired `Screen.LendList` in `App.kt` to render `UdhaarLandingScreen` with `onBack = Screen.Home`.
+- Evidence: 14 tests in `UdhaarRowsTest` pass. Full test suite `./gradlew :core-domain:jvmTest :core-data:jvmTest :core-database:jvmTest :composeApp:jvmTest` passes with 652 tests, 0 failures, 0 errors across 131 test suites (109 core-domain, 160 core-data, 12 core-database, 371 composeApp).
+- Emulator verification: emulator-5554 (Android 15, 390dp width, density 443) on staging (http://64.227.142.180:8060). Light and Dark themes tested. Real taps verified: tab switch tap, horizontal swipe between Diya and Liya, row tap opening PartyLedger and Android back navigation returning to Udhaar, Add button opening LendEntry and back returning to Udhaar. No real data writes.
+- Screenshots saved: `docs/testing/screenshots/udhaar/t6-landing-diya-light-390.png`, `docs/testing/screenshots/udhaar/t6-landing-liya-light-390.png`, `docs/testing/screenshots/udhaar/t6-landing-diya-dark-390.png`, `docs/testing/screenshots/udhaar/t6-landing-liya-dark-390.png`.
+- Edge case 15 (grain loans): checked staging PostgreSQL database (`mandisamiti_staging_db`); `SELECT count(*) FROM lend_entries WHERE lend_type = 'GRAIN'` returned 0 (only 1 loan exists, which is MONEY). Verified `DashboardKpis.kt` and `HomeViewModel.kt` already only include `LendType.MONEY`. Home totals and KPIs never reached grain loans anyway, and no real grain loans exist on staging.
+- Unverified: Physical device check on Redmi Note 7 (tested on emulator-5554 at 390dp reference width); add sheet (deferred to Task 7).
+- Next: Task 7 (short add form / sheet).

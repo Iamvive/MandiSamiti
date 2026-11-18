@@ -63,6 +63,8 @@ import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
 import com.appwork.mandisamiti.ui.slip.ReceiptPreviewScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncScreen
 import com.appwork.mandisamiti.ui.sync.FirstSyncViewModel
+import com.appwork.mandisamiti.ui.udhaar.UdhaarLandingScreen
+import com.appwork.mandisamiti.ui.udhaar.UdhaarLandingViewModel
 import com.appwork.mandisamiti.ui.theme.MandiSamitiTheme
 import com.appwork.mandisamiti.ui.settings.StartupLanguage
 import com.appwork.mandisamiti.ui.settings.startupLanguage
@@ -1008,42 +1010,19 @@ fun App(
             }
             is Screen.LendList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
-                val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
-                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
-                LendTransactionsListScreen(
-                    entries = lends,
-                    partyNamesById = parties.associate { it.id to it.name },
-                    onNew = { currentScreen = Screen.LendEntry },
-                    onPartyClick = { partyId -> currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList) },
-                    getSettlements = { lendId -> lendRepo.getSettlements(lendId) },
-                    onRepay = { lendId, amountPaisa, weightGrams, bagsCount, note, paymentMode ->
-                        coroutineScope.launch {
-                            try {
-                                lendUseCase.repay(lendId, amountPaisa, weightGrams, bagsCount, note, paymentMode = paymentMode)
-                            } catch (_: com.appwork.mandisamiti.domain.usecase.LendException) {
-                                return@launch
-                            }
-                            syncScheduler.scheduleOneTimeSync()
-                        }
-                    },
-                    onRepayMoney = { lendId, paymentPaisa, interestPaisa, calculatedPaisa ->
-                        coroutineScope.launch {
-                            try {
-                                lendUseCase.repayWithInterest(lendId, paymentPaisa, interestPaisa, calculatedPaisa)
-                            } catch (_: IllegalArgumentException) {
-                                return@launch
-                            }
-                            syncScheduler.scheduleOneTimeSync()
-                        }
-                    },
+                val udhaarViewModel = remember(shopId) {
+                    UdhaarLandingViewModel(shopId, lendRepo, partyRepo)
+                }
+                UdhaarLandingScreen(
+                    viewModel = udhaarViewModel,
                     isEnglish = tradeSettings?.isEnglish ?: false,
-                    onVoid = { id, reason ->
-                        coroutineScope.launch {
-                            lendRepo.voidLendEntry(id, reason)
-                            syncScheduler.scheduleOneTimeSync()
-                        }
+                    onPartyClick = { partyId ->
+                        currentScreen = Screen.PartyLedger(partyId, returnScreen = Screen.LendList)
                     },
-                    onBack = { currentScreen = screen.backTarget() }
+                    onAddClick = {
+                        currentScreen = Screen.LendEntry // TODO(task7)
+                    },
+                    onBack = { currentScreen = Screen.Home }
                 )
             }
             is Screen.ExpenseEntry -> {

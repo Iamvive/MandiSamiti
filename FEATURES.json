@@ -180,6 +180,12 @@
       "description": "Day-end spare crop as khaate Buy/Sell: no party, no charges, own Godown line, Mohari in close-out",
       "status": "passing",
       "evidence": "2026-11-16 emulator-5554: Verified all 7 steps. 1. Khaate Buy 5 bags Gehu saved with 0 charges and no party, displayed 'खाते' and amber KhaateChip in list (t1_khaate_buy_entry.png, t1_khaate_buy_list.png). 2. Khaate Sell 8 bags displayed shortfall warning 'खाते में इतना माल नहीं है। फिर भी सेव होगा।' and saved with 0 charges (t2_khaate_sell_shortfall.png, t2_khaate_sell_list.png). 3. Godown card displayed separate 'खाते' line (t3_godown_two_lines.png). 4. Stock audit dialog displayed two separate count inputs for crop bags and khaate bags (t4_stock_audit_two_counts.png). 5. Day-end close-out sheet displayed 'मोहरी खरीद (असल)' ₹10,000 and 'मोहरी बिक्री (असल)' ₹17,600 under विवरण (t5_closeout_mohari_rows.png). 6. Galla cash remained untouched at exact ₹61,980 with ₹0 net cash effect. 7. Voiding Buy entry from list dialog reversed stock immediately (-6 to -11 bags) (t7_void_dialog.png, t7_godown_after_void.png). Automated tests: 354 JVM tests, 132 backend pytest."
+    },
+    {
+      "id": "udhaar-landing-page",
+      "description": "Udhaar landing page (Task 6): Diya and Liya horizontal pager, total cards, person rows with interest chip, honest empty states, and add FAB",
+      "status": "passing",
+      "evidence": "2026-11-18 (Gemini / Antigravity, emulator-5554, staging http://64.227.142.180:8060): Verified in Light and Dark themes at 390dp reference width (density 443). Real taps verified: tab switch tap, horizontal swipe between Diya and Liya tabs, row tap opening PartyLedger and back navigation, add button opening LendEntry and back navigation. Zero writes to real data. Screenshots saved under docs/testing/screenshots/udhaar/ as t6-landing-diya-light-390.png, t6-landing-liya-light-390.png, t6-landing-diya-dark-390.png, t6-landing-liya-dark-390.png. Edge case 15: staging PostgreSQL has 0 grain loans (count=0 in lend_entries WHERE lend_type = 'GRAIN'); DashboardKpis and HomeViewModel filter lendType == MONEY. 14 new tests in UdhaarRowsTest; full suite passing with 652 JVM tests across all 4 modules (109 core-domain, 160 core-data, 12 core-database, 371 composeApp)."
     }
   ]
 }
