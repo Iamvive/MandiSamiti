@@ -799,3 +799,42 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Card/surface pattern used: `MandiOutlinedButton` using `RoundedCornerShape(10.dp)`, `BorderStroke(1.dp, MandiBorder)`, `MandiTextPrimary` text and icon tint, 48dp touch target height.
 - Unverified: Physical Redmi Note 7 (`d93c743`), VPS deploy, production migration, real-device sync.
 - Next steps: User sign-off and VPS production deployment.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 15: Create Pesgi from Udhaar Add Sheet (no push, no deploy)
+- What was built:
+  - Added `var kind by mutableStateOf(LendKind.LOAN)` to `UdhaarAddFormState.kt`. Updated `toForm()` to set `kind = if (direction == LendDirection.GIVEN) kind else LendKind.LOAN`.
+  - Updated `UdhaarAddSheet.kt`:
+    - Updated `UdhaarAddFormStateSaver` to be `internal` and added `saveState` helper function. Appended `value.kind.name` at index 12, with safe `LendKind.LOAN` fallback on short (older) lists.
+    - Added two-option `TabRow` segmented control ("उधार / पेशगी", English: "Loan / Advance") near the top below the header on `direction == LendDirection.GIVEN` only (hidden on `LendDirection.TAKEN`). Reused the existing `TabRow` segmented pattern from `UdhaarLandingScreen.kt:317-356` with NGDL tokens (`MandiSurface`, `MandiBorder`, `MandiPrimaryAction`, `MandiTextPrimary`, `MandiTextSecondary`), 48dp touch targets, and zero horizontal scroll at 390dp.
+    - Added one-line helper text when "पेशगी" is chosen: "फसल बेचने से पहले दिया गया पैसा, अगली पर्ची से कटेगा।" (English: "Money given before the crop is sold. It is cut from the next slip."). Both strings follow the inline `isEnglish` pattern.
+    - Left the interest toggle switch available and defaulting to off for both loan and pesgi.
+  - Tests:
+    - `UdhaarAddFormStateTest`: added `kindDefaultsToLoanAndSettingPesgiFlowsToForm` (default is LOAN, setting PESGI flows into `toForm`, TAKEN resets to LOAN), and `saverRoundTripPreservesKindAndShortListRestoresLoan` (saver round-trip preserves PESGI, 12-element short list restores LOAN).
+    - `UdhaarUseCaseTest`: added `createGivenPesgiStoresKindPesgiAndWritesLinkedCashOut` (creating with `kind = PESGI` stores `LendEntry` with `kind = PESGI`, direction `GIVEN`, and linked `UDHAR_GIVEN` cash row).
+    - `BuyLoanCutTest`: updated `pesgiLoanPlusOrdinaryLoanOlderCutFirst` to explicitly assert the settlement row carries the correct loan id and principal.
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:core-data`: 187 tests (0 failures, +1 test)
+  - `:composeApp`: 417 tests (0 failures, +2 tests)
+  - Total: 725 tests passing (0 failures).
+  - NGDL tokens test: `pytest tests/ngdl-tokens`: 5/5 passing (0.01s).
+- Device walk on `emulator-5554` (staging `http://64.227.142.180:8060`, Android 15, 390dp reference width, density 443; desktop 720dp, density 240) with zero SQLite edits:
+  - 7.1: Added Rs 10,000 loan for farmer Kisan Dev (`9876500015`) with interest off. Verified on landing list and person screen.
+  - 7.2: Added Rs 3,000 pesgi for Kisan Dev using the new "पेशगी" toggle on the add sheet. Verified person screen showed total "बाकी ₹13,000" and the "पेशगी" chip.
+  - 7.3: Created Buy slip #6 for Kisan Dev: 4 bags of 50kg @ Rs 5,000/qtl = Gross Rs 10,000, 0 charges. Detected "पुराना उधार / पेशगी: ₹13,000" and label "पेशगी / उधार से काटें (रु)". Entered Rs 5,000 loan cut, final due Rs 5,000. Paid Rs 4,000 cash on payment screen. Confirmed loan cut settled oldest loan first (Rs 10,000 loan `d476b196...`, entry_date `1795075006027` < pesgi entry_date `1795075229526`).
+  - 7.4: Checked receipt #6: showed deduction line `उधार कटौती: − ₹5,000`, payment history `• नकद भुगतान · 19 Nov: − ₹4,000`, and remaining slip balance `₹1,000`.
+  - 7.5: Verified Udhaar person screen showed remaining Rs 8,000 left (Rs 5,000 on oldest loan + Rs 3,000 on pesgi) with settlement tag: ₹5,000 settled from oldest loan.
+  - 7.6: Opened Repay dialog ("पैसे मिले") on Kisan Dev. Attempted overpayment of Rs 9,000 against Rs 8,000 due. UI blocked submission with message "बाकी सिर्फ ₹8,000 है" and submit button disabled.
+  - 7.7: Voided slip #6 in BuyList with reason "गलत प्रविष्टि". Verified Udhaar landing and person screen balance restored to Rs 13,000, and oldest loan returned to OPEN.
+- Screenshots captured under `docs/testing/screenshots/udhaar/`:
+  - `t15-add-sheet-loan-light-390.png`
+  - `t15-add-sheet-pesgi-light-390.png`
+  - `t15-add-sheet-pesgi-dark-390.png`
+  - `t15-add-sheet-desktop-light.png`
+- Contrast readings:
+  - Light theme: selected `#090A0C` on `#FFFFFF` = 19.81:1 (AAA); unselected `#585E6B` on `#FFFFFF` = 6.49:1 (AA)
+  - Dark theme: selected `#FFFFFF` on `#121316` = 18.92:1 (AAA); unselected `#A0A5AE` on `#121316` = 7.58:1 (AA)
+- Reused pattern: `TabRow` segmented control from `UdhaarLandingScreen.kt:317-356`.
+- Unverified: Physical Redmi Note 7 (`d93c743`), VPS deploy, production migration, real-device sync.
+- Next steps: User sign-off and VPS production deployment.
