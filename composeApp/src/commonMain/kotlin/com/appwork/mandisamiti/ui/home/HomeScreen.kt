@@ -71,6 +71,7 @@ fun HomeScreen(
     onNavigateToNewEntry: () -> Unit,
     onSyncNow: suspend () -> Result<Int>,
     onNavigateToPartyKhata: (Party) -> Unit,
+    onNavigateToPartyKhataFromParchi: ((Party) -> Unit)? = null,
     onNavigateToDayClosing: () -> Unit = {},
     onSignOut: () -> Unit,
     registerViewModel: DailyRegisterViewModel? = null,
@@ -235,7 +236,9 @@ fun HomeScreen(
                             onOpenSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewBuy = onNavigateToBuy,
                             onNavigateToNewSell = onNavigateToSell,
-                            onOpenPartyKhata = onNavigateToPartyKhata,
+                            onOpenPartyKhata = { party ->
+                                onNavigateToPartyKhataFromParchi?.invoke(party) ?: onNavigateToPartyKhata(party)
+                            },
                             isEnglish = uiState.isEnglish
                         )
                     }

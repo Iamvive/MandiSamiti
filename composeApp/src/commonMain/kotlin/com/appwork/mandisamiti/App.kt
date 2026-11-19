@@ -321,6 +321,10 @@ fun App(
                     onNavigateToPartyKhata = { party ->
                         currentScreen = partyKhataScreen(party.id, returnScreen = Screen.Home)
                     },
+                    onNavigateToPartyKhataFromParchi = { party ->
+                        homeViewModel.selectTab(com.appwork.mandisamiti.ui.navigation.NavigationTab.PARCHI)
+                        currentScreen = partyKhataScreen(party.id, returnScreen = Screen.Home)
+                    },
                     onNavigateToDayClosing = {
                         currentScreen = Screen.DailyRegister
                     },
