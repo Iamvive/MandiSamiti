@@ -862,7 +862,7 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: Board filled from `main` `e8b7259`, open PRs #3 #4 #5 #6, `PROGRESS.md`, `FEATURES.json` (36 passing, 5 failing), `docs/PRODUCT_SPEC.md`, and `AGENTS.md`. Docs only. Gradle tests not run.
 - Next: Agents read the board and take their queue. Vivek merges #3 to #6 and keeps every new `FEATURES.json` row and `PROGRESS.md` entry. After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade.
 
-## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 16: Staging Reset Retest & Task 14 Gaps (no deploy, no push, no code changes)
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 16: Staging Reset Retest & Task 14 Gaps (branch antigravity/device-audit-2026-11-19, PR #9, no deploy, no code changes)
 - What ran:
   - Task 16 Udhaar round-trip retest executed on the rebuilt staging server (`http://64.227.142.180:8060`, PostgreSQL 16 on migration `0008_udhaar_fields`).
   - Reset emulator (`adb uninstall com.appwork.mandisamiti`), reinstalled debug APK, performed fresh UI signup (`9826012345`, "Vivek Mandi Shop", Mathura). First sync completed with `Worker result SUCCESS`.
@@ -907,7 +907,7 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 
 ## 2026-11-19 · Gemini 3.8 Flash / Antigravity · PR Branch Device Audit (#3, #4, #5) & Dark Theme 7-Screen Card Audit at 390dp
 - What ran:
-  - 1. PR #3 (`cursor/buy-slip-advance-not-pesgi-4465`, commit `e0557fa`):
+  - 1. PR #3 (`cursor/buy-slip-advance-not-pesgi-4465`, branch commit `e0557fa`, merged to main as `6ed6866`):
     - Tested Buy-slip अग्रिम flow strictly on a fresh build of PR #3 (`./gradlew :composeApp:installDebug`).
     - Entered Buy slip #8 for Kisan Dev: 10 bags @ 50kg (5.0 Q @ ₹1,000/Q) = Gross ₹5,000. Commission ₹30, Mazdoori ₹100 -> Parchi net ₹4,870.
     - Entered अग्रिम / पेशगी (Advance): ₹1,000. Final payable: ₹3,870. Completed checkout with ₹0 additional cash.
@@ -918,27 +918,69 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
     - Screenshots: `docs/testing/screenshots/audit/pr3-buy-slip-receipt-advance.png`, `docs/testing/screenshots/audit/pr3-dashboard-verified.png`, `docs/testing/screenshots/audit/pr3-kisan-dev-person-screen.png`.
   - 2. PR #4 (`cursor/flat-cards-dashboard-expense-4465`, commit `18dbde1`):
     - Built and installed debug APK of PR #4.
-    - Audited flat cards on Home (Dashboard) and Expenses (`Screen.ExpenseList`): verified flat `MandiCard`, 1dp `MandiBorder`, no shadow/elevation, clean readable typography.
-    - Screenshots: `docs/testing/screenshots/audit/pr4-dashboard-light.png`, `docs/testing/screenshots/audit/pr4-expense-list-light.png`.
+    - Audited flat cards on Home (Dashboard) and Expenses (`Screen.ExpenseList`) in Light and Dark themes at 390dp: verified flat `MandiCard`, 1dp `MandiBorder`, no shadow/elevation, clean readable typography.
+    - Build commit `18dbde1` screenshots:
+      - `docs/testing/screenshots/audit/pr4-home-light-390.png`
+      - `docs/testing/screenshots/audit/pr4-home-dark-390.png`
+      - `docs/testing/screenshots/audit/pr4-expense-light-390.png`
+      - `docs/testing/screenshots/audit/pr4-expense-dark-390.png`
   - 3. PR #5 (`cursor/flat-cards-lists-4465`, commit `33be63c`):
     - Built and installed debug APK of PR #5.
-    - Audited flat cards on Lists (Buy list, Sell list, Parchi list, Stock) and Drawer summary (Daily register).
+    - Audited flat cards on Lists (Buy list, Sell list, Parchi list, Stock), Drawer summary (Daily register), and Void dialog in Light and Dark themes at 390dp.
     - Long-press on buy row in `BuyTransactionsListScreen` verified: `VoidEntryDialog` ("खरीद सौदा रद्द करें?") opens cleanly.
-    - Screenshots: `docs/testing/screenshots/audit/pr5-void-dialog.png`.
-  - 4. 7-Screen Card Audit in Dark Theme at 390dp:
+    - Build commit `33be63c` screenshots:
+      - `docs/testing/screenshots/audit/pr5-buylist-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-buylist-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-void-dialog-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-void-dialog-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-selllist-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-selllist-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-parchi-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-parchi-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-drawer-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-drawer-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-stock-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-stock-dark-390.png`
+  - 4. 7-Screen Card Audit in Dark Theme at 390dp (throwaway shop "Vivek Mandi Shop"):
     - Emulator configured to 390dp reference width (`1080x2400` at density 443 -> `1080 / 2.76875 = 390.07dp`).
     - Night mode enabled (`cmd uimode night yes`).
     - All 7 screens inspected for card readability, 1dp borders, zero clipped text, and contrast:
       1. Home (`Screen.Home`): `audit-dark-home-390.png`
       2. Expenses (`Screen.ExpenseList`): `audit-dark-expense-390.png`
-      3. Buy list (`Screen.BuyList`): `audit-dark-buylist-390.png` (and `audit-dark-buylist-void-390.png`)
-      4. Sell list (`Screen.SellList`): `audit-dark-selllist-390.png`
-      5. Parchi (`Screen.ParchiList`): `audit-dark-parchi-390.png`
-      6. Stock (`Screen.StockRegister`): `audit-dark-stock-390.png`
-      7. Drawer summary (`Screen.DailyRegister`): `audit-dark-drawer-390.png`
+      3. Buy list (`Screen.BuyList`): `audit-dark-buylist-390.png`
+      4. Void dialog (`VoidEntryDialog`): `audit-dark-buylist-void-390.png` (verified shasum differs from drawer)
+      5. Sell list (`Screen.SellList`): `audit-dark-selllist-390.png`
+      6. Parchi (`Screen.ParchiList`): `audit-dark-parchi-390.png`
+      7. Stock (`Screen.StockRegister`): `audit-dark-stock-390.png`
+      8. Drawer summary (`Screen.DailyRegister`): `audit-dark-drawer-390.png`
   - 5. Device & Passing Rule:
     - Physical Redmi Note 7 (`d93c743`) was detached.
     - Per repo rule (`CLAUDE.md`), emulator evidence is recorded but feature status in `FEATURES.json` remains `failing` until verified on physical Redmi Note 7 (`d93c743`).
 - Screenshots captured:
   - `docs/testing/screenshots/audit/*`
 - Unverified: Physical Redmi Note 7 (`d93c743`), VPS production deployment, production database migration.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 1: PR #9 Audit & Screenshot Fixup
+- What changed:
+  - 1. Void Dialog vs Drawer Shasum Fix:
+    - Retook dark Buy list void dialog (`audit-dark-buylist-void-390.png`) by long-pressing buy row in `Screen.BuyList` with `VoidEntryDialog` open.
+    - Confirmed distinct SHA-1 checksums:
+      - `audit-dark-buylist-void-390.png`: `f624303cfef280ce812dadd107617d60231af2a1`
+      - `audit-dark-drawer-390.png`: `ab58cb822820736d078048714e63774b1b725269`
+  - 2. Per-PR, Per-Theme Evidence at 390dp:
+    - Built and installed PR #4 (`cursor/flat-cards-dashboard-expense-4465`, commit `18dbde1`) independently; captured light and dark for Home and Expenses (`pr4-home-light-390.png`, `pr4-home-dark-390.png`, `pr4-expense-light-390.png`, `pr4-expense-dark-390.png`).
+    - Built and installed PR #5 (`cursor/flat-cards-lists-4465`, commit `33be63c`) independently; captured light and dark for Buy list, Void dialog, Sell list, Parchi list, Stock register, and Drawer summary (`pr5-buylist-light-390.png`, `pr5-buylist-dark-390.png`, `pr5-void-dialog-light-390.png`, `pr5-void-dialog-dark-390.png`, `pr5-selllist-light-390.png`, `pr5-selllist-dark-390.png`, `pr5-parchi-light-390.png`, `pr5-parchi-dark-390.png`, `pr5-drawer-light-390.png`, `pr5-drawer-dark-390.png`, `pr5-stock-light-390.png`, `pr5-stock-dark-390.png`).
+    - Removed old unmatched screenshot files: `pr4-dashboard-light.png`, `pr4-expense-list-light.png`, `pr5-void-dialog.png`, and `docs/testing/screenshots/audit-home-390.png`.
+    - Removed any "verified" claim lacking a supporting screenshot file.
+  - 3. Shop Data & Clean Auth:
+    - Old drawer screenshot displayed "Omveer Singh & Brothers" from legacy test data. Noted in documentation, removed all images depicting it, and retook all audit screenshots under the throwaway test shop "Vivek Mandi Shop" (Mathura).
+    - Logged in fresh with phone `9826012345` / MPIN `1234` against staging (`http://64.227.142.180:8060`); zero "दोबारा लॉगिन करें" banners appeared.
+  - 4. Text & Doc Fixes:
+    - `FEATURES.json` (`udhaar-round-trip-staging`): noted that back navigation from Khata opened via Parchi currently lands on Home as a known bug (Vivek decided it must return to Parchi list, fix not in this PR), and staging is now stamped `0001_baseline`.
+    - `docs/STATUS.md`: moved merged PR #3 (`6ed6866`) out of "Needs device check", noting its evidence originated from branch commit `e0557fa`. Added build commit hashes next to screenshot groups.
+    - `PROGRESS.md`: corrected Task 16 heading.
+- Evidence:
+  - All 16 PR4 and PR5 screenshots captured on live Android 15 emulator at 390dp reference width (`1080x2400`, density 443) under throwaway shop "Vivek Mandi Shop".
+  - Unique shasums confirmed across all dark/light screenshot pairs.
+- Unverified: Physical Redmi Note 7 (`d93c743`) check (phone disconnected); VPS production deployment; production DB migrations.
+- Next steps: Stop and notify Vivek that PR #9 (`antigravity/device-audit-2026-11-19`) is ready for merge. Await Vivek's reply before proceeding to Task 2.
