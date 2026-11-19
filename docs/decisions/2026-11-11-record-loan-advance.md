@@ -1,3 +1,5 @@
+> **Superseded by 2026-11-16 udhaar rewrite** (see [2026-11-16-udhaar-model.md](2026-11-16-udhaar-model.md))
+
 # Decision: Record Loan / Advance entry design
 
 Date: 2026-11-11

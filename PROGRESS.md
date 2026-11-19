@@ -737,3 +737,35 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Task 12 backend change committed, not deployed, pending Vivek's approval.
 - Unverified: VPS deploy, production-database migration (tests use SQLite `batch_alter_table`), real-device sync.
 - Next: Vivek approves the deploy, then a device sync check; Task 13 cleanup (void warning, `snapshot_json`, helper visibility, hardcoded elevation token).
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 13: Udhaar Rewrite Final Cleanup & Device Sign-Off (no push, no deploy)
+- Code cleanups and navigation updates:
+  - Dead screens: `LoanAdvanceEntryScreen.kt` and `LendTransactionsListScreen.kt` removed along with their dead imports and dead call sites in `App.kt`.
+  - Navigation routing: Removed `Screen.LendEntry` route and dead `LoanAdvanceEntryScreen` branch. Routed Dashboard quick action `onNavigateToLend` directly to `Screen.LendList`. Changed `GrainLendEntry` default return target from `Screen.LendEntry` to `Screen.LendList` (retained `LendEntryScreen` for grain udhaar). Added navigation tests in `ScreenRoutingTest.kt`.
+  - Four carry-over items:
+    1. Void warning: Confirmed `PartyLedgerScreen.kt` displays localized warning ("इस पर्ची की उधार कटौती (₹...) भी वापस हो जाएगी।") when `cutPaisa > 0`, and hides when `cutPaisa == 0`.
+    2. `snapshot_json`: Verified `sync.py` and `SyncEngine.kt` ensure non-null, valid JSON payloads.
+    3. Helper visibility: Tightened top-level helpers `isSameOrPastDay` (UdhaarAddFormState.kt) and `isSameOrAfterDay`, `normalisePickerDate`, `localInstantToPickerUtc`, `isSameDay` (UdhaarRepayFormState.kt) from `public` to `internal`.
+    4. Hardcoded elevation token: Replaced hardcoded `elevation = CardDefaults.cardElevation(1.dp)` in `UdhaarCard` and `AllTimeCard` in `DashboardScreen.kt` with NGDL `MandiSurface` container and `BorderStroke(1.dp, MandiBorder)`. Older screens left with hardcoded elevation listed as out of scope.
+- Documentation:
+  - Marked `docs/decisions/2026-11-11-record-loan-advance.md` as superseded by 2026-11-16 udhaar rewrite.
+  - Updated `docs/product/feature-status.md` with Udhaar Rewrite status row (`Live in KMP`).
+  - Created `docs/decisions/2026-11-16-udhaar-model.md` covering core rules (slip vs udhaar separation, oldest-first repayment, interest before principal, overpayment blocked, void reversal) and outcomes for Open Decisions 1, 2, and 3.
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:core-data`: 186 tests (0 failures)
+  - `:composeApp`: 414 tests (0 failures, +1 new test in `ScreenRoutingTest`)
+  - Total: 721 tests passing (0 failures).
+  - NGDL tokens test: `python3 -m unittest discover -s tests/ngdl-tokens -p 'test_*.py'`: 5/5 passing (0.002s).
+- Device walk on `emulator-5554` (staging `http://64.227.142.180:8060`, 390dp reference width, density 443):
+  - 5.1: Added Rs 10,000 loan for Rameshwar (`9876501300`, village Rampur), interest off. Verified row on landing screen ("बाकी ₹10,000") and person screen.
+  - 5.2: Added Rs 3,000 pesgi for Rameshwar via SQLite (`kind = 'PESGI'`). Verified person screen showed total "बाकी ₹13,000" with "पेशगी" chip. Dashboard Udhaar card updated to `दिया: ₹63,133.33` (was `₹50,133.33`, +₹13,000).
+  - 5.3: Created Buy entry #4 for Rameshwar (4 bags of 50kg @ Rs 5,000/qtl = Gross Rs 10,000, Rs 110 charges, slip amount Rs 9,890). Detected "पुराना उधार / पेशगी: ₹13,000" and label "पेशगी / उधार से काटें (रु)". Entered Rs 5,000 loan cut (split text: "पहले ब्याज ₹0, फिर मूल ₹5,000। बाकी मूल ₹8,000।"). Final due: Rs 4,890. Paid Rs 4,000 cash on payment screen.
+  - 5.4: Checked receipt #4: showed loan cut line `− ₹5,000`, payment history `• नकद भुगतान · 19 Nov: − ₹4,000`, slip remaining `₹890`.
+  - 5.5: Verified Rameshwar on `Screen.LendList`: "बाकी ₹8,000". Person screen showed remaining balance `₹8,000` (₹10,000 + ₹3,000 − ₹5,000) with settlement tags: ₹3,000 settled from 19 Nov 2025 pesgi (oldest first) and ₹2,000 settled from 19 Nov 2026 loan. Screenshot: `docs/testing/screenshots/udhaar/step-5.5-rameshwar-person.png`.
+  - 5.6: Opened Repay dialog ("पैसे मिले") on Rameshwar screen. Attempted overpayment of Rs 9,000 against Rs 8,000 due. UI blocked submission with message "बाकी सिर्फ ₹8,000 है". Confirm button was disabled. Screenshot: `docs/testing/screenshots/udhaar/step-5.6-overpayment-blocked.png`.
+  - 5.7: Long-pressed Buy slip #4 in Khata. Verified void confirmation alert text: "इस पर्ची की उधार कटौती (₹5,000) भी वापस हो जाएगी।". Selected reason "गलत प्रविष्टि". Verified slip marked void (`रद्द · गलत प्रविष्टि`), slip balance returned to ₹0 (`हिसाब चुकता`), udhaar balance returned to ₹13,000 (`दिया (लेना है)`), and SQLite confirmed both loans reset to `OPEN`, both settlements `is_void = 1`, and both cut BOOK_ENTRY cash rows `is_void = 1`. Galla cash (`₹44,980`) was unchanged. Screenshots: `docs/testing/screenshots/udhaar/step-5.7-void-confirm.png` and `docs/testing/screenshots/udhaar/step-5.7-khata-after-void.png`.
+- Unverified:
+  - VPS deploy, production-database migration, real-device sync, and physical Redmi Note 7 (`d93c743`) stay unverified.
+- Next: Final user sign-off and VPS deployment approval from Vivek.
