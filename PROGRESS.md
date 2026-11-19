@@ -887,3 +887,28 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Cleanup: No extra worktrees exist (`ms-repay-edit-wt` deleted/absent). Temporary scratch files removed.
 - Unverified: Physical Redmi Note 7 (`d93c743`) was detached during session; VPS production deployment and production DB migration unverified.
 - Next steps: User sign-off; connect Redmi Note 7 for physical device verification before release.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Buy Slip Advance (अग्रिम) & 7-Screen Card/Border Audit
+- What ran:
+  - 1. Buy Slip अग्रिम (Advance) Verification:
+    - Baseline before transaction: Galla Rokad ₹27,980, Udhaar दिया ₹76,133.33, Kisan Dev (`9876500015`) debt ₹13,000 (Rs 10k loan + Rs 3k pesgi).
+    - Entered Buy slip #7 for Kisan Dev: 10 bags @ 50kg (5.0 Q @ ₹1,000/Q) = Gross ₹5,000. Commission ₹30, Mazdoori ₹100 $\rightarrow$ Parchi net ₹4,870.
+    - Entered अग्रिम / पेशगी (Advance): ₹1,000. Final payable: ₹3,870. Completed checkout with ₹0 additional cash payment.
+    - Verification 1 (Bill): Bill / Receipt #7 displays deduction line `अग्रिम / पेशगी: − ₹1,000` (and `• नकद भुगतान · 19 Nov: − ₹1,000`).
+    - Verification 2 (Drawer Cash): Cash drawer dropped by exactly ₹1,000 from ₹27,980 to ₹26,980. Daily register (Galla Rokad) reflects outgoing cash withdrawal `Kisan Dev | −₹1,000`.
+    - Verification 3 (Udhaar दिया): Udhaar दिया remained ₹76,133.33 (did NOT grow, zero `LendEntry` created).
+    - Verification 4 (Person Screen): Kisan Dev person screen remained at ₹13,000 (Rs 3k pesgi + Rs 10k loan). Gained NO pesgi.
+  - 2. 7-Screen Design & Readability Audit (Cards, Borders, Text Clipping, Long-Press Void):
+    - Home (Dashboard): Rokad card, Date selector, Kisaan Deya / Vyapari Lene cards, Ab Tak cards readable, bordered (`MandiBorder`), zero clipped text.
+    - Expenses (`Screen.ExpenseList`): "पिछले खर्च" screen displays "Churma | ₹200" card with clear border and readable unclipped typography.
+    - Buy list (`Screen.BuyList`): "खरीद सौदे" screen displays slip cards (#7 Kisan Dev, #2 खाते, #1 Monty) with clean borders and readable text. Long-press on buy row #7 successfully opened `VoidEntryDialog` ("खरीद सौदा रद्द करें?").
+    - Sell list (`Screen.SellList`): "बिक्री बिल" screen displays bills (#3 खाते, #2 खाते, #1 Vivvek) with clean borders and readable text.
+    - Parchi (`Screen.ParchiList`): Both "किसान पर्ची" and "व्यापारी पर्ची" tabs display bordered summary tiles and slip cards with no clipped text.
+    - Stock (`Screen.StockRegister`): "गोदाम बहीखाता ● लाइव" displays bordered balance cards, sub-cards, and wheat commodity breakdown with no clipped text.
+    - Drawer summary (`Screen.DailyRegister`): "गल्ला रोकड़" displays bordered header cards and side-by-side ledger columns ("जमा पक्ष" and "नामे पक्ष") with clear borders and unclipped figures.
+  - 3. Device & Passing Rule:
+    - Physical Redmi Note 7 (`d93c743`) was detached.
+    - Per repo rule (`CLAUDE.md`), emulator evidence is recorded but feature status in `FEATURES.json` remains `failing` until verified on physical Redmi Note 7 (`d93c743`).
+- Screenshots captured:
+  - `projects/MandiSamiti/docs/testing/screenshots/audit-home-390.png`
+- Unverified: Physical Redmi Note 7 (`d93c743`), VPS production deployment, production database migration.
