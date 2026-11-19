@@ -9,6 +9,8 @@
 
 Engineered to FAANG Tier-1 enterprise fintech design standards, it replaces paper ledger books (*बही-खाता*) and clumsy spreadsheets with integer-precision arithmetic, real-time voice speech soundbox announcements, and 1-tap WhatsApp digital bills.
 
+Living product spec (who it is for, and what is still open): [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md).
+
 ---
 
 ## 🌟 Core Features
