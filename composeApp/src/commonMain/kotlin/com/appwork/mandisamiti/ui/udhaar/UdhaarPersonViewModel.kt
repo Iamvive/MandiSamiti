@@ -7,6 +7,7 @@ import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendType
+import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
 import com.appwork.mandisamiti.domain.usecase.LendException
@@ -52,6 +53,7 @@ data class UdhaarPersonUiState(
     val repaymentEditPreview: RepaymentEditPlan? = null,
     val repaymentEditError: String? = null,
     val repaymentHistory: List<LendSettlement>? = null,
+    val party: Party? = null,
 ) {
     val totalDuePaisa: Long get() = principalDuePaisa + interestDuePaisa
     val isSettled: Boolean get() = principalDuePaisa == 0L && interestDuePaisa == 0L
@@ -163,6 +165,7 @@ class UdhaarPersonViewModel(
                 repaymentEditPreview = current?.repaymentEditPreview,
                 repaymentEditError = current?.repaymentEditError,
                 repaymentHistory = current?.repaymentHistory,
+                party = party,
             )
         }.onEach { state ->
             _uiState.value = state

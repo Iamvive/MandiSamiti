@@ -235,6 +235,7 @@ fun HomeScreen(
                             onOpenSellReceipt = onNavigateToSellReceipt,
                             onNavigateToNewBuy = onNavigateToBuy,
                             onNavigateToNewSell = onNavigateToSell,
+                            onOpenPartyKhata = onNavigateToPartyKhata,
                             isEnglish = uiState.isEnglish
                         )
                     }

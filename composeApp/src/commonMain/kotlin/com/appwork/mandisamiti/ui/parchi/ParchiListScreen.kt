@@ -87,6 +87,7 @@ import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -125,12 +126,23 @@ fun ParchiListScreen(
     onNavigateToNewSell: () -> Unit,
     onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
     onSettleSellSlipCash: ((sellId: String, amountPaisa: Long) -> Unit)? = null,
+    onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     var query by rememberSaveable { mutableStateOf("") }
+    var lastPartyClickMs by remember { mutableStateOf(0L) }
+    val debouncedOpenPartyKhata: ((Party) -> Unit)? = if (onOpenPartyKhata != null) {
+        { party ->
+            val now = Clock.System.now().toEpochMilliseconds()
+            if (now - lastPartyClickMs > 800L) {
+                lastPartyClickMs = now
+                onOpenPartyKhata(party)
+            }
+        }
+    } else null
 
     Scaffold(
         floatingActionButton = {
@@ -232,6 +244,7 @@ fun ParchiListScreen(
                         gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenBuyReceipt,
                         onSettleBuySlipCash = onSettleBuySlipCash,
+                        onOpenPartyKhata = debouncedOpenPartyKhata,
                         isEnglish = isEnglish
                     )
                     1 -> VyapariParchiView(
@@ -242,6 +255,7 @@ fun ParchiListScreen(
                         gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenSellReceipt,
                         onSettleSellSlipCash = onSettleSellSlipCash,
+                        onOpenPartyKhata = debouncedOpenPartyKhata,
                         isEnglish = isEnglish
                     )
                 }
@@ -259,6 +273,7 @@ private fun KisaanParchiView(
     gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
     onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
+    onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
 ) {
     val nonVoidBuys = remember(buys) { buys.filter { !it.isVoid } }
@@ -310,6 +325,8 @@ private fun KisaanParchiView(
                             farmerName = g.party.name,
                             onOpenReceipt = { onOpenReceipt(buy.id) },
                             onSettleCash = { settlingBuy = buy },
+                            parties = parties,
+                            onOpenPartyKhata = onOpenPartyKhata,
                             isEnglish = isEnglish
                         )
                     }
@@ -326,6 +343,8 @@ private fun KisaanParchiView(
                                         farmerName = g.party.name,
                                         onOpenReceipt = { onOpenReceipt(buy.id) },
                                         onSettleCash = { settlingBuy = buy },
+                                        parties = parties,
+                                        onOpenPartyKhata = onOpenPartyKhata,
                                         isEnglish = isEnglish
                                     )
                                 }
@@ -388,6 +407,8 @@ private fun KisaanParchiView(
                         farmerName = partyNamesById[buy.farmerId] ?: buy.farmerId,
                         onOpenReceipt = { onOpenReceipt(buy.id) },
                         onSettleCash = { settlingBuy = buy },
+                        parties = parties,
+                        onOpenPartyKhata = onOpenPartyKhata,
                         isEnglish = isEnglish
                     )
                 }
@@ -420,6 +441,7 @@ private fun VyapariParchiView(
     gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
     onSettleSellSlipCash: ((sellId: String, amountPaisa: Long) -> Unit)? = null,
+    onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
 ) {
     var settlingSell by remember { mutableStateOf<SellEntry?>(null) }
@@ -470,6 +492,8 @@ private fun VyapariParchiView(
                             buyerName = g.party.name,
                             onOpenReceipt = { onOpenReceipt(sell.id) },
                             onSettleCash = if (onSettleSellSlipCash != null) { { settlingSell = sell } } else null,
+                            parties = parties,
+                            onOpenPartyKhata = onOpenPartyKhata,
                             isEnglish = isEnglish
                         )
                     }
@@ -486,6 +510,8 @@ private fun VyapariParchiView(
                                         buyerName = g.party.name,
                                         onOpenReceipt = { onOpenReceipt(sell.id) },
                                         onSettleCash = null,
+                                        parties = parties,
+                                        onOpenPartyKhata = onOpenPartyKhata,
                                         isEnglish = isEnglish
                                     )
                                 }
@@ -548,6 +574,8 @@ private fun VyapariParchiView(
                         buyerName = partyNamesById[sell.buyerId] ?: sell.buyerId,
                         onOpenReceipt = { onOpenReceipt(sell.id) },
                         onSettleCash = if (onSettleSellSlipCash != null) { { settlingSell = sell } } else null,
+                        parties = parties,
+                        onOpenPartyKhata = onOpenPartyKhata,
                         isEnglish = isEnglish
                     )
                 }
@@ -651,8 +679,11 @@ private fun KisaanSlipCard(
     farmerName: String,
     onOpenReceipt: () -> Unit,
     onSettleCash: (() -> Unit)? = null,
+    parties: List<Party> = emptyList(),
+    onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
 ) {
+    val party = remember(parties, buy.farmerId) { parties.find { it.id == buy.farmerId } }
     val displayFarmerName = if (buy.isKhaate) {
         if (isEnglish) "Khaate" else "खाते"
     } else {
@@ -698,7 +729,13 @@ private fun KisaanSlipCard(
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable(enabled = onOpenPartyKhata != null && party != null) {
+                                    party?.let { onOpenPartyKhata?.invoke(it) }
+                                }
+                                .padding(vertical = 2.dp, horizontal = 2.dp)
                         )
                         if (buy.isKhaate) {
                             com.appwork.mandisamiti.ui.khaate.KhaateChip(isEnglish = isEnglish)
@@ -818,8 +855,11 @@ private fun VyapariSlipCard(
     buyerName: String,
     onOpenReceipt: () -> Unit,
     onSettleCash: (() -> Unit)? = null,
+    parties: List<Party> = emptyList(),
+    onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
 ) {
+    val party = remember(parties, sell.buyerId) { parties.find { it.id == sell.buyerId } }
     val isFullyReceived = sell.receivedPaisa >= sell.totalReceivablePaisa
     val remainingPaisa = (sell.totalReceivablePaisa - sell.receivedPaisa).coerceAtLeast(0L)
     val remainingRupees = remainingPaisa / 100
@@ -867,7 +907,13 @@ private fun VyapariSlipCard(
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable(enabled = onOpenPartyKhata != null && party != null) {
+                                    party?.let { onOpenPartyKhata?.invoke(it) }
+                                }
+                                .padding(vertical = 2.dp, horizontal = 2.dp)
                         )
                         if (sell.isKhaate) {
                             com.appwork.mandisamiti.ui.khaate.KhaateChip(isEnglish = isEnglish)

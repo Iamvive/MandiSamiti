@@ -105,6 +105,10 @@ internal fun sellDepositPaisa(cash: List<com.appwork.mandisamiti.domain.model.Ca
     cash.filter { !it.isVoid && it.transactionType == com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED && it.lendId == null }
         .sumOf { it.amountPaisa }
 
+/** Navigation helper to construct Screen.PartyLedger with the correct return target. */
+internal fun partyKhataScreen(partyId: String, returnScreen: Screen = Screen.Home): Screen.PartyLedger =
+    Screen.PartyLedger(partyId, returnScreen)
+
 fun Screen.backTarget(): Screen = when (this) {
     is Screen.BuyEntry -> Screen.BuyList
     is Screen.BuyPayment -> Screen.BuyReceipt(entryId, returnScreen)
@@ -315,7 +319,7 @@ fun App(
                         currentScreen = Screen.BuyEntry(null)
                     },
                     onNavigateToPartyKhata = { party ->
-                        currentScreen = Screen.PartyLedger(party.id, returnScreen = Screen.Home)
+                        currentScreen = partyKhataScreen(party.id, returnScreen = Screen.Home)
                     },
                     onNavigateToDayClosing = {
                         currentScreen = Screen.DailyRegister
@@ -1032,7 +1036,10 @@ fun App(
                     viewModel = personViewModel,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onBack = { currentScreen = screen.backTarget() },
-                    onRepaymentSaved = { syncScheduler.scheduleOneTimeSync() }
+                    onRepaymentSaved = { syncScheduler.scheduleOneTimeSync() },
+                    onOpenKhata = { party ->
+                        currentScreen = partyKhataScreen(party.id, returnScreen = screen)
+                    }
                 )
             }
             is Screen.ExpenseEntry -> {

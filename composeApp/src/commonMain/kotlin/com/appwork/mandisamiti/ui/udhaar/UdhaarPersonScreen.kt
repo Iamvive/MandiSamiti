@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
@@ -71,8 +72,10 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendKind
 import com.appwork.mandisamiti.domain.model.LendSettlement
+import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.usecase.UdhaarOverpaymentException
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.MandiOutlinedButton
 import com.appwork.mandisamiti.ui.ledger.EditRepaymentDialog
 import com.appwork.mandisamiti.ui.ledger.RepaymentHistoryDialog
 import com.appwork.mandisamiti.ui.ledger.formatEpochDate
@@ -98,6 +101,7 @@ fun UdhaarPersonScreen(
     isEnglish: Boolean,
     onBack: () -> Unit,
     onRepaymentSaved: () -> Unit = {},
+    onOpenKhata: (Party) -> Unit = {},
 ) {
     MandiBackHandler(enabled = true) { onBack() }
 
@@ -178,6 +182,26 @@ fun UdhaarPersonScreen(
                         village = state.village,
                         phone = state.phone,
                         isEnglish = isEnglish
+                    )
+                }
+
+                // View Khata button
+                item(key = "khata_button") {
+                    var lastClickMs by remember { mutableStateOf(0L) }
+                    MandiOutlinedButton(
+                        text = if (isEnglish) "View Khata" else "खाता देखें",
+                        onClick = {
+                            val p = state.party
+                            if (p != null) {
+                                val now = Clock.System.now().toEpochMilliseconds()
+                                if (now - lastClickMs > 800L) {
+                                    lastClickMs = now
+                                    onOpenKhata(p)
+                                }
+                            }
+                        },
+                        leadingIcon = Icons.AutoMirrored.Filled.MenuBook,
+                        fullWidth = true
                     )
                 }
 

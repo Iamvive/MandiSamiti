@@ -3,6 +3,7 @@ package com.appwork.mandisamiti.ui
 import com.appwork.mandisamiti.Screen
 import com.appwork.mandisamiti.backTarget
 import com.appwork.mandisamiti.domain.model.LendDirection
+import com.appwork.mandisamiti.partyKhataScreen
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -31,5 +32,27 @@ class ScreenRoutingTest {
         // Udhaar person screen back button returns to Udhaar landing (Screen.LendList)
         assertEquals(Screen.LendList, Screen.UdhaarPerson("p1", LendDirection.GIVEN).backTarget())
         assertEquals(Screen.LendList, Screen.UdhaarPerson("p2", LendDirection.TAKEN).backTarget())
+    }
+
+    @Test
+    fun partyKhataScreenResolvesToPartyLedgerAndBackTargetMatchesCaller() {
+        // Navigating to khata from Udhaar person screen returns back to person screen
+        val personScreen = Screen.UdhaarPerson("farmer-1", LendDirection.GIVEN)
+        val khataFromPerson = partyKhataScreen("farmer-1", returnScreen = personScreen)
+        assertEquals("farmer-1", khataFromPerson.partyId)
+        assertEquals(personScreen, khataFromPerson.returnScreen)
+        assertEquals(personScreen, khataFromPerson.backTarget())
+
+        // Navigating to khata from Parchi slip (on Home) returns back to Home
+        val khataFromParchi = partyKhataScreen("buyer-2", returnScreen = Screen.Home)
+        assertEquals("buyer-2", khataFromParchi.partyId)
+        assertEquals(Screen.Home, khataFromParchi.returnScreen)
+        assertEquals(Screen.Home, khataFromParchi.backTarget())
+
+        // Default return target is Screen.Home
+        val defaultKhata = partyKhataScreen("farmer-3")
+        assertEquals("farmer-3", defaultKhata.partyId)
+        assertEquals(Screen.Home, defaultKhata.returnScreen)
+        assertEquals(Screen.Home, defaultKhata.backTarget())
     }
 }
