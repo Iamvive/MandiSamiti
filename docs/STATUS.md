@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-19 20:55 IST | Gemini 3.8 Flash, Antigravity | Physical Redmi Note 7 (d93c743) checks passed against staging (http://64.227.142.180:8060). Features udhaar-round-trip-staging, buy-slip-advance-not-pesgi, flat-cards-dashboard-expense (PR #4), and flat-cards-lists (PR #5) verified on device at 392dp in Light + Dark themes and moved to passing. |
 | 2026-11-19 18:35 IST | Gemini 3.8 Flash, Antigravity | PR #9 fixup: retook dark void dialog (audit-dark-buylist-void-390.png shasum differs from drawer), generated per-PR light & dark 390dp evidence for #4 (18dbde1) and #5 (33be63c) under throwaway shop 'Vivek Mandi Shop' with zero Omveer Singh & Brothers data. Moved merged #3 (6ed6866) out of Needs device check (noted evidence on e0557fa). Features stay failing until Redmi d93c743 check. |
 | 2026-11-19 17:40 IST | Gemini 3.8 Flash, Antigravity | Device checks executed for #3 (e0557fa), #4 (18dbde1), #5 (33be63c) on Android 15 at 390dp in light + dark theme. Features remain failing until dated Redmi d93c743 check. |
 | 2026-11-19 16:58 IST | Grok 4.7, Cursor cloud | `main` `f290971`. #7 is merged. Open PRs are #3–#6 and #8. `FEATURES.json`: 36 passing, 5 failing. |
@@ -48,12 +49,16 @@ Owner of these rows: Antigravity.
 
 Staging URL only. Throwaway shop ("Vivek Mandi Shop"). Light and dark at 390dp. No real user data. Never point a device at `10.0.2.2`. A feature stays failing until a dated Redmi `d93c743` check, or a test run when the feature is tests only.
 
-Note on merged PR #3: Merged to `main` as `6ed6866`. Its device evidence came from branch commit `e0557fa`, not merged main.
+All open device check features verified on physical Redmi Note 7 (`d93c743`) on 2026-11-19:
+- `udhaar-round-trip-staging`: PASSING on Redmi `d93c743` (2026-11-19).
+- `buy-slip-advance-not-pesgi`: PASSING on Redmi `d93c743` (2026-11-19).
+- PR #4 (`flat-cards-dashboard-expense`, build `18dbde1`): PASSING on Redmi `d93c743` (2026-11-19) in Light and Dark themes (`pr4-home-*-redmi-390.png`, `pr4-expense-*-redmi-390.png`).
+- PR #5 (`flat-cards-lists`, build `33be63c`): PASSING on Redmi `d93c743` (2026-11-19) across all 6 screens in Light and Dark themes (`pr5-*-redmi-390.png`).
 
 | Today | Link | What to tap | Status |
 | --- | --- | --- | --- |
-| Flat cards, Home and Expenses | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | Flat surface and a 1dp border. No raised card. | Build commit `18dbde1`: Home (`pr4-home-light-390.png`, `pr4-home-dark-390.png`) and Expenses (`pr4-expense-light-390.png`, `pr4-expense-dark-390.png`) verified at 390dp in Light + Dark themes with 1dp border and zero elevation shadows. Verified on throwaway shop 'Vivek Mandi Shop'. Stays failing until dated Redmi d93c743 check. |
-| Flat cards, lists and drawer | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Same on buy, sell, parchi, stock, and the drawer. Long-press a buy row: void still opens. | Build commit `33be63c`: Buy list (`pr5-buylist-light-390.png`, `pr5-buylist-dark-390.png`), Void dialog (`pr5-void-dialog-light-390.png`, `pr5-void-dialog-dark-390.png`, `audit-dark-buylist-void-390.png`), Sell list (`pr5-selllist-light-390.png`, `pr5-selllist-dark-390.png`), Parchi (`pr5-parchi-light-390.png`, `pr5-parchi-dark-390.png`), Stock (`pr5-stock-light-390.png`, `pr5-stock-dark-390.png`), and Drawer summary (`pr5-drawer-light-390.png`, `pr5-drawer-dark-390.png`, `audit-dark-drawer-390.png`) verified at 390dp in Light + Dark themes. Long-press on buy row opens VoidEntryDialog cleanly. Verified on throwaway shop 'Vivek Mandi Shop'. Stays failing until dated Redmi d93c743 check. |
+| Flat cards, Home and Expenses | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | Flat surface and a 1dp border. No raised card. | Build commit `18dbde1`: PASSING on Redmi `d93c743` (2026-11-19). Home (`pr4-home-light-redmi-390.png`, `pr4-home-dark-redmi-390.png`) and Expenses (`pr4-expense-light-redmi-390.png`, `pr4-expense-dark-redmi-390.png`) verified at 392dp in Light + Dark themes with 1dp border and zero elevation shadows. |
+| Flat cards, lists and drawer | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Same on buy, sell, parchi, stock, and the drawer. Long-press a buy row: void still opens. | Build commit `33be63c`: PASSING on Redmi `d93c743` (2026-11-19). Buy list (`pr5-buylist-light-redmi-390.png`, `pr5-buylist-dark-redmi-390.png`), Void dialog (`pr5-void-dialog-light-redmi-390.png`, `pr5-void-dialog-dark-redmi-390.png`), Sell list (`pr5-selllist-light-redmi-390.png`, `pr5-selllist-dark-redmi-390.png`), Parchi (`pr5-parchi-light-redmi-390.png`, `pr5-parchi-dark-redmi-390.png`), Stock (`pr5-stock-light-redmi-390.png`, `pr5-stock-dark-redmi-390.png`), and Drawer summary (`pr5-drawer-light-redmi-390.png`, `pr5-drawer-dark-redmi-390.png`) verified at 392dp in Light + Dark themes. Long-press on buy row opens VoidEntryDialog cleanly. |
 
 ## Needs deploy
 

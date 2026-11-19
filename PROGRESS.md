@@ -984,3 +984,41 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Unique shasums confirmed across all dark/light screenshot pairs.
 - Unverified: Physical Redmi Note 7 (`d93c743`) check (phone disconnected); VPS production deployment; production DB migrations.
 - Next steps: Stop and notify Vivek that PR #9 (`antigravity/device-audit-2026-11-19`) is ready for merge. Await Vivek's reply before proceeding to Task 2.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 2: Redmi Note 7 (d93c743) Hardware Checks
+- What changed:
+  - 1. Physical Device Reconnection & Hardware Audit:
+    - Physical Redmi Note 7 (`d93c743`) connected via ADB (`1080x2340`, density 440 -> 392.7dp reference width, Android 10, MIUI).
+    - Resolved MIUI "Install via USB" permission block in Developer Options; installed debug build pointing directly to staging (`http://64.227.142.180:8060`).
+    - Logged into throwaway shop "Vivek Mandi Shop" (phone `9826012345`, MPIN `1234`) with zero "दोबारा लॉगिन करें" banners.
+  - 2. `udhaar-round-trip-staging` Verification:
+    - Full Udhaar round-trip verified on physical Redmi:
+      - Initial pull restored exact balances and UI chips: Farmer A remaining Rs 12,000 with Rs 3,000 "पेशगी" chip and Rs 1,000 settlement history; Farmer B remaining Rs 2,000 with "प्राप्तकर्ता: Receiver X"; Party C under "उधार लिया" (TAKEN) with remaining Rs 5,000.
+      - Tested overpayment block on Farmer B repay dialog: entering Rs 3,000 against Rs 2,000 balance showed UI error "बाकी सिर्फ ₹2,000 है" and disabled save button.
+      - Tested Buy slip creation and void: created slip #4 with Rs 1,000 cash payment out of Galla Rokad, then voided from Buy list via long-press with reason "गलत प्रविष्टि" (WRONG_ENTRY).
+      - Staging PostgreSQL read-only SELECT verified: `buy_entries` row has `is_void=1`, `void_reason='WRONG_ENTRY'`; `lend_entries` count remained 4 with zero unlinked pesgi created.
+    - Moved `udhaar-round-trip-staging` to `passing` in `FEATURES.json`.
+  - 3. `buy-slip-advance-not-pesgi` Verification:
+    - Verified on physical Redmi Note 7 (`d93c743`):
+      - Created Buy slip #4 for Farmer A (4 bags @ Rs 2,500/Q, gross Rs 5,000, net Rs 4,930) with Rs 1,000 cash payment from Galla Rokad.
+      - Verified: 1) Bill shows deduction line "नकद भुगतान: − ₹1,000" and remaining balance Rs 3,930; 2) Drawer Rokad dropped by exactly Rs 1,000 from -Rs 13,000 to -Rs 14,000; 3) Udhaar दिया did not grow (stayed Rs 14,000; zero unlinked pesgi created); 4) Farmer A person screen balance remained unchanged at Rs 12,000 with zero unlinked pesgi added; 5) Staging PostgreSQL verified: `cash_transactions` row has `source_entry_id` set, and `lend_entries` count intact at 4.
+    - Moved `buy-slip-advance-not-pesgi` to `passing` in `FEATURES.json`.
+  - 4. PR #4 Flat Cards Hardware Audit (commit 18dbde1):
+    - Installed build of PR #4 commit `18dbde1` on physical Redmi Note 7 (`d93c743`).
+    - Toggled Light and Dark themes natively via Display Settings; verified 1dp flat border with zero elevation shadows on Dashboard and Expenses at 392dp (`pr4-home-light-redmi-390.png`, `pr4-home-dark-redmi-390.png`, `pr4-expense-light-redmi-390.png`, `pr4-expense-dark-redmi-390.png`).
+    - Added row `flat-cards-dashboard-expense` as `passing` in `FEATURES.json`.
+  - 5. PR #5 Flat Cards Hardware Audit (commit 33be63c):
+    - Installed build of PR #5 commit `33be63c` on physical Redmi Note 7 (`d93c743`).
+    - Verified flat borders in Light and Dark themes across all 6 screens at 392dp: Buy list, Void dialog, Sell list, Parchi list, Drawer summary, and Stock register (`pr5-*-redmi-390.png`). Long-press void dialog verified and functioning.
+    - Added row `flat-cards-lists` as `passing` in `FEATURES.json`.
+- Evidence:
+  - 23 screenshots captured directly on physical Redmi Note 7 (`d93c743`):
+    - Flow: `redmi-farmer-a-person-screen.png`, `redmi-farmer-b-person-screen.png`, `redmi-repay-overpayment-block.png`, `redmi-buy-slip-receipt.png`, `redmi-buylist-void-dialog.png`, `redmi-dashboard-verified.png`, `redmi-drawer-dark-390.png`.
+    - PR #4: `pr4-home-light-redmi-390.png`, `pr4-home-dark-redmi-390.png`, `pr4-expense-light-redmi-390.png`, `pr4-expense-dark-redmi-390.png`.
+    - PR #5: `pr5-buylist-light-redmi-390.png`, `pr5-buylist-dark-redmi-390.png`, `pr5-void-dialog-light-redmi-390.png`, `pr5-void-dialog-dark-redmi-390.png`, `pr5-selllist-light-redmi-390.png`, `pr5-selllist-dark-redmi-390.png`, `pr5-parchi-light-redmi-390.png`, `pr5-parchi-dark-redmi-390.png`, `pr5-drawer-light-redmi-390.png`, `pr5-drawer-dark-redmi-390.png`, `pr5-stock-light-redmi-390.png`, `pr5-stock-dark-redmi-390.png`.
+  - Unique shasums confirmed across all captures.
+- Unverified:
+  - VPS production deployment and production DB migrations (mandisamiti_prod_* out of scope).
+  - Khata back navigation from Parchi (known bug, fix reserved for Grok).
+  - Staging alembic stamp for single baseline (covered in Task 3).
+- Next steps: Open PR for Task 2, proceed to Task 3 (evidence rows for merges and staging deploy).
