@@ -13,7 +13,7 @@ import kotlinx.datetime.toLocalDateTime
 
 const val MAX_UDHAAR_RUPEES = 99_999_999L
 
-fun isSameOrPastDay(
+internal fun isSameOrPastDay(
     dateMs: Long,
     todayMs: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),

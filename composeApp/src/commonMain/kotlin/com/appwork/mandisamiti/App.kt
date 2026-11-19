@@ -7,8 +7,6 @@ import com.appwork.mandisamiti.ui.sell.SellEntryScreen
 import com.appwork.mandisamiti.ui.sell.SellTransactionsListScreen
 import com.appwork.mandisamiti.ui.sell.SellTransactionReceiptScreen
 import com.appwork.mandisamiti.ui.lend.LendEntryScreen
-import com.appwork.mandisamiti.ui.lend.LoanAdvanceEntryScreen
-import com.appwork.mandisamiti.ui.lend.LendTransactionsListScreen
 import com.appwork.mandisamiti.ui.expense.ExpenseEntryScreen
 import com.appwork.mandisamiti.ui.expense.labelHi
 import com.appwork.mandisamiti.ui.stock.StockBreakdownSheet
@@ -93,8 +91,7 @@ sealed interface Screen {
     data class SellEntry(val existingId: String? = null) : Screen
     data object SellList : Screen
     data class SellReceipt(val id: String, val returnScreen: Screen? = null) : Screen
-    data object LendEntry : Screen
-    data class GrainLendEntry(val returnScreen: Screen = Screen.LendEntry) : Screen
+    data class GrainLendEntry(val returnScreen: Screen = Screen.LendList) : Screen
     data object LendList : Screen
     data class UdhaarPerson(val partyId: String, val direction: LendDirection) : Screen
     data class ExpenseEntry(val existingId: String? = null) : Screen
@@ -116,7 +113,6 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.SellEntry -> Screen.SellList
     is Screen.SellReceipt -> returnScreen ?: Screen.SellList
     is Screen.SellList -> Screen.Home
-    is Screen.LendEntry -> Screen.LendList
     is Screen.GrainLendEntry -> returnScreen
     is Screen.LendList -> Screen.Home
     is Screen.UdhaarPerson -> Screen.LendList
@@ -329,7 +325,7 @@ fun App(
                     },
                     onNavigateToBuy = { currentScreen = Screen.BuyEntry(null) },
                     onNavigateToSell = { currentScreen = Screen.SellEntry(null) },
-                    onNavigateToLend = { currentScreen = Screen.LendEntry },
+                    onNavigateToLend = { currentScreen = Screen.LendList },
                     onNavigateToExpense = { currentScreen = Screen.ExpenseEntry() },
                     onNavigateToBuyList = { currentScreen = Screen.BuyList },
                     onNavigateToSellList = { currentScreen = Screen.SellList },
@@ -981,52 +977,6 @@ fun App(
                         }
                     },
                     onEdit = { currentScreen = Screen.SellEntry(it) },
-                    onBack = { currentScreen = screen.backTarget() }
-                )
-            }
-            is Screen.LendEntry -> {
-                val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
-                LoanAdvanceEntryScreen(
-                    shopId = shopId ?: "",
-                    parties = parties,
-                    lendRepository = lendRepo,
-                    isEnglish = tradeSettings?.isEnglish ?: false,
-                    onLoanGiven = { entry, party ->
-                        coroutineScope.launch {
-                            if (party != null) {
-                                partyRepo.saveParty(party)
-                            }
-                            lendRepo.saveLendEntry(entry)
-                            if (entry.lendType == com.appwork.mandisamiti.domain.model.LendType.MONEY && entry.amountPaisa > 0L) {
-                                val noteText = entry.notes?.trim()
-                                val rem = if (noteText.isNullOrBlank()) "उधार ऋण" else "उधार ऋण: $noteText"
-                                cashRepo.recordTransaction(
-                                    com.appwork.mandisamiti.domain.model.CashTransaction(
-                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                        shopId = shopId ?: "",
-                                        partyId = entry.partyId,
-                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                        amountPaisa = entry.amountPaisa,
-                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                        transactionDate = entry.entryDate,
-                                        remarks = "$rem [LEND:${entry.id}]",
-                                        createdAt = entry.createdAt,
-                                        updatedAt = entry.updatedAt,
-                                    )
-                                )
-                            }
-                            syncScheduler.scheduleOneTimeSync()
-                            currentScreen = Screen.LendList
-                        }
-                    },
-                    onLoanReceived = { transaction, party ->
-                        coroutineScope.launch {
-                            if (party != null) partyRepo.saveParty(party)
-                            cashRepo.recordTransaction(transaction)
-                            syncScheduler.scheduleOneTimeSync()
-                            currentScreen = Screen.Home
-                        }
-                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }

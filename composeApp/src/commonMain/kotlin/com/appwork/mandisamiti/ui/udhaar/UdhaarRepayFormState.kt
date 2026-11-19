@@ -11,7 +11,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 
-fun isSameOrAfterDay(
+internal fun isSameOrAfterDay(
     dateMs: Long,
     minDateMs: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
@@ -21,7 +21,7 @@ fun isSameOrAfterDay(
     return pickedDate >= minDate
 }
 
-fun normalisePickerDate(
+internal fun normalisePickerDate(
     utcMillis: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Long {
@@ -29,7 +29,7 @@ fun normalisePickerDate(
     return date.atStartOfDayIn(timeZone).toEpochMilliseconds()
 }
 
-fun localInstantToPickerUtc(
+internal fun localInstantToPickerUtc(
     instantMs: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Long {
@@ -37,7 +37,7 @@ fun localInstantToPickerUtc(
     return localDate.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
 }
 
-fun isSameDay(
+internal fun isSameDay(
     dateMs: Long,
     otherMs: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
