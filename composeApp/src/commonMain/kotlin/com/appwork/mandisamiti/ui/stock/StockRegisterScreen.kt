@@ -456,7 +456,6 @@ private fun GodownHeroCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         border = BorderStroke(1.dp, MandiBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -613,7 +612,6 @@ private fun GodownCommodityLedgerCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         border = BorderStroke(1.dp, if (isNegative) MandiRedBorder else MandiBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -1371,7 +1369,6 @@ private fun StockEmptyState(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         border = BorderStroke(1.dp, MandiBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier

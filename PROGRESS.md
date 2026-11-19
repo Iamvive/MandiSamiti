@@ -868,3 +868,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified: light, dark, and 390dp on a device. Feature `flat-cards-dashboard-expense` stays failing.
 - Left in place: `DashboardRevampComponents.kt` still hardcodes elevation. Nothing in the app calls those composables.
 - Next: the same flat card on Buy, Sell, Parchi, Stock, and the drawer summary.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (flat cards on lists and the drawer)
+- What changed: Buy, Sell, Parchi, Stock, the stock breakdown sheet, and the drawer summary no longer set a hardcoded card elevation. Cards that had no border now use `MandiSurface` and a 1dp `MandiBorder`, the same flat card as `MandiCard`. Long-press on a buy or sell row is unchanged. A negative stock line keeps its red container.
+- Evidence: JVM XML before and after: core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures (725).
+- Unverified: light, dark, and 390dp on a device. Feature `flat-cards-lists` stays failing.
+- Left in place: billing cards, the party search dropdown (it needs a raised menu), and `DashboardRevampComponents.kt` (nothing calls it).
+- Next: squash Alembic 0001 to 0008 into one baseline. Staging still needs a stamp on the next deploy. Do not touch the VPS in this change.

@@ -264,6 +264,12 @@
       "description": "Home and expense list cards use the flat MandiCard (border, no hardcoded elevation)",
       "status": "failing",
       "evidence": "2026-11-19 Grok 4.7: DashboardScreen and ExpenseListScreen no longer pass defaultElevation; they use MandiCard. JVM XML unchanged at core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures. tests/ngdl-tokens is not in the repo. Unverified: needs device check in light, dark, and 390dp. DashboardRevampComponents.kt still has hardcoded elevation and is left in place because nothing calls it."
+    },
+    {
+      "id": "flat-cards-lists",
+      "description": "Buy, sell, parchi, stock, and drawer cards use a flat border instead of hardcoded elevation",
+      "status": "failing",
+      "evidence": "2026-11-19 Grok 4.7: defaultElevation removed from BuyTransactionsListScreen, SellTransactionsListScreen, ParchiListScreen, StockRegisterScreen, StockBreakdownSheet, and DrawerSummaryCard. Long-press on buy and sell cards is unchanged. JVM XML: core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures (725 before and after). Unverified: needs device check in light, dark, and 390dp. Billing cards, the party autocomplete dropdown, and unused DashboardRevampComponents stay as they are."
     }
   ]
 }
