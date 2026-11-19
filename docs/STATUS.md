@@ -6,7 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
-| 2026-11-19 16:58 IST | Grok 4.7, Cursor cloud | `main` `f290971`. #7 is merged. Open PRs are #3–#6. `FEATURES.json`: 36 passing, 5 failing. |
+| 2026-11-19 16:58 IST | Grok 4.7, Cursor cloud | `main` `f290971`. #7 is merged. Open PRs are #3–#6 and #8. `FEATURES.json`: 36 passing, 5 failing. |
 
 ## In flight
 
@@ -18,6 +18,7 @@ Owner of these rows: Cursor cloud.
 | `cursor/flat-cards-dashboard-expense-4465` | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | Cursor cloud | Home and Expenses use flat `MandiCard`. No review yet. |
 | `cursor/flat-cards-lists-4465` | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Cursor cloud | Lists and the drawer use a flat border. Long-press void kept. No review yet. |
 | `cursor/alembic-baseline-4465` | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | Cursor cloud | `0002`–`0008` folded into `0001_baseline`. Backend tests green. Needs a stamp on the next deploy. |
+| `cursor/status-board-pr7-merged-45f5` | [#8](https://github.com/Iamvive/MandiSamiti/pull/8) | Cursor cloud | Marks #7 merged and leaves #3–#6 as the open pulls. Docs only. |
 
 ## Waiting on Vivek
 
@@ -37,6 +38,7 @@ Owner of these rows: Claude. No review on any open PR.
 | Flat cards, Home and Expenses | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | `MandiCard` only. No new shadow token. |
 | Flat cards, lists and drawer | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Border replaces elevation. Long-press void still opens. |
 | Alembic baseline | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | Empty database reaches today's schema. Existing databases need the stamp above. |
+| Status board after the merge | [#8](https://github.com/Iamvive/MandiSamiti/pull/8) | Confirms #7 is on `main` and #3–#6 are still open. Docs only. |
 
 ## Needs device check
 
@@ -100,11 +102,11 @@ Each agent owns only their block.
 
 ### Cursor cloud (Grok 4.7)
 
-Done: The status board is on `main` as #7 (`f290971`). PRs #3, #4, #5, and #6 are still open. Next: Phase 0, in a new PR. Do not deploy or print secret values. Verify: #7 is merged, #3–#6 are open, and `FEATURES.json` on `main` is still 36 passing and 5 failing. The new feature rows exist only on #3–#6.
+Done: The status board is on `main` as #7 (`f290971`). This correction is #8. PRs #3, #4, #5, and #6 are still open. Next: Phase 0, in a new PR, after #8. Do not deploy or print secret values. Verify: #7 is merged, #3–#6 and #8 are open, and `FEATURES.json` on `main` is still 36 passing and 5 failing. The new feature rows exist only on #3–#6.
 
 ### Claude
 
-Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. Next: review #3, #4, #5, and #6. Leave the VPS alone. Verify: read those diffs. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
+Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. Next: review #3, #4, #5, #6, and #8. Leave the VPS alone. Verify: read those diffs. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
 
 ### Codex
 
