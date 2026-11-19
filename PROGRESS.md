@@ -844,3 +844,46 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Code check for the README note (read-only, no test run): two-stage deal status is in `Deal.kt`; farmer commission default is 0.70% and buyer commission default is 1.50%, not a fixed 2%; mandi shulk on a bill of supply is 1.50%; hammali is slip labour (default Rs 10 per bag) plus an expense category; rural interest is simple, default 2% per month; daily cash register, WhatsApp share, and Hindi voice are present. That note is marked inferred, not owner-confirmed.
 - `FEATURES.json` unchanged (33 passing, 5 failing). `hot.md` not updated. `./init.sh` run with `SKIP_TESTS=1` because this session does not change app code. Gradle tests not run.
 - Next: session 2, Core Flows. Do not treat the inferred code note as a product decision.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 16: Staging Reset Retest & Task 14 Gaps (no deploy, no push, no code changes)
+- What ran:
+  - Task 16 Udhaar round-trip retest executed on the rebuilt staging server (`http://64.227.142.180:8060`, PostgreSQL 16 on migration `0008_udhaar_fields`).
+  - Reset emulator (`adb uninstall com.appwork.mandisamiti`), reinstalled debug APK, performed fresh UI signup (`9826012345`, "Vivek Mandi Shop", Mathura). First sync completed with `Worker result SUCCESS`.
+  - Created round-trip dataset strictly through app UI (zero SQLite or direct DB mutations):
+    1. Loan GIVEN Rs 10,000 to Farmer A (`9876543210`).
+    2. Pesgi GIVEN Rs 3,000 to Farmer A via "उधार / पेशगी" segmented toggle.
+    3. Loan GIVEN Rs 2,000 to Farmer B (`9876543211`) with receiver switch ON, Receiver Name "Receiver X", Receiver Phone `9876543299`.
+    4. Loan TAKEN Rs 5,000 from Party C (`9876543212`).
+    5. Repayment of Rs 1,000 recorded against Farmer A's Rs 10,000 loan via Person Screen FAB ("पैसे मिले").
+  - Triggered sync from Settings ("अभी बैकअप लें"). Confirmed in logcat `MandiSyncWorker` SUCCESS.
+  - Read-only SELECT on staging DB (`mandisamiti_staging_db`) confirmed:
+    - `lend_entries`: 4 rows (Rs 10,000 GIVEN LOAN; Rs 3,000 GIVEN PESGI; Rs 2,000 GIVEN LOAN with receiver name/phone; Rs 5,000 TAKEN LOAN).
+    - `lend_settlements`: 1 row (Rs 1,000, `is_void = 0`).
+    - `cash_transactions`: 5 rows (3 `UDHAR_GIVEN`, 2 `JAMA_RECEIVED`, all with `lend_id` set).
+    - `parties`: 3 rows.
+  - Wipe and Pull Proof:
+    - Uninstalled app from emulator, reinstalled debug build, logged in with same test account.
+    - Verified initial pull succeeded: Farmer A balance Rs 12,000 with "पेशगी" chip on Rs 3,000 entry and Rs 1,000 repayment history; Farmer B showed "प्राप्तकर्ता: Receiver X"; Party C displayed under "उधार लिया" as TAKEN; Dashboard displayed Rokad `-₹9,000`, Udhaar `दिया: ₹14,000`, `लिया: ₹5,000`.
+  - Task 15 Walk Re-Run on Device:
+    - Created Buy slip #2 for Farmer A: 20 bags @ 50kg = 10.0 Q @ Rs 1,000/Q (Gross Rs 10,000, Net Rs 9,730). Cut Rs 5,000 loan, paid Rs 4,000 cash.
+    - Confirmed cut settled oldest loan 3.1 first (Rs 10,000 loan, created earlier than pesgi 3.2, sorted oldest-first by `UdhaarAllocator.allocate`).
+    - Verified overpayment block on Person Screen: attempting Rs 8,000 repayment against Rs 7,000 remaining balance immediately blocked with "बाकी सिर्फ ₹7,000 है".
+    - Voided Buy slip #2 from buy list (`BuyTransactionsListScreen`) with reason "गलत प्रविष्टि".
+    - Confirmed Farmer A balance returned from Rs 7,000 to Rs 12,000.
+    - Synced to staging; server read-only SELECT confirmed `buy_entries` slip #2 marked `is_void = 1`, `lend_settlements` Rs 5,000 cut marked `is_void = 1`, and associated cash transaction marked `is_void = 1`.
+  - Task 14 Gaps Live Device Audit:
+    - 7.1: Party with 0 slips and 0 udhaar: Not reachable from UI (Parchi list only displays parties with non-void slips, Udhaar list only displays parties with balance > 0, no general party directory exists).
+    - 7.2: Voided slip party name tap: Not reachable on Parchi list (voided slips are filtered out from ParchiListScreen by `buys.filter { !it.isVoid }`).
+    - 7.3: Back navigation from Khata opened via Parchi party name: Consistently lands on Home (`Screen.Home`), verified twice on live device (`returnScreen = Screen.Home`).
+    - 7.4: Double-tapping "खाता देखें" quickly: Opened exactly one Khata screen; pressing back once immediately returned to UdhaarPersonScreen (no duplicated backstack).
+    - 7.5: Unresolvable party khata: Not reachable (Parchi list click disabled when `party == null`; Udhaar person screen requires non-null state party).
+    - 7.6: English and Hindi button labels verified on live device by toggling language in Settings. Captured screenshots of "खाता देखें" (Hindi) vs "View Khata" (English).
+- Screenshots saved:
+  - `docs/testing/screenshots/udhaar/t16-person-pull-light-390.png`
+  - `docs/testing/screenshots/udhaar/t16-pesgi-chip-light-390.png`
+  - `docs/testing/screenshots/udhaar/t16-pesgi-chip-dark-390.png`
+  - `docs/testing/screenshots/udhaar/t16-buttons-hi-390.png`
+  - `docs/testing/screenshots/udhaar/t16-buttons-en-390.png`
+- Cleanup: No extra worktrees exist (`ms-repay-edit-wt` deleted/absent). Temporary scratch files removed.
+- Unverified: Physical Redmi Note 7 (`d93c743`) was detached during session; VPS production deployment and production DB migration unverified.
+- Next steps: User sign-off; connect Redmi Note 7 for physical device verification before release.
