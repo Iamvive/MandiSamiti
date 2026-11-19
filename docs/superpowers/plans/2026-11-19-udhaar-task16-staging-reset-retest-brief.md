@@ -13,7 +13,7 @@ Also close the Task 14 gaps from the Task 15 report: items that were read from c
 - Staging URL only (`http://64.227.142.180:8060`). Never `10.0.2.2`.
 - Never write or print the signup password/MPIN, tokens, or any key. Choose a throwaway test MPIN, keep it out of every file and the report.
 - Database access is **read-only**: `SELECT` over `ssh appworx-core-vps` into `mandisamiti_staging_db` is allowed. No `INSERT`, `UPDATE`, `DELETE`, no schema change, no touching `mandisamiti_prod_*`. All data is created through the app UI.
-- Do not push. Do not deploy. Do not change app or backend code unless a test fails because of a real bug; if so, stop and report it to Vivek before fixing.
+- Do not push (repo rule: never push to `main`; branch and pull request only, and only with Vivek's approval). Do not deploy. Do not change app or backend code unless a test fails because of a real bug; if so, stop and report it to Vivek before fixing.
 
 ## Do (in order)
 1. `git pull` in `projects/MandiSamiti`, confirm HEAD includes `e8b7259`. Check `curl http://64.227.142.180:8060/` readiness reports `db: ok, redis: ok`.
@@ -36,7 +36,7 @@ Also close the Task 14 gaps from the Task 15 report: items that were read from c
    6. Hindi and English labels on the new buttons: switch the language in Settings and screenshot both.
 8. Screenshots, saved as `docs/testing/screenshots/udhaar/t16-<screen>-<light|dark>-390.png`: the person screen showing the pesgi chip in light and dark, and the person screen after the pull. Delete any test-only screenshots, temp files and extra worktrees (including `ms-repay-edit-wt` if it still exists) when you finish.
 9. If the Redmi Note 7 (`d93c743`) is connected, repeat steps 2, 5 and 7.3 on it. If it is not connected, list it as unverified. Do not guess.
-10. Logging: a `PROGRESS.md` entry (runtime, what ran, concrete evidence, unverified list, next steps), a "Udhaar round trip on rebuilt staging" feature at the end of `FEATURES.json` with `passing` only for what steps 4 to 7 proved, and a vault `log.md` entry. Run `python3 scripts/vault_lint.py` from the repo root (0 errors). Commit the docs in the submodule as `docs(mandisamiti): task 16 staging round-trip retest`. Do not push.
+10. Logging: a `PROGRESS.md` entry (runtime, what ran, concrete evidence, unverified list, next steps), a "Udhaar round trip on rebuilt staging" feature at the end of `FEATURES.json` with `passing` only when a test run or a dated Redmi `d93c743` check proves it (repo rule in `CLAUDE.md`). Emulator-only results go in the evidence text, and the feature stays `failing` or is listed as unverified until the Redmi check is done. Add a vault `log.md` entry. Run `python3 scripts/vault_lint.py` from the repo root (0 errors). Commit the docs in the submodule as `docs(mandisamiti): task 16 staging round-trip retest`. Do not push.
 
 ## Out of scope
 - Backend deploy to production, the `mandisamiti-prod` stack, grain udhaar, a taken pesgi, pesgi on the buy slip, any change to the allocator.
