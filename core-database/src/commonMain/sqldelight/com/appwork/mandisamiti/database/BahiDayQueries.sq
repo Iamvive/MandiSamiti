@@ -25,6 +25,7 @@ SELECT lendSettlementEntity.* FROM lendSettlementEntity
 WHERE shop_id = :shopId AND settled_at >= :startMillis AND settled_at < :endMillis
 ORDER BY settled_at ASC;
 
+-- Slip अग्रिम is UDHAR_GIVEN cash with source_entry_id set. That row is slip money, not an unlinked pesgi.
 getUnlinkedFarmerAdvancesBefore:
 SELECT * FROM cashTransactionEntity
 WHERE shop_id = :shopId
@@ -34,6 +35,7 @@ WHERE shop_id = :shopId
   AND is_deleted = 0
   AND is_void = 0
   AND lend_id IS NULL
+  AND source_entry_id IS NULL
   AND (remarks IS NULL OR remarks NOT LIKE '%[BUY:%')
 ORDER BY transaction_date ASC;
 
