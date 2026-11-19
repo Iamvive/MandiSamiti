@@ -844,3 +844,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Code check for the README note (read-only, no test run): two-stage deal status is in `Deal.kt`; farmer commission default is 0.70% and buyer commission default is 1.50%, not a fixed 2%; mandi shulk on a bill of supply is 1.50%; hammali is slip labour (default Rs 10 per bag) plus an expense category; rural interest is simple, default 2% per month; daily cash register, WhatsApp share, and Hindi voice are present. That note is marked inferred, not owner-confirmed.
 - `FEATURES.json` unchanged (33 passing, 5 failing). `hot.md` not updated. `./init.sh` run with `SKIP_TESTS=1` because this session does not change app code. Gradle tests not run.
 - Next: session 2, Core Flows. Do not treat the inferred code note as a product decision.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (flat cards on Home and Expenses)
+- What changed: the live cards on `DashboardScreen` and `ExpenseListScreen` now use `MandiCard` (surface, 1dp border, no hardcoded elevation). No new shadow token.
+- Evidence: `defaultElevation` is gone from those two files. JVM XML before and after: core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures (725). `tests/ngdl-tokens` is not in the repo.
+- Unverified: light, dark, and 390dp on a device. Feature `flat-cards-dashboard-expense` stays failing.
+- Left in place: `DashboardRevampComponents.kt` still hardcodes elevation. Nothing in the app calls those composables.
+- Next: the same flat card on Buy, Sell, Parchi, Stock, and the drawer summary.

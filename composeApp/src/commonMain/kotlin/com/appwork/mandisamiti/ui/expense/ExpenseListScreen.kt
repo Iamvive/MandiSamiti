@@ -1,6 +1,5 @@
 package com.appwork.mandisamiti.ui.expense
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,8 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.ExpenseEntry
+import com.appwork.mandisamiti.ui.components.MandiCard
 
 /** Past expenses, newest first. Tap a row to edit it. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,12 +65,9 @@ fun ExpenseListScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(visible, key = { it.id }) { e ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable { onOpen(e.id) },
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    ) {
+                    MandiCard(onClick = { onOpen(e.id) }, padding = 16.dp, spacing = 0.dp) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
