@@ -845,6 +845,23 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - `FEATURES.json` unchanged (33 passing, 5 failing). `hot.md` not updated. `./init.sh` run with `SKIP_TESTS=1` because this session does not change app code. Gradle tests not run.
 - Next: session 2, Core Flows. Do not treat the inferred code note as a product decision.
 
+## 2026-11-19, Grok 4.7 (Cursor cloud) (one Alembic baseline)
+- What changed: revisions `0002` through `0008` are folded into `0001_baseline`. An empty database upgrades to the current schema and downgrades back to empty. Quota columns keep their server defaults (`50`, `0`, `0`, `FREE`). A lend row that omits direction and kind stores `GIVEN` and `LOAN`.
+- Evidence: backend pytest 140 passed before and 140 passed after. `test_alembic_upgrade_and_downgrade` matches `Base.metadata`. `test_baseline_udhaar_defaults_on_insert` checks the udhaar defaults. JVM tests were not re-run; this change does not touch Kotlin. Last JVM count on main: 725 (109, 12, 187, 417), 0 failures.
+- Unverified: staging `alembic_version` is still `0008_udhaar_fields`. The next deploy must `alembic stamp 0001_baseline` before `upgrade`. This change does not touch the VPS. Feature `alembic-single-baseline` stays failing until that stamp.
+- Next: Vivek approves merges. Claude reviews. Antigravity runs the device checks.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (buy-slip advance is not a pesgi)
+- What changed: `getUnlinkedFarmerAdvancesBefore` now requires `source_entry_id IS NULL`. A buy-slip अग्रिम is still `UDHAR_GIVEN` cash linked to the slip, so the bill line and the drawer movement stay. That row is no longer readable as an unlinked pesgi. No second create-pesgi path.
+- Evidence: `BuyCheckoutTest.slipAdvanceStaysOnTheBillAndOutOfPesgi`. XML counts before: core-domain 109, core-database 12, core-data 187, composeApp 417 (725, 0 failures). After: core-domain 109, core-database 12, core-data 188, composeApp 417 (726, 0 failures).
+- Unverified: device check of the buy-slip drawer flow, light theme, dark theme, 390dp. Feature `buy-slip-advance-not-pesgi` stays failing.
+- Next: flat cards on Dashboard and Expense, using `MandiCard`.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (shared status board)
+- What changed: Added `docs/STATUS.md` and a Shared status board rule at the top of `AGENTS.md`. `CLAUDE.md` and `GEMINI.md` follow it because they are symlinks. No `FEATURES.json` row. `hot.md` not updated.
+- Evidence: Board filled from `main` `e8b7259`, open PRs #3 #4 #5 #6, `PROGRESS.md`, `FEATURES.json` (36 passing, 5 failing), `docs/PRODUCT_SPEC.md`, and `AGENTS.md`. Docs only. Gradle tests not run.
+- Next: Agents read the board and take their queue. Vivek merges #3 to #6 and keeps every new `FEATURES.json` row and `PROGRESS.md` entry. After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade.
+
 ## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 16: Staging Reset Retest & Task 14 Gaps (no deploy, no push, no code changes)
 - What ran:
   - Task 16 Udhaar round-trip retest executed on the rebuilt staging server (`http://64.227.142.180:8060`, PostgreSQL 16 on migration `0008_udhaar_fields`).
@@ -888,27 +905,40 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified: Physical Redmi Note 7 (`d93c743`) was detached during session; VPS production deployment and production DB migration unverified.
 - Next steps: User sign-off; connect Redmi Note 7 for physical device verification before release.
 
-## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Buy Slip Advance (अग्रिम) & 7-Screen Card/Border Audit
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · PR Branch Device Audit (#3, #4, #5) & Dark Theme 7-Screen Card Audit at 390dp
 - What ran:
-  - 1. Buy Slip अग्रिम (Advance) Verification:
-    - Baseline before transaction: Galla Rokad ₹27,980, Udhaar दिया ₹76,133.33, Kisan Dev (`9876500015`) debt ₹13,000 (Rs 10k loan + Rs 3k pesgi).
-    - Entered Buy slip #7 for Kisan Dev: 10 bags @ 50kg (5.0 Q @ ₹1,000/Q) = Gross ₹5,000. Commission ₹30, Mazdoori ₹100 $\rightarrow$ Parchi net ₹4,870.
-    - Entered अग्रिम / पेशगी (Advance): ₹1,000. Final payable: ₹3,870. Completed checkout with ₹0 additional cash payment.
-    - Verification 1 (Bill): Bill / Receipt #7 displays deduction line `अग्रिम / पेशगी: − ₹1,000` (and `• नकद भुगतान · 19 Nov: − ₹1,000`).
-    - Verification 2 (Drawer Cash): Cash drawer dropped by exactly ₹1,000 from ₹27,980 to ₹26,980. Daily register (Galla Rokad) reflects outgoing cash withdrawal `Kisan Dev | −₹1,000`.
+  - 1. PR #3 (`cursor/buy-slip-advance-not-pesgi-4465`, commit `e0557fa`):
+    - Tested Buy-slip अग्रिम flow strictly on a fresh build of PR #3 (`./gradlew :composeApp:installDebug`).
+    - Entered Buy slip #8 for Kisan Dev: 10 bags @ 50kg (5.0 Q @ ₹1,000/Q) = Gross ₹5,000. Commission ₹30, Mazdoori ₹100 -> Parchi net ₹4,870.
+    - Entered अग्रिम / पेशगी (Advance): ₹1,000. Final payable: ₹3,870. Completed checkout with ₹0 additional cash.
+    - Verification 1 (Bill): Bill / Receipt displays deduction line `अग्रिम / पेशगी: − ₹1,000` (and `• नकद भुगतान · 19 Nov: − ₹1,000`).
+    - Verification 2 (Drawer Cash): Cash drawer dropped by exactly ₹1,000 from ₹26,980 to ₹25,980.
     - Verification 3 (Udhaar दिया): Udhaar दिया remained ₹76,133.33 (did NOT grow, zero `LendEntry` created).
     - Verification 4 (Person Screen): Kisan Dev person screen remained at ₹13,000 (Rs 3k pesgi + Rs 10k loan). Gained NO pesgi.
-  - 2. 7-Screen Design & Readability Audit (Cards, Borders, Text Clipping, Long-Press Void):
-    - Home (Dashboard): Rokad card, Date selector, Kisaan Deya / Vyapari Lene cards, Ab Tak cards readable, bordered (`MandiBorder`), zero clipped text.
-    - Expenses (`Screen.ExpenseList`): "पिछले खर्च" screen displays "Churma | ₹200" card with clear border and readable unclipped typography.
-    - Buy list (`Screen.BuyList`): "खरीद सौदे" screen displays slip cards (#7 Kisan Dev, #2 खाते, #1 Monty) with clean borders and readable text. Long-press on buy row #7 successfully opened `VoidEntryDialog` ("खरीद सौदा रद्द करें?").
-    - Sell list (`Screen.SellList`): "बिक्री बिल" screen displays bills (#3 खाते, #2 खाते, #1 Vivvek) with clean borders and readable text.
-    - Parchi (`Screen.ParchiList`): Both "किसान पर्ची" and "व्यापारी पर्ची" tabs display bordered summary tiles and slip cards with no clipped text.
-    - Stock (`Screen.StockRegister`): "गोदाम बहीखाता ● लाइव" displays bordered balance cards, sub-cards, and wheat commodity breakdown with no clipped text.
-    - Drawer summary (`Screen.DailyRegister`): "गल्ला रोकड़" displays bordered header cards and side-by-side ledger columns ("जमा पक्ष" and "नामे पक्ष") with clear borders and unclipped figures.
-  - 3. Device & Passing Rule:
+    - Screenshots: `docs/testing/screenshots/audit/pr3-buy-slip-receipt-advance.png`, `docs/testing/screenshots/audit/pr3-dashboard-verified.png`, `docs/testing/screenshots/audit/pr3-kisan-dev-person-screen.png`.
+  - 2. PR #4 (`cursor/flat-cards-dashboard-expense-4465`, commit `18dbde1`):
+    - Built and installed debug APK of PR #4.
+    - Audited flat cards on Home (Dashboard) and Expenses (`Screen.ExpenseList`): verified flat `MandiCard`, 1dp `MandiBorder`, no shadow/elevation, clean readable typography.
+    - Screenshots: `docs/testing/screenshots/audit/pr4-dashboard-light.png`, `docs/testing/screenshots/audit/pr4-expense-list-light.png`.
+  - 3. PR #5 (`cursor/flat-cards-lists-4465`, commit `33be63c`):
+    - Built and installed debug APK of PR #5.
+    - Audited flat cards on Lists (Buy list, Sell list, Parchi list, Stock) and Drawer summary (Daily register).
+    - Long-press on buy row in `BuyTransactionsListScreen` verified: `VoidEntryDialog` ("खरीद सौदा रद्द करें?") opens cleanly.
+    - Screenshots: `docs/testing/screenshots/audit/pr5-void-dialog.png`.
+  - 4. 7-Screen Card Audit in Dark Theme at 390dp:
+    - Emulator configured to 390dp reference width (`1080x2400` at density 443 -> `1080 / 2.76875 = 390.07dp`).
+    - Night mode enabled (`cmd uimode night yes`).
+    - All 7 screens inspected for card readability, 1dp borders, zero clipped text, and contrast:
+      1. Home (`Screen.Home`): `audit-dark-home-390.png`
+      2. Expenses (`Screen.ExpenseList`): `audit-dark-expense-390.png`
+      3. Buy list (`Screen.BuyList`): `audit-dark-buylist-390.png` (and `audit-dark-buylist-void-390.png`)
+      4. Sell list (`Screen.SellList`): `audit-dark-selllist-390.png`
+      5. Parchi (`Screen.ParchiList`): `audit-dark-parchi-390.png`
+      6. Stock (`Screen.StockRegister`): `audit-dark-stock-390.png`
+      7. Drawer summary (`Screen.DailyRegister`): `audit-dark-drawer-390.png`
+  - 5. Device & Passing Rule:
     - Physical Redmi Note 7 (`d93c743`) was detached.
     - Per repo rule (`CLAUDE.md`), emulator evidence is recorded but feature status in `FEATURES.json` remains `failing` until verified on physical Redmi Note 7 (`d93c743`).
 - Screenshots captured:
-  - `projects/MandiSamiti/docs/testing/screenshots/audit-home-390.png`
+  - `docs/testing/screenshots/audit/*`
 - Unverified: Physical Redmi Note 7 (`d93c743`), VPS production deployment, production database migration.
