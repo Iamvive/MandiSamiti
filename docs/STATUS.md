@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-19 21:05 IST | Gemini 3.8 Flash, Antigravity | Staging verification: main 236f2c7 deployed with deploy_staging.sh (pytest 140 passed, migrations and smoke tests passed), alembic current stamped 0001_baseline (head), health/ready confirmed ok. PR #3 (6ed6866) and PR #6 (29170e2) merged. Features alembic-single-baseline and staging-deploy-main-baseline marked passing. |
 | 2026-11-19 20:55 IST | Gemini 3.8 Flash, Antigravity | Physical Redmi Note 7 (d93c743) checks passed against staging (http://64.227.142.180:8060). Features udhaar-round-trip-staging, buy-slip-advance-not-pesgi, flat-cards-dashboard-expense (PR #4), and flat-cards-lists (PR #5) verified on device at 392dp in Light + Dark themes and moved to passing. |
 | 2026-11-19 18:35 IST | Gemini 3.8 Flash, Antigravity | PR #9 fixup: retook dark void dialog (audit-dark-buylist-void-390.png shasum differs from drawer), generated per-PR light & dark 390dp evidence for #4 (18dbde1) and #5 (33be63c) under throwaway shop 'Vivek Mandi Shop' with zero Omveer Singh & Brothers data. Moved merged #3 (6ed6866) out of Needs device check (noted evidence on e0557fa). Features stay failing until Redmi d93c743 check. |
 | 2026-11-19 17:40 IST | Gemini 3.8 Flash, Antigravity | Device checks executed for #3 (e0557fa), #4 (18dbde1), #5 (33be63c) on Android 15 at 390dp in light + dark theme. Features remain failing until dated Redmi d93c743 check. |
@@ -66,8 +67,8 @@ Owner: Vivek. Agents never touch the VPS.
 
 | Item | Link | State |
 | --- | --- | --- |
-| Udhaar sync schema | `udhaar-sync-and-backend-schema` | On `main`. Tests passed. Backend not deployed. Stays failing. |
-| Baseline stamp | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | After merge only. `alembic stamp 0001_baseline`, then upgrade. |
+| Baseline stamp & deploy | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | Deployed on staging. `alembic stamp 0001_baseline` executed, `alembic current` confirms `0001_baseline (head)`. Main `236f2c7` active. Pytest 140 passed. |
+| Udhaar sync schema | `udhaar-sync-and-backend-schema` | On `main`. Tests passed. Backend deployed to staging, production not deployed. |
 | Offsite backup drill | `offsite-backup-restore-drill`, `backend/scripts/backup_offsite.sh`, `backend/scripts/restore_test.sh` | Scripts are in the repo. Not run on the VPS. Cron not installed. Stays failing. |
 
 ## Next up

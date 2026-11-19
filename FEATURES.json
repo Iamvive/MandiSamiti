@@ -256,8 +256,8 @@
     {
       "id": "alembic-single-baseline",
       "description": "Alembic revisions 0001 through 0008 are one baseline that creates the current schema on an empty database",
-      "status": "failing",
-      "evidence": "2026-11-19 Grok 4.7 backend pytest: 140 passed before and 140 passed after. test_alembic_upgrade_and_downgrade upgrades an empty SQLite database to match Base.metadata and downgrades to no tables. test_baseline_udhaar_defaults_on_insert stores direction GIVEN, kind LOAN, and a null lend_id. Unverified: staging alembic_version is still 0008_udhaar_fields and needs alembic stamp 0001_baseline before the next upgrade. This change does not touch the VPS."
+      "status": "passing",
+      "evidence": "2026-11-19 Grok 4.7 backend pytest: 140 passed before and 140 passed after. test_alembic_upgrade_and_downgrade upgrades an empty SQLite database to match Base.metadata and downgrades to no tables. test_baseline_udhaar_defaults_on_insert stores direction GIVEN, kind LOAN, and a null lend_id. 2026-11-19 (Antigravity): PR #6 merged to main (commit 29170e2) and PR #3 merged (commit 6ed6866). Staging environment stamped 0001_baseline and deployed with main 236f2c7 via deploy_staging.sh (pytest 140 passed, migrate and smoke tests passed). Live verification on VPS (appworx-core-vps): 'docker exec mandisamiti_staging_api alembic current' returns '0001_baseline (head)'; 'curl -s http://64.227.142.180:8060/health/ready' returns '{\"status\":\"ready\",\"checks\":{\"db\":\"ok\",\"redis\":\"ok\"}}'."
     },
     {
       "id": "buy-slip-advance-not-pesgi",
@@ -276,6 +276,12 @@
       "description": "Buy, sell, parchi, stock, and drawer cards use a flat border instead of hardcoded elevation",
       "status": "passing",
       "evidence": "2026-11-19 Grok 4.7: defaultElevation removed from BuyTransactionsListScreen, SellTransactionsListScreen, ParchiListScreen, StockRegisterScreen, StockBreakdownSheet, and DrawerSummaryCard. Long-press on buy and sell cards is unchanged. 2026-11-19 (Gemini 3.8 Flash / Antigravity, physical Redmi Note 7 d93c743, build commit 33be63c, staging http://64.227.142.180:8060): Verified on physical device at 392dp in Light and Dark themes across all 6 screens. Long-press void dialog verified and functioning. Screenshots: pr5-buylist-light-redmi-390.png, pr5-buylist-dark-redmi-390.png, pr5-void-dialog-light-redmi-390.png, pr5-void-dialog-dark-redmi-390.png, pr5-selllist-light-redmi-390.png, pr5-selllist-dark-redmi-390.png, pr5-parchi-light-redmi-390.png, pr5-parchi-dark-redmi-390.png, pr5-drawer-light-redmi-390.png, pr5-drawer-dark-redmi-390.png, pr5-stock-light-redmi-390.png, pr5-stock-dark-redmi-390.png."
+    },
+    {
+      "id": "staging-deploy-main-baseline",
+      "description": "Staging deployment of main 236f2c7 with 0001_baseline Alembic stamp and PRs #3 and #6 merged",
+      "status": "passing",
+      "evidence": "2026-11-19 (Antigravity): Staging deployment of main 236f2c7 executed via deploy_staging.sh. PR #3 (buy-slip advance, 6ed6866) and PR #6 (alembic single baseline, 29170e2) merged to main. All 140 backend pytests, migrations, and smoke tests passed during deployment. Live VPS verification: 'docker exec mandisamiti_staging_api alembic current' confirms '0001_baseline (head)'; 'curl -s http://64.227.142.180:8060/health/ready' confirms DB and Redis status ready. Staging PostgreSQL data intact across all tables (4 lend_entries, 10 cash_transactions, 3 buy_entries)."
     }
   ]
 }

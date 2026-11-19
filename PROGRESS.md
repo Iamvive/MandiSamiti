@@ -1022,3 +1022,22 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Khata back navigation from Parchi (known bug, fix reserved for Grok).
   - Staging alembic stamp for single baseline (covered in Task 3).
 - Next steps: Open PR for Task 2, proceed to Task 3 (evidence rows for merges and staging deploy).
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 3: Merges & Staging Deploy Evidence
+- What changed:
+  - 1. Merged PRs & Staging Baseline Verification:
+    - Verified PR #3 (`buy-slip-advance-not-pesgi`, commit `6ed6866`) and PR #6 (`alembic-baseline-4465`, commit `29170e2`) merged to `origin/main`.
+    - Main branch commit `236f2c7` active and deployed on staging server via `deploy_staging.sh`.
+  - 2. Live VPS Database & Migration State:
+    - Queried live VPS container `mandisamiti_staging_api` via SSH: `alembic current` confirms `0001_baseline (head)`.
+    - Health check `curl -s http://64.227.142.180:8060/health/ready` confirms `{"status":"ready","checks":{"db":"ok","redis":"ok"}}`.
+    - Staging PostgreSQL data confirmed intact: 4 lend_entries (GIVEN LOAN Rs 10k, GIVEN PESGI Rs 3k, GIVEN LOAN Rs 2k, TAKEN LOAN Rs 5k), 10 cash transactions, 3 buy entries.
+  - 3. Tracker Updates:
+    - Moved `alembic-single-baseline` to `passing` with concrete VPS migration evidence.
+    - Added new feature row `staging-deploy-main-baseline` as `passing` in `FEATURES.json`.
+- Evidence:
+  - Live VPS terminal output:
+    - `ssh appworx-core-vps "docker exec mandisamiti_staging_api alembic current"` -> `0001_baseline (head)`.
+    - `curl -s http://64.227.142.180:8060/health/ready` -> `{"status":"ready","checks":{"db":"ok","redis":"ok"}}`.
+- Unverified: Production deployment (`mandisamiti_prod_*` stack out of scope); offsite backup cron.
+- Next steps: Proceed to Task 4 (cleanup with Vivek's explicit confirmation, one question at a time).
