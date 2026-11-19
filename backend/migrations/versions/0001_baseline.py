@@ -1,8 +1,8 @@
-"""baseline
+"""Full schema baseline. Revisions 0002 through 0008 are folded into this file.
 
 Revision ID: 0001_baseline
-Revises: 
-Create Date: 2026-10-30 16:02:29.408240
+Revises:
+Create Date: 2026-11-19
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0001_baseline'
+revision: str = "0001_baseline"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,12 +29,20 @@ def upgrade() -> None:
     sa.Column('shop_number', sa.String(), nullable=True),
     sa.Column('phone_number', sa.String(length=15), nullable=True),
     sa.Column('pin_hash', sa.String(), nullable=True),
+    sa.Column('address', sa.String(), nullable=True),
+    sa.Column('gstin', sa.String(length=15), nullable=True),
+    sa.Column('licence_no', sa.String(), nullable=True),
     sa.Column('default_monthly_interest_rate', sa.Float(), nullable=True),
     sa.Column('is_sound_enabled', sa.Integer(), nullable=True),
     sa.Column('soundbox_voice_lang', sa.String(), nullable=True),
     sa.Column('created_at', sa.BigInteger(), nullable=True),
     sa.Column('updated_at', sa.BigInteger(), nullable=True),
     sa.Column('last_seq', sa.BigInteger(), server_default='0', nullable=False),
+    sa.Column('monthly_bill_limit', sa.Integer(), server_default='50', nullable=False),
+    sa.Column('emergency_extensions_used', sa.Integer(), server_default='0', nullable=False),
+    sa.Column('emergency_extension_bills', sa.Integer(), server_default='0', nullable=False),
+    sa.Column('plan_tier', sa.String(length=32), server_default='FREE', nullable=False),
+    sa.Column('plan_valid_until', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('entry_revisions',
@@ -92,6 +100,8 @@ def upgrade() -> None:
     sa.Column('village', sa.String(), nullable=True),
     sa.Column('monthly_interest_rate', sa.Float(), nullable=True),
     sa.Column('photo_uri', sa.String(), nullable=True),
+    sa.Column('gstin', sa.String(length=15), nullable=True),
+    sa.Column('mandi_license', sa.String(length=100), nullable=True),
     sa.Column('is_deleted', sa.Integer(), nullable=True),
     sa.Column('sync_version', sa.Integer(), nullable=True),
     sa.Column('server_seq', sa.BigInteger(), server_default='0', nullable=False),
@@ -159,6 +169,7 @@ def upgrade() -> None:
     sa.Column('remarks', sa.String(), nullable=True),
     sa.Column('is_void', sa.Integer(), nullable=True),
     sa.Column('void_reason', sa.String(), nullable=True),
+    sa.Column('is_khaate', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('revision', sa.Integer(), nullable=True),
     sa.Column('is_deleted', sa.Integer(), nullable=True),
     sa.Column('sync_version', sa.Integer(), nullable=True),
@@ -235,6 +246,11 @@ def upgrade() -> None:
     sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('is_void', sa.Integer(), nullable=True),
     sa.Column('void_reason', sa.String(), nullable=True),
+    sa.Column('monthly_interest_rate', sa.Float(), server_default='2.0', nullable=False),
+    sa.Column('direction', sa.String(length=10), server_default='GIVEN', nullable=False),
+    sa.Column('kind', sa.String(length=10), server_default='LOAN', nullable=False),
+    sa.Column('receiver_name', sa.String(), nullable=True),
+    sa.Column('receiver_phone', sa.String(), nullable=True),
     sa.Column('revision', sa.Integer(), nullable=True),
     sa.Column('is_deleted', sa.Integer(), nullable=True),
     sa.Column('sync_version', sa.Integer(), nullable=True),
@@ -290,6 +306,7 @@ def upgrade() -> None:
     sa.Column('remarks', sa.String(), nullable=True),
     sa.Column('is_void', sa.Integer(), nullable=True),
     sa.Column('void_reason', sa.String(), nullable=True),
+    sa.Column('is_khaate', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('revision', sa.Integer(), nullable=True),
     sa.Column('is_deleted', sa.Integer(), nullable=True),
     sa.Column('sync_version', sa.Integer(), nullable=True),
@@ -318,6 +335,9 @@ def upgrade() -> None:
     sa.Column('voice_note_uri', sa.String(), nullable=True),
     sa.Column('remarks', sa.String(), nullable=True),
     sa.Column('category', sa.String(length=50), nullable=True),
+    sa.Column('source_entry_type', sa.String(length=20), nullable=True),
+    sa.Column('source_entry_id', sa.String(), nullable=True),
+    sa.Column('lend_id', sa.String(), nullable=True),
     sa.Column('soundbox_broadcasted', sa.Integer(), nullable=True),
     sa.Column('is_void', sa.Integer(), nullable=True),
     sa.Column('void_reason', sa.String(), nullable=True),
