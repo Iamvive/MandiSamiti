@@ -1,6 +1,8 @@
 package com.appwork.mandisamiti.ui.stock
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.StockLine
+import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiSurface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,9 +79,10 @@ fun StockLineCard(line: StockLine) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MandiBorder),
         colors = if (isNegative) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                 else CardDefaults.cardColors()
+                 else CardDefaults.cardColors(containerColor = MandiSurface)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

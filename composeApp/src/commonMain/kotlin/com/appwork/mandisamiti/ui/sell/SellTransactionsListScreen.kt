@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.sell
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -49,6 +50,8 @@ import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.search.BilingualSearchEngine
 import com.appwork.mandisamiti.ui.components.VoidEntryDialog
+import com.appwork.mandisamiti.ui.theme.MandiBorder
+import com.appwork.mandisamiti.ui.theme.MandiSurface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,7 +180,9 @@ private fun SellEntryCard(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MandiSurface),
+        border = BorderStroke(1.dp, MandiBorder),
     ) {
         Column(
             modifier = Modifier.padding(14.dp),

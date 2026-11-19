@@ -611,7 +611,6 @@ private fun ParchiKpiCard(
         colors = CardDefaults.cardColors(containerColor = MandiSurfaceElevated),
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -704,7 +703,6 @@ private fun KisaanSlipCard(
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -883,7 +881,6 @@ private fun VyapariSlipCard(
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -1078,8 +1075,8 @@ private fun PartySearchSummary(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MandiBorder),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
