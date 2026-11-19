@@ -258,6 +258,12 @@
       "description": "Buy-slip अग्रिम stays on the bill and in the drawer, and the cash row is not an unlinked pesgi",
       "status": "failing",
       "evidence": "2026-11-19 Grok 4.7 JVM: BuyCheckoutTest.slipAdvanceStaysOnTheBillAndOutOfPesgi. A checkout with advancePaidPaisa 200000 keeps the bill field, writes no LendEntry, leaves udhaarGivenPaisa at 0, drops CashDrawer by 200000, and is absent from getUnlinkedFarmerAdvancesBefore while a real unlinked UDHAR_GIVEN row still appears. Counts from XML: core-domain 109, core-database 12, core-data 188, composeApp 417, 0 failures (was 725; now 726). Unverified: needs device check of the buy-slip drawer flow, light, dark, and 390dp."
+    },
+    {
+      "id": "flat-cards-dashboard-expense",
+      "description": "Home and expense list cards use the flat MandiCard (border, no hardcoded elevation)",
+      "status": "failing",
+      "evidence": "2026-11-19 Grok 4.7: DashboardScreen and ExpenseListScreen no longer pass defaultElevation; they use MandiCard. JVM XML unchanged at core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures. tests/ngdl-tokens is not in the repo. Unverified: needs device check in light, dark, and 390dp. DashboardRevampComponents.kt still has hardcoded elevation and is left in place because nothing calls it."
     }
   ]
 }

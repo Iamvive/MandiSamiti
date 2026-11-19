@@ -861,3 +861,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - What changed: Added `docs/STATUS.md` and a Shared status board rule at the top of `AGENTS.md`. `CLAUDE.md` and `GEMINI.md` follow it because they are symlinks. No `FEATURES.json` row. `hot.md` not updated.
 - Evidence: Board filled from `main` `e8b7259`, open PRs #3 #4 #5 #6, `PROGRESS.md`, `FEATURES.json` (36 passing, 5 failing), `docs/PRODUCT_SPEC.md`, and `AGENTS.md`. Docs only. Gradle tests not run.
 - Next: Agents read the board and take their queue. Vivek merges #3 to #6 and keeps every new `FEATURES.json` row and `PROGRESS.md` entry. After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (flat cards on Home and Expenses)
+- What changed: the live cards on `DashboardScreen` and `ExpenseListScreen` now use `MandiCard` (surface, 1dp border, no hardcoded elevation). No new shadow token.
+- Evidence: `defaultElevation` is gone from those two files. JVM XML before and after: core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures (725). `tests/ngdl-tokens` is not in the repo.
+- Unverified: light, dark, and 390dp on a device. Feature `flat-cards-dashboard-expense` stays failing.
+- Left in place: `DashboardRevampComponents.kt` still hardcodes elevation. Nothing in the app calls those composables.
+- Next: the same flat card on Buy, Sell, Parchi, Stock, and the drawer summary.
