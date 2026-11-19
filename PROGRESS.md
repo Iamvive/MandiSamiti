@@ -844,3 +844,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Code check for the README note (read-only, no test run): two-stage deal status is in `Deal.kt`; farmer commission default is 0.70% and buyer commission default is 1.50%, not a fixed 2%; mandi shulk on a bill of supply is 1.50%; hammali is slip labour (default Rs 10 per bag) plus an expense category; rural interest is simple, default 2% per month; daily cash register, WhatsApp share, and Hindi voice are present. That note is marked inferred, not owner-confirmed.
 - `FEATURES.json` unchanged (33 passing, 5 failing). `hot.md` not updated. `./init.sh` run with `SKIP_TESTS=1` because this session does not change app code. Gradle tests not run.
 - Next: session 2, Core Flows. Do not treat the inferred code note as a product decision.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (buy-slip advance is not a pesgi)
+- What changed: `getUnlinkedFarmerAdvancesBefore` now requires `source_entry_id IS NULL`. A buy-slip अग्रिम is still `UDHAR_GIVEN` cash linked to the slip, so the bill line and the drawer movement stay. That row is no longer readable as an unlinked pesgi. No second create-pesgi path.
+- Evidence: `BuyCheckoutTest.slipAdvanceStaysOnTheBillAndOutOfPesgi`. XML counts before: core-domain 109, core-database 12, core-data 187, composeApp 417 (725, 0 failures). After: core-domain 109, core-database 12, core-data 188, composeApp 417 (726, 0 failures).
+- Unverified: device check of the buy-slip drawer flow, light theme, dark theme, 390dp. Feature `buy-slip-advance-not-pesgi` stays failing.
+- Next: flat cards on Dashboard and Expense, using `MandiCard`.
