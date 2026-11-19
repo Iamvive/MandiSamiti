@@ -1055,3 +1055,16 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
     - `curl -s http://64.227.142.180:8060/health/ready` -> `{"status":"ready","checks":{"db":"ok","redis":"ok"}}`.
 - Unverified: Production deployment (`mandisamiti_prod_*` stack out of scope); offsite backup cron.
 - Next steps: Proceed to Task 4 (cleanup with Vivek's explicit confirmation, one question at a time).
+
+## 2026-11-20 · Gemini / Antigravity · Milestone 1 Merge & Day 1 Phase 0 Delivery
+- What changed:
+  - 1. Merged all open November PRs (#4, #5, #9, #10, #11) into \`main\` via PR #12 (commit \`4048626\`).
+  - 2. Purged committed SQLite database \`backend/mandi_backend.db\` from git tracking (commit \`679621e\`).
+  - 3. Fixed Parchi-to-Khata back navigation bug: wired \`onNavigateToPartyKhataFromParchi\` in \`HomeScreen.kt\` and \`App.kt\` so \`homeViewModel.selectTab(NavigationTab.PARCHI)\` is restored when pressing back from Party Ledger (commit \`13e77f8\`).
+  - 4. Merged Day 1 PR #13 (\`fix(day1): back navigation to parchi tab & purge committed sqlite db\`) into \`main\` (commit \`3072e58\`).
+- Evidence:
+  - JVM tests: \`./gradlew :composeApp:jvmTest\` (417 passed).
+  - Backend tests: \`PYTHONPATH=. venv/bin/pytest tests/ -q\` (140 passed).
+  - PR #12 merged to main: \`4048626\`.
+  - PR #13 merged to main: \`3072e58\`.
+- Next steps: Proceed with Day 2 of plan (SEC-02 secret parameterization and SEC-03 dead OTP bypass cleanup).
