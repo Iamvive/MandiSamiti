@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-19 23:10 IST | Antigravity (Claude Sonnet) | Integration branch `integration/open-prs-november` created from `main` (236f2c7). PRs #4, #5, #9, #10, #11 merged cleanly. FEATURES.json: 47 features, 42 passing, 5 failing. PROGRESS.md: all chronological session entries preserved. Plan: `docs/superpowers/plans/2026-11-20-mandi-open-prs-integration.md`. |
 | 2026-11-19 21:05 IST | Gemini 3.8 Flash, Antigravity | Staging verification: main 236f2c7 deployed with deploy_staging.sh (pytest 140 passed, migrations and smoke tests passed), alembic current stamped 0001_baseline (head), health/ready confirmed ok. PR #3 (6ed6866) and PR #6 (29170e2) merged. Features alembic-single-baseline and staging-deploy-main-baseline marked passing. |
 | 2026-11-19 20:55 IST | Gemini 3.8 Flash, Antigravity | Physical Redmi Note 7 (d93c743) checks passed against staging (http://64.227.142.180:8060). Features udhaar-round-trip-staging, buy-slip-advance-not-pesgi, flat-cards-dashboard-expense (PR #4), and flat-cards-lists (PR #5) verified on device at 392dp in Light + Dark themes and moved to passing. |
 | 2026-11-19 18:35 IST | Gemini 3.8 Flash, Antigravity | PR #9 fixup: retook dark void dialog (audit-dark-buylist-void-390.png shasum differs from drawer), generated per-PR light & dark 390dp evidence for #4 (18dbde1) and #5 (33be63c) under throwaway shop 'Vivek Mandi Shop' with zero Omveer Singh & Brothers data. Moved merged #3 (6ed6866) out of Needs device check (noted evidence on e0557fa). Features stay failing until Redmi d93c743 check. |
@@ -14,22 +15,26 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 ## In flight
 
-Owner of these rows: Cursor cloud.
+| Branch | PR | Agent | State |
+| --- | --- | --- | --- |
+| `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
+
+### Merged into integration/open-prs-november
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
-| `cursor/buy-slip-advance-not-pesgi-4465` | [#3](https://github.com/Iamvive/MandiSamiti/pull/3) | Cursor cloud | Buy-slip अग्रिम stays on the bill and out of the pesgi list. JVM test green. No review yet. |
-| `cursor/flat-cards-dashboard-expense-4465` | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | Cursor cloud | Home and Expenses use flat `MandiCard`. No review yet. |
-| `cursor/flat-cards-lists-4465` | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Cursor cloud | Lists and the drawer use a flat border. Long-press void kept. No review yet. |
-| `cursor/alembic-baseline-4465` | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | Cursor cloud | `0002`–`0008` folded into `0001_baseline`. Backend tests green. Needs a stamp on the next deploy. |
-| `cursor/status-board-pr7-merged-45f5` | [#8](https://github.com/Iamvive/MandiSamiti/pull/8) | Cursor cloud | Marks #7 merged and leaves #3–#6 as the open pulls. Docs only. |
+| `cursor/flat-cards-dashboard-expense-4465` | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | Cursor cloud (Grok) | Merged into integration branch. Redmi evidence: `passing`. |
+| `cursor/flat-cards-lists-4465` | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Cursor cloud (Grok) | Merged into integration branch. Redmi evidence: `passing`. |
+| `antigravity/device-audit-2026-11-19` | [#9](https://github.com/Iamvive/MandiSamiti/pull/9) | Antigravity | Merged into integration branch via PR #11 chain. |
+| `antigravity/redmi-device-checks-2026-11-19` | [#10](https://github.com/Iamvive/MandiSamiti/pull/10) | Antigravity | Merged into integration branch via PR #11 chain. |
+| `antigravity/staging-deploy-evidence-2026-11-19` | [#11](https://github.com/Iamvive/MandiSamiti/pull/11) | Antigravity | Merged into integration branch. |
 
 ## Waiting on Vivek
 
 | Item | Owner | Link | Note |
 | --- | --- | --- | --- |
-| Merge the open PRs | Vivek | [#3](https://github.com/Iamvive/MandiSamiti/pull/3) [#4](https://github.com/Iamvive/MandiSamiti/pull/4) [#5](https://github.com/Iamvive/MandiSamiti/pull/5) [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | #7 is merged. #3–#6 each still add a `FEATURES.json` row and a `PROGRESS.md` entry, and those entries also meet the status-board entry now on `main`. Keep every new row. |
-| Stamp, then upgrade | Vivek | [#6](https://github.com/Iamvive/MandiSamiti/pull/6), [migrations README](backend/migrations/README.md) | After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade. The live version is still `0008_udhaar_fields`. |
+| Merge integration branch to main | Vivek | `integration/open-prs-november` | Merge this branch to main. Contains PRs #4, #5, #9, #10, #11. All conflicts resolved. 42 passing / 5 failing. |
+| Close PRs #4, #5, #9, #10, #11 on GitHub | Vivek | — | Once integration branch merges to main, close the individual PRs. |
 | Khata filter chips | Vivek | `khata-chips-explained`, `khata-filter-explainer-card` | Both stay failing. The screen is unreachable since Parchi replaced Khata. No product decision yet. |
 
 ## Needs review
@@ -111,23 +116,36 @@ Each agent owns only their block.
 
 ### Cursor cloud (Grok 4.7)
 
-Done: The status board is on `main` as #7 (`f290971`). This correction is #8. PRs #3, #4, #5, and #6 are still open. Next: Phase 0, in a new PR, after #8. Do not deploy or print secret values. Verify: #7 is merged, #3–#6 and #8 are open, and `FEATURES.json` on `main` is still 36 passing and 5 failing. The new feature rows exist only on #3–#6.
+**Status: ON LEAVE for the next few days.**
+
+Done (all merged or on integration branch):
+- PRs #3, #4, #5, #6, #7, #8 delivered and merged to main or integration branch.
+- Operating contract `AGENTS.md`, product spec `docs/PRODUCT_SPEC.md`, buy-slip advance separation, Alembic single baseline, flat MandiCard styling, shared status board.
+
+**Queue while on leave (Antigravity to execute):**
+- Day 1: Fix Parchi-to-Khata back-navigation bug (back should return to Parchi list, not Home). Files: `ParchiListScreen.kt`, `KhataScreen.kt`.
+- Day 1: Purge committed `backend/mandi_backend.db` from git tracking (`git rm --cached`). Update `.gitignore`.
+- Day 2: Parameterize `backend/docker-compose.yml` plaintext credentials with environment variable references. Add `.env.staging.template`.
+- Day 2: Delete static OTP bypass code from `backend/app/config.py` and `backend/app/core/otp_sender.py`.
+- Day 3: Create `.github/workflows/ci.yml` running JVM tests and Pytest on every PR.
 
 ### Claude
 
-Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. Next: review #3, #4, #5, #6, and #8. Leave the VPS alone. Verify: read those diffs. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
+Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
 
 ### Codex
 
-Done: 2026-11-16, udhaar rewrite Tasks 0 and 1 (direction, kind, receiver, local migration `14.sqm`). Later tasks landed on `main` through other agents. Next: nothing queued. If this block is still the latest, take the top of Next up. Verify: no open Codex pull request. The udhaar model is on `main` in `docs/decisions/2026-11-16-udhaar-model.md`.
+Done: 2026-11-16, udhaar rewrite Tasks 0 and 1. No open Codex PRs. Udhaar model in `docs/decisions/2026-11-16-udhaar-model.md`.
 
 ### Antigravity
 
-Done: 2026-11-19, PR #9 fixup and per-PR device audit completed on emulator-5554 (Android 15, 390dp reference width, Light and Dark themes):
-- PR #3: Merged to `main` as `6ed6866`. Evidence was captured on branch commit `e0557fa` (slip #8, Rs 1k advance, drawer dropped to Rs 25,980, udhaar unchanged at Rs 76,133.33, Kisan Dev debt unchanged at Rs 13k with 0 added pesgi; `pr3-*`).
-- PR #4 (`cursor/flat-cards-dashboard-expense-4465`, commit `18dbde1`): Flat bordered `MandiCard` verified on Dashboard and Expenses with 1dp border, no elevation shadows, no text clipping in both Light and Dark themes at 390dp (`pr4-home-light-390.png`, `pr4-home-dark-390.png`, `pr4-expense-light-390.png`, `pr4-expense-dark-390.png`).
-- PR #5 (`cursor/flat-cards-lists-4465`, commit `33be63c`): Flat cards audited across Buy list, Sell list, Parchi list, Stock, Drawer summary, and Void dialog in both Light and Dark themes at 390dp (`pr5-buylist-light-390.png`, `pr5-buylist-dark-390.png`, `pr5-void-dialog-light-390.png`, `pr5-void-dialog-dark-390.png`, `pr5-selllist-light-390.png`, `pr5-selllist-dark-390.png`, `pr5-parchi-light-390.png`, `pr5-parchi-dark-390.png`, `pr5-drawer-light-390.png`, `pr5-drawer-dark-390.png`, `pr5-stock-light-390.png`, `pr5-stock-dark-390.png`).
-- Void dialog shasum fix: `audit-dark-buylist-void-390.png` retaken as dark VoidEntryDialog; shasum confirmed differing from `audit-dark-drawer-390.png`.
-- Shop data fix: Logged in fresh on throwaway shop "Vivek Mandi Shop" (Mathura). Deleted all shots displaying legacy "Omveer Singh & Brothers" data and retook cleanly with no re-login banner.
-Features remain `failing` in `FEATURES.json` until physical Redmi `d93c743` check per repo rules.
-Next: Task 2 Redmi Note 7 (`d93c743`) check once connected and Vivek approves.
+Done: 2026-11-19, Tasks 1-4 complete.
+- PR #9 fixup: void dialog screenshot retaken, per-PR Redmi evidence organized, docs corrected (commit `ea5632d`).
+- PR #10: Physical Redmi Note 7 (d93c743) audit — `udhaar-round-trip-staging`, `buy-slip-advance-not-pesgi`, flat cards #4/#5 all verified passing with 23 hardware screenshots (commit `a4cade9`).
+- PR #11: Live staging deploy evidence, alembic baseline confirmed `0001_baseline (head)` (commit `a70a2fc`).
+- Integration branch `integration/open-prs-november` created: PRs #4, #5, #9, #10, #11 merged, all conflicts resolved, 47 features (42 passing / 5 failing).
+
+Next (Antigravity incharge while Grok is on leave):
+1. Push `integration/open-prs-november` to remote for Vivek's review and merge.
+2. Execute Grok's queue: navigation fix → security hygiene → CI workflow → pilot features.
+3. Verify 725+ JVM tests and 140 Pytest tests pass on the integration branch before each PR.
