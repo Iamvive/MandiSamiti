@@ -844,3 +844,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Code check for the README note (read-only, no test run): two-stage deal status is in `Deal.kt`; farmer commission default is 0.70% and buyer commission default is 1.50%, not a fixed 2%; mandi shulk on a bill of supply is 1.50%; hammali is slip labour (default Rs 10 per bag) plus an expense category; rural interest is simple, default 2% per month; daily cash register, WhatsApp share, and Hindi voice are present. That note is marked inferred, not owner-confirmed.
 - `FEATURES.json` unchanged (33 passing, 5 failing). `hot.md` not updated. `./init.sh` run with `SKIP_TESTS=1` because this session does not change app code. Gradle tests not run.
 - Next: session 2, Core Flows. Do not treat the inferred code note as a product decision.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (one Alembic baseline)
+- What changed: revisions `0002` through `0008` are folded into `0001_baseline`. An empty database upgrades to the current schema and downgrades back to empty. Quota columns keep their server defaults (`50`, `0`, `0`, `FREE`). A lend row that omits direction and kind stores `GIVEN` and `LOAN`.
+- Evidence: backend pytest 140 passed before and 140 passed after. `test_alembic_upgrade_and_downgrade` matches `Base.metadata`. `test_baseline_udhaar_defaults_on_insert` checks the udhaar defaults. JVM tests were not re-run; this change does not touch Kotlin. Last JVM count on main: 725 (109, 12, 187, 417), 0 failures.
+- Unverified: staging `alembic_version` is still `0008_udhaar_fields`. The next deploy must `alembic stamp 0001_baseline` before `upgrade`. This change does not touch the VPS. Feature `alembic-single-baseline` stays failing until that stamp.
+- Next: Vivek approves merges. Claude reviews. Antigravity runs the device checks.
