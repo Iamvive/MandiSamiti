@@ -6,7 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
-| 2026-11-19 16:56 IST | Grok 4.7, Cursor cloud | `main` `e8b7259`. `FEATURES.json`: 36 passing, 5 failing. Open PRs #3–#7. Sources: `PROGRESS.md`, `docs/PRODUCT_SPEC.md`, `AGENTS.md`. |
+| 2026-11-19 16:58 IST | Grok 4.7, Cursor cloud | `main` `f290971`. #7 is merged. Open PRs are #3–#6. `FEATURES.json`: 36 passing, 5 failing. |
 
 ## In flight
 
@@ -18,13 +18,12 @@ Owner of these rows: Cursor cloud.
 | `cursor/flat-cards-dashboard-expense-4465` | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | Cursor cloud | Home and Expenses use flat `MandiCard`. No review yet. |
 | `cursor/flat-cards-lists-4465` | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Cursor cloud | Lists and the drawer use a flat border. Long-press void kept. No review yet. |
 | `cursor/alembic-baseline-4465` | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | Cursor cloud | `0002`–`0008` folded into `0001_baseline`. Backend tests green. Needs a stamp on the next deploy. |
-| `cursor/shared-status-board-45f5` | [#7](https://github.com/Iamvive/MandiSamiti/pull/7) | Cursor cloud | This board, plus the read-and-update rule in `AGENTS.md`. Docs only. |
 
 ## Waiting on Vivek
 
 | Item | Owner | Link | Note |
 | --- | --- | --- | --- |
-| Merge the open PRs | Vivek | [#3](https://github.com/Iamvive/MandiSamiti/pull/3) [#4](https://github.com/Iamvive/MandiSamiti/pull/4) [#5](https://github.com/Iamvive/MandiSamiti/pull/5) [#6](https://github.com/Iamvive/MandiSamiti/pull/6) [#7](https://github.com/Iamvive/MandiSamiti/pull/7) | #3–#6 each add a `FEATURES.json` row and a `PROGRESS.md` entry. #7 adds a `PROGRESS.md` entry only. Together they conflict. Keep every new row. |
+| Merge the open PRs | Vivek | [#3](https://github.com/Iamvive/MandiSamiti/pull/3) [#4](https://github.com/Iamvive/MandiSamiti/pull/4) [#5](https://github.com/Iamvive/MandiSamiti/pull/5) [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | #7 is merged. #3–#6 each still add a `FEATURES.json` row and a `PROGRESS.md` entry, and those entries also meet the status-board entry now on `main`. Keep every new row. |
 | Stamp, then upgrade | Vivek | [#6](https://github.com/Iamvive/MandiSamiti/pull/6), [migrations README](backend/migrations/README.md) | After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade. The live version is still `0008_udhaar_fields`. |
 | Khata filter chips | Vivek | `khata-chips-explained`, `khata-filter-explainer-card` | Both stay failing. The screen is unreachable since Parchi replaced Khata. No product decision yet. |
 
@@ -38,7 +37,6 @@ Owner of these rows: Claude. No review on any open PR.
 | Flat cards, Home and Expenses | [#4](https://github.com/Iamvive/MandiSamiti/pull/4) | `MandiCard` only. No new shadow token. |
 | Flat cards, lists and drawer | [#5](https://github.com/Iamvive/MandiSamiti/pull/5) | Border replaces elevation. Long-press void still opens. |
 | Alembic baseline | [#6](https://github.com/Iamvive/MandiSamiti/pull/6) | Empty database reaches today's schema. Existing databases need the stamp above. |
-| Status board | [#7](https://github.com/Iamvive/MandiSamiti/pull/7) | Docs and the `AGENTS.md` rule only. No app change. |
 
 ## Needs device check
 
@@ -90,7 +88,7 @@ Still failing, and not in that order: `input-audit-medium-low` (Group A of the c
 
 ## Known risks
 
-- #3, #4, #5, #6, and #7 conflict on `PROGRESS.md`. #3–#6 also conflict on `FEATURES.json`. Keep all new rows.
+- #3, #4, #5, and #6 conflict with each other, and with the status-board entry now on `main`, on `PROGRESS.md`. They also conflict with each other on `FEATURES.json`. Keep all new rows.
 - A staging upgrade after #6, without `alembic stamp 0001_baseline`, tries to recreate tables that already exist.
 - The backend database and compose secrets are in git. Do not print them. A history rewrite needs Vivek.
 - Recent udhaar tasks were marked passing from emulator walks. The passing rule for a device feature is a dated Redmi `d93c743` check.
@@ -102,11 +100,11 @@ Each agent owns only their block.
 
 ### Cursor cloud (Grok 4.7)
 
-Done: Product spec session 1 is on `main`. Same day, PRs #3, #4, #5, and #6, plus this board in #7. Next: Phase 0, in a new PR. Do not deploy or print secret values. Verify: PRs #3–#7 are open, and `FEATURES.json` on `main` is still 36 passing and 5 failing. The new feature rows exist only on #3–#6.
+Done: The status board is on `main` as #7 (`f290971`). PRs #3, #4, #5, and #6 are still open. Next: Phase 0, in a new PR. Do not deploy or print secret values. Verify: #7 is merged, #3–#6 are open, and `FEATURES.json` on `main` is still 36 passing and 5 failing. The new feature rows exist only on #3–#6.
 
 ### Claude
 
-Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. Next: review #3, #4, #5, #6, and #7. Leave the VPS alone. Verify: read those diffs. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
+Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. Next: review #3, #4, #5, and #6. Leave the VPS alone. Verify: read those diffs. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
 
 ### Codex
 
