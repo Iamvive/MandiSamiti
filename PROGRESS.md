@@ -769,3 +769,33 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Unverified:
   - VPS deploy, production-database migration, real-device sync, and physical Redmi Note 7 (`d93c743`) stay unverified.
 - Next: Final user sign-off and VPS deployment approval from Vivek.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 14: Khata Entry Points from Udhaar Person Screen & Parchi Slips (no push, no deploy)
+- What was built:
+  - Udhaar Person Screen Button: Added "खाता देखें" (View Khata in English) `MandiOutlinedButton` with `Icons.AutoMirrored.Filled.MenuBook` on `UdhaarPersonScreen.kt` (48dp height, NGDL tokens, no emoji, debounced rapid double-tap, safe no-op on missing party).
+  - View model party wiring: Added `party: Party? = null` to `UdhaarPersonUiState` and wired it from `UdhaarPersonViewModel.observeData()`, making the party domain object accessible to UI actions.
+  - Parchi slip cards: Made the party name clickable in `KisaanSlipCard` and `VyapariSlipCard` inside `ParchiListScreen.kt` to open the party's khata, while keeping the existing slip-body tap (`onOpenReceipt`) and long-press void flow intact. Added debounced click handling and safe fallback for missing/deleted parties.
+  - Navigation helper in `App.kt`: Added `partyKhataScreen(partyId, returnScreen)` ensuring back button resolves to the caller screen (`Screen.UdhaarPerson` returns to person screen; `ParchiListScreen` returns to `Screen.Home`). Reused helper across both entry points with no duplicate `Screen.PartyLedger` constructors.
+  - Restored Card elevation: Restored `CardDefaults.cardElevation(defaultElevation = 1.dp)` in `DashboardScreen.kt` on `UdhaarCard` and `AllTimeCard` using NGDL card shadow token pattern.
+  - Regression routing test: Added `partyKhataScreenResolvesToPartyLedgerAndBackTargetMatchesCaller` in `ScreenRoutingTest.kt`.
+- Test counts from XML (`build/test-results/jvmTest/*.xml`):
+  - `:core-domain`: 109 tests (0 failures)
+  - `:core-database`: 12 tests (0 failures)
+  - `:core-data`: 186 tests (0 failures)
+  - `:composeApp`: 415 tests (0 failures, +1 new test in `ScreenRoutingTest`)
+  - Total: 722 tests passing (0 failures).
+  - NGDL tokens test: `pytest tests/ngdl-tokens`: 5/5 passing (0.01s).
+- Device walk on `emulator-5554` (staging `http://64.227.142.180:8060`, Android 15, 390dp reference width, density 443; desktop 720dp, density 240):
+  - Flow 1 (Udhaar -> Person -> Khata -> Back): Walked Home -> Udhaar landing -> Rameshwar (`9876501300`) -> tapped "खाता देखें" -> verified Rameshwar Khata opened -> pressed back -> returned to Rameshwar's `UdhaarPersonScreen`.
+  - Flow 2 (Parchi -> Party name -> Khata -> Back): Walked Home -> Parchi -> tapped party name "Monty" on Buy Slip #1 -> verified Monty Khata opened -> pressed back -> returned to Home.
+  - Flow 3 (Void dialog warning): Long-pressed Buy Slip #4 in Khata and verified void confirm dialog displays "इस पर्ची की उधार कटौती (₹5,000) भी वापस हो जाएगी।".
+  - Screenshots captured under `docs/testing/screenshots/udhaar/`:
+    - 390dp Light: `t14-home-light-390.png`, `t14-landing-light-390.png`, `t14-add-form-light-390.png`, `t14-person-light-390.png`, `t14-khata-light-390.png`
+    - 390dp Dark: `t14-home-dark-390.png`, `t14-landing-dark-390.png`, `t14-add-form-dark-390.png`, `t14-person-dark-390.png`, `t14-khata-dark-390.png`
+    - Desktop width (>600dp, 720dp) Light: `t14-person-desktop-light.png`, `t14-khata-desktop-light.png`
+  - Contrast readings:
+    - Light theme: `#090A0C` on `#F8F9FA` = 18.79:1 (WCAG AAA)
+    - Dark theme: `#FFFFFF` on `#08090A` = 19.93:1 (WCAG AAA)
+- Card/surface pattern used: `MandiOutlinedButton` using `RoundedCornerShape(10.dp)`, `BorderStroke(1.dp, MandiBorder)`, `MandiTextPrimary` text and icon tint, 48dp touch target height.
+- Unverified: Physical Redmi Note 7 (`d93c743`), VPS deploy, production migration, real-device sync.
+- Next steps: User sign-off and VPS production deployment.
