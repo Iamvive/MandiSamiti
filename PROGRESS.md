@@ -844,3 +844,8 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Code check for the README note (read-only, no test run): two-stage deal status is in `Deal.kt`; farmer commission default is 0.70% and buyer commission default is 1.50%, not a fixed 2%; mandi shulk on a bill of supply is 1.50%; hammali is slip labour (default Rs 10 per bag) plus an expense category; rural interest is simple, default 2% per month; daily cash register, WhatsApp share, and Hindi voice are present. That note is marked inferred, not owner-confirmed.
 - `FEATURES.json` unchanged (33 passing, 5 failing). `hot.md` not updated. `./init.sh` run with `SKIP_TESTS=1` because this session does not change app code. Gradle tests not run.
 - Next: session 2, Core Flows. Do not treat the inferred code note as a product decision.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (shared status board)
+- What changed: Added `docs/STATUS.md` and a Shared status board rule at the top of `AGENTS.md`. `CLAUDE.md` and `GEMINI.md` follow it because they are symlinks. No `FEATURES.json` row. `hot.md` not updated.
+- Evidence: Board filled from `main` `e8b7259`, open PRs #3 #4 #5 #6, `PROGRESS.md`, `FEATURES.json` (36 passing, 5 failing), `docs/PRODUCT_SPEC.md`, and `AGENTS.md`. Docs only. Gradle tests not run.
+- Next: Agents read the board and take their queue. Vivek merges #3 to #6 and keeps every new `FEATURES.json` row and `PROGRESS.md` entry. After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade.

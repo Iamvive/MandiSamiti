@@ -4,6 +4,17 @@ This file is the only source of truth for coding agents in this repo.
 Read it before you change anything.
 `CLAUDE.md` and `GEMINI.md` are symlinks to this file. Edit this file only.
 
+## Shared status board
+
+`docs/STATUS.md` is the one board for every agent.
+
+- Read `docs/STATUS.md` before starting any work, and pick up items in your queue.
+- Before you stop, update your rows in the same PR. Move items between sections, add your handover, and bump Last updated.
+- Edit only the rows you own, so merge conflicts stay small.
+- Never put secrets in it.
+- Anything waiting on Vivek goes in Waiting on Vivek.
+- If the board disagrees with GitHub, GitHub wins. Fix the board.
+
 ## Core rules
 
 ### Think before coding
