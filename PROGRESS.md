@@ -861,3 +861,197 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - What changed: Added `docs/STATUS.md` and a Shared status board rule at the top of `AGENTS.md`. `CLAUDE.md` and `GEMINI.md` follow it because they are symlinks. No `FEATURES.json` row. `hot.md` not updated.
 - Evidence: Board filled from `main` `e8b7259`, open PRs #3 #4 #5 #6, `PROGRESS.md`, `FEATURES.json` (36 passing, 5 failing), `docs/PRODUCT_SPEC.md`, and `AGENTS.md`. Docs only. Gradle tests not run.
 - Next: Agents read the board and take their queue. Vivek merges #3 to #6 and keeps every new `FEATURES.json` row and `PROGRESS.md` entry. After #6, the next staging deploy must `alembic stamp 0001_baseline` before upgrade.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (flat cards on Home and Expenses)
+- What changed: the live cards on `DashboardScreen` and `ExpenseListScreen` now use `MandiCard` (surface, 1dp border, no hardcoded elevation). No new shadow token.
+- Evidence: `defaultElevation` is gone from those two files. JVM XML before and after: core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures (725). `tests/ngdl-tokens` is not in the repo.
+- Unverified: light, dark, and 390dp on a device. Feature `flat-cards-dashboard-expense` stays failing.
+- Left in place: `DashboardRevampComponents.kt` still hardcodes elevation. Nothing in the app calls those composables.
+- Next: the same flat card on Buy, Sell, Parchi, Stock, and the drawer summary.
+
+## 2026-11-19, Grok 4.7 (Cursor cloud) (flat cards on lists and the drawer)
+- What changed: Buy, Sell, Parchi, Stock, the stock breakdown sheet, and the drawer summary no longer set a hardcoded card elevation. Cards that had no border now use `MandiSurface` and a 1dp `MandiBorder`, the same flat card as `MandiCard`. Long-press on a buy or sell row is unchanged. A negative stock line keeps its red container.
+- Evidence: JVM XML before and after: core-domain 109, core-database 12, core-data 187, composeApp 417, 0 failures (725).
+- Unverified: light, dark, and 390dp on a device. Feature `flat-cards-lists` stays failing.
+- Left in place: billing cards, the party search dropdown (it needs a raised menu), and `DashboardRevampComponents.kt` (nothing calls it).
+- Next: squash Alembic 0001 to 0008 into one baseline. Staging still needs a stamp on the next deploy. Do not touch the VPS in this change.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 16: Staging Reset Retest & Task 14 Gaps (branch antigravity/device-audit-2026-11-19, PR #9, no deploy, no code changes)
+- What ran:
+  - Task 16 Udhaar round-trip retest executed on the rebuilt staging server (`http://64.227.142.180:8060`, PostgreSQL 16 on migration `0008_udhaar_fields`).
+  - Reset emulator (`adb uninstall com.appwork.mandisamiti`), reinstalled debug APK, performed fresh UI signup (`9826012345`, "Vivek Mandi Shop", Mathura). First sync completed with `Worker result SUCCESS`.
+  - Created round-trip dataset strictly through app UI (zero SQLite or direct DB mutations):
+    1. Loan GIVEN Rs 10,000 to Farmer A (`9876543210`).
+    2. Pesgi GIVEN Rs 3,000 to Farmer A via "उधार / पेशगी" segmented toggle.
+    3. Loan GIVEN Rs 2,000 to Farmer B (`9876543211`) with receiver switch ON, Receiver Name "Receiver X", Receiver Phone `9876543299`.
+    4. Loan TAKEN Rs 5,000 from Party C (`9876543212`).
+    5. Repayment of Rs 1,000 recorded against Farmer A's Rs 10,000 loan via Person Screen FAB ("पैसे मिले").
+  - Triggered sync from Settings ("अभी बैकअप लें"). Confirmed in logcat `MandiSyncWorker` SUCCESS.
+  - Read-only SELECT on staging DB (`mandisamiti_staging_db`) confirmed:
+    - `lend_entries`: 4 rows (Rs 10,000 GIVEN LOAN; Rs 3,000 GIVEN PESGI; Rs 2,000 GIVEN LOAN with receiver name/phone; Rs 5,000 TAKEN LOAN).
+    - `lend_settlements`: 1 row (Rs 1,000, `is_void = 0`).
+    - `cash_transactions`: 5 rows (3 `UDHAR_GIVEN`, 2 `JAMA_RECEIVED`, all with `lend_id` set).
+    - `parties`: 3 rows.
+  - Wipe and Pull Proof:
+    - Uninstalled app from emulator, reinstalled debug build, logged in with same test account.
+    - Verified initial pull succeeded: Farmer A balance Rs 12,000 with "पेशगी" chip on Rs 3,000 entry and Rs 1,000 repayment history; Farmer B showed "प्राप्तकर्ता: Receiver X"; Party C displayed under "उधार लिया" as TAKEN; Dashboard displayed Rokad `-₹9,000`, Udhaar `दिया: ₹14,000`, `लिया: ₹5,000`.
+  - Task 15 Walk Re-Run on Device:
+    - Created Buy slip #2 for Farmer A: 20 bags @ 50kg = 10.0 Q @ Rs 1,000/Q (Gross Rs 10,000, Net Rs 9,730). Cut Rs 5,000 loan, paid Rs 4,000 cash.
+    - Confirmed cut settled oldest loan 3.1 first (Rs 10,000 loan, created earlier than pesgi 3.2, sorted oldest-first by `UdhaarAllocator.allocate`).
+    - Verified overpayment block on Person Screen: attempting Rs 8,000 repayment against Rs 7,000 remaining balance immediately blocked with "बाकी सिर्फ ₹7,000 है".
+    - Voided Buy slip #2 from buy list (`BuyTransactionsListScreen`) with reason "गलत प्रविष्टि".
+    - Confirmed Farmer A balance returned from Rs 7,000 to Rs 12,000.
+    - Synced to staging; server read-only SELECT confirmed `buy_entries` slip #2 marked `is_void = 1`, `lend_settlements` Rs 5,000 cut marked `is_void = 1`, and associated cash transaction marked `is_void = 1`.
+  - Task 14 Gaps Live Device Audit:
+    - 7.1: Party with 0 slips and 0 udhaar: Not reachable from UI (Parchi list only displays parties with non-void slips, Udhaar list only displays parties with balance > 0, no general party directory exists).
+    - 7.2: Voided slip party name tap: Not reachable on Parchi list (voided slips are filtered out from ParchiListScreen by `buys.filter { !it.isVoid }`).
+    - 7.3: Back navigation from Khata opened via Parchi party name: Consistently lands on Home (`Screen.Home`), verified twice on live device (`returnScreen = Screen.Home`).
+    - 7.4: Double-tapping "खाता देखें" quickly: Opened exactly one Khata screen; pressing back once immediately returned to UdhaarPersonScreen (no duplicated backstack).
+    - 7.5: Unresolvable party khata: Not reachable (Parchi list click disabled when `party == null`; Udhaar person screen requires non-null state party).
+    - 7.6: English and Hindi button labels verified on live device by toggling language in Settings. Captured screenshots of "खाता देखें" (Hindi) vs "View Khata" (English).
+- Screenshots saved:
+  - `docs/testing/screenshots/udhaar/t16-person-pull-light-390.png`
+  - `docs/testing/screenshots/udhaar/t16-pesgi-chip-light-390.png`
+  - `docs/testing/screenshots/udhaar/t16-pesgi-chip-dark-390.png`
+  - `docs/testing/screenshots/udhaar/t16-buttons-hi-390.png`
+  - `docs/testing/screenshots/udhaar/t16-buttons-en-390.png`
+- Cleanup: No extra worktrees exist (`ms-repay-edit-wt` deleted/absent). Temporary scratch files removed.
+- Unverified: Physical Redmi Note 7 (`d93c743`) was detached during session; VPS production deployment and production DB migration unverified.
+- Next steps: User sign-off; connect Redmi Note 7 for physical device verification before release.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · PR Branch Device Audit (#3, #4, #5) & Dark Theme 7-Screen Card Audit at 390dp
+- What ran:
+  - 1. PR #3 (`cursor/buy-slip-advance-not-pesgi-4465`, branch commit `e0557fa`, merged to main as `6ed6866`):
+    - Tested Buy-slip अग्रिम flow strictly on a fresh build of PR #3 (`./gradlew :composeApp:installDebug`).
+    - Entered Buy slip #8 for Kisan Dev: 10 bags @ 50kg (5.0 Q @ ₹1,000/Q) = Gross ₹5,000. Commission ₹30, Mazdoori ₹100 -> Parchi net ₹4,870.
+    - Entered अग्रिम / पेशगी (Advance): ₹1,000. Final payable: ₹3,870. Completed checkout with ₹0 additional cash.
+    - Verification 1 (Bill): Bill / Receipt displays deduction line `अग्रिम / पेशगी: − ₹1,000` (and `• नकद भुगतान · 19 Nov: − ₹1,000`).
+    - Verification 2 (Drawer Cash): Cash drawer dropped by exactly ₹1,000 from ₹26,980 to ₹25,980.
+    - Verification 3 (Udhaar दिया): Udhaar दिया remained ₹76,133.33 (did NOT grow, zero `LendEntry` created).
+    - Verification 4 (Person Screen): Kisan Dev person screen remained at ₹13,000 (Rs 3k pesgi + Rs 10k loan). Gained NO pesgi.
+    - Screenshots: `docs/testing/screenshots/audit/pr3-buy-slip-receipt-advance.png`, `docs/testing/screenshots/audit/pr3-dashboard-verified.png`, `docs/testing/screenshots/audit/pr3-kisan-dev-person-screen.png`.
+  - 2. PR #4 (`cursor/flat-cards-dashboard-expense-4465`, commit `18dbde1`):
+    - Built and installed debug APK of PR #4.
+    - Audited flat cards on Home (Dashboard) and Expenses (`Screen.ExpenseList`) in Light and Dark themes at 390dp: verified flat `MandiCard`, 1dp `MandiBorder`, no shadow/elevation, clean readable typography.
+    - Build commit `18dbde1` screenshots:
+      - `docs/testing/screenshots/audit/pr4-home-light-390.png`
+      - `docs/testing/screenshots/audit/pr4-home-dark-390.png`
+      - `docs/testing/screenshots/audit/pr4-expense-light-390.png`
+      - `docs/testing/screenshots/audit/pr4-expense-dark-390.png`
+  - 3. PR #5 (`cursor/flat-cards-lists-4465`, commit `33be63c`):
+    - Built and installed debug APK of PR #5.
+    - Audited flat cards on Lists (Buy list, Sell list, Parchi list, Stock), Drawer summary (Daily register), and Void dialog in Light and Dark themes at 390dp.
+    - Long-press on buy row in `BuyTransactionsListScreen` verified: `VoidEntryDialog` ("खरीद सौदा रद्द करें?") opens cleanly.
+    - Build commit `33be63c` screenshots:
+      - `docs/testing/screenshots/audit/pr5-buylist-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-buylist-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-void-dialog-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-void-dialog-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-selllist-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-selllist-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-parchi-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-parchi-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-drawer-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-drawer-dark-390.png`
+      - `docs/testing/screenshots/audit/pr5-stock-light-390.png`
+      - `docs/testing/screenshots/audit/pr5-stock-dark-390.png`
+  - 4. 7-Screen Card Audit in Dark Theme at 390dp (throwaway shop "Vivek Mandi Shop"):
+    - Emulator configured to 390dp reference width (`1080x2400` at density 443 -> `1080 / 2.76875 = 390.07dp`).
+    - Night mode enabled (`cmd uimode night yes`).
+    - All 7 screens inspected for card readability, 1dp borders, zero clipped text, and contrast:
+      1. Home (`Screen.Home`): `audit-dark-home-390.png`
+      2. Expenses (`Screen.ExpenseList`): `audit-dark-expense-390.png`
+      3. Buy list (`Screen.BuyList`): `audit-dark-buylist-390.png`
+      4. Void dialog (`VoidEntryDialog`): `audit-dark-buylist-void-390.png` (verified shasum differs from drawer)
+      5. Sell list (`Screen.SellList`): `audit-dark-selllist-390.png`
+      6. Parchi (`Screen.ParchiList`): `audit-dark-parchi-390.png`
+      7. Stock (`Screen.StockRegister`): `audit-dark-stock-390.png`
+      8. Drawer summary (`Screen.DailyRegister`): `audit-dark-drawer-390.png`
+  - 5. Device & Passing Rule:
+    - Physical Redmi Note 7 (`d93c743`) was detached.
+    - Per repo rule (`CLAUDE.md`), emulator evidence is recorded but feature status in `FEATURES.json` remains `failing` until verified on physical Redmi Note 7 (`d93c743`).
+- Screenshots captured:
+  - `docs/testing/screenshots/audit/*`
+- Unverified: Physical Redmi Note 7 (`d93c743`), VPS production deployment, production database migration.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 1: PR #9 Audit & Screenshot Fixup
+- What changed:
+  - 1. Void Dialog vs Drawer Shasum Fix:
+    - Retook dark Buy list void dialog (`audit-dark-buylist-void-390.png`) by long-pressing buy row in `Screen.BuyList` with `VoidEntryDialog` open.
+    - Confirmed distinct SHA-1 checksums:
+      - `audit-dark-buylist-void-390.png`: `f624303cfef280ce812dadd107617d60231af2a1`
+      - `audit-dark-drawer-390.png`: `ab58cb822820736d078048714e63774b1b725269`
+  - 2. Per-PR, Per-Theme Evidence at 390dp:
+    - Built and installed PR #4 (`cursor/flat-cards-dashboard-expense-4465`, commit `18dbde1`) independently; captured light and dark for Home and Expenses (`pr4-home-light-390.png`, `pr4-home-dark-390.png`, `pr4-expense-light-390.png`, `pr4-expense-dark-390.png`).
+    - Built and installed PR #5 (`cursor/flat-cards-lists-4465`, commit `33be63c`) independently; captured light and dark for Buy list, Void dialog, Sell list, Parchi list, Stock register, and Drawer summary (`pr5-buylist-light-390.png`, `pr5-buylist-dark-390.png`, `pr5-void-dialog-light-390.png`, `pr5-void-dialog-dark-390.png`, `pr5-selllist-light-390.png`, `pr5-selllist-dark-390.png`, `pr5-parchi-light-390.png`, `pr5-parchi-dark-390.png`, `pr5-drawer-light-390.png`, `pr5-drawer-dark-390.png`, `pr5-stock-light-390.png`, `pr5-stock-dark-390.png`).
+    - Removed old unmatched screenshot files: `pr4-dashboard-light.png`, `pr4-expense-list-light.png`, `pr5-void-dialog.png`, and `docs/testing/screenshots/audit-home-390.png`.
+    - Removed any "verified" claim lacking a supporting screenshot file.
+  - 3. Shop Data & Clean Auth:
+    - Old drawer screenshot displayed "Omveer Singh & Brothers" from legacy test data. Noted in documentation, removed all images depicting it, and retook all audit screenshots under the throwaway test shop "Vivek Mandi Shop" (Mathura).
+    - Logged in fresh with phone `9826012345` / MPIN `1234` against staging (`http://64.227.142.180:8060`); zero "दोबारा लॉगिन करें" banners appeared.
+  - 4. Text & Doc Fixes:
+    - `FEATURES.json` (`udhaar-round-trip-staging`): noted that back navigation from Khata opened via Parchi currently lands on Home as a known bug (Vivek decided it must return to Parchi list, fix not in this PR), and staging is now stamped `0001_baseline`.
+    - `docs/STATUS.md`: moved merged PR #3 (`6ed6866`) out of "Needs device check", noting its evidence originated from branch commit `e0557fa`. Added build commit hashes next to screenshot groups.
+    - `PROGRESS.md`: corrected Task 16 heading.
+- Evidence:
+  - All 16 PR4 and PR5 screenshots captured on live Android 15 emulator at 390dp reference width (`1080x2400`, density 443) under throwaway shop "Vivek Mandi Shop".
+  - Unique shasums confirmed across all dark/light screenshot pairs.
+- Unverified: Physical Redmi Note 7 (`d93c743`) check (phone disconnected); VPS production deployment; production DB migrations.
+- Next steps: Stop and notify Vivek that PR #9 (`antigravity/device-audit-2026-11-19`) is ready for merge. Await Vivek's reply before proceeding to Task 2.
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 2: Redmi Note 7 (d93c743) Hardware Checks
+- What changed:
+  - 1. Physical Device Reconnection & Hardware Audit:
+    - Physical Redmi Note 7 (`d93c743`) connected via ADB (`1080x2340`, density 440 -> 392.7dp reference width, Android 10, MIUI).
+    - Resolved MIUI "Install via USB" permission block in Developer Options; installed debug build pointing directly to staging (`http://64.227.142.180:8060`).
+    - Logged into throwaway shop "Vivek Mandi Shop" (phone `9826012345`, MPIN `1234`) with zero "दोबारा लॉगिन करें" banners.
+  - 2. `udhaar-round-trip-staging` Verification:
+    - Full Udhaar round-trip verified on physical Redmi:
+      - Initial pull restored exact balances and UI chips: Farmer A remaining Rs 12,000 with Rs 3,000 "पेशगी" chip and Rs 1,000 settlement history; Farmer B remaining Rs 2,000 with "प्राप्तकर्ता: Receiver X"; Party C under "उधार लिया" (TAKEN) with remaining Rs 5,000.
+      - Tested overpayment block on Farmer B repay dialog: entering Rs 3,000 against Rs 2,000 balance showed UI error "बाकी सिर्फ ₹2,000 है" and disabled save button.
+      - Tested Buy slip creation and void: created slip #4 with Rs 1,000 cash payment out of Galla Rokad, then voided from Buy list via long-press with reason "गलत प्रविष्टि" (WRONG_ENTRY).
+      - Staging PostgreSQL read-only SELECT verified: `buy_entries` row has `is_void=1`, `void_reason='WRONG_ENTRY'`; `lend_entries` count remained 4 with zero unlinked pesgi created.
+    - Moved `udhaar-round-trip-staging` to `passing` in `FEATURES.json`.
+  - 3. `buy-slip-advance-not-pesgi` Verification:
+    - Verified on physical Redmi Note 7 (`d93c743`):
+      - Created Buy slip #4 for Farmer A (4 bags @ Rs 2,500/Q, gross Rs 5,000, net Rs 4,930) with Rs 1,000 cash payment from Galla Rokad.
+      - Verified: 1) Bill shows deduction line "नकद भुगतान: − ₹1,000" and remaining balance Rs 3,930; 2) Drawer Rokad dropped by exactly Rs 1,000 from -Rs 13,000 to -Rs 14,000; 3) Udhaar दिया did not grow (stayed Rs 14,000; zero unlinked pesgi created); 4) Farmer A person screen balance remained unchanged at Rs 12,000 with zero unlinked pesgi added; 5) Staging PostgreSQL verified: `cash_transactions` row has `source_entry_id` set, and `lend_entries` count intact at 4.
+    - Moved `buy-slip-advance-not-pesgi` to `passing` in `FEATURES.json`.
+  - 4. PR #4 Flat Cards Hardware Audit (commit 18dbde1):
+    - Installed build of PR #4 commit `18dbde1` on physical Redmi Note 7 (`d93c743`).
+    - Toggled Light and Dark themes natively via Display Settings; verified 1dp flat border with zero elevation shadows on Dashboard and Expenses at 392dp (`pr4-home-light-redmi-390.png`, `pr4-home-dark-redmi-390.png`, `pr4-expense-light-redmi-390.png`, `pr4-expense-dark-redmi-390.png`).
+    - Added row `flat-cards-dashboard-expense` as `passing` in `FEATURES.json`.
+  - 5. PR #5 Flat Cards Hardware Audit (commit 33be63c):
+    - Installed build of PR #5 commit `33be63c` on physical Redmi Note 7 (`d93c743`).
+    - Verified flat borders in Light and Dark themes across all 6 screens at 392dp: Buy list, Void dialog, Sell list, Parchi list, Drawer summary, and Stock register (`pr5-*-redmi-390.png`). Long-press void dialog verified and functioning.
+    - Added row `flat-cards-lists` as `passing` in `FEATURES.json`.
+- Evidence:
+  - 23 screenshots captured directly on physical Redmi Note 7 (`d93c743`):
+    - Flow: `redmi-farmer-a-person-screen.png`, `redmi-farmer-b-person-screen.png`, `redmi-repay-overpayment-block.png`, `redmi-buy-slip-receipt.png`, `redmi-buylist-void-dialog.png`, `redmi-dashboard-verified.png`, `redmi-drawer-dark-390.png`.
+    - PR #4: `pr4-home-light-redmi-390.png`, `pr4-home-dark-redmi-390.png`, `pr4-expense-light-redmi-390.png`, `pr4-expense-dark-redmi-390.png`.
+    - PR #5: `pr5-buylist-light-redmi-390.png`, `pr5-buylist-dark-redmi-390.png`, `pr5-void-dialog-light-redmi-390.png`, `pr5-void-dialog-dark-redmi-390.png`, `pr5-selllist-light-redmi-390.png`, `pr5-selllist-dark-redmi-390.png`, `pr5-parchi-light-redmi-390.png`, `pr5-parchi-dark-redmi-390.png`, `pr5-drawer-light-redmi-390.png`, `pr5-drawer-dark-redmi-390.png`, `pr5-stock-light-redmi-390.png`, `pr5-stock-dark-redmi-390.png`.
+  - Unique shasums confirmed across all captures.
+- Unverified:
+  - VPS production deployment and production DB migrations (mandisamiti_prod_* out of scope).
+  - Khata back navigation from Parchi (known bug, fix reserved for Grok).
+  - Staging alembic stamp for single baseline (covered in Task 3).
+- Next steps: Open PR for Task 2, proceed to Task 3 (evidence rows for merges and staging deploy).
+
+## 2026-11-19 · Gemini 3.8 Flash / Antigravity · Task 3: Merges & Staging Deploy Evidence
+- What changed:
+  - 1. Merged PRs & Staging Baseline Verification:
+    - Verified PR #3 (`buy-slip-advance-not-pesgi`, commit `6ed6866`) and PR #6 (`alembic-baseline-4465`, commit `29170e2`) merged to `origin/main`.
+    - Main branch commit `236f2c7` active and deployed on staging server via `deploy_staging.sh`.
+  - 2. Live VPS Database & Migration State:
+    - Queried live VPS container `mandisamiti_staging_api` via SSH: `alembic current` confirms `0001_baseline (head)`.
+    - Health check `curl -s http://64.227.142.180:8060/health/ready` confirms `{"status":"ready","checks":{"db":"ok","redis":"ok"}}`.
+    - Staging PostgreSQL data confirmed intact: 4 lend_entries (GIVEN LOAN Rs 10k, GIVEN PESGI Rs 3k, GIVEN LOAN Rs 2k, TAKEN LOAN Rs 5k), 10 cash transactions, 3 buy entries.
+  - 3. Tracker Updates:
+    - Moved `alembic-single-baseline` to `passing` with concrete VPS migration evidence.
+    - Added new feature row `staging-deploy-main-baseline` as `passing` in `FEATURES.json`.
+- Evidence:
+  - Live VPS terminal output:
+    - `ssh appworx-core-vps "docker exec mandisamiti_staging_api alembic current"` -> `0001_baseline (head)`.
+    - `curl -s http://64.227.142.180:8060/health/ready` -> `{"status":"ready","checks":{"db":"ok","redis":"ok"}}`.
+- Unverified: Production deployment (`mandisamiti_prod_*` stack out of scope); offsite backup cron.
+- Next steps: Proceed to Task 4 (cleanup with Vivek's explicit confirmation, one question at a time).

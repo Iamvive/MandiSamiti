@@ -62,7 +62,6 @@ internal fun DrawerSummaryCard(
         colors = CardDefaults.cardColors(containerColor = MandiSurface),
         border = BorderStroke(1.dp, MandiBorder),
         shape = RoundedCornerShape(14.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             Modifier

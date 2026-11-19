@@ -8,7 +8,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,8 +38,6 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,6 +62,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.components.MandiCard
 import com.appwork.mandisamiti.ui.components.QuotaProgressBanner
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.OutlierEntryInfo
@@ -74,7 +72,6 @@ import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
 import com.appwork.mandisamiti.ui.theme.MandiRedPayable
-import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
@@ -259,47 +256,39 @@ fun DashboardScreen(
 
             // 1. Rokdi Balance Hero Card
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onNavigateToGalla),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                MandiCard(
+                    onClick = onNavigateToGalla,
+                    padding = 16.dp,
+                    spacing = 4.dp,
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (isEnglish) "Rokdi Balance" else "रोकड़ शेष",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MandiTextSecondary
-                            )
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = MandiTextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
                         Text(
-                            text = MandiMathEngine.formatRupees(uiState.rokdiBalancePaisa),
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary
-                        )
-                        Text(
-                            text = if (isEnglish) "By the book, in the galla now" else "बही के अनुसार, गल्ले में अभी",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = if (isEnglish) "Rokdi Balance" else "रोकड़ शेष",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MandiTextSecondary
                         )
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MandiTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
+                    Text(
+                        text = MandiMathEngine.formatRupees(uiState.rokdiBalancePaisa),
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                    Text(
+                        text = if (isEnglish) "By the book, in the galla now" else "बही के अनुसार, गल्ले में अभी",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MandiTextSecondary
+                    )
                 }
             }
 
@@ -386,71 +375,57 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Left Column: किसान देय
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(onClick = onNavigateToBuyList),
-                        shape = RoundedCornerShape(14.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    MandiCard(
+                        modifier = Modifier.weight(1f),
+                        onClick = onNavigateToBuyList,
+                        padding = 14.dp,
+                        spacing = 4.dp,
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = if (isEnglish) "Net Payable" else "किसान देय",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MandiTextSecondary
-                            )
-                            Text(
-                                text = MandiMathEngine.formatRupees(datedNetPayablePaisa),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiTextPrimary
-                            )
-                            Text(
-                                text = if (isEnglish) "Buy slip value" else "खरीद पर्ची देय",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
-                                color = MandiTextSecondary
-                            )
-                        }
+                        Text(
+                            text = if (isEnglish) "Net Payable" else "किसान देय",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = MandiMathEngine.formatRupees(datedNetPayablePaisa),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
+                        Text(
+                            text = if (isEnglish) "Buy slip value" else "खरीद पर्ची देय",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            color = MandiTextSecondary
+                        )
                     }
 
                     // Right Column: व्यापारी से लेना
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(onClick = onNavigateToSellList),
-                        shape = RoundedCornerShape(14.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    MandiCard(
+                        modifier = Modifier.weight(1f),
+                        onClick = onNavigateToSellList,
+                        padding = 14.dp,
+                        spacing = 4.dp,
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = if (isEnglish) "To Receive" else "व्यापारी से लेना",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MandiTextSecondary
-                            )
-                            Text(
-                                text = MandiMathEngine.formatRupees(datedVyapariReceivablePaisa),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiGreenReceivable
-                            )
-                            Text(
-                                text = if (isEnglish) "Unpaid balance" else "बिक्री बिल बाकी",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
-                                color = MandiTextSecondary
-                            )
-                        }
+                        Text(
+                            text = if (isEnglish) "To Receive" else "व्यापारी से लेना",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MandiTextSecondary
+                        )
+                        Text(
+                            text = MandiMathEngine.formatRupees(datedVyapariReceivablePaisa),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiGreenReceivable
+                        )
+                        Text(
+                            text = if (isEnglish) "Unpaid balance" else "बिक्री बिल बाकी",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            color = MandiTextSecondary
+                        )
                     }
                 }
             }
@@ -536,18 +511,9 @@ private fun RecentSlipRow(
     onClick: () -> Unit
 ) {
     val slipNet = (slip.grossPaisa - slip.labourPaisa - slip.commissionPaisa).coerceAtLeast(0L)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
+    MandiCard(onClick = onClick, padding = 14.dp, spacing = 0.dp) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -578,16 +544,7 @@ private fun UdhaarCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MandiSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+    MandiCard(modifier = modifier, onClick = onClick, padding = 12.dp, spacing = 4.dp) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -635,7 +592,6 @@ private fun UdhaarCard(
                     )
                 }
             }
-        }
     }
 }
 
@@ -646,16 +602,9 @@ private fun AllTimeCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MandiSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(label, style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
-            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
-        }
+    MandiCard(modifier = modifier, onClick = onClick, padding = 12.dp, spacing = 4.dp) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
+        Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MandiTextPrimary)
     }
 }
 
