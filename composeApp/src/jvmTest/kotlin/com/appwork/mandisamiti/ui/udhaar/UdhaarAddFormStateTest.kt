@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.udhaar
 
 import com.appwork.mandisamiti.domain.model.LendDirection
+import com.appwork.mandisamiti.domain.model.LendKind
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.lend.LendPartyResolver
@@ -318,5 +319,66 @@ class UdhaarAddFormStateTest {
 
         val tomorrowLaMs = LocalDate(2026, 11, 13).atStartOfDayIn(la).toEpochMilliseconds()
         assertFalse(isSameOrPastDay(tomorrowLaMs, todayLaMs, la), "Tomorrow must be invalid in LA")
+    }
+
+    @Test
+    fun kindDefaultsToLoanAndSettingPesgiFlowsToForm() {
+        val state = UdhaarAddFormState(direction = LendDirection.GIVEN, todayMs = todayMs)
+        assertEquals(LendKind.LOAN, state.kind)
+        state.updatePhone("9876543210")
+        state.name = "Ramesh Kumar"
+        state.amountRupees = "3000"
+
+        val defaultForm = state.toForm(shopId = "shop1", partyId = "party1")
+        assertEquals(LendKind.LOAN, defaultForm.kind)
+
+        // Switch to PESGI
+        state.kind = LendKind.PESGI
+        assertEquals(LendKind.PESGI, state.kind)
+        val pesgiForm = state.toForm(shopId = "shop1", partyId = "party1")
+        assertEquals(LendKind.PESGI, pesgiForm.kind)
+
+        // Switching direction to TAKEN forces kind to LOAN in toForm
+        val takenState = UdhaarAddFormState(direction = LendDirection.TAKEN, todayMs = todayMs)
+        takenState.kind = LendKind.PESGI
+        takenState.updatePhone("9876543210")
+        takenState.name = "Suresh Vyapari"
+        takenState.amountRupees = "4000"
+        val takenForm = takenState.toForm(shopId = "shop1", partyId = "party1")
+        assertEquals(LendKind.LOAN, takenForm.kind)
+    }
+
+    @Test
+    fun saverRoundTripPreservesKindAndShortListRestoresLoan() {
+        val state = UdhaarAddFormState(direction = LendDirection.GIVEN, todayMs = todayMs)
+        state.phone = "9876543210"
+        state.name = "Ramesh Kumar"
+        state.selectedPartyId = "p1"
+        state.amountRupees = "3000"
+        state.kind = LendKind.PESGI
+        state.interestOn = true
+        state.rateInput = "2.5"
+        state.giveToOther = true
+        state.receiverName = "Sonu"
+        state.receiverPhone = "9876543211"
+
+        // Round trip with kind
+        val saved: List<Any?> = UdhaarAddFormStateSaver.saveState(state)
+        assertEquals(13, saved.size)
+        assertEquals(LendKind.PESGI.name, saved[12])
+
+        val restored = UdhaarAddFormStateSaver.restore(saved)
+        assertEquals(LendKind.PESGI, restored.kind)
+        assertEquals(state.phone, restored.phone)
+        assertEquals(state.name, restored.name)
+        assertEquals(state.amountRupees, restored.amountRupees)
+        assertEquals(state.interestOn, restored.interestOn)
+        assertEquals(state.rateInput, restored.rateInput)
+        assertEquals(state.receiverName, restored.receiverName)
+
+        // Older short list (12 elements, without kind)
+        val shortList = saved.take(12)
+        val restoredFromShort = UdhaarAddFormStateSaver.restore(shortList)
+        assertEquals(LendKind.LOAN, restoredFromShort.kind)
     }
 }

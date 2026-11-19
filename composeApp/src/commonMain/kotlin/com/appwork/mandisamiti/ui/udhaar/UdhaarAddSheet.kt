@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.ui.udhaar
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,10 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -54,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendDirection
+import com.appwork.mandisamiti.domain.model.LendKind
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.ui.lend.LendPartyResolver
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
@@ -81,8 +88,8 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-private object UdhaarAddFormStateSaver : Saver<UdhaarAddFormState, List<Any?>> {
-    override fun SaverScope.save(value: UdhaarAddFormState): List<Any?> = listOf(
+internal object UdhaarAddFormStateSaver : Saver<UdhaarAddFormState, List<Any?>> {
+    fun saveState(value: UdhaarAddFormState): List<Any?> = listOf(
         value.direction.name,
         value.todayMs,
         value.phone,
@@ -95,7 +102,10 @@ private object UdhaarAddFormStateSaver : Saver<UdhaarAddFormState, List<Any?>> {
         value.giveToOther,
         value.receiverName,
         value.receiverPhone,
+        value.kind.name,
     )
+
+    override fun SaverScope.save(value: UdhaarAddFormState): List<Any?> = saveState(value)
 
     override fun restore(value: List<Any?>): UdhaarAddFormState {
         val direction = LendDirection.valueOf(value[0] as String)
@@ -111,6 +121,8 @@ private object UdhaarAddFormStateSaver : Saver<UdhaarAddFormState, List<Any?>> {
         state.giveToOther = value[9] as Boolean
         state.receiverName = value[10] as String
         state.receiverPhone = value[11] as String
+        val kindStr = value.getOrNull(12) as? String
+        state.kind = kindStr?.let { runCatching { LendKind.valueOf(it) }.getOrNull() } ?: LendKind.LOAN
         return state
     }
 }
@@ -215,6 +227,66 @@ fun UdhaarAddSheet(
                     enabled = !isSaving
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = MandiTextSecondary)
+                }
+            }
+
+            // Kind Segmented Control (GIVEN only: Loan vs Advance)
+            if (direction == LendDirection.GIVEN) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TabRow(
+                        selectedTabIndex = if (state.kind == LendKind.PESGI) 1 else 0,
+                        containerColor = MandiSurface,
+                        contentColor = MandiPrimaryAction,
+                        indicator = { tabPositions ->
+                            val currentTabIndex = if (state.kind == LendKind.PESGI) 1 else 0
+                            if (currentTabIndex < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[currentTabIndex]),
+                                    color = MandiPrimaryAction
+                                )
+                            }
+                        },
+                        divider = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, MandiBorder, RoundedCornerShape(12.dp))
+                    ) {
+                        Tab(
+                            selected = state.kind == LendKind.LOAN,
+                            onClick = { state.kind = LendKind.LOAN },
+                            text = {
+                                Text(
+                                    text = if (isEnglish) "Loan" else "उधार",
+                                    fontWeight = if (state.kind == LendKind.LOAN) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (state.kind == LendKind.LOAN) MandiTextPrimary else MandiTextSecondary
+                                )
+                            }
+                        )
+                        Tab(
+                            selected = state.kind == LendKind.PESGI,
+                            onClick = { state.kind = LendKind.PESGI },
+                            text = {
+                                Text(
+                                    text = if (isEnglish) "Advance" else "पेशगी",
+                                    fontWeight = if (state.kind == LendKind.PESGI) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (state.kind == LendKind.PESGI) MandiTextPrimary else MandiTextSecondary
+                                )
+                            }
+                        )
+                    }
+                    if (state.kind == LendKind.PESGI) {
+                        Text(
+                            text = if (isEnglish) {
+                                "Money given before the crop is sold. It is cut from the next slip."
+                            } else {
+                                "फसल बेचने से पहले दिया गया पैसा, अगली पर्ची से कटेगा।"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MandiTextSecondary,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
 

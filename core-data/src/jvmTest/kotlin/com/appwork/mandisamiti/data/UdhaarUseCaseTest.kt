@@ -61,6 +61,20 @@ class UdhaarUseCaseTest {
     }
 
     @Test
+    fun createGivenPesgiStoresKindPesgiAndWritesLinkedCashOut() = runTest {
+        val f = fixture(testScheduler)
+        val lend = f.useCase.createLoan(form(kind = LendKind.PESGI))
+        val rows = f.cashRows()
+        assertEquals(LendDirection.GIVEN, lend.direction)
+        assertEquals(LendKind.PESGI, lend.kind)
+        assertEquals(1, rows.size)
+        assertEquals(TransactionType.UDHAR_GIVEN, rows.single().transactionType)
+        assertEquals(1_000_000L, rows.single().amountPaisa)
+        assertEquals(lend.id, rows.single().lendId)
+        assertNull(rows.single().sourceEntryId)
+    }
+
+    @Test
     fun createTakenLoanWritesCashIn() = runTest {
         val f = fixture(testScheduler)
         f.useCase.createLoan(form(direction = LendDirection.TAKEN))

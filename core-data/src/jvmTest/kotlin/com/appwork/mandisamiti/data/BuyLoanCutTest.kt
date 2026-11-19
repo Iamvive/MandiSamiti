@@ -206,11 +206,18 @@ class BuyLoanCutTest {
         // Day 1 PESGI is fully settled first
         val l1 = lendRepo.getLendEntryById("l1")!!
         assertEquals(LendStatus.SETTLED, l1.status)
+        val s1 = lendRepo.getSettlements("l1").filter { !it.isVoid }
+        assertEquals(1, s1.size)
+        assertEquals("l1", s1.first().lendId)
+        assertEquals(200_000L, s1.first().principalPaisa)
+
         // Day 2 ordinary LOAN has Rs 4,000 remaining (1,000 cut)
         val l2 = lendRepo.getLendEntryById("l2")!!
         assertEquals(LendStatus.PARTIAL, l2.status)
         val s2 = lendRepo.getSettlements("l2").filter { !it.isVoid }
-        assertEquals(100_000L, s2.sumOf { it.principalPaisa })
+        assertEquals(1, s2.size)
+        assertEquals("l2", s2.first().lendId)
+        assertEquals(100_000L, s2.first().principalPaisa)
     }
 
     @Test

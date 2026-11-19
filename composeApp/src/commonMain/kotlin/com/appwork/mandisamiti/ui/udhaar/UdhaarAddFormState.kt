@@ -27,6 +27,7 @@ class UdhaarAddFormState(
     val direction: LendDirection,
     val todayMs: Long,
 ) {
+    var kind by mutableStateOf(LendKind.LOAN)
     var phone by mutableStateOf("")
 
     fun updatePhone(input: String) {
@@ -134,7 +135,7 @@ class UdhaarAddFormState(
             direction = direction,
             amountPaisa = amountWhole * 100L,
             date = dateMs,
-            kind = LendKind.LOAN,
+            kind = if (direction == LendDirection.GIVEN) kind else LendKind.LOAN,
             monthlyRatePercent = effectiveRate,
             receiverName = if (isGivenWithOther) receiverName.trim().takeIf { it.isNotEmpty() } else null,
             receiverPhone = if (isGivenWithOther) receiverPhone.trim().takeIf { it.isNotEmpty() } else null,
