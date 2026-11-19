@@ -252,6 +252,12 @@
       "description": "Alembic revisions 0001 through 0008 are one baseline that creates the current schema on an empty database",
       "status": "failing",
       "evidence": "2026-11-19 Grok 4.7 backend pytest: 140 passed before and 140 passed after. test_alembic_upgrade_and_downgrade upgrades an empty SQLite database to match Base.metadata and downgrades to no tables. test_baseline_udhaar_defaults_on_insert stores direction GIVEN, kind LOAN, and a null lend_id. Unverified: staging alembic_version is still 0008_udhaar_fields and needs alembic stamp 0001_baseline before the next upgrade. This change does not touch the VPS."
+    },
+    {
+      "id": "buy-slip-advance-not-pesgi",
+      "description": "Buy-slip अग्रिम stays on the bill and in the drawer, and the cash row is not an unlinked pesgi",
+      "status": "failing",
+      "evidence": "2026-11-19 Grok 4.7 JVM: BuyCheckoutTest.slipAdvanceStaysOnTheBillAndOutOfPesgi. A checkout with advancePaidPaisa 200000 keeps the bill field, writes no LendEntry, leaves udhaarGivenPaisa at 0, drops CashDrawer by 200000, and is absent from getUnlinkedFarmerAdvancesBefore while a real unlinked UDHAR_GIVEN row still appears. Counts from XML: core-domain 109, core-database 12, core-data 188, composeApp 417, 0 failures (was 725; now 726). Unverified: needs device check of the buy-slip drawer flow, light, dark, and 390dp."
     }
   ]
 }

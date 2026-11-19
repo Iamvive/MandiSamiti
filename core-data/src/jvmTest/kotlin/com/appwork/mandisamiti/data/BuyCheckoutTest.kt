@@ -2,10 +2,12 @@ package com.appwork.mandisamiti.data
 
 import com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository
 import com.appwork.mandisamiti.database.createTestDatabase
+import com.appwork.mandisamiti.domain.cash.CashDrawer
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -73,6 +75,42 @@ class BuyCheckoutTest {
         assertNull(repo.getBuyEntryById("b1"))
         assertNull(db.appDatabaseQueries.getCashTransactionById("c1").executeAsOneOrNull())
         assertEquals(0, db.appDatabaseQueries.getRevisionsForEntry("b1").executeAsList().size)
+    }
+
+    @Test
+    fun slipAdvanceStaysOnTheBillAndOutOfPesgi() = runTest {
+        val db = createTestDatabase()
+        val repo = OfflineFirstBuyRepository(db)
+        repo.saveBuyCheckout(slip(), party, listOf(cash("c1", 200_000)))
+        db.appDatabaseQueries.insertCashTransaction(
+            id = "c-legacy", shop_id = "shop", party_id = "p1", deal_id = null,
+            transaction_type = TransactionType.UDHAR_GIVEN.name, amount_paisa = 50_000L,
+            payment_mode = PaymentMode.CASH.name, transaction_date = 1L,
+            voice_note_uri = null, remarks = "पुरानी पेशगी", created_at = 1L, updated_at = 1L,
+            is_deleted = 0L, sync_status = 0L, revision = 1L, is_void = 0L, void_reason = null,
+            source_entry_type = null, source_entry_id = null, lend_id = null,
+        )
+
+        val q = db.appDatabaseQueries
+        assertEquals(200_000L, repo.getBuyEntryById("b1")!!.advancePaidPaisa)
+        assertEquals(0, q.getLendEntriesByShop("shop").executeAsList().size)
+        assertEquals(0L, q.getPartyBalance("p1").executeAsOne().udhaar_given_paisa)
+
+        val saved = q.getCashTransactionById("c1").executeAsOne()
+        assertEquals("b1", saved.source_entry_id)
+        val drawerTx = CashTransaction(
+            id = saved.id, shopId = saved.shop_id, partyId = saved.party_id!!,
+            transactionType = TransactionType.valueOf(saved.transaction_type),
+            amountPaisa = saved.amount_paisa, paymentMode = PaymentMode.valueOf(saved.payment_mode),
+            transactionDate = saved.transaction_date, createdAt = saved.created_at, updatedAt = saved.updated_at,
+            isDeleted = saved.is_deleted == 1L, isVoid = saved.is_void == 1L,
+        )
+        assertEquals(-200_000L, CashDrawer.balancePaisa(listOf(drawerTx)))
+
+        val advances = db.bahiDayQueriesQueries.getUnlinkedFarmerAdvancesBefore(
+            shopId = "shop", farmerId = "p1", purchaseMillis = 10L,
+        ).executeAsList()
+        assertEquals(listOf("c-legacy"), advances.map { it.id })
     }
 
     @Test
