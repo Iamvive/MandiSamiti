@@ -1080,3 +1080,25 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - 2026-11-20 (Claude Haiku 5.5, Claude Code): Udhaar Task 12 server check on staging, partial pass. Staging Postgres (mandisamiti_staging_db, via the VPS console): lend_entries row 267a8fee-0fc6-40b9-9957-a933c4697fda, party SyncTestLender / 9999900077, direction TAKEN, kind LOAN, amount_paisa 100000, is_deleted 0, server_seq 70, created 11:42 IST. Matches the device save and the MandiSyncWorker SUCCESS. Receiver name/phone empty (expected for a LOAN, per code reading, not tested). Not yet verified: a PESGI entry with receiver_name/receiver_phone, and a cash repayment with lend_id on staging. Feature udhaar-sync-and-backend-schema stays failing. Next: fresh session, add PESGI + linked cash row on d93c743 (throwaway shop), check on staging, then mark passing with date.
 
 - 2026-11-20 (Claude Haiku 5.5, Claude Code): Udhaar Task 12 PESGI + cash repayment check on staging, PASS. Device d93c743 (throwaway shop): PESGI given entry PesgiTestParty 9999900078, Rs 1000, receiver ReceiverTest 9999900079; repayment Rs 500 linked to it; sync worker SUCCESS. Staging Postgres via VPS console: lend_entries 57888c2d-1a15-49fb-9fda-0e8bae4936c3 GIVEN/PESGI, 100000 paisa, receiver fields match, server_seq 79; lend_settlements lend_id matches, 50000 paisa, is_void 0. Feature udhaar-sync-and-backend-schema marked passing (staging scope). Not verified: production VPS deploy and production migration. Not committed: FEATURES.json and PROGRESS.md edits await Vivek's approval for commit.
+
+
+## 2026-11-20 18:45 IST · Claude Haiku 5.5 / Claude Code · PR #34 and PR #35 feature logging
+- What changed:
+  - 1. Recorded PR #34 (`fix(input): search keys, identifier keyboards, party lookup opens on text`, merged `60c31e9`) and PR #35 (`feat(khata): add all-parties khata entry point from dashboard`, merged `524eb9b`) in `FEATURES.json`.
+  - 2. Added `input-search-keys-identifier-keyboards` (failing) and `all-parties-khata-entry` (passing) at the end of the list, per the FEATURES.json rules.
+  - 3. Appended evidence to `input-audit-medium-low` (stays failing) and `party-lookup-phone-or-name` (stays passing). No descriptions were reworded.
+  - 4. Deleted the merged branches on origin and local in this session. Only `main` remains on origin. Local `backup/local-main-unpushed-2026-11-20` kept on purpose (holds 2 commits not on main: `c2ced3b`, `de9bc92`).
+- Evidence:
+  - `./gradlew :composeApp:jvmTest`: 418 tests, 0 failures, 0 errors. Gradle reported the task up to date, so these are cached results for unchanged inputs on `main` at `524eb9b`.
+  - `PartyLookupTest`: 8 of 8 pass.
+  - Redmi `d93c743`, light and dark system theme (PR #34): Buy search 'Farmer' filters to Farmer A; Sell search 'Farmer' filters to Farmer B (light); empty state for an unmatched query.
+  - Redmi `d93c743`, staging build, light theme (PR #35): dashboard 'सभी खाते' opens the list (5 parties), a party tap opens its ledger, Back returns to the list.
+  - Staging deploy from `main` `524eb9b` via `backend/scripts/deploy_staging.sh`: smoke tests passed on `127.0.0.1:8060`; public `/health` returns `healthy`.
+- Unverified:
+  - PR #34: Search key on Buy does not dismiss the keyboard (open, not confirmed as a bug); 390dp pass; Search key on Sell and Khata.
+  - PR #35: dark theme on the all-parties khata screen; 390dp pass.
+  - Production deploy: not run (Vivek asked for staging only).
+- Decisions needed from Vivek:
+  - The description of `party-lookup-phone-or-name` still says the lookup opens on the number pad. PR #34 changed the default to the text keyboard. The rules forbid rewording, so the description is left stale until Vivek says otherwise.
+- Not committed: `FEATURES.json` and this entry await Vivek's approval for the commit.
+- Next steps: device checks for dark theme and 390dp on the all-parties khata screen; Search key behaviour on Buy; then move `input-search-keys-identifier-keyboards` to passing.

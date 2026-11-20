@@ -77,7 +77,7 @@
       "id": "input-audit-medium-low",
       "description": "13 Medium and 48 Low input-audit items; search boxes on Khata, Buy, Sell, Stock, Expense, Register",
       "status": "failing",
-      "evidence": "Group B audit completed across Settings, Daily Cash Register, Lend & Repay, Expense, and Stock using MandiKeyboard presets (Decimal, Whole, Name, Identifier, Search, Note). Verified on emulator-5554 (settings_trade_rates_keyboard.png, cash_in_decimal_keyboard.png) and GroupBInputAuditTest. Group A core trade screens in progress."
+      "evidence": "Group B audit completed across Settings, Daily Cash Register, Lend & Repay, Expense, and Stock using MandiKeyboard presets (Decimal, Whole, Name, Identifier, Search, Note). Verified on emulator-5554 (settings_trade_rates_keyboard.png, cash_in_decimal_keyboard.png) and GroupBInputAuditTest. Group A core trade screens in progress. 2026-11-20 (Claude Haiku 5.5, Claude Code): PR #34 (merged 60c31e9) adds Search IME action on Buy, Sell and Khata search, and MandiKeyboard.Identifier on Khata GSTIN and licence fields. Device Redmi d93c743, light and dark system theme: Buy search 'Farmer' filters to Farmer A, Sell 'Farmer' filters to Farmer B (light), empty state shown for unmatched query. Not verified: Search key dismissing the keyboard on Buy (open, not confirmed as a bug); 390dp pass. Entry stays failing."
     },
     {
       "id": "khata-chips-explained",
@@ -125,7 +125,7 @@
       "id": "party-lookup-phone-or-name",
       "description": "Party lookup field (Buy, Sell, Lend, Loan advance) opens on the number pad and has an अ/A toggle to a text keyboard so a party can be found by name or village; typed text never reaches the phone value",
       "status": "passing",
-      "evidence": "2026-11-14 emulator-5554 (staging build): Sell entry, toggle to text keyboard (inputType 0x1, no autocorrect), typed 'ra', dropdown showed Ramesh 9876543211 Orai, picking it filled phone, name and village and reset the field to the number pad. composeApp jvmTest 311 tests 0 failures including PartyLookupTest (7 cases). Not opened on emulator: Buy, Lend and Loan advance screens (same MandiPartyLookupField, no caller changes). Not checked on Redmi d93c743, Light/Dark and 390dp not separately reviewed."
+      "evidence": "2026-11-14 emulator-5554 (staging build): Sell entry, toggle to text keyboard (inputType 0x1, no autocorrect), typed 'ra', dropdown showed Ramesh 9876543211 Orai, picking it filled phone, name and village and reset the field to the number pad. composeApp jvmTest 311 tests 0 failures including PartyLookupTest (7 cases). Not opened on emulator: Buy, Lend and Loan advance screens (same MandiPartyLookupField, no caller changes). Not checked on Redmi d93c743, Light/Dark and 390dp not separately reviewed. 2026-11-20 (Claude Haiku 5.5, Claude Code): PR #34 (merged 60c31e9) changed the default: the lookup now opens on the text keyboard, and the अ/A toggle returns to phone mode. The description above still says number pad; left unchanged per FEATURES.json rules, flagged for Vivek. Device check on d93c743 light and dark: name query 'Farmer' returns matching party on Buy and Sell. PartyLookupTest 8 of 8 (JVM)."
     },
     {
       "id": "login-rehome-and-push-resilience",
@@ -283,6 +283,18 @@
       "description": "Staging deployment of main 236f2c7 with 0001_baseline Alembic stamp and PRs #3 and #6 merged",
       "status": "passing",
       "evidence": "2026-11-19 (Antigravity): Staging deployment of main 236f2c7 executed via deploy_staging.sh. PR #3 (buy-slip advance, 6ed6866) and PR #6 (alembic single baseline, 29170e2) merged to main. All 140 backend pytests, migrations, and smoke tests passed during deployment. Live VPS verification: 'docker exec mandisamiti_staging_api alembic current' confirms '0001_baseline (head)'; 'curl -s http://64.227.142.180:8060/health/ready' confirms DB and Redis status ready. Staging PostgreSQL data intact across all tables (4 lend_entries, 10 cash_transactions, 3 buy_entries)."
+    },
+    {
+      "id": "input-search-keys-identifier-keyboards",
+      "description": "PR #34: Search IME action on Buy, Sell and Khata search; identifier keyboard on Khata GSTIN and licence fields; party lookup opens on text keyboard with all-digit text mode still reporting the phone",
+      "status": "failing",
+      "evidence": "2026-11-20 (Claude Haiku 5.5, Claude Code). Merged to main as 60c31e9 on Vivek's approval. ./gradlew :composeApp:jvmTest: 418 tests, 0 failures (run on main 524eb9b; Gradle reported task up to date, so cached results for identical inputs). PartyLookupTest 8 of 8, including all-digit text mode and cleared phone on mixed text. Device Redmi d93c743 light and dark system theme: Buy 'Farmer' -> Farmer A, Sell 'Farmer' -> Farmer B (light), empty state for unmatched query. Open: Search key on Buy does not dismiss the keyboard (not confirmed as a bug). Not run: 390dp pass, Search key behaviour on Sell and Khata. Stays failing until those run."
+    },
+    {
+      "id": "all-parties-khata-entry",
+      "description": "All-parties khata entry point: 'सभी खाते' button on Dashboard opens KhataLedgerTabScreen; party tap opens its ledger; Back returns to the all-parties list",
+      "status": "passing",
+      "evidence": "2026-11-20 (Claude Haiku 5.5, Claude Code). Merged to main as 524eb9b on Vivek's approval (PR #35, 3 files: App.kt, HomeScreen.kt, DashboardScreen.kt). ./gradlew :composeApp:jvmTest: 418 tests, 0 failures. Device Redmi d93c743, staging build, light theme: button opens list (5 parties), party tap opens its ledger, Back returns to the list. Not checked: dark theme on this screen (adb theme switch did not take), 390dp layout pass."
     }
   ]
 }
