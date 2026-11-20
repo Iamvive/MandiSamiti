@@ -51,6 +51,7 @@ import com.appwork.mandisamiti.ui.deal.DealEntryScreen
 import com.appwork.mandisamiti.ui.deal.DealEntryViewModel
 import com.appwork.mandisamiti.ui.home.HomeScreen
 import com.appwork.mandisamiti.ui.home.HomeViewModel
+import com.appwork.mandisamiti.ui.ledger.KhataLedgerTabScreen
 import com.appwork.mandisamiti.ui.ledger.PartyLedgerScreen
 import com.appwork.mandisamiti.ui.ledger.PartyLedgerViewModel
 import com.appwork.mandisamiti.ui.register.DailyCashRegisterScreen
@@ -97,6 +98,7 @@ sealed interface Screen {
     data class ExpenseEntry(val existingId: String? = null) : Screen
     data object ExpenseList : Screen
     data object StockSheet : Screen
+    data object AllKhata : Screen
     data object SubscriptionContact : Screen
 }
 
@@ -123,6 +125,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.ExpenseEntry -> if (existingId != null) Screen.ExpenseList else Screen.Home
     is Screen.ExpenseList -> Screen.ExpenseEntry()
     is Screen.StockSheet -> Screen.Home
+    is Screen.AllKhata -> Screen.Home
     is Screen.SubscriptionContact -> Screen.Home
     is Screen.DealEntry -> Screen.Home
     is Screen.PartyLedger -> returnScreen ?: Screen.Home
@@ -324,6 +327,9 @@ fun App(
                     onNavigateToPartyKhataFromParchi = { party ->
                         homeViewModel.selectTab(com.appwork.mandisamiti.ui.navigation.NavigationTab.PARCHI)
                         currentScreen = partyKhataScreen(party.id, returnScreen = Screen.Home)
+                    },
+                    onNavigateToAllKhata = {
+                        currentScreen = Screen.AllKhata
                     },
                     onNavigateToDayClosing = {
                         currentScreen = Screen.DailyRegister
@@ -1099,6 +1105,45 @@ fun App(
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onOpen = { id -> currentScreen = Screen.ExpenseEntry(id) },
                     onBack = { currentScreen = Screen.Home },
+                )
+            }
+            is Screen.AllKhata -> {
+                MandiBackHandler { currentScreen = screen.backTarget() }
+                val allKhataViewModel = remember(shopId) {
+                    HomeViewModel(
+                        shopId = shopId!!,
+                        shopProfileRepository = shopRepo,
+                        partyRepository = partyRepo,
+                        tradeSettingsRepository = tradeSettingsRepo,
+                        buyRepository = buyRepo,
+                        sellRepository = sellRepo,
+                        lendRepository = lendRepo,
+                        expenseRepository = expenseRepo,
+                        cashRepository = cashRepo,
+                        quotaRepository = quotaRepo,
+                        stockUseCase = stockUseCase,
+                        stockAuditRepository = stockAuditRepo,
+                        viewModelScope = coroutineScope,
+                        onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
+                        pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() }
+                    )
+                }
+                val allKhataState by allKhataViewModel.uiState.collectAsState()
+                KhataLedgerTabScreen(
+                    uiState = allKhataState,
+                    onSearchQueryChanged = allKhataViewModel::onSearchQueryChanged,
+                    onFilterSelected = allKhataViewModel::onFilterSelected,
+                    onTypeFilterSelected = allKhataViewModel::onTypeFilterSelected,
+                    onPartyClick = { party ->
+                        currentScreen = partyKhataScreen(party.id, returnScreen = Screen.AllKhata)
+                    },
+                    onCreateParty = { name, village, phone, type, gstin, mandiLicense ->
+                        allKhataViewModel.createParty(name, village, phone, type, gstin, mandiLicense)
+                    },
+                    onUpdatePartyPhone = { party, phone -> allKhataViewModel.updatePartyPhone(party, phone) },
+                    onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
+                    onPhoneNeeded = { onAdd -> onAdd() },
+                    isEnglish = allKhataState.isEnglish
                 )
             }
             is Screen.StockSheet -> {
