@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Agriculture
@@ -33,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.input.ImeAction
 import com.appwork.mandisamiti.domain.model.Party
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -1038,6 +1040,7 @@ private fun ParchiSearchBox(query: String, onQueryChange: (String) -> Unit, isEn
         value = query,
         onValueChange = onQueryChange,
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MandiTextMuted) },
         trailingIcon = {
             if (query.isNotEmpty()) {
