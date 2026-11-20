@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.DuplicatePhoneException
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.PartyFilter
@@ -143,7 +144,7 @@ fun KhataLedgerTabScreen(
             // 1. Full-Width Search Input
             item {
                 OutlinedTextField(
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Search),
                     value = uiState.searchQuery,
                     onValueChange = onSearchQueryChanged,
                     placeholder = {
@@ -438,13 +439,13 @@ fun KhataLedgerTabScreen(
                             supportingText = if (!isGstinValid) {
                                 { Text(if (isEnglish) "GSTIN must be 15 characters (e.g. 23AAAAA0000A1Z5)" else "GSTIN 15 अक्षरों का होना चाहिए (जैसे 23AAAAA0000A1Z5)") }
                             } else null,
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                            keyboardOptions = MandiKeyboard.Identifier,
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedTextField(
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                            keyboardOptions = MandiKeyboard.Identifier,
                             value = partyMandiLicenseInput,
                             onValueChange = {
                                 if (it.length <= 50) partyMandiLicenseInput = it
