@@ -6,10 +6,16 @@ import com.appwork.mandisamiti.domain.model.Party
 object PartyLookup {
     data class Input(val query: String, val phoneToEmit: String?)
 
-    /** Number mode keeps up to 10 digits and reports them as a phone. Text mode is search-only. */
+    /**
+     * Number mode keeps up to 10 digits and reports them as a phone.
+     * Text mode searches by name; an all-digit query is still reported as the phone,
+     * and any other text clears the phone so a stale number is never saved.
+     */
     fun onInput(raw: String, textMode: Boolean): Input =
         if (textMode) {
-            Input(query = raw, phoneToEmit = null)
+            val trimmed = raw.trim()
+            val phone = if (trimmed.isNotEmpty() && trimmed.all { it.isDigit() }) trimmed.take(10) else ""
+            Input(query = raw, phoneToEmit = phone)
         } else {
             val digits = raw.filter { it.isDigit() }.take(10)
             Input(query = digits, phoneToEmit = digits)

@@ -175,7 +175,7 @@ fun MandiPartyLookupField(
     val effectiveQuery = if (searchQuery.isNotEmpty()) searchQuery else phoneValue
     val trimmed = effectiveQuery.trim()
 
-    var textMode by remember { mutableStateOf(false) }
+    var textMode by remember { mutableStateOf(true) }
     val matches = remember(parties, trimmed) { PartyLookup.matches(parties, trimmed) }
 
     val showDropdown = expanded && matches.isNotEmpty() &&
@@ -213,8 +213,8 @@ fun MandiPartyLookupField(
                 searchQuery = result.query
                 expanded = true
                 result.phoneToEmit?.let(onPhoneChange)
-                val digits = result.query
-                if (!textMode && digits.length == 10) {
+                val digits = result.phoneToEmit.orEmpty()
+                if (digits.length == 10) {
                     val exact = parties.firstOrNull { it.phone == digits }
                     if (exact != null) {
                         onPartySelected(exact)
