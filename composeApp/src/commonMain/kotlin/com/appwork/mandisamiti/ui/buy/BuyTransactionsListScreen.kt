@@ -113,7 +113,7 @@ fun BuyTransactionsListScreen(
                 .padding(paddingValues)
         ) {
             OutlinedTextField(
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Search),
                 singleLine = true,
                 value = searchQuery,
                 onValueChange = { searchQuery = it },

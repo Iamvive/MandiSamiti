@@ -4,7 +4,6 @@ import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class PartyLookupTest {
     private fun party(id: String, name: String, phone: String?, village: String? = null) = Party(
@@ -51,9 +50,16 @@ class PartyLookupTest {
     }
 
     @Test
-    fun textModeKeepsRawTextAndNeverEmitsPhone() {
+    fun textModeKeepsRawTextAndClearsPhone() {
         val r = PartyLookup.onInput("रमेश 12", textMode = true)
         assertEquals("रमेश 12", r.query)
-        assertNull(r.phoneToEmit)
+        assertEquals("", r.phoneToEmit)
+    }
+
+    @Test
+    fun textModeAllDigitsEmitsPhone() {
+        val r = PartyLookup.onInput("9876543210", textMode = true)
+        assertEquals("9876543210", r.query)
+        assertEquals("9876543210", r.phoneToEmit)
     }
 }
