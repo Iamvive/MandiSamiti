@@ -1068,3 +1068,11 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - PR #12 merged to main: \`4048626\`.
   - PR #13 merged to main: \`3072e58\`.
 - Next steps: Proceed with Day 2 of plan (SEC-02 secret parameterization and SEC-03 dead OTP bypass cleanup).
+
+
+## 2026-11-20 (Claude Haiku 5.5, Claude Code): Udhaar Task 12 re-verify
+- Task 12 code was already on main (1df00bf, 4ef1440). Branch `udhaar/task12-verify` created from main.
+- Uncommitted App.kt edit found in the working tree (Screen.Home initialTab, removed onNavigateToPartyKhataFromParchi). It would undo the committed nav fix 13e77f8, so it was saved as a patch and not committed. Patch: scratchpad app-kt-uncommitted-backup.patch. Owner to confirm.
+- Evidence: backend 140 passed; test_sync_udhaar + test_migrations 9 passed; UdhaarWireTest 7/7; SellDepositFilterTest 2/2; staging openapi has the Udhaar fields; staging /health/ready ok.
+- Device: Redmi d93c743, debug build from main pointing at staging; Udhaar landing loads given and taken tabs.
+- Next: on d93c743 add a TAKEN/PESGI entry with receiver name and phone on the throwaway shop, add a cash row linked to a lend, confirm both on staging. Then mark passing with the date.
