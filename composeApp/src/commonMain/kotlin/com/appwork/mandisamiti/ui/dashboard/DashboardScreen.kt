@@ -483,6 +483,16 @@ fun DashboardScreen(
             }
 
             item {
+                TextButton(
+                    onClick = onNavigateToAllKhata,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isEnglish) "All khatas" else "सभी खाते")
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                }
+            }
+
+            item {
                 Spacer(Modifier.height(16.dp))
             }
         }
