@@ -1102,3 +1102,21 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - The description of `party-lookup-phone-or-name` still says the lookup opens on the number pad. PR #34 changed the default to the text keyboard. The rules forbid rewording, so the description is left stale until Vivek says otherwise.
 - Not committed: `FEATURES.json` and this entry await Vivek's approval for the commit.
 - Next steps: device checks for dark theme and 390dp on the all-parties khata screen; Search key behaviour on Buy; then move `input-search-keys-identifier-keyboards` to passing.
+
+## 2026-11-20 07:47 UTC (Claude Haiku 5.5, Claude Code): Offsite backup restore drill, partial
+- What changed:
+  - Found the nightly staging backup had failed every night since at least 2026-11-19: `backend/scripts/backup_staging.sh` was committed as mode 100644, so cron printed `Permission denied` (`/var/log/mandi-backup.log`). No dump existed in `/root/mandi-backups`.
+  - Set the execute bit on the VPS copy and in the git index (`git update-index --chmod=+x`, staged, not committed at this entry).
+  - Ran `backup_staging.sh` once on the VPS: `staging-20261120-074712.sql.gz`, 14 tables.
+- Evidence:
+  - Local-stand-in restore drill on VPS: encrypted the dump with the real passphrase file, then ran `restore_test.sh` with `REMOTE` set to a local directory. Output: `restore-test ok: staging-20261120-074712.sql.gz.enc (14 tables, alembic row present, ~86 rows)`. Scratch remote removed afterwards.
+  - Read-only checks: passphrase file present; `rclone.conf` absent; `gdrive` remote not configured; no Sunday cron for `backup_offsite.sh`.
+- Not done (blocks the feature):
+  - The `gdrive` rclone remote needs a one-time browser OAuth step. Until it exists, `backup_offsite.sh` cannot upload and `restore_test.sh` has not run against the Drive copy.
+  - Sunday cron for `backup_offsite.sh` is not installed. Do not install it before the remote works.
+- Next steps: configure the `gdrive` remote on the VPS (Vivek, interactive), then run `backup_offsite.sh` once, run `restore_test.sh` with the default remote, install the Sunday cron line from the script header, and update FEATURES.json to passing.
+
+## 2026-11-20 (Claude Haiku 5.5, Claude Code): Offsite drill deferred for pilot
+- Vivek decided the offsite (Google Drive) copy is not needed for pilot. Feature `offsite-backup-restore-drill` stays `failing` and carries a `deferred` note in FEATURES.json.
+- Pilot safety relies on the nightly on-VPS backup (`backup_staging.sh`, cron 02:30 UTC). Fixed in c2ced3b. Confirm a second unattended dump appears in `/root/mandi-backups` before pilot go-live.
+- Resume the offsite work after pilot: configure the `gdrive` rclone remote, run backup_offsite.sh, restore_test.sh, install the Sunday cron.
