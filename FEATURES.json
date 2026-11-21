@@ -101,7 +101,8 @@
       "id": "offsite-backup-restore-drill",
       "description": "Weekly encrypted offsite backup (Sunday cron) plus a restore drill into a scratch Postgres",
       "status": "failing",
-      "evidence": "backup_offsite.sh and restore_test.sh written, bash -n ok; not run on the VPS (no docker locally); cron line not installed; rclone gdrive remote and passphrase file existence unchecked"
+      "evidence": "2026-11-20 (Claude Haiku 5.5, Claude Code), partial. Root cause of no backups: backup_staging.sh was committed as mode 100644, so the nightly cron failed with Permission denied every night (/var/log/mandi-backup.log). Fixed: chmod +x on VPS and git index mode 100755. Manual run on VPS: backup ok, staging-20261120-074712.sql.gz (14 tables). Restore drill against a local stand-in remote on VPS (encrypted copy with real passphrase file, restore_test.sh with REMOTE=local dir): restore-test ok, 14 tables, alembic row present, ~86 rows. NOT DONE: rclone gdrive remote not configured on VPS (rclone.conf absent), so backup_offsite.sh has not uploaded to Drive; Sunday cron for backup_offsite.sh not installed; restore_test.sh not run against the Drive copy.",
+      "deferred": "Deferred for pilot by Vivek on 2026-11-20. Status stays failing. Pilot relies on the nightly on-VPS backup only; resume after pilot."
     },
     {
       "id": "clean-install-defaults",
