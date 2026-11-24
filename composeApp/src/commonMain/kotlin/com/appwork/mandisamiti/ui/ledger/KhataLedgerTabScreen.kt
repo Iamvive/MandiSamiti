@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
@@ -58,6 +61,7 @@ import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.DuplicatePhoneException
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.components.MandiKeyboard
+import com.appwork.mandisamiti.ui.components.MandiScreenHeader
 import com.appwork.mandisamiti.ui.components.PartyCard
 import com.appwork.mandisamiti.ui.home.HomeUiState
 import com.appwork.mandisamiti.ui.home.PartyFilter
@@ -65,13 +69,8 @@ import com.appwork.mandisamiti.ui.home.PartyTypeFilter
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryAction
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Store
-import com.appwork.mandisamiti.ui.theme.MandiAmberDark
-import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiSurface
-import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
 import com.appwork.mandisamiti.ui.theme.MandiTextMuted
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
@@ -86,8 +85,8 @@ fun KhataLedgerTabScreen(
     onPartyClick: (Party) -> Unit,
     onCreateParty: suspend (name: String, village: String?, phone: String?, type: PartyType, gstin: String?, mandiLicense: String?) -> Party,
     onUpdatePartyPhone: suspend (party: Party, phone: String) -> Party,
-    onNavigateToStockSheet: () -> Unit = {},
     onPhoneNeeded: (onAdd: () -> Unit) -> Unit = {},
+    onBack: (() -> Unit)? = null,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -104,7 +103,26 @@ fun KhataLedgerTabScreen(
     var phoneEditDuplicate by remember { mutableStateOf<Party?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
+    val resetAddPartyDialog = {
+        showAddPartyDialog = false
+        partyNameInput = ""
+        partyVillageInput = ""
+        partyPhoneInput = ""
+        partyGstinInput = ""
+        partyMandiLicenseInput = ""
+        selectedPartyType = PartyType.FARMER
+        duplicateParty = null
+    }
+
     Scaffold(
+        topBar = {
+            if (onBack != null) {
+                MandiScreenHeader(
+                    title = if (isEnglish) "All Khatas" else "सभी खाते",
+                    onBack = onBack,
+                )
+            }
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAddPartyDialog = true },
@@ -131,8 +149,10 @@ fun KhataLedgerTabScreen(
             )
         },
         containerColor = MandiBackground,
-        // The Home Scaffold already applies system-bar insets; applying them again leaves a gap under the top bar.
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        // Standalone mode (onBack != null) applies bottom navigation-bar insets so the FAB is never clipped;
+        // inside HomeScreen, the parent Scaffold already handles system bars.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        modifier = if (onBack != null) modifier.navigationBarsPadding() else modifier
     ) { paddingValues ->
         LazyColumn(
             modifier = modifier
@@ -186,64 +206,7 @@ fun KhataLedgerTabScreen(
                 )
             }
 
-            // 2. Godown Stock Tile (Warehouse Inventory Audit)
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MandiSurfaceElevated)
-                        .border(1.dp, MandiBorder, RoundedCornerShape(10.dp))
-                        .clickable { onNavigateToStockSheet() }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Store,
-                            contentDescription = null,
-                            tint = MandiNavy,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = if (isEnglish) "Godown Stock (Inventory)" else "गोदाम स्टॉक (जिंस इन्वेंटरी)",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiNavy
-                            )
-                            Text(
-                                text = if (isEnglish) "Check bags and weight in warehouse" else "गोदाम में उपलब्ध बोरी एवं वजन देखें",
-                                fontSize = 11.sp,
-                                color = MandiTextSecondary
-                            )
-                        }
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = if (isEnglish) "View Stock" else "स्टॉक देखें",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiAmberDark
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = MandiAmberDark,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
-
-            // 3a. Party type chips (Kisaan / Vyapari)
+            // 2a. Party type chips (Kisaan / Vyapari)
             item {
                 val kisaanCount = uiState.allParties.count { it.party.partyType == PartyType.FARMER }
                 val vyapariCount = uiState.allParties.count { it.party.partyType == PartyType.BUYER }
@@ -357,12 +320,7 @@ fun KhataLedgerTabScreen(
 
     if (showAddPartyDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showAddPartyDialog = false
-                partyNameInput = ""
-                partyVillageInput = ""
-                partyPhoneInput = ""
-            },
+            onDismissRequest = resetAddPartyDialog,
             title = {
                 Text(
                     text = if (isEnglish) "Create New Account" else "नया खाता बनाएं",
@@ -371,7 +329,10 @@ fun KhataLedgerTabScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     // Party Type selector
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -395,7 +356,7 @@ fun KhataLedgerTabScreen(
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = partyNameInput,
                         onValueChange = { partyNameInput = it },
-                        label = { Text(if (isEnglish) "Party Name *" else "नांव / नाम *") },
+                        label = { Text(if (isEnglish) "Party Name *" else "नाम *") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -409,7 +370,7 @@ fun KhataLedgerTabScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val phoneInvalid = !isValidPartyPhone(partyPhoneInput)
+                    val phoneInvalid = partyPhoneInput.isNotEmpty() && !isValidPartyPhone(partyPhoneInput)
                     OutlinedTextField(
                         value = partyPhoneInput,
                         onValueChange = {
@@ -468,8 +429,7 @@ fun KhataLedgerTabScreen(
                                 fontSize = 13.sp,
                             )
                             TextButton(onClick = {
-                                showAddPartyDialog = false
-                                duplicateParty = null
+                                resetAddPartyDialog()
                                 onPartyClick(existing)
                             }) {
                                 Text(if (isEnglish) "Open account" else "खाता खोलें")
@@ -495,12 +455,7 @@ fun KhataLedgerTabScreen(
                                         if (selectedPartyType == PartyType.BUYER) gstinClean.ifBlank { null } else null,
                                         if (selectedPartyType == PartyType.BUYER) partyMandiLicenseInput.trim().ifBlank { null } else null
                                     )
-                                    showAddPartyDialog = false
-                                    partyNameInput = ""
-                                    partyVillageInput = ""
-                                    partyPhoneInput = ""
-                                    partyGstinInput = ""
-                                    partyMandiLicenseInput = ""
+                                    resetAddPartyDialog()
                                     onPartyClick(created)
                                 } catch (duplicate: DuplicatePhoneException) {
                                     duplicateParty = duplicate.existing
@@ -517,20 +472,12 @@ fun KhataLedgerTabScreen(
                     Text(
                         text = if (isEnglish) "Save Account" else "खाता बनाएं",
                         fontWeight = FontWeight.Bold,
-                        color = MandiPrimaryActionText
                     )
                 }
             },
             dismissButton = {
                 TextButton(
-                    onClick = {
-                        showAddPartyDialog = false
-                        partyNameInput = ""
-                        partyVillageInput = ""
-                        partyPhoneInput = ""
-                        partyGstinInput = ""
-                        partyMandiLicenseInput = ""
-                    }
+                    onClick = resetAddPartyDialog
                 ) {
                     Text(
                         text = if (isEnglish) "Cancel" else "रद्द करें",

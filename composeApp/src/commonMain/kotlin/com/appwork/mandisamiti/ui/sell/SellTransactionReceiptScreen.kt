@@ -43,6 +43,7 @@ fun SellTransactionReceiptScreen(
     shopGstin: String? = null,
     shopLicenceNo: String? = null,
     partyVillage: String? = null,
+    partyPhone: String? = null,
     onShareWhatsApp: ((String) -> Unit)? = null,
     onPrint: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
@@ -57,7 +58,7 @@ fun SellTransactionReceiptScreen(
     } catch (_: Exception) {
         null
     }
-    val billText = entry?.let { buildSellBillText(it, buyerName, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo) } ?: ""
+    val billText = entry?.let { buildSellBillText(it, buyerName, shopName, mandiName, shopAddress, shopGstin, shopLicenceNo, partyPhone) } ?: ""
     val billHtml = entry?.let {
         val tempShop = ShopProfile(
             id = "",
@@ -72,7 +73,7 @@ fun SellTransactionReceiptScreen(
             gstin = shopGstin,
             licenceNo = shopLicenceNo
         )
-        ReceiptHtmlRenderer.renderSellReceiptHtml(it, tempShop, name, lots ?: emptyList())
+        ReceiptHtmlRenderer.renderSellReceiptHtml(it, tempShop, name, lots ?: emptyList(), partyPhone = partyPhone)
     } ?: ""
     val isBos = entry?.billMode == BillMode.BILL_OF_SUPPLY
     ReceiptScaffold(
@@ -117,6 +118,7 @@ fun SellTransactionReceiptScreen(
                 isVoid = entry.isVoid
             )
             if (!entry.gstin.isNullOrBlank()) ReceiptAmountRow("GSTIN", entry.gstin!!)
+            if (!partyPhone.isNullOrBlank()) ReceiptAmountRow(if (isEnglish) "Mobile" else "मोबाइल", partyPhone)
 
             if (!lots.isNullOrEmpty()) {
                 lots.forEachIndexed { i, lot ->
@@ -139,12 +141,14 @@ fun SellTransactionReceiptScreen(
             }
 
             ReceiptDivider()
-            ReceiptAmountRow("कुल (${entry.bagsCount} बोरी, ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
+            ReceiptAmountRow("कुल (${entry.bagsCount} बोरी, ${formatQuintals2(entry.totalWeightGrams)} क्विंटल)", "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
             val amounts = sellSlipAmounts(entry)
             if (amounts.mandiShulkPaisa > 0) ReceiptAmountRow("मंडी प्रभार एवं उपकर (2%)", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.mandiShulkPaisa)}")
             if (amounts.commissionPaisa > 0) ReceiptAmountRow("कमीशन", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.commissionPaisa)}")
             if (amounts.tulakPaisa > 0) ReceiptAmountRow("तुलाई", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.tulakPaisa)}")
             if (amounts.labourPaisa > 0) ReceiptAmountRow("मजदूरी", "+ ₹${MandiMathEngine.paisaToRupeesString(amounts.labourPaisa)}")
+            val kharchaPaisa = amounts.commissionPaisa + amounts.labourPaisa
+            if (kharchaPaisa > 0) ReceiptAmountRow(if (isEnglish) "Total kharcha (arat + labour)" else "कुल खर्चा (आढ़त + मजदूरी)", "₹${MandiMathEngine.paisaToRupeesString(kharchaPaisa)}")
             ReceiptDivider()
             ReceiptAmountRow("कुल देय राशि", MandiMathEngine.formatRupees(entry.totalReceivablePaisa), emphasized = true)
         }
@@ -179,7 +183,8 @@ fun buildSellBillText(
     mandiName: String = "",
     shopAddress: String? = null,
     shopGstin: String? = null,
-    shopLicenceNo: String? = null
+    shopLicenceNo: String? = null,
+    buyerPhone: String? = null
 ): String {
     val lots = try {
         entry.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
@@ -212,19 +217,27 @@ fun buildSellBillText(
         if (amounts.mandiShulkPaisa > 0) appendLine("मंडी शुल्क एवं उपकर: +₹${MandiMathEngine.paisaToRupeesString(amounts.mandiShulkPaisa)}")
         if (amounts.tulakPaisa > 0) appendLine("तुलाई: +₹${MandiMathEngine.paisaToRupeesString(amounts.tulakPaisa)}")
         if (amounts.labourPaisa > 0) appendLine("मजदूरी: +₹${MandiMathEngine.paisaToRupeesString(amounts.labourPaisa)}")
+        val kharchaPaisa = amounts.commissionPaisa + amounts.labourPaisa
+        if (kharchaPaisa > 0) appendLine("कुल खर्चा (आढ़त + मजदूरी): ₹${MandiMathEngine.paisaToRupeesString(kharchaPaisa)}")
     }
 
     return """
 *$title*
 $shopLine$shopGstinLine${shopLicLine}बिल #: ${slipLabel(entry.slipNo, entry.id)}
 क्रेता: ${buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry.buyerId.ifBlank { "खरीदार" }}
-${if (!entry.gstin.isNullOrBlank()) "GSTIN: ${entry.gstin}\n" else ""}--------------------
+${if (!entry.gstin.isNullOrBlank()) "GSTIN: ${entry.gstin}\n" else ""}${if (!buyerPhone.isNullOrBlank()) "मोबाइल: $buyerPhone\n" else ""}--------------------
 $lotsText
 --------------------
 कुल बोरी: ${entry.bagsCount}
-कुल वजन: ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल
+कुल वजन: ${formatQuintals2(entry.totalWeightGrams)} क्विंटल
 कुल असल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}
 $amountLines--------------------
 *कुल देय राशि: ${MandiMathEngine.formatRupees(entry.totalReceivablePaisa)}*
     """.trimIndent()
+}
+
+/** Grams to quintals with exactly 2 decimals (half-up), integer math: 1_250_000 g -> "12.50". */
+internal fun formatQuintals2(grams: Long): String {
+    val hundredths = (grams + 500L) / 1_000L
+    return "${hundredths / 100}.${(hundredths % 100).toString().padStart(2, '0')}"
 }

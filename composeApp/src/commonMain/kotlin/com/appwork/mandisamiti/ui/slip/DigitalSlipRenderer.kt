@@ -18,8 +18,8 @@ object DigitalSlipRenderer {
     ): String {
         val dateStr = "दिनांक: ${kotlinx.datetime.Instant.fromEpochMilliseconds(deal.dealDate)}"
         val rateStr = deal.ratePaisaPerUnit?.let { "₹ ${MandiMathEngine.paisaToRupeesString(it)} / कुंतल" } ?: "बाजार भाव"
-        val grossQ = MandiMathEngine.gramsToQuintals(deal.grossWeightGrams)
-        val netQ = MandiMathEngine.gramsToQuintals(deal.netWeightGrams)
+        val grossQ = slipQuintalText(deal.grossWeightGrams)
+        val netQ = slipQuintalText(deal.netWeightGrams)
 
         val farmerPayableRs = MandiMathEngine.paisaToRupeesString(kotlin.math.abs(deal.netFarmerPayablePaisa))
         val labourRs = MandiMathEngine.paisaToRupeesString(deal.labourChargePaisa)
@@ -41,9 +41,11 @@ object DigitalSlipRenderer {
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
             appendLine("📜 *पक्का सौदा पर्चा (Settlement Slip)*")
             appendLine("👨‍🌾 *किसान:* ${farmer.name} (गांव: ${farmer.village ?: "-"})")
+            if (!farmer.phone.isNullOrBlank()) appendLine("मो.: ${farmer.phone}")
             if (buyer != null) {
                 appendLine("🏭 *व्यापारी:* ${buyer.name}")
             }
+            if (!buyer?.phone.isNullOrBlank()) appendLine("मो.: ${buyer?.phone}")
             appendLine("📦 *बोरी:* ${deal.bagsCount} | *भाव:* $rateStr")
             appendLine("━━━━━━━━━━━━━━━━━━━━━")
             appendLine("⚖️ *कुल वजन (Gross):* $grossQ कुंतल")

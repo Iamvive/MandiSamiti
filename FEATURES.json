@@ -302,6 +302,12 @@
       "description": "Galla-Rokad cash popup: one name box to pick a kisan khata (type-ahead), add a new kisan, or save a name only with no khata; no silent fallback to the first party",
       "status": "failing",
       "evidence": "2026-11-24 (Claude Opus 5.5, Claude Code). Spec docs/superpowers/specs/2026-11-24-galla-cash-party-picker-design.md. CashEntryTargetTest 6/6 pass; ./gradlew jvmTest 1157 tests, 0 failures. Debug APK installed on Redmi d93c743 2026-11-24 23:05. Unverified: owner device check (light+dark, pick/add/name-only/empty)."
+    },
+    {
+      "id": "parchi-phone-kharcha-lab-slip",
+      "description": "Parchi list/detail/print/share show party mobile when present; sell parchi shows total kharcha (arat + majoori); quintals shown to 2 decimals; buy lab slip mode (lab value / base value, no bags)",
+      "status": "failing",
+      "evidence": "2026-11-24 (Claude Code, Sonnet 5.5). Implemented via 4 screen agents + lab slip. :composeApp:compileDebugKotlinAndroid passes. No tests or device run (owner asked impl only). Unverified: device check light+dark at 390px, lab slip formula units (kg) and edit-restore, buy slip print/share, tests for lab slip math."
     }
   ]
 }

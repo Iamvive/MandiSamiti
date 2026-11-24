@@ -736,6 +736,13 @@ fun SellEntryScreen(
                         )
                     }
                 }
+                val kharchaPaisa = preview.commissionPaisa + preview.labourPaisa
+                if (kharchaPaisa > 0) {
+                    Line(
+                        label = if (isEnglish) "Total kharcha (arat + labour)" else "कुल खर्चा (आढ़त + मजदूरी)",
+                        amountText = "₹${MandiMathEngine.paisaToRupeesString(kharchaPaisa)}"
+                    )
+                }
                 TotalLine(
                     label = if (isEnglish) "Total Receivable" else "कुल देय राशि (Total Receivable)",
                     amountText = MandiMathEngine.formatRupees(preview.totalReceivablePaisa),

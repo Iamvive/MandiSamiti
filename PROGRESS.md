@@ -1132,3 +1132,17 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - New: ui/register/CashEntryTarget.kt, CashEntryTargetTest.kt; recordDailyEntry gained optional newKisan.
 - Evidence: CashEntryTargetTest 6/6; ./gradlew jvmTest 1157 tests, 0 failures; APK installed on Redmi d93c743 23:05.
 - Next: Vivek checks on device (light+dark): pick khata, add kisan, name only, empty name; then fix the same first-party fallback in opening balance / cash-to-home in a separate PR.
+
+## 2026-11-24 IST - Claude Code (Sonnet 5.5) - Parchi phone, kharcha, 2-decimal qtl, buy lab slip
+- Mobile shown on buy/sell parchi list, receipt, print and share only when present. Sell list/receipt/entry/print/share have a kharcha row (arat + majoori). Quintals 2 decimals on parchi, buy, sell, slip screens. Buy slip prints mobile once (old vehicle row removed, it held the same number).
+- Buy lab slip: per-lot checkbox, Lab value and Base value (kg), weight = (lab/base)*base, no bags, then rate, commission, majoori (0 bags), Rs 10 round-off. BuyCropLot gained labValueGrams/baseValueGrams (default 0, backward compatible).
+- Evidence: compileDebugKotlinAndroid passes. No tests or device run, as asked.
+- Next: device check light+dark; confirm lab units are kg; add lab slip math test once confirmed.
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Validation of lab slip + parchi display changes
+- Units: lab and base values are quintals (qtl), not kg. Labels, parsing and BuyEntryFormState conversion use MandiMathEngine.gramsToQuintalsInputString().
+- Button text in MandiPrimaryButton and MandiSecondaryButton: maxLines=1, ellipsis, reduced horizontal padding.
+- Buy share slip drops the "कुल खर्चा" line. Labour and commission rows on the receipt keep their "−" prefix (Vivek decision).
+- Evidence: ./gradlew :composeApp:jvmTest BUILD SUCCESSFUL. 430 tests, 0 failures, 0 errors, 0 skipped (JVM XML reports). BuyLabSlipTest 3/3, SlipEquationTest 3/3, ReceiptHtmlRendererTest 4/4.
+- Not verified: device run on Redmi d93c743 (light and dark, 390px) for the lab slip and the button clipping fix. Still open.
+- Next: device check before the feature is marked passing in FEATURES.json.

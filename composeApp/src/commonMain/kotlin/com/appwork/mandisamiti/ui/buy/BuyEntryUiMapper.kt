@@ -43,6 +43,11 @@ fun BuyEntryFormState.toUiState(): BuyEntryUiState {
                 rateError = lot.ratePerQuintal.errorIfFilled(v.rateError),
                 netWeightGrams = calc.totalWeightGrams,
                 grossPaisa = calc.grossPaisa,
+                labMode = lot.labMode,
+                labValueQuintals = lot.labValueQuintals,
+                baseValueQuintals = lot.baseValueQuintals,
+                labError = lot.labValueQuintals.errorIfFilled(v.labError),
+                baseError = lot.baseValueQuintals.errorIfFilled(v.baseError),
             )
         },
         rates = BuyRatesState(commissionPercent = commissionPercent, labourPerBag = labourPerBag),

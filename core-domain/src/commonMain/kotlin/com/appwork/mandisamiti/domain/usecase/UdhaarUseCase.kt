@@ -36,6 +36,7 @@ data class UdhaarLoanForm(
     val monthlyRatePercent: Double = 0.0,
     val receiverName: String? = null,
     val receiverPhone: String? = null,
+    val notes: String? = null,
 )
 
 enum class CashSide { GAVE, GOT }
@@ -54,6 +55,7 @@ class UdhaarUseCase(
         require(form.amountPaisa > 0L) { "Amount must be above zero" }
         require(form.monthlyRatePercent >= 0.0) { "Interest rate cannot be negative" }
         val now = nowMillis()
+        val cleanNotes = form.notes?.trim()?.takeIf { it.isNotEmpty() }
         val loan = LendEntry(
             id = newId(),
             shopId = form.shopId,
@@ -61,6 +63,7 @@ class UdhaarUseCase(
             lendType = LendType.MONEY,
             entryDate = form.date,
             amountPaisa = form.amountPaisa,
+            notes = cleanNotes,
             status = LendStatus.OPEN,
             createdAt = now,
             updatedAt = now,
@@ -74,6 +77,7 @@ class UdhaarUseCase(
             LendDirection.GIVEN -> TransactionType.UDHAR_GIVEN
             LendDirection.TAKEN -> TransactionType.JAMA_RECEIVED
         }
+        val cashRemarks = if (cleanNotes != null) "$cleanNotes [LEND:${loan.id}]" else "उधार [LEND:${loan.id}]"
         val cash = CashTransaction(
             id = newId(),
             shopId = form.shopId,
@@ -82,7 +86,7 @@ class UdhaarUseCase(
             amountPaisa = form.amountPaisa,
             paymentMode = PaymentMode.CASH,
             transactionDate = form.date,
-            remarks = "उधार [LEND:${loan.id}]",
+            remarks = cashRemarks,
             createdAt = now,
             updatedAt = now,
             sourceEntryId = null,
@@ -156,12 +160,14 @@ class UdhaarUseCase(
         side: CashSide,
         amountPaisa: Long,
         date: Long,
+        note: String? = null,
     ): PlainCashResult {
         require(amountPaisa > 0L) { "Amount must be above zero" }
+        val cleanNote = note?.trim()?.takeIf { it.isNotEmpty() }
         val opposite = if (side == CashSide.GAVE) LendDirection.TAKEN else LendDirection.GIVEN
         val loans = openLoans(shopId, partyId, opposite, date)
         if (loans.any { it.outstandingPrincipalPaisa + it.interestDuePaisa > 0L }) {
-            return PlainCashResult.Repaid(repay(shopId, partyId, opposite, amountPaisa, date))
+            return PlainCashResult.Repaid(repay(shopId, partyId, opposite, amountPaisa, date, remarks = cleanNote))
         }
         val direction = if (side == CashSide.GAVE) LendDirection.GIVEN else LendDirection.TAKEN
         return PlainCashResult.NewLoan(createLoan(UdhaarLoanForm(
@@ -171,6 +177,7 @@ class UdhaarUseCase(
             amountPaisa = amountPaisa,
             date = date,
             kind = LendKind.CASH,
+            notes = cleanNote,
         )))
     }
 

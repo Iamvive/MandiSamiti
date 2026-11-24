@@ -54,5 +54,9 @@ class ScreenRoutingTest {
         assertEquals("farmer-3", defaultKhata.partyId)
         assertEquals(Screen.Home, defaultKhata.returnScreen)
         assertEquals(Screen.Home, defaultKhata.backTarget())
+
+        // StockSheet returns to its caller (Home by default, AllKhata when opened from AllKhata)
+        assertEquals(Screen.Home, Screen.StockSheet().backTarget())
+        assertEquals(Screen.AllKhata, Screen.StockSheet(returnScreen = Screen.AllKhata).backTarget())
     }
 }

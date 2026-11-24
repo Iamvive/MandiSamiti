@@ -61,6 +61,7 @@ fun SellTransactionsListScreen(
     onBack: () -> Unit,
     entries: List<SellEntry> = emptyList(),
     partyNamesById: Map<String, String> = emptyMap(),
+    partyPhonesById: Map<String, String> = emptyMap(),
     onVoid: ((id: String, reason: VoidReason) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -142,6 +143,7 @@ fun SellTransactionsListScreen(
                         SellEntryCard(
                             entry = entry,
                             buyerName = partyNamesById[entry.buyerId] ?: entry.buyerId,
+                            buyerPhone = partyPhonesById[entry.buyerId],
                             onClick = { onOpen(entry.id) },
                             onLongClick = { voidTarget = entry }
                         )
@@ -169,6 +171,7 @@ fun SellTransactionsListScreen(
 private fun SellEntryCard(
     entry: SellEntry,
     buyerName: String,
+    buyerPhone: String? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
 ) {
@@ -212,6 +215,14 @@ private fun SellEntryCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    val phone = if (entry.isKhaate) null else buyerPhone?.takeIf { it.isNotBlank() }
+                    if (phone != null) {
+                        Text(
+                            text = phone,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 if (!entry.isKhaate) {
                     if (entry.billMode == com.appwork.mandisamiti.domain.model.BillMode.BILL_OF_SUPPLY) {
@@ -239,7 +250,7 @@ private fun SellEntryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल",
+                    text = "${entry.bagsCount} बोरी • ${formatQuintals2(entry.totalWeightGrams)} क्विंटल",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(

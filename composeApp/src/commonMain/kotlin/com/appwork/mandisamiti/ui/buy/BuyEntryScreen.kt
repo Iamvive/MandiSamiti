@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -526,7 +527,49 @@ fun BuyEntryScreenContent(
                         placeholder = if (isEnglish) "Enter crop name" else "फसल का नाम लिखें",
                     )
 
-                    // B final Line 1: Bags, Weight/Bag, Extra weight in a 3-column row
+                    // Lab slip: weight = (lab / base) * base, no bags
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = lot.labMode,
+                            onCheckedChange = { actions.onLotChange(lot.id, BuyLotField.LabMode, if (it) "1" else "") }
+                        )
+                        Text(
+                            text = if (isEnglish) "Lab slip (lab value / base value)" else "लैब पर्ची (लैब वैल्यू / बेस वैल्यू)",
+                            fontSize = 14.sp,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    if (lot.labMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            MandiFlatTextField(
+                                value = lot.labValueQuintals,
+                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.LabValue, it) },
+                                label = if (isEnglish) "Lab value (qtl)" else "लैब वैल्यू (क्विंटल)",
+                                isError = lot.labError != null,
+                                errorMessage = lot.labError,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                isTall = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            MandiFlatTextField(
+                                value = lot.baseValueQuintals,
+                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.BaseValue, it) },
+                                label = if (isEnglish) "Base value (qtl)" else "बेस वैल्यू (क्विंटल)",
+                                isError = lot.baseError != null,
+                                errorMessage = lot.baseError,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                isTall = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -562,6 +605,8 @@ fun BuyEntryScreenContent(
                             isTall = true,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
                     }
 
                     // B final Line 2: Rate on next line

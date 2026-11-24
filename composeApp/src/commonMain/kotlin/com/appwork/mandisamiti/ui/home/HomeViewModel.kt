@@ -117,11 +117,22 @@ class HomeViewModel(
     private val onLocalWrite: () -> Unit = {},
     /** Entries saved on this phone that have not reached the server yet; null in tests and previews. */
     private val pendingSyncCountProvider: (suspend () -> Int)? = null,
-    private val nowMsProvider: () -> Long = { Clock.System.now().toEpochMilliseconds() }
+    private val nowMsProvider: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    initialTab: NavigationTab = NavigationTab.DASHBOARD,
+    initialSearchQuery: String = "",
+    initialFilter: PartyFilter = PartyFilter.ALL,
+    initialTypeFilter: PartyTypeFilter = PartyTypeFilter.ALL,
 ) {
 
     private val stockRevision = MutableStateFlow(0L)
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(
+        HomeUiState(
+            currentTab = initialTab,
+            searchQuery = initialSearchQuery,
+            activeFilter = initialFilter,
+            activeTypeFilter = initialTypeFilter,
+        )
+    )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {

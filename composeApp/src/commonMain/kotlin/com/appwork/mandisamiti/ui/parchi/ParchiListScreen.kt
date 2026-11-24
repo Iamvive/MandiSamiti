@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.slipLabel
@@ -376,7 +377,7 @@ private fun KisaanParchiView(
                 )
                 ParchiKpiCard(
                     title = if (isEnglish) "Grain Procured" else "कुल आवक",
-                    value = "${MandiMathEngine.gramsToQuintals(totalWeightGrams)} Q",
+                    value = "${formatQtl(totalWeightGrams)} Q",
                     subtitle = if (isEnglish) "Quintals" else "क्विंटल",
                     modifier = Modifier.weight(1f)
                 )
@@ -537,7 +538,7 @@ private fun VyapariParchiView(
                 )
                 ParchiKpiCard(
                     title = if (isEnglish) "Total Volume" else "कुल मात्रा",
-                    value = "${MandiMathEngine.gramsToQuintals(totalVolumeGrams)} Q",
+                    value = "${formatQtl(totalVolumeGrams)} Q",
                     subtitle = if (isEnglish) "Quintals" else "क्विंटल",
                     modifier = Modifier.weight(1f)
                 )
@@ -691,7 +692,7 @@ private fun KisaanSlipCard(
         farmerName.ifBlank { if (isEnglish) "Farmer" else "किसान" }
     }
     val cropLabel = buy.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
-    val quintals = MandiMathEngine.gramsToQuintals(buy.totalWeightGrams)
+    val quintals = formatQtl(buy.totalWeightGrams)
     val rateRupees = buy.ratePaisaPerQuintal / 100
     val isFullyPaid = buy.paidPaisa >= buy.netPayablePaisa
     val remainingPaisa = (buy.netPayablePaisa - buy.paidPaisa).coerceAtLeast(0L)
@@ -751,6 +752,9 @@ private fun KisaanSlipCard(
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             )
                         }
+                    }
+                    party?.phone?.takeIf { it.isNotBlank() }?.let {
+                        Text(text = it, style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
                     }
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -872,7 +876,7 @@ private fun VyapariSlipCard(
         buyerName.ifBlank { if (isEnglish) "Buyer" else "व्यापारी" }
     }
     val cropLabel = sell.commodityId.ifBlank { if (isEnglish) "Crop" else "फसल" }
-    val quintals = MandiMathEngine.gramsToQuintals(sell.totalWeightGrams)
+    val quintals = formatQtl(sell.totalWeightGrams)
     val rateRupees = sell.ratePaisaPerQuintal / 100
 
     Card(
@@ -923,6 +927,9 @@ private fun VyapariSlipCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MandiTextMuted
                     )
+                    party?.phone?.takeIf { it.isNotBlank() }?.let {
+                        Text(text = it, style = MaterialTheme.typography.bodySmall, color = MandiTextSecondary)
+                    }
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
@@ -958,6 +965,14 @@ private fun VyapariSlipCard(
                     color = MandiTextMuted
                 )
             }
+
+            val kharchaPaisa = sellSlipAmounts(sell).let { it.commissionPaisa + it.labourPaisa }
+            Text(
+                text = (if (isEnglish) "Kharcha (arat + labour): ₹" else "खर्चा (आढ़त + मजदूरी): ₹") +
+                    MandiMathEngine.formatIndianGrouping(kharchaPaisa / 100),
+                style = MaterialTheme.typography.bodySmall,
+                color = MandiTextSecondary
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1174,3 +1189,9 @@ private fun formatLocalDate(date: LocalDate, isEnglish: Boolean): String {
     return "${date.dayOfMonth} $monthStr ${date.year}"
 }
 
+
+/** Grams to quintals with exactly 2 decimals (half-up), integer math only: 1_250_000 -> "12.50". */
+private fun formatQtl(grams: Long): String {
+    val c = (grams + 500) / 1000
+    return "${c / 100}.${(c % 100).toString().padStart(2, '0')}"
+}

@@ -59,7 +59,8 @@ class ReceiptHtmlRendererTest {
             entry = entry,
             shop = sampleShop,
             farmerName = "राम शरण",
-            lots = emptyList()
+            lots = emptyList(),
+            partyPhone = "9988776655"
         )
 
         // Verify A5 page constraint
@@ -133,8 +134,8 @@ class ReceiptHtmlRendererTest {
 
         assertTrue(html.contains("गेहूं शरबती"), "Must list first lot crop name")
         assertTrue(html.contains("सरसों"), "Must list second lot crop name")
-        assertTrue(html.contains("12 × 50 + 0 = 6 क्विंटल × ₹2,200"), "Must contain first lot equation")
-        assertTrue(html.contains("8 × 50 + 0 = 4 क्विंटल × ₹5,000"), "Must contain second lot equation")
+        assertTrue(html.contains("12 × 50 + 0 = 6.00 क्विंटल × ₹2,200"), "Must contain first lot equation")
+        assertTrue(html.contains("8 × 50 + 0 = 4.00 क्विंटल × ₹5,000"), "Must contain second lot equation")
     }
 
     @Test

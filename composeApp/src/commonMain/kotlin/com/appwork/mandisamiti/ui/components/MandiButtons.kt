@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.ui.theme.MandiBorder
@@ -61,6 +63,7 @@ fun MandiPrimaryButton(
             containerColor = MandiPrimaryAction,
             contentColor = MandiPrimaryActionText
         ),
+        contentPadding = PaddingValues(horizontal = 8.dp),
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
             .height(height)
@@ -87,7 +90,9 @@ fun MandiPrimaryButton(
                 Text(
                     text = text,
                     fontSize = fontSize,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -120,6 +125,7 @@ fun MandiSecondaryButton(
             containerColor = MandiSecondaryAction,
             contentColor = MandiSecondaryActionText
         ),
+        contentPadding = PaddingValues(horizontal = 8.dp),
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
             .height(height)
@@ -139,7 +145,9 @@ fun MandiSecondaryButton(
             Text(
                 text = text,
                 fontSize = fontSize,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
