@@ -1173,3 +1173,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Scroll stops at the last card (हिसाब पर्ची / अंतिम देय राशि). No further scroll into blank space.
 - Gap of about 110 device px remains between last card and dock. Not judged as a bug yet; Vivek to confirm.
 - Not checked: Sell entry (the + button opened Buy directly), dark theme, 390px. Nothing saved, no commit made.
+
+## 2026-11-25 IST - Antigravity - Khate / Receipt -> New Buy & New Sell party prefill (Kisaan & Vyapari)
+- Root cause: `Screen.BuyEntry` / `Screen.SellEntry` carried only `existingId` (no `initialPartyId`/`returnScreen`), so `BuyReceipt` `onNewBuy` opened a blank form; `SellReceipt` had no `onNewSell`; `PartyLedgerScreen` had no New Buy / New Sell action; `SellEntryScreen` lacked `LaunchedEffect(existingEntry, parties)`; `SellPartyResolver.pick` didn't set `SellPartyKind.MERCHANT` or derive `stateCode`; `BuyEntryScreen` `onPartySelected` skipped clearing stale `null` phone/village.
+- Changes: `App.kt`, `BuyEntryScreen.kt`, `BuyEntryFormState.kt`, `SellEntryScreen.kt`, `SellEntryFormState.kt`, `SellPartyResolver.kt`, `SellTransactionReceiptScreen.kt`, `PartyLedgerScreen.kt`, `PartyPrefillTest.kt`, `ScreenRoutingTest.kt`.
+- Evidence: `:core-domain:jvmTest` (`UP-TO-DATE`) and filtered `:composeApp:jvmTest` (`PartyPrefillTest` 2/2, `BuyPartyResolverTest` 12/12, `ScreenRoutingTest` 3/3, `PartyLedgerBalanceF01Test` 4/4, `PartyLedgerViewModelTest` 18/18, `HomeViewModelTest` 16/16, `HomeViewModelSettlementTest` 1/1, `HomeViewModelSellSettlementTest` 6/6 — 0 failures, 0 skipped), `:composeApp:assembleDebug`, and live on Redmi `d93c743` (`Vivek` Farmer Khata -> `नई खरीद पर्ची` prefilled `9058666306`, `Vivek`, `NMS`; `Dharmendra` Vyapari Khata -> `नई बिक्री बिल` & `SellReceipt` -> `नई बिक्री` prefilled `9997661012`, `Dharmendra`, `Visawar`, `व्यापारी (Merchant)`).
+- NOT VERIFIED: Dark mode rendering on `d93c743` (read-only form checks only, nothing saved); unrelated pre-existing tests excluded from the filtered run (`ReceiptHtmlRendererTest` / `SlipEquationTest` from prior branch WIP).
+
