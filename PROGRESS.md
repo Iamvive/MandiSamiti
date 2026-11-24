@@ -1120,3 +1120,15 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Vivek decided the offsite (Google Drive) copy is not needed for pilot. Feature `offsite-backup-restore-drill` stays `failing` and carries a `deferred` note in FEATURES.json.
 - Pilot safety relies on the nightly on-VPS backup (`backup_staging.sh`, cron 02:30 UTC). Fixed in c2ced3b. Confirm a second unattended dump appears in `/root/mandi-backups` before pilot go-live.
 - Resume the offsite work after pilot: configure the `gdrive` rclone remote, run backup_offsite.sh, restore_test.sh, install the Sunday cron.
+
+## 2026-11-24 22:18 IST - Claude Code - Redmi install
+- Built debug APK from working tree (branch feat/galla-rokad-editable, incl. uncommitted Galla-Rokad edits), 21,788,008 bytes.
+- `adb -s d93c743 install -r` Success; lastUpdateTime 2026-11-24 22:18:25; app launched.
+- Next: Vivek checks Galla-Rokad screens on device (staging URL).
+
+## 2026-11-24 23:06 IST - Claude Code (Opus 5.5) - Galla cash popup party picker
+- Replaced the full-list khata picker in the नकद जमा/निकासी popup with one name box: type-ahead khata matches (BuyPartyResolver), "+ नया किसान खाता" (LendPartyResolver.partyToSave), or name only (kept in remarks, no khata). Live status line says which.
+- Fixed: Save with no khata picked used to book the entry into the first party in the list.
+- New: ui/register/CashEntryTarget.kt, CashEntryTargetTest.kt; recordDailyEntry gained optional newKisan.
+- Evidence: CashEntryTargetTest 6/6; ./gradlew jvmTest 1157 tests, 0 failures; APK installed on Redmi d93c743 23:05.
+- Next: Vivek checks on device (light+dark): pick khata, add kisan, name only, empty name; then fix the same first-party fallback in opening balance / cash-to-home in a separate PR.

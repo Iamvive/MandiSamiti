@@ -296,6 +296,12 @@
       "description": "All-parties khata entry point: 'सभी खाते' button on Dashboard opens KhataLedgerTabScreen; party tap opens its ledger; Back returns to the all-parties list",
       "status": "passing",
       "evidence": "2026-11-20 (Claude Haiku 5.5, Claude Code). Merged to main as 524eb9b on Vivek's approval (PR #35, 3 files: App.kt, HomeScreen.kt, DashboardScreen.kt). ./gradlew :composeApp:jvmTest: 418 tests, 0 failures. Device Redmi d93c743, staging build, light theme: button opens list (5 parties), party tap opens its ledger, Back returns to the list. Not checked: dark theme on this screen (adb theme switch did not take), 390dp layout pass."
+    },
+    {
+      "id": "galla-cash-party-picker",
+      "description": "Galla-Rokad cash popup: one name box to pick a kisan khata (type-ahead), add a new kisan, or save a name only with no khata; no silent fallback to the first party",
+      "status": "failing",
+      "evidence": "2026-11-24 (Claude Opus 5.5, Claude Code). Spec docs/superpowers/specs/2026-11-24-galla-cash-party-picker-design.md. CashEntryTargetTest 6/6 pass; ./gradlew jvmTest 1157 tests, 0 failures. Debug APK installed on Redmi d93c743 2026-11-24 23:05. Unverified: owner device check (light+dark, pick/add/name-only/empty)."
     }
   ]
 }

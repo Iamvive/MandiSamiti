@@ -27,6 +27,7 @@ import com.appwork.mandisamiti.domain.repository.PartyRepository
 import com.appwork.mandisamiti.domain.repository.SellRepository
 import com.appwork.mandisamiti.domain.repository.ShopProfileRepository
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
+import com.appwork.mandisamiti.ui.lend.LendPartyResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -452,7 +453,8 @@ class DailyRegisterViewModel(
         transactionType: TransactionType,
         amountRs: Long,
         paymentMode: PaymentMode = PaymentMode.CASH,
-        remarks: String? = null
+        remarks: String? = null,
+        newKisan: NewKisan? = null,
     ) {
         if (_uiState.value.isReadOnly) return
         if (amountRs <= 0L) return
@@ -460,21 +462,25 @@ class DailyRegisterViewModel(
         val now = clock.now().toEpochMilliseconds()
         val amountPaisa = amountRs * 100L
 
-        val tx = CashTransaction(
-            id = IdGenerator.newId(),
-            shopId = shopId,
-            partyId = partyId,
-            transactionType = transactionType,
-            amountPaisa = amountPaisa,
-            paymentMode = paymentMode,
-            transactionDate = now,
-            remarks = remarks,
-            createdAt = now,
-            updatedAt = now
-        )
-
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
+            // A kisan added from the popup is saved first so the entry lands in its khata.
+            val resolvedPartyId = newKisan?.let { k ->
+                LendPartyResolver.partyToSave(k.name, k.phone, k.village, shopId, existing = null, now = now)
+                    ?.also { partyRepository.saveParty(it) }?.id
+            } ?: partyId
+            val tx = CashTransaction(
+                id = IdGenerator.newId(),
+                shopId = shopId,
+                partyId = resolvedPartyId,
+                transactionType = transactionType,
+                amountPaisa = amountPaisa,
+                paymentMode = paymentMode,
+                transactionDate = now,
+                remarks = remarks,
+                createdAt = now,
+                updatedAt = now
+            )
             cashRepository.recordTransaction(tx)
             onLocalWrite()
 
@@ -488,6 +494,22 @@ class DailyRegisterViewModel(
             val typeHindi = if (transactionType == TransactionType.JAMA_RECEIVED) "जमा मिला" else "उधार दिया"
             _uiState.value = _uiState.value.copy(isSaving = false, isAddEntryDialogOpen = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)
+        }
+    }
+
+    /** Edits a direct Galla-Rokad entry's amount, payment mode and note. Linked rows (lend, expense, settlement) are rejected by the repository. */
+    fun editDailyEntry(transaction: CashTransaction, amountRs: Long, paymentMode: PaymentMode, remarks: String?) {
+        if (_uiState.value.isReadOnly || amountRs <= 0L) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            try {
+                cashRepository.editTransaction(
+                    transaction.id, amountRs * 100L, paymentMode, transaction.transactionDate, remarks
+                )
+                onLocalWrite()
+            } finally {
+                _uiState.value = _uiState.value.copy(isSaving = false)
+            }
         }
     }
 
