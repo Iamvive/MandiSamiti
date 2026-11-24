@@ -521,13 +521,24 @@ class SellEntryFormState(
         }
     }
 
-    fun hasUnsavedChanges(originalEntry: SellEntry? = null): Boolean {
+    fun hasUnsavedChanges(
+        originalEntry: SellEntry? = null,
+        prefilledParty: com.appwork.mandisamiti.domain.model.Party? = null
+    ): Boolean {
         if (originalEntry == null) {
-            return buyerName.isNotBlank() ||
-                phone.isNotBlank() ||
-                village.isNotBlank() ||
+            val basePhone = prefilledParty?.phone.orEmpty().filter { it.isDigit() }.take(10)
+            val baseVillage = MandiValidators.sanitizeVillage(prefilledParty?.village.orEmpty())
+            val baseGstin = prefilledParty?.gstin.orEmpty().trim().uppercase()
+            val partyChanged = if (prefilledParty != null) {
+                buyerName != prefilledParty.name ||
+                    phone != basePhone ||
+                    MandiValidators.sanitizeVillage(village) != baseVillage ||
+                    gstin.trim().uppercase() != baseGstin
+            } else {
+                buyerName.isNotBlank() || phone.isNotBlank() || village.isNotBlank() || gstin.isNotBlank()
+            }
+            return partyChanged ||
                 advanceReceived.isNotBlank() ||
-                gstin.isNotBlank() ||
                 invoiceDate.isNotBlank() ||
                 lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() || it.cropName != "गेहूं" }
         }

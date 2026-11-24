@@ -511,12 +511,23 @@ class BuyEntryFormState(
         )
     }
 
-    fun hasUnsavedChanges(originalEntry: BuyEntry? = null): Boolean {
+    fun hasUnsavedChanges(
+        originalEntry: BuyEntry? = null,
+        prefilledParty: com.appwork.mandisamiti.domain.model.Party? = null
+    ): Boolean {
         if (originalEntry == null) {
-            return farmerName.isNotBlank() ||
-                phone.isNotBlank() ||
-                village.isNotBlank() ||
+            val basePhone = prefilledParty?.phone.orEmpty().filter { it.isDigit() }.take(10)
+            val baseVillage = MandiValidators.sanitizeVillage(prefilledParty?.village.orEmpty())
+            val partyChanged = if (prefilledParty != null) {
+                farmerName != prefilledParty.name ||
+                    phone != basePhone ||
+                    MandiValidators.sanitizeVillage(village) != baseVillage
+            } else {
+                farmerName.isNotBlank() || phone.isNotBlank() || village.isNotBlank()
+            }
+            return partyChanged ||
                 advancePaid.isNotBlank() ||
+                loanCut.isNotBlank() ||
                 lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() }
         }
         val origVillage = extractVillage(originalEntry.remarks) ?: ""

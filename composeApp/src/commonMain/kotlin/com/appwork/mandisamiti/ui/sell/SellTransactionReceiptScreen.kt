@@ -25,6 +25,7 @@ import com.appwork.mandisamiti.ui.components.ReceiptHero
 import com.appwork.mandisamiti.ui.components.ReceiptLot
 import com.appwork.mandisamiti.ui.components.ReceiptLotRow
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
+import com.appwork.mandisamiti.ui.components.MandiSecondaryButton
 import com.appwork.mandisamiti.ui.components.ReceiptScaffold
 import com.appwork.mandisamiti.ui.parchi.TraderSlipCashSettlementSheet
 import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
@@ -35,6 +36,7 @@ fun SellTransactionReceiptScreen(
     id: String,
     onBack: () -> Unit,
     onEdit: ((String) -> Unit)? = null,
+    onNewSell: (() -> Unit)? = null,
     entry: SellEntry? = null,
     buyerName: String = "खरीदार",
     shopName: String = "",
@@ -158,6 +160,13 @@ fun SellTransactionReceiptScreen(
                 text = if (isEnglish) "Cash in →" else "नकद लें →",
                 onClick = { showSettlementSheet = true },
                 height = 52.dp
+            )
+        }
+        if (onNewSell != null) {
+            MandiSecondaryButton(
+                text = if (isEnglish) "New sale" else "नई बिक्री",
+                height = 48.dp,
+                onClick = onNewSell,
             )
         }
         if (showSettlementSheet) {

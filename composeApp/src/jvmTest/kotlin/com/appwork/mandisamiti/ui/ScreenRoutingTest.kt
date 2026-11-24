@@ -58,5 +58,15 @@ class ScreenRoutingTest {
         // StockSheet returns to its caller (Home by default, AllKhata when opened from AllKhata)
         assertEquals(Screen.Home, Screen.StockSheet().backTarget())
         assertEquals(Screen.AllKhata, Screen.StockSheet(returnScreen = Screen.AllKhata).backTarget())
+
+        // Navigating to New Buy / New Sell from an existing party's Khata returns back to that Khata
+        val farmerKhata = Screen.PartyLedger("farmer-1", Screen.AllKhata)
+        val buyerKhata = Screen.PartyLedger("buyer-1", Screen.AllKhata)
+        val prefilledBuy = Screen.BuyEntry(initialPartyId = "farmer-1", returnScreen = farmerKhata)
+        val prefilledSell = Screen.SellEntry(initialPartyId = "buyer-1", returnScreen = buyerKhata)
+        assertEquals("farmer-1", prefilledBuy.initialPartyId)
+        assertEquals(farmerKhata, prefilledBuy.backTarget())
+        assertEquals("buyer-1", prefilledSell.initialPartyId)
+        assertEquals(buyerKhata, prefilledSell.backTarget())
     }
 }

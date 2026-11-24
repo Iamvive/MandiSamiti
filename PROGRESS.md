@@ -1146,3 +1146,30 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: ./gradlew :composeApp:jvmTest BUILD SUCCESSFUL. 430 tests, 0 failures, 0 errors, 0 skipped (JVM XML reports). BuyLabSlipTest 3/3, SlipEquationTest 3/3, ReceiptHtmlRendererTest 4/4.
 - Not verified: device run on Redmi d93c743 (light and dark, 390px) for the lab slip and the button clipping fix. Still open.
 - Next: device check before the feature is marked passing in FEATURES.json.
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Device check (partial), Redmi Note 7 d93c743, light theme
+- Debug APK from 0e04a4a installed with -r. App launched on staging (default build config).
+- PASS: parchi list shows mobile (9058666306) on card; quintals 22.70 Q with 2 decimals; kharcha not checked.
+- PASS: buy entry shows "लैब पर्ची" checkbox; ticking it shows Lab value (क्विंटल) and Base value (क्विंटल) fields.
+- PASS: lab 45, base 50 → weight 45.0 क्विंटल; rate 2500 → gross ₹1,12,500; final ₹1,11,710 (0.70% commission, round-off to ₹10).
+- Harness note: first tap on base field landed in lab field because the keyboard shifted the layout. Re-entered with keyboard "next" key. Not an app bug, but check the field focus behaviour when the keyboard opens.
+- NOT DONE: nothing saved. No receipt, print, share, dark theme, 390px overflow, or button-clipping check. Form left unsaved.
+- Next: save one dummy-shop test entry on staging to check receipt, slip and dark theme, if Vivek approves.
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Buy entry: total kharcha row + scroll past content
+- BuyEntryScreen slip card: added "कुल खर्चा" / "Total charges" row (labour + commission, shown with − prefix), same as the buy receipt.
+- BuyEntryScreen scroll Column: removed the extra .imePadding() from the scroll column. The bottom dock keeps its own imePadding. Suspected cause of blank scrollable space when the keyboard was open (keyboard inset applied twice). Not confirmed by a before/after measurement.
+- Evidence: ./gradlew :composeApp:assembleDebug :composeApp:jvmTest BUILD SUCCESSFUL. Redmi d93c743: "कुल खर्चा − ₹0" row visible in slip card (light theme, keyboard closed). Scroll to bottom with keyboard closed ends right after the last card, no extra blank area.
+- NOT VERIFIED: scroll to bottom with the keyboard open (the blank area reproduced only in that state, before the fix); dark theme; 390px overflow.
+- Open: buy receipt screen still shows "Total charges" (kept, BuyTransactionReceiptScreen). Share slip still omits it (privacy rule from 2026-11-24).
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Sell entry: scroll past content
+- SellEntryScreen scroll Column: removed extra .imePadding() (same fix as buy entry). Dock keeps its own imePadding.
+- Evidence: assembleDebug + jvmTest BUILD SUCCESSFUL; APK reinstalled on d93c743.
+- NOT VERIFIED on device yet: scroll to bottom with keyboard open on sell entry, light and dark, 390px.
+
+### 2026-11-25 00:18 IST: Buy entry keyboard-open scroll check (Redmi d93c743, light theme, staging)
+- Opened Buy entry (नई खरीद एंट्री), tapped गांव field so keyboard showed, swiped form content to the end.
+- Scroll stops at the last card (हिसाब पर्ची / अंतिम देय राशि). No further scroll into blank space.
+- Gap of about 110 device px remains between last card and dock. Not judged as a bug yet; Vivek to confirm.
+- Not checked: Sell entry (the + button opened Buy directly), dark theme, 390px. Nothing saved, no commit made.

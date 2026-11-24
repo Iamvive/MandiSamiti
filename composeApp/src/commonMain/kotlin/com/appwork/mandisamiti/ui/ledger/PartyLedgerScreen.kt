@@ -136,6 +136,8 @@ fun PartyLedgerScreen(
     onEditDeal: (String) -> Unit = {},
     onOpenBuyReceipt: (String) -> Unit = {},
     onOpenSellReceipt: (String) -> Unit = {},
+    onNewBuy: (() -> Unit)? = null,
+    onNewSell: (() -> Unit)? = null,
     isEnglish: Boolean = false,
     udhaarPersonViewModelFactory: ((LendDirection) -> UdhaarPersonViewModel)? = null,
 ) {
@@ -557,6 +559,45 @@ fun PartyLedgerScreen(
                             },
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    val activeParty = party
+                    val tradeCallback = if (activeParty != null && !activeParty.isDeleted && activeParty.id != com.appwork.mandisamiti.domain.model.Khaate.partyId(activeParty.shopId)) {
+                        when (activeParty.partyType) {
+                            PartyType.FARMER -> onNewBuy
+                            PartyType.BUYER -> onNewSell
+                        }
+                    } else null
+                    if (tradeCallback != null && activeParty != null) {
+                        val tradeLabel = if (activeParty.partyType == PartyType.FARMER) {
+                            if (isEnglish) "New Buy Slip" else "नई खरीद पर्ची"
+                        } else {
+                            if (isEnglish) "New Sell Slip" else "नई बिक्री बिल"
+                        }
+                        OutlinedButton(
+                            onClick = tradeCallback,
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, MandiBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = MandiSurface,
+                                contentColor = MandiTextPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = MandiPrimaryAction,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = tradeLabel,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiTextPrimary
+                            )
+                        }
                     }
                 }
             }

@@ -3,6 +3,7 @@ package com.appwork.mandisamiti.ui.sell
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.ui.buy.BuyPartyResolver
 
 /**
@@ -22,7 +23,14 @@ object SellPartyResolver {
         form.buyerName = party.name
         form.updatePhone(party.phone.orEmpty())
         form.village = party.village.orEmpty()
-        party.gstin?.let { form.gstin = it }
+        val cleanGstin = party.gstin.orEmpty().trim().uppercase()
+        form.gstin = cleanGstin
+        if (cleanGstin.length >= 2 && cleanGstin.take(2).all { it.isDigit() }) {
+            form.stateCode = cleanGstin.take(2)
+        }
+        if (party.partyType == PartyType.BUYER || cleanGstin.isNotBlank() || !party.mandiLicense.isNullOrBlank()) {
+            form.setParty(SellPartyKind.MERCHANT)
+        }
     }
 
     fun needsPhonePrompt(form: SellEntryFormState): Boolean =

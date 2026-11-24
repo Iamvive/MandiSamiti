@@ -101,9 +101,11 @@ fun SellEntryScreen(
     lends: List<LendEntry> = emptyList(),
     cashTransactions: List<CashTransaction> = emptyList(),
     isEnglish: Boolean = false,
+    initialPartyId: String? = null,
     modifier: Modifier = Modifier
 ) {
     var existingEntry by remember { mutableStateOf<SellEntry?>(null) }
+    var prefilledParty by remember(existingId, initialPartyId) { mutableStateOf<Party?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showSanityConfirmation by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
@@ -114,7 +116,7 @@ fun SellEntryScreen(
     var pendingEntryToSave by remember { mutableStateOf<SellEntry?>(null) }
 
     val recentSells by (sellRepository?.getSellEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
-    val isDirty = formState.hasUnsavedChanges(existingEntry)
+    val isDirty = formState.hasUnsavedChanges(existingEntry, prefilledParty)
 
     MandiBackHandler(enabled = true) {
         if (isDirty) {
@@ -130,6 +132,31 @@ fun SellEntryScreen(
             if (entry != null) {
                 existingEntry = entry
                 formState.populateFrom(entry)
+            }
+        }
+    }
+
+    LaunchedEffect(existingId, initialPartyId, parties) {
+        if (existingId == null && initialPartyId != null && prefilledParty?.id != initialPartyId) {
+            val party = parties.firstOrNull { it.id == initialPartyId } ?: return@LaunchedEffect
+            SellPartyResolver.pick(formState, party)
+            prefilledParty = party
+        }
+    }
+
+    LaunchedEffect(existingEntry, parties) {
+        val entry = existingEntry ?: return@LaunchedEffect
+        val party = parties.firstOrNull { it.id == entry.buyerId } ?: return@LaunchedEffect
+        if (formState.buyerName == entry.buyerId) formState.buyerName = party.name
+        if (formState.phone.isBlank()) party.phone?.let(formState::updatePhone)
+        if (formState.village.isBlank()) formState.village = party.village.orEmpty()
+        if (formState.gstin.isBlank()) {
+            val cleanGstin = party.gstin.orEmpty().trim().uppercase()
+            if (cleanGstin.isNotBlank()) {
+                formState.gstin = cleanGstin
+                if (cleanGstin.length >= 2 && cleanGstin.take(2).all { it.isDigit() }) {
+                    formState.stateCode = cleanGstin.take(2)
+                }
             }
         }
     }
@@ -295,8 +322,7 @@ fun SellEntryScreen(
                 .background(MandiBackground)
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-                .imePadding(),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Locked once saved: an entry cannot switch between normal and khaate.

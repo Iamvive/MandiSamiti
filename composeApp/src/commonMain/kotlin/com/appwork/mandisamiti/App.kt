@@ -85,11 +85,11 @@ sealed interface Screen {
     data object DailyRegister : Screen
 
     // Revamp Screens (Tasks 11-15)
-    data class BuyEntry(val existingId: String? = null) : Screen
+    data class BuyEntry(val existingId: String? = null, val initialPartyId: String? = null, val returnScreen: Screen? = null) : Screen
     data class BuyPayment(val entryId: String, val returnScreen: Screen? = null) : Screen
     data object BuyList : Screen
     data class BuyReceipt(val id: String, val returnScreen: Screen? = null) : Screen
-    data class SellEntry(val existingId: String? = null) : Screen
+    data class SellEntry(val existingId: String? = null, val initialPartyId: String? = null, val returnScreen: Screen? = null) : Screen
     data object SellList : Screen
     data class SellReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data class GrainLendEntry(val returnScreen: Screen = Screen.LendList) : Screen
@@ -112,11 +112,11 @@ internal fun partyKhataScreen(partyId: String, returnScreen: Screen = Screen.Hom
     Screen.PartyLedger(partyId, returnScreen)
 
 fun Screen.backTarget(): Screen = when (this) {
-    is Screen.BuyEntry -> Screen.BuyList
+    is Screen.BuyEntry -> returnScreen ?: Screen.BuyList
     is Screen.BuyPayment -> Screen.BuyReceipt(entryId, returnScreen)
     is Screen.BuyReceipt -> returnScreen ?: Screen.BuyList
     is Screen.BuyList -> Screen.Home
-    is Screen.SellEntry -> Screen.SellList
+    is Screen.SellEntry -> returnScreen ?: Screen.SellList
     is Screen.SellReceipt -> returnScreen ?: Screen.SellList
     is Screen.SellList -> Screen.Home
     is Screen.GrainLendEntry -> returnScreen
@@ -459,6 +459,14 @@ fun App(
                     onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) },
                     onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
                     onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
+                    onNewBuy = {
+                        val ledger = Screen.PartyLedger(screen.partyId, screen.returnScreen)
+                        currentScreen = Screen.BuyEntry(initialPartyId = screen.partyId, returnScreen = ledger)
+                    },
+                    onNewSell = {
+                        val ledger = Screen.PartyLedger(screen.partyId, screen.returnScreen)
+                        currentScreen = Screen.SellEntry(initialPartyId = screen.partyId, returnScreen = ledger)
+                    },
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     udhaarPersonViewModelFactory = { direction ->
                         com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel(
@@ -536,7 +544,9 @@ fun App(
             is Screen.BuyEntry -> {
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
-                val buyForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings) }
+                val buyForm = remember(tradeSettings, screen.existingId, screen.initialPartyId) {
+                    com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings)
+                }
                 // Loan section: the picked or phone-matched party's open GIVEN money loans, with interest due as of now.
                 val loanPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, buyForm.selectedFarmerId, buyForm.phone)?.id
                 LaunchedEffect(loanPartyId, lends) {
@@ -579,6 +589,7 @@ fun App(
                 BuyEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
+                    initialPartyId = screen.initialPartyId,
                     buyRepository = buyRepo,
                     tradeSettings = tradeSettings,
                     formState = buyForm,
@@ -622,9 +633,9 @@ fun App(
                             currentScreen = if (entry.isKhaate) {
                                 screen.backTarget()
                             } else if (screen.existingId == null) {
-                                Screen.BuyPayment(entry.id)
+                                Screen.BuyPayment(entry.id, screen.returnScreen)
                             } else {
-                                Screen.BuyReceipt(entry.id)
+                                Screen.BuyReceipt(entry.id, screen.returnScreen)
                             }
                         }
                     },
@@ -818,8 +829,13 @@ fun App(
                             printer.printHtml(job, html)
                         }
                     },
-                    onEdit = { currentScreen = Screen.BuyEntry(it) },
-                    onNewBuy = { currentScreen = Screen.BuyEntry(null) },
+                    onEdit = { currentScreen = Screen.BuyEntry(it, returnScreen = screen.returnScreen) },
+                    onNewBuy = {
+                        currentScreen = Screen.BuyEntry(
+                            initialPartyId = buyEntry?.takeUnless { it.isKhaate }?.farmerId,
+                            returnScreen = screen.returnScreen ?: Screen.BuyList
+                        )
+                    },
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onBack = { currentScreen = screen.backTarget() }
                 )
@@ -828,7 +844,9 @@ fun App(
                 var stockLines by remember(shopId) { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
-                val sellForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.sell.SellEntryFormState(tradeSettings) }
+                val sellForm = remember(tradeSettings, screen.existingId, screen.initialPartyId) {
+                    com.appwork.mandisamiti.ui.sell.SellEntryFormState(tradeSettings)
+                }
                 val buyerPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, sellForm.selectedBuyerId, sellForm.phone)?.id
                 LaunchedEffect(buyerPartyId, lends) {
                     val open = lends
@@ -863,6 +881,7 @@ fun App(
                 SellEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
+                    initialPartyId = screen.initialPartyId,
                     sellRepository = sellRepo,
                     tradeSettings = tradeSettings,
                     formState = sellForm,
@@ -906,7 +925,7 @@ fun App(
                                 com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) { sellRepo.editSellEntry(entry) }
                             }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id)
+                            currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id, screen.returnScreen)
                         }
                     },
                     onBack = { currentScreen = screen.backTarget() }
@@ -1002,7 +1021,13 @@ fun App(
                             printer.printHtml(job, html)
                         }
                     },
-                    onEdit = { currentScreen = Screen.SellEntry(it) },
+                    onEdit = { currentScreen = Screen.SellEntry(it, returnScreen = screen.returnScreen) },
+                    onNewSell = {
+                        currentScreen = Screen.SellEntry(
+                            initialPartyId = sellEntry?.takeUnless { it.isKhaate }?.buyerId,
+                            returnScreen = screen.returnScreen ?: Screen.SellList
+                        )
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
