@@ -30,6 +30,9 @@ fun buyEntryActions(
             BuyLotField.WeightPerBag -> lot.weightPerBagKg = value.filter { it.isDigit() }.take(3)
             BuyLotField.ExtraWeight -> lot.extraWeightKg = value.take(5)
             BuyLotField.Rate -> lot.ratePerQuintal = value.filter { it.isDigit() }.take(6)
+            BuyLotField.LabMode -> lot.labMode = value == "1"
+            BuyLotField.LabValue -> lot.labValueQuintals = value.take(7)
+            BuyLotField.BaseValue -> lot.baseValueQuintals = value.take(7)
         }
     }
 

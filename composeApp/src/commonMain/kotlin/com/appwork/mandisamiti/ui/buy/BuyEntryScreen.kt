@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -99,9 +100,11 @@ fun BuyEntryScreen(
     buyRepository: BuyRepository? = null,
     parties: List<Party> = emptyList(),
     isEnglish: Boolean = false,
+    initialPartyId: String? = null,
     modifier: Modifier = Modifier
 ) {
     var existingEntry by remember { mutableStateOf<BuyEntry?>(null) }
+    var prefilledParty by remember(existingId, initialPartyId) { mutableStateOf<Party?>(null) }
     var showRateOutlierConfirmation by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
     var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
@@ -109,7 +112,7 @@ fun BuyEntryScreen(
     var pendingEntryToSave by remember { mutableStateOf<BuyEntry?>(null) }
 
     val recentBuys by (buyRepository?.getBuyEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
-    val isDirty = formState.hasUnsavedChanges(existingEntry)
+    val isDirty = formState.hasUnsavedChanges(existingEntry, prefilledParty)
 
     MandiBackHandler(enabled = true) {
         if (isDirty) {
@@ -126,6 +129,14 @@ fun BuyEntryScreen(
                 existingEntry = entry
                 formState.populateFrom(entry)
             }
+        }
+    }
+
+    LaunchedEffect(existingId, initialPartyId, parties) {
+        if (existingId == null && initialPartyId != null && prefilledParty?.id != initialPartyId) {
+            val party = parties.firstOrNull { it.id == initialPartyId } ?: return@LaunchedEffect
+            BuyPartyResolver.pick(formState, party)
+            prefilledParty = party
         }
     }
 
@@ -394,8 +405,7 @@ fun BuyEntryScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-                .imePadding(),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Khaate toggle: spare crop, no party, no charges
@@ -419,8 +429,8 @@ fun BuyEntryScreenContent(
                 onPartySelected = { party ->
                     actions.onPickParty(party.id)
                     actions.onNameChange(party.name)
-                    party.phone?.let { actions.onPhoneChange(it) }
-                    party.village?.let { actions.onVillageChange(it) }
+                    actions.onPhoneChange(party.phone.orEmpty())
+                    actions.onVillageChange(party.village.orEmpty())
                 },
                 parties = parties,
                 label = if (isEnglish) "Mobile number" else "मोबाइल नंबर",
@@ -526,7 +536,49 @@ fun BuyEntryScreenContent(
                         placeholder = if (isEnglish) "Enter crop name" else "फसल का नाम लिखें",
                     )
 
-                    // B final Line 1: Bags, Weight/Bag, Extra weight in a 3-column row
+                    // Lab slip: weight = (lab / base) * base, no bags
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = lot.labMode,
+                            onCheckedChange = { actions.onLotChange(lot.id, BuyLotField.LabMode, if (it) "1" else "") }
+                        )
+                        Text(
+                            text = if (isEnglish) "Lab slip (lab value / base value)" else "लैब पर्ची (लैब वैल्यू / बेस वैल्यू)",
+                            fontSize = 14.sp,
+                            color = MandiTextPrimary
+                        )
+                    }
+
+                    if (lot.labMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            MandiFlatTextField(
+                                value = lot.labValueQuintals,
+                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.LabValue, it) },
+                                label = if (isEnglish) "Lab value (qtl)" else "लैब वैल्यू (क्विंटल)",
+                                isError = lot.labError != null,
+                                errorMessage = lot.labError,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                isTall = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            MandiFlatTextField(
+                                value = lot.baseValueQuintals,
+                                onValueChange = { actions.onLotChange(lot.id, BuyLotField.BaseValue, it) },
+                                label = if (isEnglish) "Base value (qtl)" else "बेस वैल्यू (क्विंटल)",
+                                isError = lot.baseError != null,
+                                errorMessage = lot.baseError,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                isTall = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -562,6 +614,8 @@ fun BuyEntryScreenContent(
                             isTall = true,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
                     }
 
                     // B final Line 2: Rate on next line
@@ -653,6 +707,10 @@ fun BuyEntryScreenContent(
                     Line(
                         label = if (isEnglish) "Commission" else "कमीशन कटौती",
                         amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.commissionPaisa)}"
+                    )
+                    Line(
+                        label = if (isEnglish) "Total charges" else "कुल खर्चा",
+                        amountText = "− ₹${MandiMathEngine.paisaToRupeesString(state.slip.labourPaisa + state.slip.commissionPaisa)}"
                     )
                 }
                 TotalLine(

@@ -1027,5 +1027,146 @@ class PartyLedgerViewModelTest {
         assertEquals(personState.interestDuePaisa, khataState.udhaarGivenInterestPaisa)
         assertTrue(khataState.udhaarGivenInterestPaisa > 0L)
     }
+
+    @Test
+    fun onPlainCashForwardsNoteToNewLoanAndRepayment() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val lendRepo = OfflineFirstLendRepository(database, ioDispatcher = ioDispatcher)
+        var idCounter = 0
+        val udhaarUseCase = UdhaarUseCase(lendRepo, { "id-${++idCounter}" }, { 5000L })
+
+        val shopId = "shop-1"
+        val partyId = "farmer-1"
+        shopRepo.saveShopProfile(ShopProfile(id = shopId, shopName = "Shop", ownerName = "Owner", mandiName = "Mandi", phoneNumber = "9800000000", pinHash = "1234", createdAt = 1000L, updatedAt = 1000L))
+        partyRepo.saveParty(Party(id = partyId, shopId = shopId, name = "रामवीर", village = "राया", partyType = PartyType.FARMER, createdAt = 1000L, updatedAt = 1000L))
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = shopId,
+            partyId = partyId,
+            partyRepository = partyRepo,
+            cashRepository = cashRepo,
+            dealRepository = dealRepo,
+            shopProfileRepository = shopRepo,
+            lendRepository = lendRepo,
+            udhaarUseCase = udhaarUseCase,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+
+        viewModel.uiState.first { it.party != null }
+        viewModel.onPlainCash(CashSide.GAVE, 50_000L, note = "खाद के लिए")
+
+        val afterLoan = viewModel.uiState.first { it.openLoans.size == 1 }
+        assertEquals("खाद के लिए", afterLoan.openLoans.single().lend.notes)
+
+        viewModel.onPlainCash(CashSide.GOT, 20_000L, note = "नकद वापसी")
+        val cashList = cashRepo.getTransactionsByPartyStream(partyId).first { it.size >= 2 }
+        assertTrue(cashList.any { it.remarks?.contains("नकद वापसी") == true })
+    }
+
+    @Test
+    fun updatePartyDetailsHandlesDuplicatePhoneWithoutCrash() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+
+        val p1 = Party(id = "p1", shopId = "shop-1", name = "किसान १", phone = "9876543210", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        val p2 = Party(id = "p2", shopId = "shop-1", name = "किसान २", phone = "9876543211", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L)
+        partyRepo.saveParty(p1)
+        partyRepo.saveParty(p2)
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1",
+            partyId = "p2",
+            partyRepository = partyRepo,
+            cashRepository = cashRepo,
+            dealRepository = dealRepo,
+            shopProfileRepository = shopRepo,
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+        viewModel.uiState.first { it.party?.id == "p2" }
+
+        val dupSignal = kotlinx.coroutines.CompletableDeferred<Party>()
+        var succeeded = false
+        viewModel.updatePartyDetails(
+            name = "किसान २",
+            village = null,
+            phone = "9876543210",
+            gstin = null,
+            mandiLicense = null,
+            onSuccess = { succeeded = true },
+            onDuplicatePhone = { dupSignal.complete(it) }
+        )
+
+        val duplicateHit = dupSignal.await()
+        assertFalse(succeeded)
+        assertEquals("p1", duplicateHit.id)
+        assertEquals("9876543211", partyRepo.getPartyById("p2")?.phone)
+    }
+
+    @Test
+    fun ledgerHidesBuyCreditBookEntryMirrorAndTagsSettleBuySlip() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        val buyRepo = OfflineFirstBuyRepository(database, ioDispatcher = ioDispatcher)
+
+        val shopId = "shop-1"
+        val farmerId = "farmer-1"
+        partyRepo.saveParty(Party(id = farmerId, shopId = shopId, name = "Vivek", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        buyRepo.saveBuyEntry(
+            BuyEntry(
+                id = "buy-1", shopId = shopId, farmerId = farmerId, commodityId = "गेहूं",
+                entryDate = 1000L, bagsCount = 10, weightPerBagGrams = 50_000L, extraWeightGrams = 0L,
+                totalWeightGrams = 500_000L, ratePaisaPerQuintal = 200_000L, commissionBps = 0L,
+                labourPerBagPaisa = 0L, advancePaidPaisa = 0L, grossPaisa = 1_000_000L,
+                commissionPaisa = 0L, labourPaisa = 0L, netPayablePaisa = 1_000_000L,
+                paidPaisa = 0L, createdAt = 1000L, updatedAt = 1000L
+            )
+        )
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "credit-mirror", shopId = shopId, partyId = farmerId,
+                transactionType = TransactionType.JAMA_RECEIVED, amountPaisa = 1_000_000L,
+                paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.BOOK_ENTRY,
+                transactionDate = 1000L, remarks = "Vivek • खरीद पर्ची #1 बाकी जमा (क्रेडिट)",
+                createdAt = 1000L, updatedAt = 1000L,
+                sourceEntryType = "BUY_CREDIT", sourceEntryId = "buy-1"
+            )
+        )
+
+        val viewModel = PartyLedgerViewModel(
+            shopId = shopId, partyId = farmerId, partyRepository = partyRepo,
+            cashRepository = cashRepo, dealRepository = dealRepo, shopProfileRepository = shopRepo,
+            buyRepository = buyRepo, ttsManager = SoundboxTtsManager(), viewModelScope = backgroundScope
+        )
+
+        val initial = viewModel.uiState.first { it.ledgerItems.isNotEmpty() }
+        assertEquals(1, initial.ledgerItems.size)
+        assertTrue(initial.ledgerItems.single() is LedgerItem.BuyItem)
+
+        // Overpayment on settleBuySlip is clamped to remaining due (1_000_000L) and tags CashTransaction
+        viewModel.settleBuySlip("buy-1", 1_500_000L, note = "पूरा")
+        val settled = viewModel.uiState.first { state ->
+            state.ledgerItems.any { it is LedgerItem.CashItem && it.transaction.sourceEntryType == "BUY" }
+        }
+        assertEquals(1_000_000L, buyRepo.getBuyEntryById("buy-1")?.paidPaisa)
+        val cashItem = settled.ledgerItems.filterIsInstance<LedgerItem.CashItem>().single()
+        assertEquals(1_000_000L, cashItem.transaction.amountPaisa)
+        assertEquals("buy-1", cashItem.transaction.sourceEntryId)
+        assertTrue(cashItem.tag is LedgerTag.Slip)
+    }
 }
 

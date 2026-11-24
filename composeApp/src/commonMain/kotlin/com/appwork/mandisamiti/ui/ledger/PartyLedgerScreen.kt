@@ -17,13 +17,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
@@ -34,6 +37,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -132,6 +136,8 @@ fun PartyLedgerScreen(
     onEditDeal: (String) -> Unit = {},
     onOpenBuyReceipt: (String) -> Unit = {},
     onOpenSellReceipt: (String) -> Unit = {},
+    onNewBuy: (() -> Unit)? = null,
+    onNewSell: (() -> Unit)? = null,
     isEnglish: Boolean = false,
     udhaarPersonViewModelFactory: ((LendDirection) -> UdhaarPersonViewModel)? = null,
 ) {
@@ -196,6 +202,19 @@ fun PartyLedgerScreen(
     var editPhoneInput by remember { mutableStateOf("") }
     var editGstinInput by remember { mutableStateOf("") }
     var editMandiLicenseInput by remember { mutableStateOf("") }
+    var editDuplicateParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+
+    val openEditPartyDialog: () -> Unit = {
+        if (party != null) {
+            editNameInput = party.name
+            editVillageInput = party.village ?: ""
+            editPhoneInput = party.phone ?: ""
+            editGstinInput = party.gstin ?: ""
+            editMandiLicenseInput = party.mandiLicense ?: ""
+            editDuplicateParty = null
+            showEditPartyDialog = true
+        }
+    }
 
     var showSettlementDialog by remember { mutableStateOf(false) }
 
@@ -216,7 +235,8 @@ fun PartyLedgerScreen(
                 shopName = party?.name ?: (if (isEnglish) "Account Details" else "खाता विवरण"),
                 mandiLocation = if (party?.village != null) (if (isEnglish) "Village: ${party.village}" else "गांव: ${party.village}") else (if (isEnglish) "Mandi account" else "मंडी खाता"),
                 isSoundEnabled = uiState.isSoundEnabled,
-                onToggleSound = {},
+                onToggleSound = viewModel::toggleSoundSetting,
+                isEnglish = isEnglish,
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -225,30 +245,51 @@ fun PartyLedgerScreen(
                             tint = MandiTextPrimary
                         )
                     }
+                },
+                actions = {
+                    if (party != null) {
+                        IconButton(
+                            onClick = openEditPartyDialog,
+                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = if (isEnglish) "Edit account" else "खाता विवरण बदलें",
+                                tint = MandiTextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             )
         },
         containerColor = MandiBackground
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             if (party?.phone == null) {
-                PhoneNeededBadge(
-                    isEnglish = isEnglish,
-                    modifier = Modifier.padding(start = 14.dp, top = 10.dp),
-                )
+                item(key = "phone_needed") {
+                    PhoneNeededBadge(
+                        isEnglish = isEnglish,
+                        onClick = if (party != null) openEditPartyDialog else null,
+                        modifier = Modifier.padding(start = 14.dp, top = 10.dp),
+                    )
+                }
             }
 
             // Two balance cards side by side
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            item(key = "balance_cards") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 14.dp, top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                 // 1. Slip balance card (पर्चियों का बाकी)
                 val slip = uiState.slipBalancePaisa
                 val isSlipReceivable = slip > 0L
@@ -422,151 +463,187 @@ fun PartyLedgerScreen(
                     }
                 }
             }
+            }
 
             // Tax details: one muted line, whole line opens the edit dialog
             if (party?.partyType == PartyType.BUYER || party?.gstin != null || party?.mandiLicense != null) {
-                val notProvided = if (isEnglish) "Not provided" else "दर्ज नहीं"
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            editNameInput = party?.name ?: ""
-                            editVillageInput = party?.village ?: ""
-                            editPhoneInput = party?.phone ?: ""
-                            editGstinInput = party?.gstin ?: ""
-                            editMandiLicenseInput = party?.mandiLicense ?: ""
-                            showEditPartyDialog = true
-                        }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "GSTIN ${party?.gstin ?: notProvided}  ·  ${if (isEnglish) "Licence" else "लाइसेंस"} ${party?.mandiLicense ?: notProvided}",
-                        modifier = Modifier.weight(1f),
-                        fontSize = 12.sp,
-                        color = MandiTextSecondary,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = if (isEnglish) "Edit" else "बदलें",
-                        modifier = Modifier.padding(start = 8.dp),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiPrimaryAction
-                    )
+                item(key = "tax_details") {
+                    val notProvided = if (isEnglish) "Not provided" else "दर्ज नहीं"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = openEditPartyDialog)
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "GSTIN ${party?.gstin ?: notProvided}  ·  ${if (isEnglish) "Licence" else "लाइसेंस"} ${party?.mandiLicense ?: notProvided}",
+                            modifier = Modifier.weight(1f),
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = if (isEnglish) "Edit" else "बदलें",
+                            modifier = Modifier.padding(start = 8.dp),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiPrimaryAction
+                        )
+                    }
                 }
             }
 
             // Quick Action Buttons
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Primary Settle Action Button (हिसाब चुकता)
-                Button(
-                    onClick = { showSettlementDialog = true },
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MandiPrimaryAction,
-                        contentColor = MandiPrimaryActionText
-                    ),
-                    shape = RoundedCornerShape(10.dp)
+            item(key = "quick_actions") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MandiPrimaryActionText,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(
-                        text = if (isEnglish) "Settle Slips (Hisab Chukta)" else "हिसाब चुकता (पर्ची)",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiPrimaryActionText
-                    )
-                }
+                    // Primary Settle Action Button (हिसाब चुकता)
+                    Button(
+                        onClick = { showSettlementDialog = true },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MandiPrimaryAction,
+                            contentColor = MandiPrimaryActionText
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MandiPrimaryActionText,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(
+                            text = if (isEnglish) "Settle Slips (Hisab Chukta)" else "हिसाब चुकता (पर्ची)",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiPrimaryActionText
+                        )
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FintechActionButton(
-                        label = if (isEnglish) "Money Received" else "रुपये मिले",
-                        icon = Icons.Default.ArrowDownward,
-                        color = MandiGreenReceivable,
-                        backgroundColor = MandiGreenLight,
-                        borderColor = MandiGreenBorder,
-                        textColor = MandiGreenText,
-                        onClick = {
-                            viewModel.clearError()
-                            showPlainCashSide = "GOT"
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FintechActionButton(
-                        label = if (isEnglish) "Money Paid" else "रुपये दिए",
-                        icon = Icons.Default.ArrowUpward,
-                        color = MandiRedPayable,
-                        backgroundColor = MandiRedLight,
-                        borderColor = MandiRedBorder,
-                        textColor = MandiRedText,
-                        onClick = {
-                            viewModel.clearError()
-                            showPlainCashSide = "GAVE"
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FintechActionButton(
+                            label = if (isEnglish) "Money Received" else "रुपये मिले",
+                            icon = Icons.Default.ArrowDownward,
+                            color = MandiGreenReceivable,
+                            backgroundColor = MandiGreenLight,
+                            borderColor = MandiGreenBorder,
+                            textColor = MandiGreenText,
+                            onClick = {
+                                viewModel.clearError()
+                                showPlainCashSide = "GOT"
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FintechActionButton(
+                            label = if (isEnglish) "Money Paid" else "रुपये दिए",
+                            icon = Icons.Default.ArrowUpward,
+                            color = MandiRedPayable,
+                            backgroundColor = MandiRedLight,
+                            borderColor = MandiRedBorder,
+                            textColor = MandiRedText,
+                            onClick = {
+                                viewModel.clearError()
+                                showPlainCashSide = "GAVE"
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    val activeParty = party
+                    val tradeCallback = if (activeParty != null && !activeParty.isDeleted && activeParty.id != com.appwork.mandisamiti.domain.model.Khaate.partyId(activeParty.shopId)) {
+                        when (activeParty.partyType) {
+                            PartyType.FARMER -> onNewBuy
+                            PartyType.BUYER -> onNewSell
+                        }
+                    } else null
+                    if (tradeCallback != null && activeParty != null) {
+                        val tradeLabel = if (activeParty.partyType == PartyType.FARMER) {
+                            if (isEnglish) "New Buy Slip" else "नई खरीद पर्ची"
+                        } else {
+                            if (isEnglish) "New Sell Slip" else "नई बिक्री बिल"
+                        }
+                        OutlinedButton(
+                            onClick = tradeCallback,
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, MandiBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = MandiSurface,
+                                contentColor = MandiTextPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = MandiPrimaryAction,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = tradeLabel,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiTextPrimary
+                            )
+                        }
+                    }
                 }
             }
 
             // Udhaar Section: shown only when the party has loans in either direction
             val hasUdhaar = uiState.udhaarGivenPaisa > 0L || uiState.udhaarTakenPaisa > 0L || uiState.openLoans.isNotEmpty()
             if (hasUdhaar) {
-                PartyUdhaarSection(
-                    uiState = uiState,
-                    givenViewModel = givenPersonViewModel,
-                    takenViewModel = takenPersonViewModel,
-                    isEnglish = isEnglish,
-                    onRefresh = { viewModel.loadPartyData() }
-                )
+                item(key = "udhaar_section") {
+                    PartyUdhaarSection(
+                        uiState = uiState,
+                        givenViewModel = givenPersonViewModel,
+                        takenViewModel = takenPersonViewModel,
+                        isEnglish = isEnglish,
+                        onEditRepayment = { editingSettlement = it },
+                        onShowRepaymentHistory = { historySettlement = it },
+                        onRefresh = { viewModel.loadPartyData() }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
             // Transaction Stream Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = (if (isEnglish) "Transactions" else "लेन-देन विवरण") + " (${uiState.ledgerItems.size})",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary
-                )
+            item(key = "tx_header") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = (if (isEnglish) "Transactions" else "लेन-देन विवरण") + " (${uiState.ledgerItems.size})",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary
+                    )
+                }
             }
 
             // Transaction List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(uiState.ledgerItems) { item ->
+            items(uiState.ledgerItems) { item ->
+                Box(modifier = Modifier.padding(horizontal = 14.dp)) {
                     when (item) {
                         is LedgerItem.BuyItem -> {
                             FintechBuyCard(
                                 isEnglish = isEnglish,
                                 buy = item.buy,
-                                tag = item.tag,
                                 onOpenReceipt = { onOpenBuyReceipt(item.buy.id) },
                                 onLongPress = { voidTarget = item }
                             )
@@ -575,7 +652,6 @@ fun PartyLedgerScreen(
                             FintechSellCard(
                                 isEnglish = isEnglish,
                                 sell = item.sell,
-                                tag = item.tag,
                                 onOpenReceipt = { onOpenSellReceipt(item.sell.id) },
                                 onLongPress = { voidTarget = item }
                             )
@@ -605,7 +681,6 @@ fun PartyLedgerScreen(
                         }
                         is LedgerItem.CashItem -> {
                             FintechCashCard(
-
                                 isEnglish = isEnglish,
                                 transaction = item.transaction,
                                 tag = item.tag,
@@ -615,21 +690,21 @@ fun PartyLedgerScreen(
                         }
                     }
                 }
+            }
 
-                if (uiState.ledgerItems.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (isEnglish) "No transactions in this account" else "इस खाते में कोई लेन-देन नहीं है",
-                                color = MandiTextMuted,
-                                fontSize = 14.sp
-                            )
-                        }
+            if (uiState.ledgerItems.isEmpty()) {
+                item(key = "empty_ledger") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isEnglish) "No transactions in this account" else "इस खाते में कोई लेन-देन नहीं है",
+                            color = MandiTextMuted,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }
@@ -643,7 +718,7 @@ fun PartyLedgerScreen(
         val phoneValid = isValidPartyPhone(editPhoneInput)
 
         AlertDialog(
-            onDismissRequest = { showEditPartyDialog = false },
+            onDismissRequest = { showEditPartyDialog = false; editDuplicateParty = null },
             title = {
                 Text(
                     text = if (isEnglish) "Edit Account Details" else "खाता विवरण बदलें",
@@ -652,12 +727,15 @@ fun PartyLedgerScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     OutlinedTextField(
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = editNameInput,
                         onValueChange = { editNameInput = it },
-                        label = { Text(if (isEnglish) "Party Name *" else "नांव / नाम *") },
+                        label = { Text(if (isEnglish) "Party Name *" else "नाम *") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -671,9 +749,15 @@ fun PartyLedgerScreen(
                     )
                     OutlinedTextField(
                         value = editPhoneInput,
-                        onValueChange = { editPhoneInput = sanitizePartyPhone(it) },
+                        onValueChange = {
+                            editPhoneInput = sanitizePartyPhone(it)
+                            editDuplicateParty = null
+                        },
                         label = { Text(if (isEnglish) "Mobile Number *" else "मोबाइल नंबर *") },
-                        isError = !phoneValid,
+                        isError = editPhoneInput.isNotEmpty() && !phoneValid,
+                        supportingText = if (editPhoneInput.isNotEmpty() && !phoneValid) {
+                            { Text(if (isEnglish) "Enter a 10-digit mobile number" else "10 अंकों का मोबाइल नंबर डालें (6–9 से शुरू)") }
+                        } else null,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -700,6 +784,17 @@ fun PartyLedgerScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    editDuplicateParty?.let { existing ->
+                        Text(
+                            text = if (isEnglish) {
+                                "This number already belongs to ${existing.name}${existing.village?.let { ", $it" } ?: ""}"
+                            } else {
+                                "यह नंबर पहले से ${existing.name}${existing.village?.let { ", $it" } ?: ""} के नाम पर है"
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 13.sp,
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -711,9 +806,15 @@ fun PartyLedgerScreen(
                                 village = editVillageInput,
                                 phone = editPhoneInput,
                                 gstin = if (isBuyer) gstinClean.ifBlank { null } else null,
-                                mandiLicense = if (isBuyer) editMandiLicenseInput.trim().ifBlank { null } else null
+                                mandiLicense = if (isBuyer) editMandiLicenseInput.trim().ifBlank { null } else null,
+                                onSuccess = {
+                                    editDuplicateParty = null
+                                    showEditPartyDialog = false
+                                },
+                                onDuplicatePhone = { existing ->
+                                    editDuplicateParty = existing
+                                }
                             )
-                            showEditPartyDialog = false
                         }
                     },
                     enabled = editNameInput.trim().isNotBlank() && phoneValid && gstinValid,
@@ -725,12 +826,11 @@ fun PartyLedgerScreen(
                     Text(
                         text = if (isEnglish) "Save" else "सहेजें",
                         fontWeight = FontWeight.Bold,
-                        color = MandiPrimaryActionText
                     )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditPartyDialog = false }) {
+                TextButton(onClick = { showEditPartyDialog = false; editDuplicateParty = null }) {
                     Text(if (isEnglish) "Cancel" else "रद्द करें", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -973,7 +1073,7 @@ fun PartyLedgerScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text(if (isEnglish) "Save" else "सुरक्षित करें", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Save" else "सुरक्षित करें", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -1037,7 +1137,7 @@ fun PartyLedgerScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (nonVoidBuys.isEmpty() && nonVoidSells.isEmpty()) {
@@ -1175,10 +1275,18 @@ fun PartyLedgerScreen(
                         }
 
                         if (!isFullSettle) {
+                            val overMax = settlementAmountPaisa > activeTargetMaxPaisa
                             OutlinedTextField(
                                 value = partialAmountInput,
                                 onValueChange = { partialAmountInput = it.filter(Char::isDigit) },
                                 label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
+                                isError = overMax,
+                                supportingText = if (overMax) {
+                                    {
+                                        val maxStr = MandiMathEngine.paisaToRupeesString(activeTargetMaxPaisa)
+                                        Text(if (isEnglish) "Cannot exceed remaining ₹$maxStr" else "राशि बाकी ₹$maxStr से ज़्यादा नहीं हो सकती")
+                                    }
+                                } else null,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -1259,7 +1367,7 @@ fun PartyLedgerScreen(
                         contentColor = MandiPrimaryActionText
                     )
                 ) {
-                    Text(if (isEnglish) "Confirm Settlement" else "सुरक्षित करें", fontWeight = FontWeight.Bold, color = MandiPrimaryActionText)
+                    Text(if (isEnglish) "Confirm Settlement" else "सुरक्षित करें", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -1369,6 +1477,8 @@ private fun PartyUdhaarSection(
     takenViewModel: UdhaarPersonViewModel?,
     isEnglish: Boolean,
     modifier: Modifier = Modifier,
+    onEditRepayment: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
+    onShowRepaymentHistory: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onRefresh: () -> Unit = {}
 ) {
     if (givenViewModel == null || takenViewModel == null) return
@@ -1519,11 +1629,9 @@ private fun PartyUdhaarSection(
                                 item = loanItem,
                                 isEnglish = isEnglish,
                                 isGiven = isGiven,
-                                onEditRepayment = { settlement ->
-                                    activeVm.startRepaymentEdit(settlement)
-                                },
+                                onEditRepayment = onEditRepayment,
                                 onViewHistory = { settlementId ->
-                                    activeVm.loadRepaymentHistory(settlementId)
+                                    loanItem.settlements.firstOrNull { it.id == settlementId }?.let(onShowRepaymentHistory)
                                 }
                             )
                         }
@@ -1620,16 +1728,29 @@ private fun FintechDealCard(
                 }
 
                 if (!isVoid) {
-                    IconButton(
-                        onClick = onShareSlip,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = if (isEnglish) "Share slip" else "पर्ची शेयर करें",
-                            tint = MandiAccent,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onShareSlip,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = if (isEnglish) "Share slip" else "पर्ची शेयर करें",
+                                tint = MandiAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onLongPress,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = if (isEnglish) "Options" else "विकल्प",
+                                tint = MandiTextMuted,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1705,9 +1826,29 @@ private fun FintechCashCard(
     onLongPress: () -> Unit
 ) {
     val isVoid = transaction.isVoid
-    val isDeposit = transaction.transactionType == TransactionType.JAMA_RECEIVED
+    val isDeposit = transaction.transactionType == TransactionType.JAMA_RECEIVED ||
+        transaction.transactionType == TransactionType.INTEREST_RECEIVED
     val shape = RoundedCornerShape(10.dp)
     val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(transaction.remarks)
+    val titleText = when (transaction.transactionType) {
+        TransactionType.JAMA_RECEIVED -> when (transaction.paymentMode) {
+            PaymentMode.BOOK_ENTRY -> if (isEnglish) "Book credit" else "बही जमा (क्रेडिट)"
+            PaymentMode.ONLINE, PaymentMode.UPI, PaymentMode.RTGS, PaymentMode.NEFT, PaymentMode.BANK ->
+                if (isEnglish) "Online / bank received" else "ऑनलाइन / बैंक जमा"
+            PaymentMode.CHEQUE -> if (isEnglish) "Cheque received" else "चेक जमा प्राप्त"
+            PaymentMode.CASH -> if (isEnglish) "Cash received" else "नकद जमा प्राप्त"
+        }
+        TransactionType.UDHAR_GIVEN -> when (transaction.paymentMode) {
+            PaymentMode.BOOK_ENTRY -> if (isEnglish) "Book debit" else "बही भुगतान (डेबिट)"
+            PaymentMode.ONLINE, PaymentMode.UPI, PaymentMode.RTGS, PaymentMode.NEFT, PaymentMode.BANK ->
+                if (isEnglish) "Online / bank paid" else "ऑनलाइन / बैंक भुगतान"
+            PaymentMode.CHEQUE -> if (isEnglish) "Cheque paid" else "चेक भुगतान दिया"
+            PaymentMode.CASH -> if (isEnglish) "Cash paid" else "नकद भुगतान दिया"
+        }
+        TransactionType.INTEREST_RECEIVED -> if (isEnglish) "Interest received" else "ब्याज मिला"
+        TransactionType.INTEREST_ADDED -> if (isEnglish) "Interest added" else "ब्याज जोड़ा गया"
+        TransactionType.DISCOUNT_GIVEN -> if (isEnglish) "Discount / settlement" else "छूट / समझौता"
+    }
 
     Box(
         modifier = Modifier
@@ -1750,7 +1891,7 @@ private fun FintechCashCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = if (isDeposit) if (isEnglish) "Cash received" else "नकद जमा प्राप्त" else "नकद भुगतान दिया",
+                            text = titleText,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MandiTextPrimary
@@ -1775,16 +1916,31 @@ private fun FintechCashCard(
                 }
             }
 
-            Text(
-                text = "${if (isDeposit) "+" else "-"}₹${MandiMathEngine.paisaToRupeesString(transaction.amountPaisa)}",
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.padding(start = 8.dp),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
-                textDecoration = if (isVoid) TextDecoration.LineThrough else null
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${if (isDeposit) "+" else "-"}₹${MandiMathEngine.paisaToRupeesString(transaction.amountPaisa)}",
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.padding(start = 8.dp),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDeposit) MandiGreenReceivable else MandiRedPayable,
+                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                )
+                if (!isVoid) {
+                    IconButton(
+                        onClick = onLongPress,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = if (isEnglish) "Options" else "विकल्प",
+                            tint = MandiTextMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         }
 
             if (isVoid) {
@@ -1804,7 +1960,6 @@ private fun FintechCashCard(
 private fun FintechBuyCard(
     isEnglish: Boolean,
     buy: com.appwork.mandisamiti.domain.model.BuyEntry,
-    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onOpenReceipt: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -1854,7 +2009,6 @@ private fun FintechBuyCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
-                    LedgerTagChip(tag = tag, slipNo = buy.slipNo, isEnglish = isEnglish)
                     if (buy.revision > 1) {
                         Text(
                             text = if (isEnglish) "Revised" else "संशोधित",
@@ -1869,13 +2023,28 @@ private fun FintechBuyCard(
                     }
                 }
 
-                Text(
-                    text = "₹$netRupees",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "₹$netRupees",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary,
+                        textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    )
+                    if (!isVoid) {
+                        IconButton(
+                            onClick = onLongPress,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = if (isEnglish) "Options" else "विकल्प",
+                                tint = MandiTextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             Text(
@@ -1963,7 +2132,6 @@ private fun FintechBuyCard(
 private fun FintechSellCard(
     isEnglish: Boolean,
     sell: com.appwork.mandisamiti.domain.model.SellEntry,
-    tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onOpenReceipt: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -2013,7 +2181,6 @@ private fun FintechSellCard(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary
                     )
-                    LedgerTagChip(tag = tag, slipNo = sell.slipNo, isEnglish = isEnglish)
                     if (sell.revision > 1) {
                         Text(
                             text = if (isEnglish) "Revised" else "संशोधित",
@@ -2028,13 +2195,28 @@ private fun FintechSellCard(
                     }
                 }
 
-                Text(
-                    text = "₹$grossRupees",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "₹$grossRupees",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary,
+                        textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    )
+                    if (!isVoid) {
+                        IconButton(
+                            onClick = onLongPress,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = if (isEnglish) "Options" else "विकल्प",
+                                tint = MandiTextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             Text(
@@ -2177,13 +2359,28 @@ private fun FintechLendCard(
                     LedgerTagChip(tag = tag, slipNo = null, isEnglish = isEnglish)
                 }
 
-                Text(
-                    text = "₹$amountRupees",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MandiTextPrimary,
-                    textDecoration = if (isVoid) TextDecoration.LineThrough else null
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "₹$amountRupees",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary,
+                        textDecoration = if (isVoid) TextDecoration.LineThrough else null
+                    )
+                    if (!isVoid) {
+                        IconButton(
+                            onClick = onLongPress,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = if (isEnglish) "Options" else "विकल्प",
+                                tint = MandiTextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             Text(

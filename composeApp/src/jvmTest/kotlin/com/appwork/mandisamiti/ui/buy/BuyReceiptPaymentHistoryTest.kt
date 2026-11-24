@@ -94,12 +94,12 @@ class BuyReceiptPaymentHistoryTest {
             payments = payments
         )
 
-        // Privacy rule: कुल खर्चा combined, NO separate labour/commission split
-        assertTrue(slipText.contains("कुल खर्चा: -₹1,000"), "Must contain combined कुल खर्चा (-₹1,000)")
+        // Kisan share slip: no commission, majoori or कुल खर्चा line (Vivek, 2026-11-24)
+        assertFalse(slipText.contains("कुल खर्चा"), "Kisan share text must NOT show कुल खर्चा")
         assertFalse(slipText.contains("मजदूरी कटौती"), "Must NOT split labour in share text")
         assertFalse(slipText.contains("कमीशन कटौती"), "Must NOT split commission in share text")
 
-        // Sequence: Gross -> कुल खर्चा -> पर्ची राशि (bold and framed with separators)
+        // Sequence: Gross -> पर्ची राशि (bold and framed with separators)
         assertTrue(slipText.contains("कुल राशि: ₹50,000"), "Must contain gross")
         assertTrue(slipText.contains("--------------------\n*पर्ची राशि: ₹49,000*\n--------------------"), "Parchi Rashi must be bold and framed with separators in share text")
         assertTrue(slipText.contains("पर्ची राशि: ₹49,000"), "Must contain slip value")

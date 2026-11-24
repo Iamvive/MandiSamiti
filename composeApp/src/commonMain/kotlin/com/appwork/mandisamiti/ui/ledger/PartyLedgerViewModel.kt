@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -153,7 +154,8 @@ class PartyLedgerViewModel(
                     partyId = partyId,
                     side = side,
                     amountPaisa = amountPaisa,
-                    date = dateMs
+                    date = dateMs,
+                    note = note,
                 )
                 val party = _uiState.value.party ?: partyRepository.getPartyById(partyId)
                 val partyName = party?.name ?: ""
@@ -274,8 +276,10 @@ class PartyLedgerViewModel(
             val (openLends, allLoansInfo) = loansPair
             val allItems = mutableListOf<LedgerItem>()
 
-            // 1. Cash transactions
-            cashList.forEach { allItems.add(LedgerItem.CashItem(it)) }
+            // 1. Cash transactions (skip BOOK_ENTRY BUY_CREDIT mirror rows; the Buy slip already shows unpaid due)
+            cashList
+                .filterNot { it.sourceEntryType == "BUY_CREDIT" && it.paymentMode == PaymentMode.BOOK_ENTRY }
+                .forEach { allItems.add(LedgerItem.CashItem(it)) }
 
             // 2. Buy entries (farmer purchases)
             buysList.filter { it.farmerId == partyId || (partyName != null && it.farmerId.equals(partyName, ignoreCase = true)) }
@@ -422,27 +426,39 @@ class PartyLedgerViewModel(
             val currentBuy = buyRepo.getBuyEntryById(buyId) ?: return@launch
             if (currentBuy.isVoid) return@launch
 
-            val newPaidPaisa = currentBuy.paidPaisa + amountPaisa
-            buyRepo.editBuyEntry(currentBuy.copy(paidPaisa = newPaidPaisa))
+            val remaining = (currentBuy.netPayablePaisa - currentBuy.paidPaisa).coerceAtLeast(0L)
+            val applied = minOf(amountPaisa, remaining)
+            if (applied <= 0L) return@launch
 
             val now = Clock.System.now().toEpochMilliseconds()
+            val newPaidPaisa = currentBuy.paidPaisa + applied
+            buyRepo.editBuyEntry(
+                currentBuy.copy(
+                    paidPaisa = newPaidPaisa,
+                    updatedAt = now,
+                    revision = currentBuy.revision + 1L
+                )
+            )
+
             val slipRef = currentBuy.slipNo?.let { "#$it" } ?: buyId.takeLast(5)
             val tx = CashTransaction(
                 id = IdGenerator.newId(),
                 shopId = shopId,
                 partyId = partyId,
                 transactionType = TransactionType.UDHAR_GIVEN, // Farmer payout / cash out from galla
-                amountPaisa = amountPaisa,
+                amountPaisa = applied,
                 paymentMode = PaymentMode.CASH,
                 transactionDate = now,
                 remarks = "खरीद पर्ची $slipRef भुगतान${if (!note.isNullOrBlank()) ": $note" else ""}",
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                sourceEntryType = "BUY",
+                sourceEntryId = buyId
             )
             cashRepository.recordTransaction(tx)
             syncScheduler.scheduleOneTimeSync()
 
-            val speechText = "पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(amountPaisa)} भुगतान किया गया।"
+            val speechText = "पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(applied)} भुगतान किया गया।"
             ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
             _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
         }
@@ -463,31 +479,38 @@ class PartyLedgerViewModel(
             val currentSell = sellRepo.getSellEntryById(sellId) ?: return@launch
             if (currentSell.isVoid) return@launch
 
-            val newReceivedPaisa = currentSell.receivedPaisa + amountPaisa
+            val applied = minOf(amountPaisa, currentSell.balanceDuePaisa.coerceAtLeast(0L))
+            if (applied <= 0L) return@launch
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            val newReceivedPaisa = currentSell.receivedPaisa + applied
             val newBalanceDue = (currentSell.totalReceivablePaisa - newReceivedPaisa).coerceAtLeast(0L)
             sellRepo.editSellEntry(currentSell.copy(
                 receivedPaisa = newReceivedPaisa,
-                balanceDuePaisa = newBalanceDue
+                balanceDuePaisa = newBalanceDue,
+                updatedAt = now,
+                revision = currentSell.revision + 1L
             ))
 
-            val now = Clock.System.now().toEpochMilliseconds()
             val slipRef = currentSell.slipNo?.let { "#$it" } ?: sellId.takeLast(5)
             val tx = CashTransaction(
                 id = IdGenerator.newId(),
                 shopId = shopId,
                 partyId = partyId,
                 transactionType = TransactionType.JAMA_RECEIVED, // Cash receipt into galla
-                amountPaisa = amountPaisa,
+                amountPaisa = applied,
                 paymentMode = PaymentMode.CASH,
                 transactionDate = now,
                 remarks = "बिक्री पर्ची $slipRef वसूली${if (!note.isNullOrBlank()) ": $note" else ""}",
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                sourceEntryType = "SELL",
+                sourceEntryId = sellId
             )
             cashRepository.recordTransaction(tx)
             syncScheduler.scheduleOneTimeSync()
 
-            val speechText = "बिक्री पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(amountPaisa)} जमा प्राप्त।"
+            val speechText = "बिक्री पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(applied)} जमा प्राप्त।"
             ttsManager.speak(speechText, _uiState.value.isSoundEnabled)
             _events.emit(PartyLedgerEvent.TransactionRecorded(speechText))
         }
@@ -585,15 +608,26 @@ class PartyLedgerViewModel(
         }
     }
 
+    fun toggleSoundSetting() {
+        viewModelScope.launch {
+            val profile = shopProfileRepository.getShopProfileStream().firstOrNull() ?: return@launch
+            val next = !profile.isSoundEnabled
+            shopProfileRepository.updateSoundSetting(profile.id, next)
+            _uiState.value = _uiState.value.copy(isSoundEnabled = next)
+        }
+    }
+
     fun updatePartyDetails(
         name: String,
         village: String?,
         phone: String?,
         gstin: String?,
-        mandiLicense: String?
+        mandiLicense: String?,
+        onSuccess: () -> Unit = {},
+        onDuplicatePhone: (Party) -> Unit = {},
     ) {
         val current = _uiState.value.party ?: return
-        val cleanPhone = phone?.filter { it.isDigit() }?.takeLast(10)?.ifBlank { null }
+        val cleanPhone = com.appwork.mandisamiti.domain.model.normalizePhone(phone)
         val now = Clock.System.now().toEpochMilliseconds()
         val updated = current.copy(
             name = name.trim().ifBlank { current.name },
@@ -605,9 +639,14 @@ class PartyLedgerViewModel(
             syncStatus = 0
         )
         viewModelScope.launch {
-            partyRepository.saveParty(updated)
-            syncScheduler.scheduleOneTimeSync()
-            _uiState.value = _uiState.value.copy(party = updated)
+            try {
+                partyRepository.saveParty(updated)
+                syncScheduler.scheduleOneTimeSync()
+                _uiState.value = _uiState.value.copy(party = updated)
+                onSuccess()
+            } catch (duplicate: com.appwork.mandisamiti.domain.model.DuplicatePhoneException) {
+                onDuplicatePhone(duplicate.existing)
+            }
         }
     }
 }

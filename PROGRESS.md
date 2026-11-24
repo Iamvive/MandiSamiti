@@ -1120,3 +1120,63 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Vivek decided the offsite (Google Drive) copy is not needed for pilot. Feature `offsite-backup-restore-drill` stays `failing` and carries a `deferred` note in FEATURES.json.
 - Pilot safety relies on the nightly on-VPS backup (`backup_staging.sh`, cron 02:30 UTC). Fixed in c2ced3b. Confirm a second unattended dump appears in `/root/mandi-backups` before pilot go-live.
 - Resume the offsite work after pilot: configure the `gdrive` rclone remote, run backup_offsite.sh, restore_test.sh, install the Sunday cron.
+
+## 2026-11-24 22:18 IST - Claude Code - Redmi install
+- Built debug APK from working tree (branch feat/galla-rokad-editable, incl. uncommitted Galla-Rokad edits), 21,788,008 bytes.
+- `adb -s d93c743 install -r` Success; lastUpdateTime 2026-11-24 22:18:25; app launched.
+- Next: Vivek checks Galla-Rokad screens on device (staging URL).
+
+## 2026-11-24 23:06 IST - Claude Code (Opus 5.5) - Galla cash popup party picker
+- Replaced the full-list khata picker in the नकद जमा/निकासी popup with one name box: type-ahead khata matches (BuyPartyResolver), "+ नया किसान खाता" (LendPartyResolver.partyToSave), or name only (kept in remarks, no khata). Live status line says which.
+- Fixed: Save with no khata picked used to book the entry into the first party in the list.
+- New: ui/register/CashEntryTarget.kt, CashEntryTargetTest.kt; recordDailyEntry gained optional newKisan.
+- Evidence: CashEntryTargetTest 6/6; ./gradlew jvmTest 1157 tests, 0 failures; APK installed on Redmi d93c743 23:05.
+- Next: Vivek checks on device (light+dark): pick khata, add kisan, name only, empty name; then fix the same first-party fallback in opening balance / cash-to-home in a separate PR.
+
+## 2026-11-24 IST - Claude Code (Sonnet 5.5) - Parchi phone, kharcha, 2-decimal qtl, buy lab slip
+- Mobile shown on buy/sell parchi list, receipt, print and share only when present. Sell list/receipt/entry/print/share have a kharcha row (arat + majoori). Quintals 2 decimals on parchi, buy, sell, slip screens. Buy slip prints mobile once (old vehicle row removed, it held the same number).
+- Buy lab slip: per-lot checkbox, Lab value and Base value (kg), weight = (lab/base)*base, no bags, then rate, commission, majoori (0 bags), Rs 10 round-off. BuyCropLot gained labValueGrams/baseValueGrams (default 0, backward compatible).
+- Evidence: compileDebugKotlinAndroid passes. No tests or device run, as asked.
+- Next: device check light+dark; confirm lab units are kg; add lab slip math test once confirmed.
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Validation of lab slip + parchi display changes
+- Units: lab and base values are quintals (qtl), not kg. Labels, parsing and BuyEntryFormState conversion use MandiMathEngine.gramsToQuintalsInputString().
+- Button text in MandiPrimaryButton and MandiSecondaryButton: maxLines=1, ellipsis, reduced horizontal padding.
+- Buy share slip drops the "कुल खर्चा" line. Labour and commission rows on the receipt keep their "−" prefix (Vivek decision).
+- Evidence: ./gradlew :composeApp:jvmTest BUILD SUCCESSFUL. 430 tests, 0 failures, 0 errors, 0 skipped (JVM XML reports). BuyLabSlipTest 3/3, SlipEquationTest 3/3, ReceiptHtmlRendererTest 4/4.
+- Not verified: device run on Redmi d93c743 (light and dark, 390px) for the lab slip and the button clipping fix. Still open.
+- Next: device check before the feature is marked passing in FEATURES.json.
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Device check (partial), Redmi Note 7 d93c743, light theme
+- Debug APK from 0e04a4a installed with -r. App launched on staging (default build config).
+- PASS: parchi list shows mobile (9058666306) on card; quintals 22.70 Q with 2 decimals; kharcha not checked.
+- PASS: buy entry shows "लैब पर्ची" checkbox; ticking it shows Lab value (क्विंटल) and Base value (क्विंटल) fields.
+- PASS: lab 45, base 50 → weight 45.0 क्विंटल; rate 2500 → gross ₹1,12,500; final ₹1,11,710 (0.70% commission, round-off to ₹10).
+- Harness note: first tap on base field landed in lab field because the keyboard shifted the layout. Re-entered with keyboard "next" key. Not an app bug, but check the field focus behaviour when the keyboard opens.
+- NOT DONE: nothing saved. No receipt, print, share, dark theme, 390px overflow, or button-clipping check. Form left unsaved.
+- Next: save one dummy-shop test entry on staging to check receipt, slip and dark theme, if Vivek approves.
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Buy entry: total kharcha row + scroll past content
+- BuyEntryScreen slip card: added "कुल खर्चा" / "Total charges" row (labour + commission, shown with − prefix), same as the buy receipt.
+- BuyEntryScreen scroll Column: removed the extra .imePadding() from the scroll column. The bottom dock keeps its own imePadding. Suspected cause of blank scrollable space when the keyboard was open (keyboard inset applied twice). Not confirmed by a before/after measurement.
+- Evidence: ./gradlew :composeApp:assembleDebug :composeApp:jvmTest BUILD SUCCESSFUL. Redmi d93c743: "कुल खर्चा − ₹0" row visible in slip card (light theme, keyboard closed). Scroll to bottom with keyboard closed ends right after the last card, no extra blank area.
+- NOT VERIFIED: scroll to bottom with the keyboard open (the blank area reproduced only in that state, before the fix); dark theme; 390px overflow.
+- Open: buy receipt screen still shows "Total charges" (kept, BuyTransactionReceiptScreen). Share slip still omits it (privacy rule from 2026-11-24).
+
+## 2026-11-25 IST - Claude Haiku 5.5 - Sell entry: scroll past content
+- SellEntryScreen scroll Column: removed extra .imePadding() (same fix as buy entry). Dock keeps its own imePadding.
+- Evidence: assembleDebug + jvmTest BUILD SUCCESSFUL; APK reinstalled on d93c743.
+- NOT VERIFIED on device yet: scroll to bottom with keyboard open on sell entry, light and dark, 390px.
+
+### 2026-11-25 00:18 IST: Buy entry keyboard-open scroll check (Redmi d93c743, light theme, staging)
+- Opened Buy entry (नई खरीद एंट्री), tapped गांव field so keyboard showed, swiped form content to the end.
+- Scroll stops at the last card (हिसाब पर्ची / अंतिम देय राशि). No further scroll into blank space.
+- Gap of about 110 device px remains between last card and dock. Not judged as a bug yet; Vivek to confirm.
+- Not checked: Sell entry (the + button opened Buy directly), dark theme, 390px. Nothing saved, no commit made.
+
+## 2026-11-25 IST - Antigravity - Khate / Receipt -> New Buy & New Sell party prefill (Kisaan & Vyapari)
+- Root cause: `Screen.BuyEntry` / `Screen.SellEntry` carried only `existingId` (no `initialPartyId`/`returnScreen`), so `BuyReceipt` `onNewBuy` opened a blank form; `SellReceipt` had no `onNewSell`; `PartyLedgerScreen` had no New Buy / New Sell action; `SellEntryScreen` lacked `LaunchedEffect(existingEntry, parties)`; `SellPartyResolver.pick` didn't set `SellPartyKind.MERCHANT` or derive `stateCode`; `BuyEntryScreen` `onPartySelected` skipped clearing stale `null` phone/village.
+- Changes: `App.kt`, `BuyEntryScreen.kt`, `BuyEntryFormState.kt`, `SellEntryScreen.kt`, `SellEntryFormState.kt`, `SellPartyResolver.kt`, `SellTransactionReceiptScreen.kt`, `PartyLedgerScreen.kt`, `PartyPrefillTest.kt`, `ScreenRoutingTest.kt`.
+- Evidence: `:core-domain:jvmTest` (`UP-TO-DATE`) and filtered `:composeApp:jvmTest` (`PartyPrefillTest` 2/2, `BuyPartyResolverTest` 12/12, `ScreenRoutingTest` 3/3, `PartyLedgerBalanceF01Test` 4/4, `PartyLedgerViewModelTest` 18/18, `HomeViewModelTest` 16/16, `HomeViewModelSettlementTest` 1/1, `HomeViewModelSellSettlementTest` 6/6 — 0 failures, 0 skipped), `:composeApp:assembleDebug`, and live on Redmi `d93c743` (`Vivek` Farmer Khata -> `नई खरीद पर्ची` prefilled `9058666306`, `Vivek`, `NMS`; `Dharmendra` Vyapari Khata -> `नई बिक्री बिल` & `SellReceipt` -> `नई बिक्री` prefilled `9997661012`, `Dharmendra`, `Visawar`, `व्यापारी (Merchant)`).
+- NOT VERIFIED: Dark mode rendering on `d93c743` (read-only form checks only, nothing saved); unrelated pre-existing tests excluded from the filtered run (`ReceiptHtmlRendererTest` / `SlipEquationTest` from prior branch WIP).
+

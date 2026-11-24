@@ -109,7 +109,7 @@ fun BuyTransactionReceiptScreen(
             gstin = shopGstin,
             licenceNo = shopLicenceNo
         )
-        ReceiptHtmlRenderer.renderBuyReceiptHtml(it, tempShop, displayName, lots, payments)
+        ReceiptHtmlRenderer.renderBuyReceiptHtml(it, tempShop, displayName, lots, payments, partyPhone = buyFarmerPhone(it))
     } ?: ""
 
     val slipNum = entry?.let { slipLabel(it.slipNo, it.id) } ?: ""
@@ -152,7 +152,7 @@ fun BuyTransactionReceiptScreen(
         topBar = {
             MandiScreenHeader(
                 title = if (isEnglish) "Purchase slip #$slipNum" else "खरीद पर्ची #$slipNum",
-                subtitle = displayName,
+                subtitle = buyFarmerPhone(entry)?.let { "$displayName  |  $it" } ?: displayName,
                 onBack = onBack
             )
         },
@@ -355,7 +355,7 @@ fun BuyTransactionReceiptScreen(
 
                 Line(
                     label = if (isEnglish) "Total weight" else "कुल वजन",
-                    amountText = "${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
+                    amountText = "${formatQuintals2(entry.totalWeightGrams)} ${if (isEnglish) "Qtl" else "क्विंटल"}"
                 )
 
                 // Labour strictly above Commission
@@ -445,6 +445,16 @@ private fun extractLots(entry: BuyEntry): List<BuyCropLot> {
     }
 }
 
+/** Kisan mobile of a buy slip. The entry stores it in vehicleNumber (non-khaate); null when absent. */
+fun buyFarmerPhone(entry: BuyEntry?): String? =
+    entry?.takeIf { !it.isKhaate }?.vehicleNumber?.trim()?.takeIf { it.isNotEmpty() }
+
+/** Grams to quintals with exactly 2 decimals (half-up), e.g. 1_250_000 -> "12.50". */
+fun formatQuintals2(grams: Long): String {
+    val hundredths = (grams + 500L) / 1000L
+    return "${hundredths / 100}.${(hundredths % 100).toString().padStart(2, '0')}"
+}
+
 fun buildFarmerSlipText(
     entry: BuyEntry,
     farmerName: String,
@@ -484,9 +494,7 @@ fun buildFarmerSlipText(
     if (!village.isNullOrBlank()) {
         appendLine("गाँव: $village")
     }
-    if (!entry.vehicleNumber.isNullOrBlank()) {
-        appendLine("मोबाइल: ${entry.vehicleNumber}")
-    }
+    buyFarmerPhone(entry)?.let { appendLine("मोबाइल: $it") }
     appendLine("--------------------")
     if (lots.isNotEmpty()) {
         lots.forEachIndexed { i, lot ->
@@ -502,8 +510,6 @@ fun buildFarmerSlipText(
         appendLine("--------------------")
     }
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
-    // The farmer sees only the combined खर्चा; labour and commission are not split
-    appendLine("कुल खर्चा: -₹${MandiMathEngine.paisaToRupeesString(entry.labourPaisa + entry.commissionPaisa)}")
     appendLine("--------------------")
     appendLine("*पर्ची राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}*")
     appendLine("--------------------")

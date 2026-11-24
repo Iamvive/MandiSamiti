@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.appwork.mandisamiti.ui.buy.BuyPartyResolver
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
@@ -136,6 +137,21 @@ fun DailyCashRegisterScreen(
     var directAmountInput by remember { mutableStateOf("") }
     var directRemarksInput by remember { mutableStateOf("") }
     var directPaymentMode by remember { mutableStateOf(PaymentMode.CASH) }
+    var partyQuery by remember { mutableStateOf("") }
+    var addingNewKisan by remember { mutableStateOf(false) }
+    var newKisanPhone by remember { mutableStateOf("") }
+    var newKisanVillage by remember { mutableStateOf("") }
+    val closeDirectCashDialog = {
+        showDirectCashDialog = null
+        directAmountInput = ""
+        directRemarksInput = ""
+        selectedPartyId = ""
+        directPaymentMode = PaymentMode.CASH
+        partyQuery = ""
+        addingNewKisan = false
+        newKisanPhone = ""
+        newKisanVillage = ""
+    }
     var physicalCashInput by remember { mutableStateOf("") }
     var physicalCashReason by remember(uiState.selectedDate) { mutableStateOf("") }
     var showOpeningBalanceDialog by remember { mutableStateOf(false) }
@@ -416,7 +432,8 @@ fun DailyCashRegisterScreen(
                                     item = item,
                                     isDeposit = true,
                                     isEnglish = isEnglish,
-                                    isCompact = true
+                                    isCompact = true,
+                                    onEdit = if (uiState.isReadOnly) null else { amt, mode, note -> viewModel.editDailyEntry(item.transaction, amt, mode, note) }
                                 )
                             }
 
@@ -453,7 +470,8 @@ fun DailyCashRegisterScreen(
                                     item = item,
                                     isDeposit = false,
                                     isEnglish = isEnglish,
-                                    isCompact = true
+                                    isCompact = true,
+                                    onEdit = if (uiState.isReadOnly) null else { amt, mode, note -> viewModel.editDailyEntry(item.transaction, amt, mode, note) }
                                 )
                             }
 
@@ -609,50 +627,121 @@ fun DailyCashRegisterScreen(
                         else "गैर-नकद भुगतान: बही में दर्ज होगा; गल्ले की नकदी नहीं बदलेगी।",
                         color = MandiTextSecondary, fontSize = 12.sp,
                     )
-                    // Party selector
-                    if (uiState.availableParties.isNotEmpty()) {
-                        Text(
-                            text = if (isEnglish) "Select Account (Optional):" else "खाता चुनें (वैकल्पिक):",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MandiTextSecondary
-                        )
-                        LazyColumn(
+                    // Name box: pick a kisan khata, add a new kisan, or keep a name only.
+                    val selectedParty = uiState.availableParties.firstOrNull { it.id == selectedPartyId }
+                    val typedName = partyQuery.trim()
+                    if (selectedParty != null) {
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 120.dp)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(MandiNeutralLight)
-                                .padding(4.dp)
+                                .background(MandiAmberLight)
+                                .padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            items(uiState.availableParties) { party ->
-                                val isSelected = selectedPartyId == party.id
-                                Row(
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MandiAmberDark, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = listOfNotNull(selectedParty.name, selectedParty.village?.ifBlank { null }).joinToString(" · "),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MandiTextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { selectedPartyId = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = if (isEnglish) "Remove khata" else "खाता हटाएँ", tint = MandiTextPrimary)
+                            }
+                        }
+                    } else {
+                        OutlinedTextField(
+                            keyboardOptions = MandiKeyboard.Note,
+                            value = partyQuery,
+                            onValueChange = { partyQuery = it },
+                            label = { Text(if (isEnglish) "Name or mobile (optional)" else "नाम या मोबाइल (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (!addingNewKisan) {
+                            val matches = BuyPartyResolver.matches(uiState.availableParties, typedName, typedName)
+                            if (matches.isNotEmpty() || typedName.isNotBlank()) {
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(if (isSelected) MandiAmberLight else Color.Transparent)
-                                        .clickable { selectedPartyId = party.id }
-                                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MandiNeutralLight)
+                                        .padding(4.dp)
                                 ) {
-                                    Text(
-                                        text = "${party.name} (${party.village ?: (if (isEnglish) "Village" else "गांव")})",
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = MandiTextPrimary
-                                    )
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = MandiAmberDark,
-                                            modifier = Modifier.size(14.dp)
+                                    matches.forEach { party ->
+                                        Text(
+                                            text = listOfNotNull(party.name, party.village?.ifBlank { null }, party.phone?.ifBlank { null }).joinToString(" · "),
+                                            fontSize = 14.sp,
+                                            color = MandiTextPrimary,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .clickable { selectedPartyId = party.id; partyQuery = "" }
+                                                .padding(horizontal = 8.dp, vertical = 10.dp)
                                         )
+                                    }
+                                    if (typedName.isNotBlank()) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .clickable { addingNewKisan = true }
+                                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null, tint = MandiTextPrimary, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                text = if (isEnglish) "New kisan khata: \"$typedName\"" else "नया किसान खाता: \"$typedName\"",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MandiTextPrimary
+                                            )
+                                        }
                                     }
                                 }
                             }
+                        } else {
+                            OutlinedTextField(
+                                keyboardOptions = MandiKeyboard.Decimal,
+                                value = newKisanPhone,
+                                onValueChange = { v -> newKisanPhone = v.filter { it.isDigit() }.take(10) },
+                                label = { Text(if (isEnglish) "Mobile (optional)" else "मोबाइल (वैकल्पिक)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                keyboardOptions = MandiKeyboard.Note,
+                                value = newKisanVillage,
+                                onValueChange = { newKisanVillage = it },
+                                label = { Text(if (isEnglish) "Village (optional)" else "गांव (वैकल्पिक)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            TextButton(onClick = { addingNewKisan = false; newKisanPhone = ""; newKisanVillage = "" }) {
+                                Text(if (isEnglish) "Don't create khata" else "खाता न बनाएँ", color = MandiTextSecondary)
+                            }
+                        }
+                    }
+                    val partyStatus = when {
+                        selectedParty != null -> if (isEnglish) "Will be booked in this khata" else "खाते में दर्ज होगा"
+                        addingNewKisan && typedName.isNotBlank() -> if (isEnglish) "A new kisan khata will be created" else "नया किसान खाता बनेगा"
+                        typedName.isNotBlank() -> if (isEnglish) "Name only. Not booked in any khata" else "सिर्फ नाम सहेजेगा, खाते में नहीं जाएगा"
+                        else -> null
+                    }
+                    if (partyStatus != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                if (selectedParty != null) Icons.Default.CheckCircle else Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MandiTextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(partyStatus, fontSize = 12.sp, color = MandiTextSecondary)
                         }
                     }
 
@@ -698,19 +787,23 @@ fun DailyCashRegisterScreen(
                     onClick = {
                         val amount = directAmountInput.toLongOrNull() ?: 0L
                         if (amount > 0L) {
-                            val partyId = selectedPartyId.ifBlank { uiState.availableParties.firstOrNull()?.id ?: "" }
+                            val target = cashEntryTarget(
+                                selectedPartyId = uiState.availableParties.firstOrNull { it.id == selectedPartyId }?.id,
+                                typedName = partyQuery,
+                                addingNewKisan = addingNewKisan,
+                                phone = newKisanPhone,
+                                village = newKisanVillage,
+                                note = directRemarksInput,
+                            )
                             viewModel.recordDailyEntry(
-                                partyId = partyId,
+                                partyId = target.partyId,
                                 transactionType = showDirectCashDialog!!,
                                 amountRs = amount,
                                 paymentMode = directPaymentMode,
-                                remarks = directRemarksInput.ifBlank { null }
+                                remarks = target.remarks,
+                                newKisan = target.newKisan,
                             )
-                            showDirectCashDialog = null
-                            directAmountInput = ""
-                            directRemarksInput = ""
-                            selectedPartyId = ""
-                            directPaymentMode = PaymentMode.CASH
+                            closeDirectCashDialog()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -722,7 +815,7 @@ fun DailyCashRegisterScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDirectCashDialog = null; selectedPartyId = ""; directPaymentMode = PaymentMode.CASH }) {
+                TextButton(onClick = { closeDirectCashDialog() }) {
                     Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
             }
@@ -936,7 +1029,8 @@ private fun BahiTransactionItem(
     item: TransactionWithParty,
     isDeposit: Boolean,
     isEnglish: Boolean,
-    isCompact: Boolean = false
+    isCompact: Boolean = false,
+    onEdit: ((amountRs: Long, mode: PaymentMode, remarks: String?) -> Unit)? = null
 ) {
     val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(item.transaction.remarks)
     val isVoid = item.transaction.isVoid
@@ -962,6 +1056,14 @@ private fun BahiTransactionItem(
     }
 
     var showDetails by remember { mutableStateOf(false) }
+    var showEdit by remember { mutableStateOf(false) }
+    var editAmount by remember { mutableStateOf("") }
+    var editNote by remember { mutableStateOf("") }
+    var editMode by remember { mutableStateOf(item.transaction.paymentMode) }
+    // Rows owned by a lend, expense or settlement are edited from their own screen.
+    val rawRemarks = item.transaction.remarks.orEmpty()
+    val canEdit = onEdit != null && !isVoid &&
+        listOf("[LEND:", "[EXPENSE:", "[SETTLE:").none { rawRemarks.contains(it) }
     val mode = when (item.transaction.paymentMode) {
         PaymentMode.CASH -> if (isEnglish) "Cash" else "नकद"
         PaymentMode.BOOK_ENTRY -> if (isEnglish) "Credit / Non-Cash" else "क्रेडिट / गैर-नकद"
@@ -1023,10 +1125,74 @@ private fun BahiTransactionItem(
                 }
             },
             confirmButton = {
-                IconButton(onClick = { showDetails = false }) {
-                    Icon(Icons.Default.Close, contentDescription = if (isEnglish) "Close details" else "विवरण बंद करें", tint = MandiTextPrimary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (canEdit) {
+                        TextButton(onClick = {
+                            editAmount = (item.transaction.amountPaisa / 100L).toString()
+                            editNote = remarks.orEmpty()
+                            editMode = item.transaction.paymentMode
+                            showDetails = false
+                            showEdit = true
+                        }) { Text(if (isEnglish) "Edit" else "बदलें") }
+                    }
+                    IconButton(onClick = { showDetails = false }) {
+                        Icon(Icons.Default.Close, contentDescription = if (isEnglish) "Close details" else "विवरण बंद करें", tint = MandiTextPrimary)
+                    }
                 }
             },
+        )
+    }
+    if (showEdit) {
+        val amountRs = editAmount.trim().toLongOrNull()
+        AlertDialog(
+            onDismissRequest = { showEdit = false },
+            title = { Text(if (isEnglish) "Edit entry" else "प्रविष्टि बदलें", color = MandiTextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = editAmount,
+                        onValueChange = { v -> editAmount = v.filter { it.isDigit() } },
+                        label = { Text(if (isEnglish) "Amount (₹)" else "रकम (₹)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    // Credit (book) rows move no cash, so their mode stays fixed.
+                    if (!isBookEntry) {
+                        Text(if (isEnglish) "Payment mode" else "भुगतान का माध्यम", fontSize = 12.sp, color = MandiTextSecondary)
+                        listOf(
+                            listOf(PaymentMode.CASH, PaymentMode.RTGS, PaymentMode.NEFT),
+                            listOf(PaymentMode.CHEQUE, PaymentMode.UPI),
+                        ).forEach { modes ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                modes.forEach { m ->
+                                    FilterChip(
+                                        selected = editMode == m,
+                                        onClick = { editMode = m },
+                                        label = { Text(if (m == PaymentMode.CASH && !isEnglish) "नकद" else m.name) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = editNote,
+                        onValueChange = { editNote = it },
+                        label = { Text(if (isEnglish) "Note" else "नोट") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = amountRs != null && amountRs > 0L,
+                    onClick = {
+                        onEdit?.invoke(amountRs!!, editMode, editNote.trim().ifBlank { null })
+                        showEdit = false
+                    },
+                ) { Text(if (isEnglish) "Save" else "सहेजें") }
+            },
+            dismissButton = { TextButton(onClick = { showEdit = false }) { Text(if (isEnglish) "Cancel" else "रद्द करें") } },
         )
     }
 }

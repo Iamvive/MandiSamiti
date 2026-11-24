@@ -203,7 +203,8 @@ object ReceiptHtmlRenderer {
         shop: ShopProfile? = null,
         farmerName: String,
         lots: List<BuyCropLot> = emptyList(),
-        payments: List<CashTransaction> = emptyList()
+        payments: List<CashTransaction> = emptyList(),
+        partyPhone: String? = null
     ): String {
         val isRevised = entry.revision > 1 || entry.paidPaisa > 0
         val title = if (isRevised) "किसान खरीद पर्चा (संशोधित)" else "किसान खरीद पर्चा"
@@ -279,13 +280,13 @@ object ReceiptHtmlRenderer {
             appendLine("<td class=\"meta-label\">गाँव:</td>")
             appendLine("<td class=\"meta-val text-right\">${escapeHtml(village ?: "-")}</td>")
             appendLine("</tr>")
-            val vehicle = entry.vehicleNumber
-            if (!vehicle.isNullOrBlank()) {
+            if (!partyPhone.isNullOrBlank()) {
                 appendLine("<tr>")
-                appendLine("<td class=\"meta-label\">मोबाइल / वाहन:</td>")
-                appendLine("<td class=\"meta-val\" colspan=\"3\">${escapeHtml(vehicle)}</td>")
+                appendLine("<td class=\"meta-label\">मोबाइल:</td>")
+                appendLine("<td class=\"meta-val\" colspan=\"3\">${escapeHtml(partyPhone)}</td>")
                 appendLine("</tr>")
             }
+            // Buy slips store the kisan mobile in vehicleNumber; it is printed above as मोबाइल.
             appendLine("</table>")
 
             // Items Table
@@ -408,7 +409,8 @@ object ReceiptHtmlRenderer {
         entry: SellEntry,
         shop: ShopProfile? = null,
         buyerName: String,
-        lots: List<SellCropLot> = emptyList()
+        lots: List<SellCropLot> = emptyList(),
+        partyPhone: String? = null
     ): String {
         val isBos = entry.billMode == BillMode.BILL_OF_SUPPLY
         val title = if (isBos) "सप्लाई बिल (Bill of Supply)" else "बिक्री पर्चा (Mandi Sale Bill)"
@@ -466,6 +468,12 @@ object ReceiptHtmlRenderer {
             appendLine("<td class=\"meta-label\">क्रेता GSTIN:</td>")
             appendLine("<td class=\"meta-val text-right\">${escapeHtml(entry.gstin ?: "-")}</td>")
             appendLine("</tr>")
+            if (!partyPhone.isNullOrBlank()) {
+                appendLine("<tr>")
+                appendLine("<td class=\"meta-label\">मोबाइल:</td>")
+                appendLine("<td class=\"meta-val\" colspan=\"3\">${escapeHtml(partyPhone)}</td>")
+                appendLine("</tr>")
+            }
             val vehicle = entry.vehicleNumber
             if (!vehicle.isNullOrBlank()) {
                 appendLine("<tr>")
@@ -544,6 +552,14 @@ object ReceiptHtmlRenderer {
                 appendLine("</tr>")
             }
 
+            val kharchaPaisa = amounts.commissionPaisa + amounts.labourPaisa
+            if (kharchaPaisa > 0L) {
+                appendLine("<tr>")
+                appendLine("<td>कुल खर्चा (आढ़त + मजदूरी):</td>")
+                appendLine("<td class=\"text-right\">₹${MandiMathEngine.paisaToRupeesString(kharchaPaisa)}</td>")
+                appendLine("</tr>")
+            }
+
             appendLine("<tr class=\"grand-total\">")
             appendLine("<td>कुल देय राशि (Total Receivable):</td>")
             appendLine("<td class=\"text-right\">${MandiMathEngine.formatRupees(entry.totalReceivablePaisa)}</td>")
@@ -580,8 +596,8 @@ object ReceiptHtmlRenderer {
         buyer: Party?
     ): String {
         val rateStr = deal.ratePaisaPerUnit?.let { "₹${MandiMathEngine.paisaToRupeesString(it)} / क्विंटल" } ?: "बाजार भाव"
-        val grossQ = MandiMathEngine.gramsToQuintals(deal.grossWeightGrams)
-        val netQ = MandiMathEngine.gramsToQuintals(deal.netWeightGrams)
+        val grossQ = slipQuintalText(deal.grossWeightGrams)
+        val netQ = slipQuintalText(deal.netWeightGrams)
         val labourRs = MandiMathEngine.paisaToRupeesString(deal.labourChargePaisa)
         val commRs = MandiMathEngine.paisaToRupeesString(deal.farmerCommissionPaisa)
 
@@ -627,6 +643,16 @@ object ReceiptHtmlRenderer {
             appendLine("<td class=\"meta-label\">व्यापारी:</td>")
             appendLine("<td class=\"meta-val text-right\">${escapeHtml(buyer?.name ?: "-")}</td>")
             appendLine("</tr>")
+            val dealPhones = listOfNotNull(
+                farmer.phone?.takeIf { it.isNotBlank() }?.let { "किसान: $it" },
+                buyer?.phone?.takeIf { it.isNotBlank() }?.let { "व्यापारी: $it" }
+            ).joinToString(" | ")
+            if (dealPhones.isNotBlank()) {
+                appendLine("<tr>")
+                appendLine("<td class=\"meta-label\">मोबाइल:</td>")
+                appendLine("<td class=\"meta-val\" colspan=\"3\">${escapeHtml(dealPhones)}</td>")
+                appendLine("</tr>")
+            }
             appendLine("</table>")
 
             // Items Table

@@ -65,6 +65,11 @@ data class BuyLotUiState(
     val rateError: String? = null,
     val netWeightGrams: Long = 0L,
     val grossPaisa: Long = 0L,
+    val labMode: Boolean = false,
+    val labValueQuintals: String = "",
+    val baseValueQuintals: String = "",
+    val labError: String? = null,
+    val baseError: String? = null,
 )
 
 /** Always-visible editable fields above the slip, filled from Settings. */
@@ -124,4 +129,4 @@ interface BuyEntryActions {
     fun onKhaateChange(value: Boolean) {}
 }
 
-enum class BuyLotField { Crop, Bags, WeightPerBag, ExtraWeight, Rate }
+enum class BuyLotField { Crop, Bags, WeightPerBag, ExtraWeight, Rate, LabMode, LabValue, BaseValue }

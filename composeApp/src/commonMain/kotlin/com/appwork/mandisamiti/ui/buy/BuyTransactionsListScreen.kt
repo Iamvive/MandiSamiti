@@ -210,6 +210,7 @@ private fun BuyEntryCard(
                     }
                     val subtitleParts = buildList {
                         if (!village.isNullOrBlank()) add("गाँव: $village")
+                        buyFarmerPhone(entry)?.let { add("मो. $it") }
                         add("पर्चा #${slipLabel(entry.slipNo, entry.id)}")
                     }
                     if (subtitleParts.isNotEmpty()) {
@@ -231,7 +232,7 @@ private fun BuyEntryCard(
             ) {
                 val cropLabel = entry.commodityId.ifBlank { "फसल" }
                 Text(
-                    text = "$cropLabel • ${entry.bagsCount} बोरी • ${MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)} क्विंटल",
+                    text = "$cropLabel • ${entry.bagsCount} बोरी • ${formatQuintals2(entry.totalWeightGrams)} क्विंटल",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(

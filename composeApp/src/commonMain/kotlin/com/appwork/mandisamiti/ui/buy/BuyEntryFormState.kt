@@ -33,8 +33,24 @@ class BuyLotItemState(
     var weightPerBagKg by mutableStateOf(initialWeightPerBagKg)
     var extraWeightKg by mutableStateOf(initialExtraWeightKg)
     var ratePerQuintal by mutableStateOf(initialRatePerQuintal)
+    /** Lab slip mode: weight comes from lab value and base value (kg), no bags. */
+    var labMode by mutableStateOf(false)
+    var labValueQuintals by mutableStateOf("")
+    var baseValueQuintals by mutableStateOf("")
 
     fun calculateLot(): BuyCropLot {
+        if (labMode) {
+            return BuyCropLot.create(
+                id = id,
+                cropName = cropName.ifBlank { "गेहूं" },
+                bags = 0L,
+                weightPerBagGrams = 0L,
+                extraWeightGrams = 0L,
+                ratePaisaPerQuintal = MandiMathEngine.parseRupeesToPaisa(ratePerQuintal.ifBlank { "0" }),
+                labValueGrams = MandiMathEngine.parseQuintalsStringToGrams(labValueQuintals.ifBlank { "0" }),
+                baseValueGrams = MandiMathEngine.parseQuintalsStringToGrams(baseValueQuintals.ifBlank { "0" }),
+            )
+        }
         val b = bags.toLongOrNull() ?: 0L
         val wGrams = MandiMathEngine.parseKgToGrams(weightPerBagKg.ifBlank { "0" })
         val extraGrams = MandiMathEngine.parseKgToGrams(extraWeightKg.ifBlank { "0" })
@@ -50,6 +66,16 @@ class BuyLotItemState(
     }
 
     fun validate(): LotValidation {
+        if (labMode) {
+            val labErr = MandiValidators.validatePositiveNumber(labValueQuintals, "लैब वैल्यू").errorOrNull
+            val baseErr = MandiValidators.validatePositiveNumber(baseValueQuintals, "बेस वैल्यू").errorOrNull
+            val rateErr = MandiValidators.validatePositiveNumber(ratePerQuintal, "भाव").errorOrNull
+            return LotValidation(
+                bagsError = null, weightError = null, rateError = rateErr, extraError = null,
+                labError = labErr, baseError = baseErr,
+                isValid = labErr == null && baseErr == null && rateErr == null,
+            )
+        }
         val bagsVal = MandiValidators.validatePositiveNumber(bags, "बोरी संख्या")
         val weightVal = MandiValidators.validatePositiveNumber(weightPerBagKg, "वजन/बोरी")
         val rateVal = MandiValidators.validatePositiveNumber(ratePerQuintal, "भाव")
@@ -84,7 +110,9 @@ data class LotValidation(
     val weightError: String?,
     val rateError: String?,
     val extraError: String?,
-    val isValid: Boolean
+    val isValid: Boolean,
+    val labError: String? = null,
+    val baseError: String? = null,
 )
 
 data class AggregatedBuyPreview(
@@ -455,7 +483,13 @@ class BuyEntryFormState(
                                     initialWeightPerBagKg = if (lot.weightPerBagGrams > 0) MandiMathEngine.paisaToInputString(lot.weightPerBagGrams / 10) else "50",
                                     initialExtraWeightKg = if (lot.extraWeightGrams > 0) (lot.extraWeightGrams / 1000.0).toString() else "",
                                     initialRatePerQuintal = if (lot.ratePaisaPerQuintal > 0) MandiMathEngine.paisaToInputString(lot.ratePaisaPerQuintal) else ""
-                                )
+                                ).also {
+                                    if (lot.labValueGrams > 0L && lot.baseValueGrams > 0L) {
+                                        it.labMode = true
+                                        it.labValueQuintals = MandiMathEngine.gramsToQuintalsInputString(lot.labValueGrams)
+                                        it.baseValueQuintals = MandiMathEngine.gramsToQuintalsInputString(lot.baseValueGrams)
+                                    }
+                                }
                             )
                         }
                         return
@@ -477,12 +511,23 @@ class BuyEntryFormState(
         )
     }
 
-    fun hasUnsavedChanges(originalEntry: BuyEntry? = null): Boolean {
+    fun hasUnsavedChanges(
+        originalEntry: BuyEntry? = null,
+        prefilledParty: com.appwork.mandisamiti.domain.model.Party? = null
+    ): Boolean {
         if (originalEntry == null) {
-            return farmerName.isNotBlank() ||
-                phone.isNotBlank() ||
-                village.isNotBlank() ||
+            val basePhone = prefilledParty?.phone.orEmpty().filter { it.isDigit() }.take(10)
+            val baseVillage = MandiValidators.sanitizeVillage(prefilledParty?.village.orEmpty())
+            val partyChanged = if (prefilledParty != null) {
+                farmerName != prefilledParty.name ||
+                    phone != basePhone ||
+                    MandiValidators.sanitizeVillage(village) != baseVillage
+            } else {
+                farmerName.isNotBlank() || phone.isNotBlank() || village.isNotBlank()
+            }
+            return partyChanged ||
                 advancePaid.isNotBlank() ||
+                loanCut.isNotBlank() ||
                 lots.any { it.bags.isNotBlank() || it.ratePerQuintal.isNotBlank() || (it.weightPerBagKg.isNotBlank() && it.weightPerBagKg != "50") || it.extraWeightKg.isNotBlank() }
         }
         val origVillage = extractVillage(originalEntry.remarks) ?: ""

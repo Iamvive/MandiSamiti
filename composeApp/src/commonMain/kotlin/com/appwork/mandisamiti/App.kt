@@ -85,11 +85,11 @@ sealed interface Screen {
     data object DailyRegister : Screen
 
     // Revamp Screens (Tasks 11-15)
-    data class BuyEntry(val existingId: String? = null) : Screen
+    data class BuyEntry(val existingId: String? = null, val initialPartyId: String? = null, val returnScreen: Screen? = null) : Screen
     data class BuyPayment(val entryId: String, val returnScreen: Screen? = null) : Screen
     data object BuyList : Screen
     data class BuyReceipt(val id: String, val returnScreen: Screen? = null) : Screen
-    data class SellEntry(val existingId: String? = null) : Screen
+    data class SellEntry(val existingId: String? = null, val initialPartyId: String? = null, val returnScreen: Screen? = null) : Screen
     data object SellList : Screen
     data class SellReceipt(val id: String, val returnScreen: Screen? = null) : Screen
     data class GrainLendEntry(val returnScreen: Screen = Screen.LendList) : Screen
@@ -97,7 +97,7 @@ sealed interface Screen {
     data class UdhaarPerson(val partyId: String, val direction: LendDirection) : Screen
     data class ExpenseEntry(val existingId: String? = null) : Screen
     data object ExpenseList : Screen
-    data object StockSheet : Screen
+    data class StockSheet(val returnScreen: Screen = Screen.Home) : Screen
     data object AllKhata : Screen
     data object SubscriptionContact : Screen
 }
@@ -112,11 +112,11 @@ internal fun partyKhataScreen(partyId: String, returnScreen: Screen = Screen.Hom
     Screen.PartyLedger(partyId, returnScreen)
 
 fun Screen.backTarget(): Screen = when (this) {
-    is Screen.BuyEntry -> Screen.BuyList
+    is Screen.BuyEntry -> returnScreen ?: Screen.BuyList
     is Screen.BuyPayment -> Screen.BuyReceipt(entryId, returnScreen)
     is Screen.BuyReceipt -> returnScreen ?: Screen.BuyList
     is Screen.BuyList -> Screen.Home
-    is Screen.SellEntry -> Screen.SellList
+    is Screen.SellEntry -> returnScreen ?: Screen.SellList
     is Screen.SellReceipt -> returnScreen ?: Screen.SellList
     is Screen.SellList -> Screen.Home
     is Screen.GrainLendEntry -> returnScreen
@@ -124,7 +124,7 @@ fun Screen.backTarget(): Screen = when (this) {
     is Screen.UdhaarPerson -> Screen.LendList
     is Screen.ExpenseEntry -> if (existingId != null) Screen.ExpenseList else Screen.Home
     is Screen.ExpenseList -> Screen.ExpenseEntry()
-    is Screen.StockSheet -> Screen.Home
+    is Screen.StockSheet -> returnScreen
     is Screen.AllKhata -> Screen.Home
     is Screen.SubscriptionContact -> Screen.Home
     is Screen.DealEntry -> Screen.Home
@@ -197,6 +197,10 @@ fun App(
     var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register()) }
     var signOutInFlight by remember { mutableStateOf(false) }
     var lendListSelectedTab by rememberSaveable { mutableStateOf(0) }
+    var homeTab by rememberSaveable { mutableStateOf(com.appwork.mandisamiti.ui.navigation.NavigationTab.DASHBOARD) }
+    var allKhataSearchQuery by rememberSaveable { mutableStateOf("") }
+    var allKhataFilter by rememberSaveable { mutableStateOf(com.appwork.mandisamiti.ui.home.PartyFilter.ALL) }
+    var allKhataTypeFilter by rememberSaveable { mutableStateOf(com.appwork.mandisamiti.ui.home.PartyTypeFilter.ALL) }
 
     MandiSamitiTheme {
         val activeSession = session
@@ -274,8 +278,13 @@ fun App(
                         stockAuditRepository = stockAuditRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
-                        pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() }
+                        pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() },
+                        initialTab = homeTab,
                     )
+                }
+                val homeState by homeViewModel.uiState.collectAsState()
+                LaunchedEffect(homeState.currentTab) {
+                    homeTab = homeState.currentTab
                 }
                 val registerViewModel = remember(shopId) {
                     DailyRegisterViewModel(
@@ -325,6 +334,7 @@ fun App(
                         currentScreen = partyKhataScreen(party.id, returnScreen = Screen.Home)
                     },
                     onNavigateToPartyKhataFromParchi = { party ->
+                        homeTab = com.appwork.mandisamiti.ui.navigation.NavigationTab.PARCHI
                         homeViewModel.selectTab(com.appwork.mandisamiti.ui.navigation.NavigationTab.PARCHI)
                         currentScreen = partyKhataScreen(party.id, returnScreen = Screen.Home)
                     },
@@ -344,7 +354,7 @@ fun App(
                     onNavigateToBuyList = { currentScreen = Screen.BuyList },
                     onNavigateToSellList = { currentScreen = Screen.SellList },
                     onNavigateToLendList = { currentScreen = Screen.LendList },
-                    onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
+                    onNavigateToStockSheet = { currentScreen = Screen.StockSheet() },
                     onNavigateToBuyReceipt = { id -> currentScreen = Screen.BuyReceipt(id, Screen.Home) },
                     onNavigateToSellReceipt = { id -> currentScreen = Screen.SellReceipt(id, Screen.Home) },
                     onNavigateToQuotaPlans = { currentScreen = Screen.SubscriptionContact },
@@ -449,6 +459,14 @@ fun App(
                     onEditDeal = { dealId -> currentScreen = Screen.DealEntry(dealId) },
                     onOpenBuyReceipt = { buyId -> currentScreen = Screen.BuyReceipt(buyId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
                     onOpenSellReceipt = { sellId -> currentScreen = Screen.SellReceipt(sellId, Screen.PartyLedger(screen.partyId, screen.returnScreen)) },
+                    onNewBuy = {
+                        val ledger = Screen.PartyLedger(screen.partyId, screen.returnScreen)
+                        currentScreen = Screen.BuyEntry(initialPartyId = screen.partyId, returnScreen = ledger)
+                    },
+                    onNewSell = {
+                        val ledger = Screen.PartyLedger(screen.partyId, screen.returnScreen)
+                        currentScreen = Screen.SellEntry(initialPartyId = screen.partyId, returnScreen = ledger)
+                    },
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     udhaarPersonViewModelFactory = { direction ->
                         com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel(
@@ -526,7 +544,9 @@ fun App(
             is Screen.BuyEntry -> {
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
-                val buyForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings) }
+                val buyForm = remember(tradeSettings, screen.existingId, screen.initialPartyId) {
+                    com.appwork.mandisamiti.ui.buy.BuyEntryFormState(tradeSettings)
+                }
                 // Loan section: the picked or phone-matched party's open GIVEN money loans, with interest due as of now.
                 val loanPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, buyForm.selectedFarmerId, buyForm.phone)?.id
                 LaunchedEffect(loanPartyId, lends) {
@@ -569,6 +589,7 @@ fun App(
                 BuyEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
+                    initialPartyId = screen.initialPartyId,
                     buyRepository = buyRepo,
                     tradeSettings = tradeSettings,
                     formState = buyForm,
@@ -612,9 +633,9 @@ fun App(
                             currentScreen = if (entry.isKhaate) {
                                 screen.backTarget()
                             } else if (screen.existingId == null) {
-                                Screen.BuyPayment(entry.id)
+                                Screen.BuyPayment(entry.id, screen.returnScreen)
                             } else {
-                                Screen.BuyReceipt(entry.id)
+                                Screen.BuyReceipt(entry.id, screen.returnScreen)
                             }
                         }
                     },
@@ -808,8 +829,13 @@ fun App(
                             printer.printHtml(job, html)
                         }
                     },
-                    onEdit = { currentScreen = Screen.BuyEntry(it) },
-                    onNewBuy = { currentScreen = Screen.BuyEntry(null) },
+                    onEdit = { currentScreen = Screen.BuyEntry(it, returnScreen = screen.returnScreen) },
+                    onNewBuy = {
+                        currentScreen = Screen.BuyEntry(
+                            initialPartyId = buyEntry?.takeUnless { it.isKhaate }?.farmerId,
+                            returnScreen = screen.returnScreen ?: Screen.BuyList
+                        )
+                    },
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onBack = { currentScreen = screen.backTarget() }
                 )
@@ -818,7 +844,9 @@ fun App(
                 var stockLines by remember(shopId) { mutableStateOf<List<com.appwork.mandisamiti.domain.model.StockLine>>(emptyList()) }
                 val parties by partyRepo.getPartiesStream(shopId ?: "").collectAsState(initial = emptyList())
                 val lends by lendRepo.getLendEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
-                val sellForm = remember(tradeSettings) { com.appwork.mandisamiti.ui.sell.SellEntryFormState(tradeSettings) }
+                val sellForm = remember(tradeSettings, screen.existingId, screen.initialPartyId) {
+                    com.appwork.mandisamiti.ui.sell.SellEntryFormState(tradeSettings)
+                }
                 val buyerPartyId = com.appwork.mandisamiti.ui.buy.BuyPartyResolver.existing(parties, sellForm.selectedBuyerId, sellForm.phone)?.id
                 LaunchedEffect(buyerPartyId, lends) {
                     val open = lends
@@ -853,6 +881,7 @@ fun App(
                 SellEntryScreen(
                     shopId = shopId ?: "",
                     existingId = screen.existingId,
+                    initialPartyId = screen.initialPartyId,
                     sellRepository = sellRepo,
                     tradeSettings = tradeSettings,
                     formState = sellForm,
@@ -896,7 +925,7 @@ fun App(
                                 com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) { sellRepo.editSellEntry(entry) }
                             }
                             syncScheduler.scheduleOneTimeSync()
-                            currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id)
+                            currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id, screen.returnScreen)
                         }
                     },
                     onBack = { currentScreen = screen.backTarget() }
@@ -909,6 +938,7 @@ fun App(
                 SellTransactionsListScreen(
                     entries = sells,
                     partyNamesById = parties.associate { it.id to it.name },
+                    partyPhonesById = parties.mapNotNull { p -> p.phone?.takeIf { it.isNotBlank() }?.let { p.id to it } }.toMap(),
                     onOpen = { id -> currentScreen = Screen.SellReceipt(id) },
                     onNew = { currentScreen = Screen.SellEntry(null) },
                     onBack = { currentScreen = screen.backTarget() },
@@ -943,6 +973,7 @@ fun App(
                     shopGstin = receiptShop?.gstin,
                     shopLicenceNo = receiptShop?.licenceNo,
                     partyVillage = receiptParty?.village,
+                    partyPhone = receiptParty?.phone,
                     gallaCashPaisa = sellGallaCashPaisa,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onSettleCash = { amountPaisa ->
@@ -990,7 +1021,13 @@ fun App(
                             printer.printHtml(job, html)
                         }
                     },
-                    onEdit = { currentScreen = Screen.SellEntry(it) },
+                    onEdit = { currentScreen = Screen.SellEntry(it, returnScreen = screen.returnScreen) },
+                    onNewSell = {
+                        currentScreen = Screen.SellEntry(
+                            initialPartyId = sellEntry?.takeUnless { it.isKhaate }?.buyerId,
+                            returnScreen = screen.returnScreen ?: Screen.SellList
+                        )
+                    },
                     onBack = { currentScreen = screen.backTarget() }
                 )
             }
@@ -1115,25 +1152,29 @@ fun App(
                         shopProfileRepository = shopRepo,
                         partyRepository = partyRepo,
                         tradeSettingsRepository = tradeSettingsRepo,
-                        buyRepository = buyRepo,
-                        sellRepository = sellRepo,
-                        lendRepository = lendRepo,
-                        expenseRepository = expenseRepo,
-                        cashRepository = cashRepo,
-                        quotaRepository = quotaRepo,
-                        stockUseCase = stockUseCase,
-                        stockAuditRepository = stockAuditRepo,
                         viewModelScope = coroutineScope,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
-                        pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() }
+                        pendingSyncCountProvider = null,
+                        initialSearchQuery = allKhataSearchQuery,
+                        initialFilter = allKhataFilter,
+                        initialTypeFilter = allKhataTypeFilter,
                     )
                 }
                 val allKhataState by allKhataViewModel.uiState.collectAsState()
                 KhataLedgerTabScreen(
                     uiState = allKhataState,
-                    onSearchQueryChanged = allKhataViewModel::onSearchQueryChanged,
-                    onFilterSelected = allKhataViewModel::onFilterSelected,
-                    onTypeFilterSelected = allKhataViewModel::onTypeFilterSelected,
+                    onSearchQueryChanged = { query ->
+                        allKhataSearchQuery = query
+                        allKhataViewModel.onSearchQueryChanged(query)
+                    },
+                    onFilterSelected = { filter ->
+                        allKhataFilter = filter
+                        allKhataViewModel.onFilterSelected(filter)
+                    },
+                    onTypeFilterSelected = { typeFilter ->
+                        allKhataTypeFilter = typeFilter
+                        allKhataViewModel.onTypeFilterSelected(typeFilter)
+                    },
                     onPartyClick = { party ->
                         currentScreen = partyKhataScreen(party.id, returnScreen = Screen.AllKhata)
                     },
@@ -1141,8 +1182,8 @@ fun App(
                         allKhataViewModel.createParty(name, village, phone, type, gstin, mandiLicense)
                     },
                     onUpdatePartyPhone = { party, phone -> allKhataViewModel.updatePartyPhone(party, phone) },
-                    onNavigateToStockSheet = { currentScreen = Screen.StockSheet },
                     onPhoneNeeded = { onAdd -> onAdd() },
+                    onBack = { currentScreen = screen.backTarget() },
                     isEnglish = allKhataState.isEnglish
                 )
             }

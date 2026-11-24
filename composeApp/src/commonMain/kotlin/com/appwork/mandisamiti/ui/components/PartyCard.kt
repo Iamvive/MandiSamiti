@@ -196,7 +196,19 @@ fun PartyCard(
                         Text(
                             text = village,
                             fontSize = 13.sp,
-                            color = MandiTextSecondary
+                            color = MandiTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    val phone = party.phone
+                    if (!phone.isNullOrBlank()) {
+                        Text(
+                            text = phone,
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     if (!party.gstin.isNullOrBlank()) {

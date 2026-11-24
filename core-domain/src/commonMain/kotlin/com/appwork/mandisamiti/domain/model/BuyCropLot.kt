@@ -14,6 +14,9 @@ data class BuyCropLot(
     val totalWeightGrams: Long = 0L,
     val ratePaisaPerQuintal: Long = 0L,
     val grossPaisa: Long = 0L,
+    /** Lab slip lots: both > 0 means weight = (lab / base) * base, no bags. */
+    val labValueGrams: Long = 0L,
+    val baseValueGrams: Long = 0L,
 ) {
     companion object {
         fun create(
@@ -22,9 +25,12 @@ data class BuyCropLot(
             weightPerBagGrams: Long,
             extraWeightGrams: Long,
             ratePaisaPerQuintal: Long,
-            id: String = IdGenerator.newId()
+            id: String = IdGenerator.newId(),
+            labValueGrams: Long = 0L,
+            baseValueGrams: Long = 0L,
         ): BuyCropLot {
-            val totalWeight = (bags * weightPerBagGrams) + extraWeightGrams
+            val isLab = labValueGrams > 0L && baseValueGrams > 0L
+            val totalWeight = if (isLab) labValueGrams * baseValueGrams / baseValueGrams else (bags * weightPerBagGrams) + extraWeightGrams
             val exactGross = MandiMathEngine.grossAmountPaisa(totalWeight, ratePaisaPerQuintal)
             val gross = (exactGross / 100L) * 100L // cut down to whole rupee per sheet rule 1
             return BuyCropLot(
@@ -35,7 +41,9 @@ data class BuyCropLot(
                 extraWeightGrams = extraWeightGrams,
                 totalWeightGrams = totalWeight,
                 ratePaisaPerQuintal = ratePaisaPerQuintal,
-                grossPaisa = gross
+                grossPaisa = gross,
+                labValueGrams = if (isLab) labValueGrams else 0L,
+                baseValueGrams = if (isLab) baseValueGrams else 0L,
             )
         }
     }
