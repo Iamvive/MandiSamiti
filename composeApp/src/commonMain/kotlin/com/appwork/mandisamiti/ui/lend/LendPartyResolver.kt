@@ -55,6 +55,7 @@ object LendPartyResolver {
         existing: Party?,
         now: Long,
         newId: String = IdGenerator.newId(),
+        partyType: PartyType = PartyType.FARMER,
     ): Party? {
         val trimmedName = name.trim()
         val sanitizedPhone = phone?.ifBlank { null }
@@ -66,7 +67,7 @@ object LendPartyResolver {
                 name = trimmedName,
                 phone = sanitizedPhone,
                 village = sanitizedVillage,
-                partyType = PartyType.FARMER,
+                partyType = partyType,
                 createdAt = now,
                 updatedAt = now,
             )
