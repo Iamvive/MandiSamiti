@@ -13,6 +13,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +37,7 @@ import com.appwork.mandisamiti.domain.model.receiptDateShort
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.components.MandiLinesCard
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
 import com.appwork.mandisamiti.ui.components.MandiScreenHeader
@@ -41,6 +45,7 @@ import com.appwork.mandisamiti.ui.components.MandiSecondaryButton
 import com.appwork.mandisamiti.ui.parchi.FarmerSlipCashSettlementSheet
 import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
 import com.appwork.mandisamiti.ui.theme.MandiBackground
+import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 import kotlinx.serialization.json.Json
@@ -69,6 +74,7 @@ fun BuyTransactionReceiptScreen(
     id: String,
     onBack: () -> Unit,
     onEdit: ((String) -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     onNewBuy: (() -> Unit)? = null,
     entry: BuyEntry? = null,
     farmerName: String = "किसान",
@@ -89,6 +95,7 @@ fun BuyTransactionReceiptScreen(
     MandiBackHandler { onBack() }
 
     var showSettlementSheet by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val displayName = farmerName.takeIf { it.isNotBlank() && it != "किसान" }
         ?: entry?.farmerId?.takeIf { it.isNotBlank() }
@@ -148,12 +155,34 @@ fun BuyTransactionReceiptScreen(
         )
     }
 
+    if (showDeleteConfirm) {
+        DeleteConfirmDialog(
+            isEnglish = isEnglish,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete?.invoke()
+            },
+            onDismiss = { showDeleteConfirm = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             MandiScreenHeader(
                 title = if (isEnglish) "Purchase slip #$slipNum" else "खरीद पर्ची #$slipNum",
                 subtitle = buyFarmerPhone(entry)?.let { "$displayName  |  $it" } ?: displayName,
-                onBack = onBack
+                onBack = onBack,
+                actions = {
+                    if (entry != null && !entry.isVoid && onDelete != null) {
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete slip" else "पर्ची हटाएं",
+                                tint = MandiRedText
+                            )
+                        }
+                    }
+                }
             )
         },
         bottomBar = {

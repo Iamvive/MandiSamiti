@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.mutableStateMapOf
@@ -71,6 +72,7 @@ import com.appwork.mandisamiti.domain.math.sellSlipAmounts
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
 import com.appwork.mandisamiti.ui.theme.MandiAmberLight
@@ -129,6 +131,8 @@ fun ParchiListScreen(
     onNavigateToNewSell: () -> Unit,
     onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
     onSettleSellSlipCash: ((sellId: String, amountPaisa: Long) -> Unit)? = null,
+    onDeleteBuy: ((String) -> Unit)? = null,
+    onDeleteSell: ((String) -> Unit)? = null,
     onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean = false,
     modifier: Modifier = Modifier
@@ -247,6 +251,7 @@ fun ParchiListScreen(
                         gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenBuyReceipt,
                         onSettleBuySlipCash = onSettleBuySlipCash,
+                        onDeleteBuy = onDeleteBuy,
                         onOpenPartyKhata = debouncedOpenPartyKhata,
                         isEnglish = isEnglish
                     )
@@ -258,6 +263,7 @@ fun ParchiListScreen(
                         gallaCashPaisa = gallaCashPaisa,
                         onOpenReceipt = onOpenSellReceipt,
                         onSettleSellSlipCash = onSettleSellSlipCash,
+                        onDeleteSell = onDeleteSell,
                         onOpenPartyKhata = debouncedOpenPartyKhata,
                         isEnglish = isEnglish
                     )
@@ -276,6 +282,7 @@ private fun KisaanParchiView(
     gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
     onSettleBuySlipCash: ((buyId: String, amountPaisa: Long) -> Unit)? = null,
+    onDeleteBuy: ((String) -> Unit)? = null,
     onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
 ) {
@@ -290,6 +297,7 @@ private fun KisaanParchiView(
     val totalWeightGrams = remember(nonVoidBuys) { nonVoidBuys.sumOf { it.totalWeightGrams } }
 
     var settlingBuy by remember { mutableStateOf<BuyEntry?>(null) }
+    var pendingDeleteBuy by remember { mutableStateOf<BuyEntry?>(null) }
 
     val dateGroupedEntries = remember(nonVoidBuys) {
         nonVoidBuys
@@ -328,6 +336,7 @@ private fun KisaanParchiView(
                             farmerName = g.party.name,
                             onOpenReceipt = { onOpenReceipt(buy.id) },
                             onSettleCash = { settlingBuy = buy },
+                            onDelete = if (onDeleteBuy != null) ({ pendingDeleteBuy = buy }) else null,
                             parties = parties,
                             onOpenPartyKhata = onOpenPartyKhata,
                             isEnglish = isEnglish
@@ -346,6 +355,7 @@ private fun KisaanParchiView(
                                         farmerName = g.party.name,
                                         onOpenReceipt = { onOpenReceipt(buy.id) },
                                         onSettleCash = { settlingBuy = buy },
+                                        onDelete = if (onDeleteBuy != null) ({ pendingDeleteBuy = buy }) else null,
                                         parties = parties,
                                         onOpenPartyKhata = onOpenPartyKhata,
                                         isEnglish = isEnglish
@@ -410,6 +420,7 @@ private fun KisaanParchiView(
                         farmerName = partyNamesById[buy.farmerId] ?: buy.farmerId,
                         onOpenReceipt = { onOpenReceipt(buy.id) },
                         onSettleCash = { settlingBuy = buy },
+                        onDelete = if (onDeleteBuy != null) ({ pendingDeleteBuy = buy }) else null,
                         parties = parties,
                         onOpenPartyKhata = onOpenPartyKhata,
                         isEnglish = isEnglish
@@ -433,6 +444,18 @@ private fun KisaanParchiView(
             isEnglish = isEnglish
         )
     }
+
+    pendingDeleteBuy?.let { buy ->
+        DeleteConfirmDialog(
+            isEnglish = isEnglish,
+            onConfirm = {
+                val id = buy.id
+                pendingDeleteBuy = null
+                onDeleteBuy?.invoke(id)
+            },
+            onDismiss = { pendingDeleteBuy = null }
+        )
+    }
 }
 
 @Composable
@@ -444,10 +467,12 @@ private fun VyapariParchiView(
     gallaCashPaisa: Long,
     onOpenReceipt: (String) -> Unit,
     onSettleSellSlipCash: ((sellId: String, amountPaisa: Long) -> Unit)? = null,
+    onDeleteSell: ((String) -> Unit)? = null,
     onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
 ) {
     var settlingSell by remember { mutableStateOf<SellEntry?>(null) }
+    var pendingDeleteSell by remember { mutableStateOf<SellEntry?>(null) }
     val nonVoidSells = remember(sells) { sells.filter { !it.isVoid } }
 
     // Metrics calculation:
@@ -495,6 +520,7 @@ private fun VyapariParchiView(
                             buyerName = g.party.name,
                             onOpenReceipt = { onOpenReceipt(sell.id) },
                             onSettleCash = if (onSettleSellSlipCash != null) { { settlingSell = sell } } else null,
+                            onDelete = if (onDeleteSell != null) ({ pendingDeleteSell = sell }) else null,
                             parties = parties,
                             onOpenPartyKhata = onOpenPartyKhata,
                             isEnglish = isEnglish
@@ -513,6 +539,7 @@ private fun VyapariParchiView(
                                         buyerName = g.party.name,
                                         onOpenReceipt = { onOpenReceipt(sell.id) },
                                         onSettleCash = null,
+                                        onDelete = if (onDeleteSell != null) ({ pendingDeleteSell = sell }) else null,
                                         parties = parties,
                                         onOpenPartyKhata = onOpenPartyKhata,
                                         isEnglish = isEnglish
@@ -577,6 +604,7 @@ private fun VyapariParchiView(
                         buyerName = partyNamesById[sell.buyerId] ?: sell.buyerId,
                         onOpenReceipt = { onOpenReceipt(sell.id) },
                         onSettleCash = if (onSettleSellSlipCash != null) { { settlingSell = sell } } else null,
+                        onDelete = if (onDeleteSell != null) ({ pendingDeleteSell = sell }) else null,
                         parties = parties,
                         onOpenPartyKhata = onOpenPartyKhata,
                         isEnglish = isEnglish
@@ -598,6 +626,18 @@ private fun VyapariParchiView(
                 settlingSell = null
             },
             isEnglish = isEnglish
+        )
+    }
+
+    pendingDeleteSell?.let { sell ->
+        DeleteConfirmDialog(
+            isEnglish = isEnglish,
+            onConfirm = {
+                val id = sell.id
+                pendingDeleteSell = null
+                onDeleteSell?.invoke(id)
+            },
+            onDismiss = { pendingDeleteSell = null }
         )
     }
 }
@@ -681,6 +721,7 @@ private fun KisaanSlipCard(
     farmerName: String,
     onOpenReceipt: () -> Unit,
     onSettleCash: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     parties: List<Party> = emptyList(),
     onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
@@ -764,48 +805,66 @@ private fun KisaanSlipCard(
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "₹${MandiMathEngine.formatIndianGrouping(buy.netPayablePaisa / 100)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MandiTextPrimary
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = when {
-                            buy.isKhaate -> MandiAmberLight
-                            isFullyPaid -> MandiGreenLight
-                            buy.paidPaisa > 0 -> MandiAmberLight
-                            else -> MandiRedLight
-                        },
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            when {
-                                buy.isKhaate -> MandiAmberBorder
-                                isFullyPaid -> MandiGreenBorder
-                                buy.paidPaisa > 0 -> MandiAmberBorder
-                                else -> MandiRedBorder
-                            }
-                        )
-                    ) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = when {
-                                buy.isKhaate -> if (isEnglish) "Mohari (Asal)" else "मोहरी (असल)"
-                                isFullyPaid -> if (isEnglish) "✓ Paid" else "✓ चुक्ता"
-                                else -> if (isEnglish) "Due ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}" else "बाकी ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}"
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = when {
-                                buy.isKhaate -> MandiAmberDark
-                                isFullyPaid -> MandiGreenText
-                                buy.paidPaisa > 0 -> MandiAmberDark
-                                else -> MandiRedText
-                            },
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            text = "₹${MandiMathEngine.formatIndianGrouping(buy.netPayablePaisa / 100)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MandiTextPrimary
                         )
+                        Spacer(Modifier.height(2.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = when {
+                                buy.isKhaate -> MandiAmberLight
+                                isFullyPaid -> MandiGreenLight
+                                buy.paidPaisa > 0 -> MandiAmberLight
+                                else -> MandiRedLight
+                            },
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                when {
+                                    buy.isKhaate -> MandiAmberBorder
+                                    isFullyPaid -> MandiGreenBorder
+                                    buy.paidPaisa > 0 -> MandiAmberBorder
+                                    else -> MandiRedBorder
+                                }
+                            )
+                        ) {
+                            Text(
+                                text = when {
+                                    buy.isKhaate -> if (isEnglish) "Mohari (Asal)" else "मोहरी (असल)"
+                                    isFullyPaid -> if (isEnglish) "✓ Paid" else "✓ चुक्ता"
+                                    else -> if (isEnglish) "Due ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}" else "बाकी ₹${MandiMathEngine.formatIndianGrouping(remainingRupees)}"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    buy.isKhaate -> MandiAmberDark
+                                    isFullyPaid -> MandiGreenText
+                                    buy.paidPaisa > 0 -> MandiAmberDark
+                                    else -> MandiRedText
+                                },
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete slip" else "पर्ची हटाएं",
+                                tint = MandiRedText,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -859,6 +918,7 @@ private fun VyapariSlipCard(
     buyerName: String,
     onOpenReceipt: () -> Unit,
     onSettleCash: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     parties: List<Party> = emptyList(),
     onOpenPartyKhata: ((Party) -> Unit)? = null,
     isEnglish: Boolean
@@ -932,19 +992,37 @@ private fun VyapariSlipCard(
                     }
                 }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "₹${MandiMathEngine.formatIndianGrouping(baseValueWithoutChargesPaisa / 100)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MandiPrimaryAction
-                    )
-                    Text(
-                        text = if (isEnglish) "Base (excl. cuts)" else "बिना आढ़त/मजदूरी",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        color = MandiTextMuted
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "₹${MandiMathEngine.formatIndianGrouping(baseValueWithoutChargesPaisa / 100)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MandiPrimaryAction
+                        )
+                        Text(
+                            text = if (isEnglish) "Base (excl. cuts)" else "बिना आढ़त/मजदूरी",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            color = MandiTextMuted
+                        )
+                    }
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete slip" else "पर्ची हटाएं",
+                                tint = MandiRedText,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
 

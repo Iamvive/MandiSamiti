@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import com.appwork.mandisamiti.ui.theme.MandiPrimaryActionText
 import com.appwork.mandisamiti.ui.theme.MandiRedPayable
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
+import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiTextSecondary
 
 /** One crop line on a bill: name + amount, with qty/rate underneath. */
@@ -59,6 +61,8 @@ fun ReceiptScaffold(
     modifier: Modifier = Modifier,
     onPrint: (() -> Unit)? = null,
     printLabel: String = "प्रिंट करें",
+    onDelete: (() -> Unit)? = null,
+    deleteContentDescription: String = "हटाएं (Delete)",
     content: @Composable () -> Unit
 ) {
     Scaffold(
@@ -74,6 +78,15 @@ fun ReceiptScaffold(
                     if (onEdit != null) {
                         IconButton(onClick = onEdit) {
                             Icon(Icons.Default.Edit, contentDescription = "सुधारें (Edit)")
+                        }
+                    }
+                    if (onDelete != null) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = deleteContentDescription,
+                                tint = MandiRedText
+                            )
                         }
                     }
                 }

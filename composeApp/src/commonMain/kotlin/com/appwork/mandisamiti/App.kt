@@ -830,6 +830,14 @@ fun App(
                         }
                     },
                     onEdit = { currentScreen = Screen.BuyEntry(it, returnScreen = screen.returnScreen) },
+                    onDelete = {
+                        val idToDelete = buyEntry?.id ?: return@BuyTransactionReceiptScreen
+                        coroutineScope.launch {
+                            buyRepo.voidBuyEntry(idToDelete, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = screen.backTarget()
+                        }
+                    },
                     onNewBuy = {
                         currentScreen = Screen.BuyEntry(
                             initialPartyId = buyEntry?.takeUnless { it.isKhaate }?.farmerId,
@@ -1022,6 +1030,14 @@ fun App(
                         }
                     },
                     onEdit = { currentScreen = Screen.SellEntry(it, returnScreen = screen.returnScreen) },
+                    onDelete = {
+                        val idToDelete = sellEntry?.id ?: return@SellTransactionReceiptScreen
+                        coroutineScope.launch {
+                            sellRepo.voidSellEntry(idToDelete, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            syncScheduler.scheduleOneTimeSync()
+                            currentScreen = screen.backTarget()
+                        }
+                    },
                     onNewSell = {
                         currentScreen = Screen.SellEntry(
                             initialPartyId = sellEntry?.takeUnless { it.isKhaate }?.buyerId,
@@ -1141,6 +1157,12 @@ fun App(
                     entries = expenses,
                     isEnglish = tradeSettings?.isEnglish ?: false,
                     onOpen = { id -> currentScreen = Screen.ExpenseEntry(id) },
+                    onDeleteExpense = { id ->
+                        coroutineScope.launch {
+                            expenseRepo.voidExpense(id, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            syncScheduler.scheduleOneTimeSync()
+                        }
+                    },
                     onBack = { currentScreen = Screen.Home },
                 )
             }

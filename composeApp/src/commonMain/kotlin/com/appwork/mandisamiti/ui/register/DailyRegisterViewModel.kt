@@ -17,6 +17,7 @@ import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.CashTransactionRepository
 import com.appwork.mandisamiti.domain.repository.DrawerCount
 import com.appwork.mandisamiti.domain.repository.DrawerCountRepository
@@ -506,6 +507,19 @@ class DailyRegisterViewModel(
                 cashRepository.editTransaction(
                     transaction.id, amountRs * 100L, paymentMode, transaction.transactionDate, remarks
                 )
+                onLocalWrite()
+            } finally {
+                _uiState.value = _uiState.value.copy(isSaving = false)
+            }
+        }
+    }
+
+    fun voidCashEntry(transactionId: String) {
+        if (_uiState.value.isReadOnly) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            try {
+                cashRepository.voidTransaction(transactionId, VoidReason.WRONG_ENTRY)
                 onLocalWrite()
             } finally {
                 _uiState.value = _uiState.value.copy(isSaving = false)

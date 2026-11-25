@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,6 +76,7 @@ import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.usecase.UdhaarOverpaymentException
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.components.MandiOutlinedButton
 import com.appwork.mandisamiti.ui.ledger.EditRepaymentDialog
 import com.appwork.mandisamiti.ui.ledger.RepaymentHistoryDialog
@@ -109,6 +111,7 @@ fun UdhaarPersonScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     var showRepayDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingDeleteLoanId by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         containerColor = MandiBackground,
@@ -248,6 +251,9 @@ fun UdhaarPersonScreen(
                             },
                             onViewHistory = { settlementId ->
                                 viewModel.loadRepaymentHistory(settlementId)
+                            },
+                            onDeleteLoan = {
+                                pendingDeleteLoanId = loanItem.loan.id
                             }
                         )
                     }
@@ -303,6 +309,19 @@ fun UdhaarPersonScreen(
                     history = history,
                     isEnglish = isEnglish,
                     onDismiss = { viewModel.clearRepaymentHistory() }
+                )
+            }
+
+            // Delete Loan Confirmation Dialog
+            val deleteLoanId = pendingDeleteLoanId
+            if (deleteLoanId != null) {
+                DeleteConfirmDialog(
+                    isEnglish = isEnglish,
+                    onConfirm = {
+                        viewModel.deleteLoan(deleteLoanId)
+                        pendingDeleteLoanId = null
+                    },
+                    onDismiss = { pendingDeleteLoanId = null }
                 )
             }
         }
@@ -427,6 +446,7 @@ internal fun LoanCardItem(
     isGiven: Boolean,
     onEditRepayment: (LendSettlement) -> Unit,
     onViewHistory: (settlementId: String) -> Unit,
+    onDeleteLoan: (() -> Unit)? = null,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -450,13 +470,31 @@ internal fun LoanCardItem(
                     text = formatEpochDate(item.loan.entryDate),
                     style = MaterialTheme.typography.bodyMedium.copy(color = MandiTextSecondary)
                 )
-                Text(
-                    text = MandiCurrencyFormatter.formatRupees(item.loan.amountPaisa),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MandiTextPrimary
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = MandiCurrencyFormatter.formatRupees(item.loan.amountPaisa),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MandiTextPrimary
+                        )
                     )
-                )
+                    if (!item.loan.isVoid && onDeleteLoan != null) {
+                        IconButton(
+                            onClick = onDeleteLoan,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete loan" else "उधार हटाएं",
+                                tint = MandiTextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             // Chips & Receiver Row

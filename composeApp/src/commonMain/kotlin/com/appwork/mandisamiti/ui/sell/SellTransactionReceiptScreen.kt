@@ -18,6 +18,7 @@ import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import com.appwork.mandisamiti.domain.model.slipLabel
+import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.components.ReceiptAmountRow
 import com.appwork.mandisamiti.ui.components.ReceiptCard
 import com.appwork.mandisamiti.ui.components.ReceiptDivider
@@ -36,6 +37,7 @@ fun SellTransactionReceiptScreen(
     id: String,
     onBack: () -> Unit,
     onEdit: ((String) -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     onNewSell: (() -> Unit)? = null,
     entry: SellEntry? = null,
     buyerName: String = "खरीदार",
@@ -54,6 +56,7 @@ fun SellTransactionReceiptScreen(
     modifier: Modifier = Modifier
 ) {
     var showSettlementSheet by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val name = buyerName.takeIf { it.isNotBlank() && it != "खरीदार" } ?: entry?.buyerId?.ifBlank { "खरीदार" } ?: "खरीदार"
     val lots = try {
         entry?.remarks?.let { Json.decodeFromString<List<SellCropLot>>(it) }
@@ -90,6 +93,8 @@ fun SellTransactionReceiptScreen(
         onShare = if (entry != null && onShareWhatsApp != null) ({ onShareWhatsApp(billText) }) else null,
         onPrint = if (entry != null && onPrint != null) ({ onPrint(billHtml) }) else null,
         printLabel = if (isEnglish) "Print bill" else "प्रिंट करें",
+        onDelete = if (entry != null && !entry.isVoid && onDelete != null) ({ showDeleteConfirm = true }) else null,
+        deleteContentDescription = if (isEnglish) "Delete bill" else "बिल हटाएं",
         modifier = modifier
     ) {
         if (entry == null) {
@@ -182,6 +187,16 @@ fun SellTransactionReceiptScreen(
                 }
             )
         }
+    }
+    if (showDeleteConfirm) {
+        DeleteConfirmDialog(
+            isEnglish = isEnglish,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete?.invoke()
+            },
+            onDismiss = { showDeleteConfirm = false }
+        )
     }
 }
 

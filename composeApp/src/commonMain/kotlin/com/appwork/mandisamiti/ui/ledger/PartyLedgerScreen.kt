@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -98,6 +99,7 @@ import com.appwork.mandisamiti.ui.udhaar.LoanCardItem
 import com.appwork.mandisamiti.ui.udhaar.UdhaarPersonUiState
 import com.appwork.mandisamiti.ui.udhaar.UdhaarPersonViewModel
 import com.appwork.mandisamiti.ui.udhaar.UdhaarRepayDialog
+import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.components.PhoneNeededBadge
 import com.appwork.mandisamiti.ui.theme.MandiAccent
@@ -645,7 +647,8 @@ fun PartyLedgerScreen(
                                 isEnglish = isEnglish,
                                 buy = item.buy,
                                 onOpenReceipt = { onOpenBuyReceipt(item.buy.id) },
-                                onLongPress = { voidTarget = item }
+                                onLongPress = { voidTarget = item },
+                                onDelete = { voidTarget = item }
                             )
                         }
                         is LedgerItem.SellItem -> {
@@ -653,7 +656,8 @@ fun PartyLedgerScreen(
                                 isEnglish = isEnglish,
                                 sell = item.sell,
                                 onOpenReceipt = { onOpenSellReceipt(item.sell.id) },
-                                onLongPress = { voidTarget = item }
+                                onLongPress = { voidTarget = item },
+                                onDelete = { voidTarget = item }
                             )
                         }
                         is LedgerItem.LendItem -> {
@@ -665,7 +669,8 @@ fun PartyLedgerScreen(
                                 tag = item.tag,
                                 onEditRepayment = { editingSettlement = it },
                                 onShowRepaymentHistory = { historySettlement = it },
-                                onLongPress = { voidTarget = item }
+                                onLongPress = { voidTarget = item },
+                                onDelete = { voidTarget = item }
                             )
                         }
                         is LedgerItem.DealItem -> {
@@ -676,7 +681,8 @@ fun PartyLedgerScreen(
                                 tag = item.tag,
                                 onShareSlip = { onShareWhatsAppReceipt(item.deal.id) },
                                 onEditDeal = { onEditDeal(item.deal.id) },
-                                onLongPress = { voidTarget = item }
+                                onLongPress = { voidTarget = item },
+                                onDelete = { voidTarget = item }
                             )
                         }
                         is LedgerItem.CashItem -> {
@@ -685,7 +691,8 @@ fun PartyLedgerScreen(
                                 transaction = item.transaction,
                                 tag = item.tag,
                                 slipNo = (item.tag as? com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip)?.let { slipNoById[it.slipId] },
-                                onLongPress = { voidTarget = item }
+                                onLongPress = { voidTarget = item },
+                                onDelete = { voidTarget = item }
                             )
                         }
                     }
@@ -857,64 +864,30 @@ fun PartyLedgerScreen(
                 0L
             }
         }
-        AlertDialog(
-            onDismissRequest = { voidTarget = null },
-            title = { Text(if (isEnglish) "Cancel this entry?" else "प्रविष्टि रद्द करें?", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isEnglish) "The cancelled entry stays visible in the account but is removed from the totals." else "रद्द प्रविष्टि खाते में दिखेगी, पर हिसाब से हट जाएगी।", color = MandiTextSecondary, fontSize = 14.sp)
-                    if (cutPaisa > 0L) {
-                        val formattedCut = MandiMathEngine.formatRupees(cutPaisa)
-                        Text(
-                            text = if (isEnglish) "Loan deduction of $formattedCut will also be reversed." else "इस पर्ची की उधार कटौती ($formattedCut) भी वापस हो जाएगी।",
-                            color = MandiOrangeLend,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
-                        )
-                    }
-                    val remarksTag = (target as? LedgerItem.CashItem)?.transaction?.remarks.orEmpty()
-                    val isLinkedCash = remarksTag.contains("[LEND:") || remarksTag.contains("[EXPENSE:") || remarksTag.contains("[SETTLE:")
-                    if (target is LedgerItem.CashItem && !isLinkedCash) {
-                        Button(
-                            onClick = {
-                                cashEditAmount = (target.transaction.amountPaisa / 100L).toString()
-                                cashEditRemarks = target.transaction.remarks.orEmpty()
-                                cashEditTarget = target
-                                voidTarget = null
-                            },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        ) { Text(if (isEnglish) "Edit amount / note" else "रकम / नोट बदलें", fontSize = 16.sp) }
-                    }
-                    if (target is LedgerItem.LendItem) {
-                        Button(
-                            onClick = {
-                                cashEditAmount = (target.lend.amountPaisa / 100L).toString()
-                                cashEditRemarks = target.lend.notes.orEmpty()
-                                lendEditTarget = target
-                                voidTarget = null
-                            },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        ) { Text(if (isEnglish) "Edit amount / note" else "रकम / नोट बदलें", fontSize = 16.sp) }
-                    }
-                    val filteredReasons = if (target is LedgerItem.CashItem) {
-                        VoidReason.entries.filter { it.appliesToCash }
-                    } else {
-                        VoidReason.entries.filter { it.appliesToDeal }
-                    }
-                    filteredReasons.forEach { reason ->
-                        OutlinedButton(
-                            onClick = { viewModel.voidEntry(target, reason); voidTarget = null },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        ) { Text(if (isEnglish) reason.labelEn else reason.labelHi, color = MandiTextPrimary, fontSize = 16.sp) }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { voidTarget = null }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(if (isEnglish) "Back" else "वापस", color = MandiTextSecondary)
-                }
+        val baseMessage = if (isEnglish) {
+            "Are you sure you want to delete this entry? It will be removed from totals and lists."
+        } else {
+            "क्या आप वाकई इस प्रविष्टि को हटाना चाहते हैं? यह सूची और कुल हिसाब से हट जाएगी।"
+        }
+        val dialogMessage = if (cutPaisa > 0L) {
+            val formattedCut = MandiMathEngine.formatRupees(cutPaisa)
+            val cutNote = if (isEnglish) {
+                "Loan deduction of $formattedCut will also be reversed."
+            } else {
+                "इस पर्ची की उधार कटौती ($formattedCut) भी वापस हो जाएगी।"
             }
+            "$baseMessage\n\n$cutNote"
+        } else {
+            baseMessage
+        }
+        DeleteConfirmDialog(
+            isEnglish = isEnglish,
+            message = dialogMessage,
+            onConfirm = {
+                viewModel.voidEntry(target, VoidReason.WRONG_ENTRY)
+                voidTarget = null
+            },
+            onDismiss = { voidTarget = null }
         )
     }
 
@@ -1670,7 +1643,8 @@ private fun FintechDealCard(
     tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onShareSlip: () -> Unit,
     onEditDeal: () -> Unit = {},
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onDelete: () -> Unit = onLongPress
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = deal.isVoid
@@ -1737,6 +1711,17 @@ private fun FintechDealCard(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = if (isEnglish) "Share slip" else "पर्ची शेयर करें",
                                 tint = MandiAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete" else "हटाएं",
+                                tint = MandiRedPayable,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1823,7 +1808,8 @@ private fun FintechCashCard(
     transaction: com.appwork.mandisamiti.domain.model.CashTransaction,
     tag: com.appwork.mandisamiti.domain.ledger.LedgerTag?,
     slipNo: Long?,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onDelete: () -> Unit = onLongPress
 ) {
     val isVoid = transaction.isVoid
     val isDeposit = transaction.transactionType == TransactionType.JAMA_RECEIVED ||
@@ -1929,6 +1915,17 @@ private fun FintechCashCard(
                 )
                 if (!isVoid) {
                     IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = if (isEnglish) "Delete" else "हटाएं",
+                            tint = MandiRedPayable,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(
                         onClick = onLongPress,
                         modifier = Modifier.size(28.dp)
                     ) {
@@ -1961,7 +1958,8 @@ private fun FintechBuyCard(
     isEnglish: Boolean,
     buy: com.appwork.mandisamiti.domain.model.BuyEntry,
     onOpenReceipt: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onDelete: () -> Unit = onLongPress
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = buy.isVoid
@@ -2032,6 +2030,17 @@ private fun FintechBuyCard(
                         textDecoration = if (isVoid) TextDecoration.LineThrough else null
                     )
                     if (!isVoid) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete" else "हटाएं",
+                                tint = MandiRedPayable,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         IconButton(
                             onClick = onLongPress,
                             modifier = Modifier.size(28.dp)
@@ -2133,7 +2142,8 @@ private fun FintechSellCard(
     isEnglish: Boolean,
     sell: com.appwork.mandisamiti.domain.model.SellEntry,
     onOpenReceipt: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onDelete: () -> Unit = onLongPress
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = sell.isVoid
@@ -2204,6 +2214,17 @@ private fun FintechSellCard(
                         textDecoration = if (isVoid) TextDecoration.LineThrough else null
                     )
                     if (!isVoid) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete" else "हटाएं",
+                                tint = MandiRedPayable,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         IconButton(
                             onClick = onLongPress,
                             modifier = Modifier.size(28.dp)
@@ -2308,7 +2329,8 @@ private fun FintechLendCard(
     tag: com.appwork.mandisamiti.domain.ledger.LedgerTag? = null,
     onEditRepayment: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onShowRepaymentHistory: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onDelete: () -> Unit = onLongPress
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = lend.isVoid
@@ -2368,6 +2390,17 @@ private fun FintechLendCard(
                         textDecoration = if (isVoid) TextDecoration.LineThrough else null
                     )
                     if (!isVoid) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = if (isEnglish) "Delete" else "हटाएं",
+                                tint = MandiRedPayable,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         IconButton(
                             onClick = onLongPress,
                             modifier = Modifier.size(28.dp)

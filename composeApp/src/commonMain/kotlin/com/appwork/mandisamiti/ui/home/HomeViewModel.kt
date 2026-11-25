@@ -523,6 +523,22 @@ class HomeViewModel(
         }
     }
 
+    fun deleteBuySlip(buyId: String) {
+        val buyRepo = buyRepository ?: return
+        viewModelScope.launch {
+            buyRepo.voidBuyEntry(buyId, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+            onLocalWrite()
+        }
+    }
+
+    fun deleteSellSlip(sellId: String) {
+        val sellRepo = sellRepository ?: return
+        viewModelScope.launch {
+            sellRepo.voidSellEntry(sellId, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+            onLocalWrite()
+        }
+    }
+
     fun settleBuySlipCash(
         buyId: String,
         cashAmountPaisa: Long,

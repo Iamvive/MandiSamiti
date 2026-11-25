@@ -8,6 +8,7 @@ import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
 import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.Party
+import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.repository.LendRepository
 import com.appwork.mandisamiti.domain.repository.PartyRepository
 import com.appwork.mandisamiti.domain.usecase.LendException
@@ -254,5 +255,11 @@ class UdhaarPersonViewModel(
 
     fun clearRepaymentHistory() {
         _uiState.value = _uiState.value?.copy(repaymentHistory = null)
+    }
+
+    fun deleteLoan(lendId: String) {
+        scope.launch {
+            lendRepository.voidLendEntry(lendId, VoidReason.WRONG_ENTRY)
+        }
     }
 }
