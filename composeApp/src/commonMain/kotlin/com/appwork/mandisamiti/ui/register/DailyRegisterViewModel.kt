@@ -467,7 +467,15 @@ class DailyRegisterViewModel(
             _uiState.value = _uiState.value.copy(isSaving = true)
             // A kisan added from the popup is saved first so the entry lands in its khata.
             val resolvedPartyId = newKisan?.let { k ->
-                LendPartyResolver.partyToSave(k.name, k.phone, k.village, shopId, existing = null, now = now)
+                LendPartyResolver.partyToSave(
+                    k.name,
+                    k.phone,
+                    k.village,
+                    shopId,
+                    existing = null,
+                    now = now,
+                    partyType = k.partyType,
+                )
                     ?.also { partyRepository.saveParty(it) }?.id
             } ?: partyId
             val tx = CashTransaction(

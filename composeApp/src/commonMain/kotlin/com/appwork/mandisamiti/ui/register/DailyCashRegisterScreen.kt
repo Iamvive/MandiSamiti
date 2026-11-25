@@ -92,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
+import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import kotlinx.datetime.DayOfWeek
@@ -141,6 +142,7 @@ fun DailyCashRegisterScreen(
     var directPaymentMode by remember { mutableStateOf(PaymentMode.CASH) }
     var partyQuery by remember { mutableStateOf("") }
     var addingNewKisan by remember { mutableStateOf(false) }
+    var newPartyType by remember { mutableStateOf(PartyType.FARMER) }
     var newKisanPhone by remember { mutableStateOf("") }
     var newKisanVillage by remember { mutableStateOf("") }
     val closeDirectCashDialog = {
@@ -151,6 +153,7 @@ fun DailyCashRegisterScreen(
         directPaymentMode = PaymentMode.CASH
         partyQuery = ""
         addingNewKisan = false
+        newPartyType = PartyType.FARMER
         newKisanPhone = ""
         newKisanVillage = ""
     }
@@ -688,8 +691,12 @@ fun DailyCashRegisterScreen(
                                         .padding(4.dp)
                                 ) {
                                     matches.forEach { party ->
+                                        val typeTag = when (party.partyType) {
+                                            PartyType.BUYER -> if (isEnglish) "Vyapari" else "व्यापारी"
+                                            PartyType.FARMER -> if (isEnglish) "Kisaan" else "किसान"
+                                        }
                                         Text(
-                                            text = listOfNotNull(party.name, party.village?.ifBlank { null }, party.phone?.ifBlank { null }).joinToString(" · "),
+                                            text = listOfNotNull(party.name, typeTag, party.village?.ifBlank { null }, party.phone?.ifBlank { null }).joinToString(" · "),
                                             fontSize = 14.sp,
                                             color = MandiTextPrimary,
                                             modifier = Modifier
@@ -704,7 +711,7 @@ fun DailyCashRegisterScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .clickable { addingNewKisan = true }
+                                                .clickable { newPartyType = PartyType.FARMER; addingNewKisan = true }
                                                 .padding(horizontal = 8.dp, vertical = 10.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
@@ -712,6 +719,23 @@ fun DailyCashRegisterScreen(
                                             Spacer(Modifier.width(6.dp))
                                             Text(
                                                 text = if (isEnglish) "New kisan khata: \"$typedName\"" else "नया किसान खाता: \"$typedName\"",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MandiTextPrimary
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .clickable { newPartyType = PartyType.BUYER; addingNewKisan = true }
+                                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null, tint = MandiTextPrimary, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                text = if (isEnglish) "New vyapari khata: \"$typedName\"" else "नया व्यापारी खाता: \"$typedName\"",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Medium,
                                                 color = MandiTextPrimary
@@ -733,18 +757,24 @@ fun DailyCashRegisterScreen(
                                 keyboardOptions = MandiKeyboard.Note,
                                 value = newKisanVillage,
                                 onValueChange = { newKisanVillage = it },
-                                label = { Text(if (isEnglish) "Village (optional)" else "गांव (वैकल्पिक)") },
+                                label = { Text(if (isEnglish) "Village / City (optional)" else "गांव / शहर (वैकल्पिक)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            TextButton(onClick = { addingNewKisan = false; newKisanPhone = ""; newKisanVillage = "" }) {
+                            TextButton(onClick = { addingNewKisan = false; newPartyType = PartyType.FARMER; newKisanPhone = ""; newKisanVillage = "" }) {
                                 Text(if (isEnglish) "Don't create khata" else "खाता न बनाएँ", color = MandiTextSecondary)
                             }
                         }
                     }
                     val partyStatus = when {
                         selectedParty != null -> if (isEnglish) "Will be booked in this khata" else "खाते में दर्ज होगा"
-                        addingNewKisan && typedName.isNotBlank() -> if (isEnglish) "A new kisan khata will be created" else "नया किसान खाता बनेगा"
+                        addingNewKisan && typedName.isNotBlank() -> {
+                            if (newPartyType == PartyType.BUYER) {
+                                if (isEnglish) "A new vyapari khata will be created" else "नया व्यापारी खाता बनेगा"
+                            } else {
+                                if (isEnglish) "A new kisan khata will be created" else "नया किसान खाता बनेगा"
+                            }
+                        }
                         typedName.isNotBlank() -> if (isEnglish) "Name only. Not booked in any khata" else "सिर्फ नाम सहेजेगा, खाते में नहीं जाएगा"
                         else -> null
                     }
@@ -810,6 +840,7 @@ fun DailyCashRegisterScreen(
                                 phone = newKisanPhone,
                                 village = newKisanVillage,
                                 note = directRemarksInput,
+                                partyType = newPartyType,
                             )
                             viewModel.recordDailyEntry(
                                 partyId = target.partyId,

@@ -1,9 +1,16 @@
 package com.appwork.mandisamiti.ui.register
 
-/** A kisan khata to create while saving a Galla-Rokad cash entry. */
-data class NewKisan(val name: String, val phone: String?, val village: String?)
+import com.appwork.mandisamiti.domain.model.PartyType
 
-/** Where a Galla-Rokad cash entry is booked: a khata, a new kisan, or no khata (name kept in remarks). */
+/** A kisan or vyapari khata to create while saving a Galla-Rokad cash entry. */
+data class NewKisan(
+    val name: String,
+    val phone: String?,
+    val village: String?,
+    val partyType: PartyType = PartyType.FARMER,
+)
+
+/** Where a Galla-Rokad cash entry is booked: a khata, a new kisan/vyapari, or no khata (name kept in remarks). */
 data class CashEntryTarget(val partyId: String, val remarks: String?, val newKisan: NewKisan?)
 
 /**
@@ -17,6 +24,7 @@ fun cashEntryTarget(
     phone: String,
     village: String,
     note: String,
+    partyType: PartyType = PartyType.FARMER,
 ): CashEntryTarget {
     val name = typedName.trim()
     val cleanNote = note.trim().ifBlank { null }
@@ -26,6 +34,7 @@ fun cashEntryTarget(
             name = name,
             phone = phone.filter { it.isDigit() }.ifBlank { null },
             village = village.trim().ifBlank { null },
+            partyType = partyType,
         )
         return CashEntryTarget("", cleanNote, kisan)
     }

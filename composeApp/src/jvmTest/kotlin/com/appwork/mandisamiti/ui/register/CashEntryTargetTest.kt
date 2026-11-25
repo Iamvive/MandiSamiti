@@ -78,4 +78,33 @@ class CashEntryTargetTest {
         assertEquals(PartyType.FARMER, saved.partyType)
         assertEquals("9876543210", saved.phone)
     }
+
+    @Test
+    fun recordDailyEntry_withNewVyapari_savesBuyerPartyAndBooksEntryToIt() = runTest {
+        val db = createTestDatabase()
+        val io = StandardTestDispatcher(testScheduler)
+        val clock = object : Clock { override fun now() = Instant.parse("2026-11-24T08:00:00Z") }
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = io)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = io, clock = clock)
+        val vm = DailyRegisterViewModel(
+            shopId = "s1",
+            cashRepository = cashRepo,
+            partyRepository = partyRepo,
+            shopProfileRepository = OfflineFirstShopProfileRepository(db, ioDispatcher = io),
+            ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope,
+            clock = clock,
+            timeZone = TimeZone.of("Asia/Kolkata"),
+        )
+
+        val target = cashEntryTarget(null, "गुप्ता ट्रेडर्स", true, "9876500001", "दिल्ली", "", PartyType.BUYER)
+        vm.recordDailyEntry("", TransactionType.JAMA_RECEIVED, 1500L, newKisan = target.newKisan)
+
+        val state = vm.uiState.first { it.todayTransactions.size == 1 }
+        val tx = state.todayTransactions.single()
+        assertEquals("गुप्ता ट्रेडर्स", tx.partyName)
+        val saved = partyRepo.getPartyById(tx.transaction.partyId)!!
+        assertEquals(PartyType.BUYER, saved.partyType)
+        assertEquals("9876500001", saved.phone)
+    }
 }
