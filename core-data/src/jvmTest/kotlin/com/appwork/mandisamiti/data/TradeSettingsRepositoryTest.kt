@@ -24,6 +24,7 @@ class TradeSettingsRepositoryTest {
         assertEquals(150L, initial.buyerCommissionBps)
         assertEquals(150L, initial.customerCommissionBps)
         assertEquals(1000L, initial.defaultLabourPaisa)
+        assertEquals(100L, initial.sellLabourPaisaPerQuintal)
         assertEquals(false, initial.isEnglish)
 
         // Save customized settings
