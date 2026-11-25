@@ -55,6 +55,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.koin.android)
+            implementation(libs.sentry.android)
             implementation(libs.kotlinx.coroutines.android)
         }
         jvmTest.dependencies {
@@ -96,12 +97,19 @@ android {
         }
     }
 
+    // Crash reporting is off unless a DSN is set: local.properties `mandi.sentryDsn` or env SENTRY_DSN. Never commit it.
+    val sentryDsn = Properties().apply {
+        rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    }.getProperty("mandi.sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""
+
     buildTypes {
         getByName("release") {
+            buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
             isMinifyEnabled = false
             buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
         }
         getByName("debug") {
+            buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
             if (drawerReview) applicationIdSuffix = ".drawerreview"
             val localProps = Properties().apply {
                 rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
