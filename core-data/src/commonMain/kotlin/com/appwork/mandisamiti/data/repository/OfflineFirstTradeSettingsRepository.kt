@@ -42,7 +42,7 @@ class OfflineFirstTradeSettingsRepository(
         val buyerBps = queries.getSyncMetadataLong(KEY_BUYER_COMM_BPS).executeAsOneOrNull() ?: DEFAULT_BUYER_COMM_BPS
         val customerBps = queries.getSyncMetadataLong(KEY_CUSTOMER_COMM_BPS).executeAsOneOrNull() ?: DEFAULT_CUSTOMER_COMM_BPS
         val labourPaisa = queries.getSyncMetadataLong(KEY_LABOUR_PAISA).executeAsOneOrNull() ?: DEFAULT_LABOUR_PAISA
-        val traderLabourPaisa = queries.getSyncMetadataLong(KEY_TRADER_LABOUR_PAISA).executeAsOneOrNull() ?: 0L
+        val traderLabourPaisa = queries.getSyncMetadataLong(KEY_TRADER_LABOUR_PAISA).executeAsOneOrNull() ?: DEFAULT_TRADER_LABOUR_PAISA
         val isEnglish = (queries.getSyncMetadataLong(KEY_IS_ENGLISH).executeAsOneOrNull() ?: 0L) == 1L
         return TradeSettings(
             farmerCommissionBps = farmerBps,
@@ -66,5 +66,6 @@ class OfflineFirstTradeSettingsRepository(
         const val DEFAULT_BUYER_COMM_BPS = 150L
         const val DEFAULT_CUSTOMER_COMM_BPS = 150L
         const val DEFAULT_LABOUR_PAISA = 1000L
+        const val DEFAULT_TRADER_LABOUR_PAISA = 100L
     }
 }
