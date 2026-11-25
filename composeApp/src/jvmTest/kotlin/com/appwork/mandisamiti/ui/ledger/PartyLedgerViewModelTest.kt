@@ -138,11 +138,11 @@ class PartyLedgerViewModelTest {
         viewModel.voidEntry(item, VoidReason.WRONG_ENTRY)
 
         val after = viewModel.uiState.first { state ->
-            // balance and list come from separate streams, so wait for both to reflect the void
-            (state.ledgerItems.singleOrNull() as? LedgerItem.CashItem)?.transaction?.isVoid == true
+            state.ledgerItems.isEmpty()
         }
-        val listed = after.ledgerItems.single() as LedgerItem.CashItem
-        assertTrue(listed.transaction.isVoid)
+        assertTrue(after.ledgerItems.isEmpty())
+        val persisted = cashRepo.getTransactionsByPartyStream("farmer-1").first().single()
+        assertTrue(persisted.isVoid)
     }
 
     @Test
@@ -194,11 +194,12 @@ class PartyLedgerViewModelTest {
         viewModel.voidEntry(item, VoidReason.WRONG_ENTRY)
 
         val after = viewModel.uiState.first { state ->
-            state.slipBalancePaisa == 0L && (state.ledgerItems.singleOrNull() as? LedgerItem.BuyItem)?.buy?.isVoid == true
+            state.slipBalancePaisa == 0L && state.ledgerItems.isEmpty()
         }
-        val listed = after.ledgerItems.single() as LedgerItem.BuyItem
-        assertTrue(listed.buy.isVoid)
-        assertEquals("WRONG_ENTRY", listed.buy.voidReason)
+        assertTrue(after.ledgerItems.isEmpty())
+        val persisted = buyRepo.getBuyEntryById("buy-1")!!
+        assertTrue(persisted.isVoid)
+        assertEquals("WRONG_ENTRY", persisted.voidReason)
     }
 
     @Test
