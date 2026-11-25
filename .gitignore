@@ -29,3 +29,8 @@ graphify-out/.graphify_*
 # Real staging secrets live only on the VPS
 backend/.env.staging
 .env.staging
+
+# Release signing credentials (never commit)
+keystore.properties
+*.jks
+*.keystore

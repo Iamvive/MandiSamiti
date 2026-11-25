@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Staging only: permit cleartext HTTP to the staging VPS IP while blocking all other cleartext traffic. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">64.227.142.180</domain>
+    </domain-config>
+</network-security-config>

@@ -96,18 +96,66 @@ android {
         }
     }
 
+    val localProps = Properties().apply {
+        rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    }
+    val keystoreProps = Properties().apply {
+        rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    }
+    val releaseStoreFile = keystoreProps.getProperty("storeFile") ?: System.getenv("MANDI_KEYSTORE_PATH")
+    val releaseStorePassword = keystoreProps.getProperty("storePassword") ?: System.getenv("MANDI_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = keystoreProps.getProperty("keyAlias") ?: System.getenv("MANDI_KEYSTORE_ALIAS")
+    val releaseKeyPassword = keystoreProps.getProperty("keyPassword") ?: System.getenv("MANDI_KEYSTORE_PASSWORD")
+    val hasReleaseSigning = !releaseStoreFile.isNullOrBlank() &&
+        !releaseStorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank() &&
+        !releaseKeyPassword.isNullOrBlank()
+
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    flavorDimensions += "env"
+    productFlavors {
+        create("staging") {
+            dimension = "env"
+            applicationIdSuffix = ".staging"
+            resValue("string", "app_name", "मंडी समिति (Staging)")
+            val stagingUrl = localProps.getProperty("mandi.stagingApiBaseUrl") ?: "http://64.227.142.180:8060"
+            buildConfigField("String", "API_BASE_URL", "\"$stagingUrl\"")
+        }
+        create("prod") {
+            dimension = "env"
+            resValue("string", "app_name", "मंडी समिति")
+            buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
+        }
+    }
+
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
-            buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         getByName("debug") {
             if (drawerReview) applicationIdSuffix = ".drawerreview"
-            val localProps = Properties().apply {
-                rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+            val debugUrl = localProps.getProperty("mandi.apiBaseUrl")
+            if (!debugUrl.isNullOrBlank()) {
+                buildConfigField("String", "API_BASE_URL", "\"$debugUrl\"")
             }
-            val debugUrl = localProps.getProperty("mandi.apiBaseUrl") ?: "http://10.0.2.2:8000"
-            buildConfigField("String", "API_BASE_URL", "\"$debugUrl\"")
         }
     }
     compileOptions {
@@ -133,4 +181,30 @@ tasks.register<JavaExec>("runDemo") {
 
 tasks.withType<Test>().configureEach {
     systemProperty("mandi.sound.disabled", "true")
+}
+
+gradle.taskGraph.whenReady {
+    val needsReleaseSigning = allTasks.any { task ->
+        task.project == project &&
+            (task.name.contains("Release") && (task.name.startsWith("assemble") || task.name.startsWith("bundle")))
+    }
+    if (needsReleaseSigning) {
+        val keystoreProps = Properties().apply {
+            rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+        }
+        val configured = (!keystoreProps.getProperty("storeFile").isNullOrBlank() ||
+            !System.getenv("MANDI_KEYSTORE_PATH").isNullOrBlank()) &&
+            (!keystoreProps.getProperty("storePassword").isNullOrBlank() ||
+                !System.getenv("MANDI_KEYSTORE_PASSWORD").isNullOrBlank()) &&
+            (!keystoreProps.getProperty("keyAlias").isNullOrBlank() ||
+                !System.getenv("MANDI_KEYSTORE_ALIAS").isNullOrBlank()) &&
+            (!keystoreProps.getProperty("keyPassword").isNullOrBlank() ||
+                !System.getenv("MANDI_KEYSTORE_PASSWORD").isNullOrBlank())
+        if (!configured) {
+            throw GradleException(
+                "Release signing is not configured. Copy keystore.properties.example to keystore.properties " +
+                    "(or set MANDI_KEYSTORE_PATH, MANDI_KEYSTORE_PASSWORD, MANDI_KEYSTORE_ALIAS)."
+            )
+        }
+    }
 }
