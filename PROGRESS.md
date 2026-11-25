@@ -1187,3 +1187,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: scrubber regex outputs checked in Python (same regex as backend).
 - NOT VERIFIED: Gradle build and `PiiScrubberTest` (cloud container cannot reach Google Maven); real crash on d93c743 reaching Sentry with no phone numbers; app boots normally with empty DSN.
 - Next: Vivek builds on device, creates Sentry Android project, sets `mandi.sentryDsn` in local.properties, forces one test crash.
+
+## 2026-11-25 IST - Claude Code (cloud) - Observability follow-up on branch appworx/android-sentry-crash-reporting
+- Changes: `docs/STATUS.md` rows (in flight, two Waiting on Vivek items), `docs/product/feature-status.md` Observability row (was stale "Design").
+- Evidence: `backend` pytest in a fresh venv: 140 passed, 4 warnings (pydantic deprecation, unrelated).
+- NOT VERIFIED: Android build, `PiiScrubberTest`, Sentry crash on Redmi `d93c743`. `android-crash-reporting` stays failing.
+- Next: Vivek runs the device check; then flip the feature status. PR not opened yet.
