@@ -235,6 +235,8 @@ fun HomeScreen(
                             },
                             onOpenBuyReceipt = onNavigateToBuyReceipt,
                             onOpenSellReceipt = onNavigateToSellReceipt,
+                            onDeleteBuy = { viewModel.deleteBuySlip(it) },
+                            onDeleteSell = { viewModel.deleteSellSlip(it) },
                             onNavigateToNewBuy = onNavigateToBuy,
                             onNavigateToNewSell = onNavigateToSell,
                             onOpenPartyKhata = { party ->

@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.LocalAtm
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,6 +97,7 @@ import com.appwork.mandisamiti.domain.model.TransactionType
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
+import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiAccent
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
@@ -164,6 +166,7 @@ fun DailyCashRegisterScreen(
     var denominationQuantities by remember(uiState.selectedDate, uiState.isDayClosingSummaryOpen) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var showCloseConfirmation by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var pendingDeleteTxId by remember { mutableStateOf<String?>(null) }
     val visibleTransactions = uiState.todayTransactions.filter {
         it.transaction.transactionType in drawerMovementTypes &&
             (it.transaction.paymentMode == PaymentMode.CASH || it.transaction.paymentMode == PaymentMode.BOOK_ENTRY)
@@ -433,7 +436,8 @@ fun DailyCashRegisterScreen(
                                     isDeposit = true,
                                     isEnglish = isEnglish,
                                     isCompact = true,
-                                    onEdit = if (uiState.isReadOnly) null else { amt, mode, note -> viewModel.editDailyEntry(item.transaction, amt, mode, note) }
+                                    onEdit = if (uiState.isReadOnly) null else { amt, mode, note -> viewModel.editDailyEntry(item.transaction, amt, mode, note) },
+                                    onDelete = if (uiState.isReadOnly) null else { { pendingDeleteTxId = item.transaction.id } }
                                 )
                             }
 
@@ -471,7 +475,8 @@ fun DailyCashRegisterScreen(
                                     isDeposit = false,
                                     isEnglish = isEnglish,
                                     isCompact = true,
-                                    onEdit = if (uiState.isReadOnly) null else { amt, mode, note -> viewModel.editDailyEntry(item.transaction, amt, mode, note) }
+                                    onEdit = if (uiState.isReadOnly) null else { amt, mode, note -> viewModel.editDailyEntry(item.transaction, amt, mode, note) },
+                                    onDelete = if (uiState.isReadOnly) null else { { pendingDeleteTxId = item.transaction.id } }
                                 )
                             }
 
@@ -582,6 +587,17 @@ fun DailyCashRegisterScreen(
                 physicalCashInput = ""
                 viewModel.closeDayClosingSummary()
             },
+        )
+    }
+
+    pendingDeleteTxId?.let { txId ->
+        DeleteConfirmDialog(
+            isEnglish = isEnglish,
+            onConfirm = {
+                viewModel.voidCashEntry(txId)
+                pendingDeleteTxId = null
+            },
+            onDismiss = { pendingDeleteTxId = null }
         )
     }
 
@@ -1030,7 +1046,8 @@ private fun BahiTransactionItem(
     isDeposit: Boolean,
     isEnglish: Boolean,
     isCompact: Boolean = false,
-    onEdit: ((amountRs: Long, mode: PaymentMode, remarks: String?) -> Unit)? = null
+    onEdit: ((amountRs: Long, mode: PaymentMode, remarks: String?) -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(item.transaction.remarks)
     val isVoid = item.transaction.isVoid
@@ -1064,6 +1081,7 @@ private fun BahiTransactionItem(
     val rawRemarks = item.transaction.remarks.orEmpty()
     val canEdit = onEdit != null && !isVoid &&
         listOf("[LEND:", "[EXPENSE:", "[SETTLE:").none { rawRemarks.contains(it) }
+    val canDelete = onDelete != null && !isVoid
     val mode = when (item.transaction.paymentMode) {
         PaymentMode.CASH -> if (isEnglish) "Cash" else "नकद"
         PaymentMode.BOOK_ENTRY -> if (isEnglish) "Credit / Non-Cash" else "क्रेडिट / गैर-नकद"
@@ -1076,8 +1094,35 @@ private fun BahiTransactionItem(
             .padding(horizontal = 8.dp, vertical = 7.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(displayName, color = MandiTextPrimary, fontSize = 15.sp, lineHeight = 19.sp,
-            fontWeight = FontWeight.SemiBold, maxLines = if (isCompact) 2 else 3, overflow = TextOverflow.Ellipsis)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                displayName,
+                color = MandiTextPrimary,
+                fontSize = 15.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = if (isCompact) 2 else 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (canDelete) {
+                IconButton(
+                    onClick = { onDelete?.invoke() },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = if (isEnglish) "Delete entry" else "प्रविष्टि हटाएं",
+                        tint = MandiRedPayable,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
