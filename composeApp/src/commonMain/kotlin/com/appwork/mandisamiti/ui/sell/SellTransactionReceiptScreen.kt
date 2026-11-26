@@ -89,7 +89,7 @@ fun SellTransactionReceiptScreen(
         },
         onBack = onBack,
         onEdit = if (entry != null && !entry.isVoid && onEdit != null) ({ onEdit(entry.id) }) else null,
-        shareLabel = "व्हाट्सएप पर बिल भेजें",
+        shareLabel = if (isEnglish) "Share bill" else "बिल भेजें",
         onShare = if (entry != null && onShareWhatsApp != null) ({ onShareWhatsApp(billText) }) else null,
         onPrint = if (entry != null && onPrint != null) ({ onPrint(billHtml) }) else null,
         printLabel = if (isEnglish) "Print bill" else "प्रिंट करें",

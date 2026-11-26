@@ -117,7 +117,13 @@ fun ReceiptScaffold(
                         border = BorderStroke(1.dp, MandiBorder)
                     ) {
                         Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(printLabel, modifier = Modifier.padding(start = 6.dp))
+                        Text(
+                            text = printLabel,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
                     }
                     Button(
                         onClick = onShare,
@@ -128,7 +134,13 @@ fun ReceiptScaffold(
                         )
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(shareLabel, modifier = Modifier.padding(start = 6.dp))
+                        Text(
+                            text = shareLabel,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
                     }
                 }
             } else if (onPrint != null) {
