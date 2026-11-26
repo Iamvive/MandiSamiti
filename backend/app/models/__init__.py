@@ -9,9 +9,10 @@ from app.models.buy_entry import BuyEntry
 from app.models.sell_entry import SellEntry
 from app.models.lend_entry import LendEntry, LendSettlement
 from app.models.expense_entry import ExpenseEntry
+from app.models.analytics_event import AnalyticsEvent
 
 __all__ = [
     "User", "ShopProfile", "Shop", "Party", "Deal", "CashTransaction", "EntryRevision", "RefreshToken", "SyncConflict",
-    "BuyEntry", "SellEntry", "LendEntry", "LendSettlement", "ExpenseEntry",
+    "BuyEntry", "SellEntry", "LendEntry", "LendSettlement", "ExpenseEntry", "AnalyticsEvent",
 ]
 

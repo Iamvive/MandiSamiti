@@ -1,5 +1,7 @@
 import os
 import pytest
+from sqlalchemy import select
+from app.models.analytics_event import AnalyticsEvent
 from app.models.user import ShopProfile
 from app.models.party import Party
 from app.models.deal import Deal
@@ -80,4 +82,96 @@ def test_format_digest():
     assert "Sharma Traders: 3" in text
     assert "Silent 2+ days: Gupta Aadhat" in text
     assert "Sync conflicts (24h): 1" in text
+    assert "App events today: none" in text
     assert "Backup: ok" in text
+
+
+def _ev(shop_id: str, ev_id: str, name: str, screen: str | None = None, session_id: str = "sess-1", received_at_ms: int = NOW - 1000) -> AnalyticsEvent:
+    return AnalyticsEvent(
+        shop_id=shop_id,
+        id=ev_id,
+        name=name,
+        screen=screen,
+        session_id=session_id,
+        occurred_at_ms=received_at_ms - 500,
+        duration_ms=None,
+        app_version="1.0",
+        received_at_ms=received_at_ms,
+    )
+
+
+@pytest.mark.asyncio
+async def test_collect_telemetry_counts(db_sessionmaker):
+    async with db_sessionmaker() as s:
+        await _seed(s)
+        s.add_all([
+            # Sharma Traders: 2 sessions, 2 *_saved (buy_saved, sell_saved); unsaved should NOT match *_saved
+            _ev("s1", "a1", "app_open", session_id="sess-1"),
+            _ev("s1", "a2", "buy_saved", session_id="sess-1"),
+            _ev("s1", "a3", "sell_saved", session_id="sess-2"),
+            _ev("s1", "a4", "unsaved", session_id="sess-2"),
+            _ev("s1", "a5", "sync_ok", session_id="sess-2"),
+            # Gupta Aadhat: 1 session, 1 *_saved, 1 sync_failed
+            _ev("s2", "b1", "expense_saved", session_id="sess-g1"),
+            _ev("s2", "b2", "sync_failed", session_id="sess-g1"),
+            # 6 distinct screens viewed today; top 5 should exclude the least viewed one (6th)
+            _ev("s1", "sv1", "screen_view", screen="home"),
+            _ev("s1", "sv2", "screen_view", screen="home"),
+            _ev("s1", "sv3", "screen_view", screen="home"),
+            _ev("s1", "sv4", "screen_view", screen="buy_list"),
+            _ev("s1", "sv5", "screen_view", screen="buy_list"),
+            _ev("s1", "sv6", "screen_view", screen="sell_list"),
+            _ev("s1", "sv7", "screen_view", screen="sell_list"),
+            _ev("s2", "sv8", "screen_view", screen="parchi", session_id="sess-g1"),
+            _ev("s2", "sv9", "screen_view", screen="parchi", session_id="sess-g1"),
+            _ev("s2", "sv10", "screen_view", screen="udhaar", session_id="sess-g1"),
+            _ev("s2", "sv11", "screen_view", screen="udhaar", session_id="sess-g1"),
+            _ev("s2", "sv12", "screen_view", screen="stock", session_id="sess-g1"),
+            # Yesterday's event (excluded from today's window)
+            _ev("s1", "old1", "sync_ok", session_id="sess-old", received_at_ms=NOW - 2 * DAY),
+            _ev("s1", "old2", "buy_saved", session_id="sess-old", received_at_ms=NOW - 2 * DAY),
+        ])
+        await s.commit()
+        stats = await ops_digest.collect(s, now_ms=NOW)
+
+    assert stats["telemetry_by_shop"] == {
+        "Sharma Traders": {"sessions": 2, "saved": 2},
+        "Gupta Aadhat": {"sessions": 1, "saved": 1},
+    }
+    assert stats["sync_ok"] == 1
+    assert stats["sync_failed"] == 1
+    assert len(stats["top_screens"]) == 5
+    assert stats["top_screens"][0] == ("home", 3)
+    assert ("stock", 1) not in stats["top_screens"]
+
+    text = ops_digest.format_digest(stats, backup_problem=None)
+    assert "App events today: sync_ok=1, sync_failed=1" in text
+    assert "Sharma Traders: 2 sessions, 2 saved" in text
+    assert "Gupta Aadhat: 1 sessions, 1 saved" in text
+    assert "Top screens: home=3" in text
+
+
+@pytest.mark.asyncio
+async def test_purge_old_events_keeps_recent_rows(db_sessionmaker, monkeypatch):
+    now = 1_760_000_000_000
+    async with db_sessionmaker() as s:
+        s.add(ShopProfile(id="s1", shop_name="Sharma Traders"))
+        s.add_all([
+            _ev("s1", "expired", "app_open", received_at_ms=now - 90 * DAY - 1),
+            _ev("s1", "boundary", "app_open", received_at_ms=now - 90 * DAY),
+            _ev("s1", "recent", "app_open", received_at_ms=now - 1000),
+        ])
+        await s.commit()
+
+    monkeypatch.setattr(ops_digest, "AsyncSessionLocal", db_sessionmaker)
+    monkeypatch.setattr(ops_digest.time, "time", lambda: now / 1000)
+
+    async def _noop_notify(_text):
+        return False
+
+    monkeypatch.setattr(ops_digest, "notify_ops", _noop_notify)
+    await ops_digest.main()
+
+    async with db_sessionmaker() as s:
+        remaining = (await s.execute(select(AnalyticsEvent.id).order_by(AnalyticsEvent.id))).scalars().all()
+    assert remaining == ["boundary", "recent"]

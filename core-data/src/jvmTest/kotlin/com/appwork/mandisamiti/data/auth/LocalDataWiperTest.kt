@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.data.auth
 
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
+import com.appwork.mandisamiti.data.analytics.AnalyticsScreen
 import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstDealRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
@@ -55,6 +58,8 @@ class LocalDataWiperTest {
             )
         )
         assertEquals(1, q.getRevisionsForEntry("deal-1").executeAsList().size)
+        Analytics(db, "1.0", ioDispatcher = io).track(AnalyticsEventName.SCREEN_VIEW, AnalyticsScreen.HOME_DASHBOARD)
+        assertEquals(1, q.getOldestAnalyticsEvents(10).executeAsList().size)
 
         LocalDataWiper(db).wipeAll()
 
@@ -65,6 +70,7 @@ class LocalDataWiperTest {
         assertEquals(0, q.getCashTransactionsByShop("shop-1").executeAsList().size)
         assertEquals(0, q.getRevisionsForEntry("deal-1").executeAsList().size)
         assertEquals(0, q.getPendingSyncRevisions().executeAsList().size)
+        assertEquals(0, q.getOldestAnalyticsEvents(10).executeAsList().size)
     }
 
     @Test

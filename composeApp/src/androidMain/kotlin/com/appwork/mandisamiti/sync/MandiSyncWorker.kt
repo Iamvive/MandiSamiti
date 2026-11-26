@@ -33,7 +33,15 @@ class MandiSyncWorker(
                 sessionStore = sessionStore,
                 refresh = AuthApi(http, apiBaseUrl)::refresh
             )
-            val syncEngine = SyncEngine(database = database, apiClient = syncApiClient)
+            val analytics = com.appwork.mandisamiti.data.analytics.Analytics(
+                database = database,
+                appVersion = com.appwork.mandisamiti.BuildConfig.VERSION_NAME
+            )
+            val syncEngine = SyncEngine(
+                database = database,
+                apiClient = syncApiClient,
+                analytics = analytics
+            )
 
             when (val r = syncEngine.syncFull(currentSession.shopId)) {
                 is SyncResult.Success -> Result.success()

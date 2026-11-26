@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.ui.home
 
+import com.appwork.mandisamiti.analytics.recordAction
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.data.repository.QuotaRepository
 import com.appwork.mandisamiti.data.repository.ShopQuota
 import com.appwork.mandisamiti.domain.id.IdGenerator
@@ -122,6 +125,7 @@ class HomeViewModel(
     initialSearchQuery: String = "",
     initialFilter: PartyFilter = PartyFilter.ALL,
     initialTypeFilter: PartyTypeFilter = PartyTypeFilter.ALL,
+    private val analytics: Analytics? = null,
 ) {
 
     private val stockRevision = MutableStateFlow(0L)
@@ -526,7 +530,9 @@ class HomeViewModel(
     fun deleteBuySlip(buyId: String) {
         val buyRepo = buyRepository ?: return
         viewModelScope.launch {
-            buyRepo.voidBuyEntry(buyId, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, viewModelScope) {
+                buyRepo.voidBuyEntry(buyId, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+            }
             onLocalWrite()
         }
     }
@@ -534,7 +540,9 @@ class HomeViewModel(
     fun deleteSellSlip(sellId: String) {
         val sellRepo = sellRepository ?: return
         viewModelScope.launch {
-            sellRepo.voidSellEntry(sellId, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, viewModelScope) {
+                sellRepo.voidSellEntry(sellId, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+            }
             onLocalWrite()
         }
     }
@@ -572,7 +580,9 @@ class HomeViewModel(
                 sourceEntryType = "BUY",
                 sourceEntryId = buyId
             )
-            cashRepo.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepo.recordTransaction(tx)
+            }
             onLocalWrite()
             onComplete?.invoke()
         }
@@ -606,22 +616,24 @@ class HomeViewModel(
             )
 
             val slipRef = currentSell.slipNo?.let { "#$it" } ?: sellId.takeLast(5)
-            cashRepo.recordTransaction(
-                CashTransaction(
-                    id = IdGenerator.newId(),
-                    shopId = currentShopId,
-                    partyId = currentSell.buyerId,
-                    transactionType = TransactionType.JAMA_RECEIVED,
-                    amountPaisa = applied,
-                    paymentMode = PaymentMode.CASH,
-                    transactionDate = now,
-                    remarks = "बिक्री पर्ची $slipRef नकद प्राप्त",
-                    createdAt = now,
-                    updatedAt = now,
-                    sourceEntryType = "SELL",
-                    sourceEntryId = sellId
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepo.recordTransaction(
+                    CashTransaction(
+                        id = IdGenerator.newId(),
+                        shopId = currentShopId,
+                        partyId = currentSell.buyerId,
+                        transactionType = TransactionType.JAMA_RECEIVED,
+                        amountPaisa = applied,
+                        paymentMode = PaymentMode.CASH,
+                        transactionDate = now,
+                        remarks = "बिक्री पर्ची $slipRef नकद प्राप्त",
+                        createdAt = now,
+                        updatedAt = now,
+                        sourceEntryType = "SELL",
+                        sourceEntryId = sellId
+                    )
                 )
-            )
+            }
             onLocalWrite()
             onComplete?.invoke()
         }

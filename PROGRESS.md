@@ -1199,3 +1199,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: `./gradlew jvmTest :composeApp:assembleStagingDebug` passed (`BUILD SUCCESSFUL`, 119 tasks).
 - Merged PR #45 into `main` (`eb35ced`, Vivek approved). Synced local `main` to `origin/main`, deleted merged local branches (`feat/consolidated-wip`, `fix/hide-voided-entries-from-ui`, `appworx/android-sentry-crash-reporting`), and pruned stale remote tracking refs.
 - Open: Step 3 Sentry live crash verification on Redmi `d93c743` still awaits `mandi.sentryDsn` in `local.properties` (`android-crash-reporting` stays `failing`).
+
+## 2026-11-26 14:06 IST - Claude Code (Sonnet 5.5) with Antigravity workers - clickstream telemetry on feat/telemetry-pipeline
+- Changes: `POST /api/v1/events` with migration `0002_analytics_events`, 90-day retention and digest counts; app offline queue (SQLDelight 15 to 16) and upload after sync; app event hooks; shared wire sample checked by pytest and jvmTest.
+- Review: Opus 5.5 reviewed the backend and queue commits (no blockers). Review fixes: foreground syncs now record and upload, home screen delete and settle are tracked, opening balance, drawer adjustments and zero payments no longer count as payments, negative durations stored as 0.
+- Evidence: backend pytest 169 passed; `./gradlew :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest :composeApp:assembleStagingDebug` exit 0 (13 + 207 + 440 tests); Postgres DDL rendered offline.
+- NOT VERIFIED: Redmi `d93c743`, staging deploy, migration on a real Postgres, nginx limits. `clickstream-telemetry` stays failing.
+- Next: Vivek reviews the PR, deploys staging, then the device check.

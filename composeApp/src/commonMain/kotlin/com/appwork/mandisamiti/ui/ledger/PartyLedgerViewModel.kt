@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.ui.ledger
 
+import com.appwork.mandisamiti.analytics.recordAction
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.data.sync.NoOpSyncScheduler
 import com.appwork.mandisamiti.data.sync.SyncScheduler
 import com.appwork.mandisamiti.domain.id.IdGenerator
@@ -135,7 +138,8 @@ class PartyLedgerViewModel(
     val lendRepository: LendRepository? = null,
     val udhaarUseCase: com.appwork.mandisamiti.domain.usecase.UdhaarUseCase? = null,
     val syncScheduler: SyncScheduler = NoOpSyncScheduler(),
-    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    private val analytics: Analytics? = null
 ) {
 
     fun onPlainCash(
@@ -149,7 +153,7 @@ class PartyLedgerViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true, error = null)
             try {
-                useCase.plainCash(
+                val plainResult = useCase.plainCash(
                     shopId = shopId,
                     partyId = partyId,
                     side = side,
@@ -157,6 +161,15 @@ class PartyLedgerViewModel(
                     date = dateMs,
                     note = note,
                 )
+                analytics?.let { a ->
+                    viewModelScope.launch {
+                        val event = when (plainResult) {
+                            is com.appwork.mandisamiti.domain.usecase.PlainCashResult.Repaid -> AnalyticsEventName.PAYMENT_SAVED
+                            is com.appwork.mandisamiti.domain.usecase.PlainCashResult.NewLoan -> AnalyticsEventName.UDHAAR_SAVED
+                        }
+                        try { a.track(event) } catch (_: Throwable) {}
+                    }
+                }
                 val party = _uiState.value.party ?: partyRepository.getPartyById(partyId)
                 val partyName = party?.name ?: ""
                 val amountRs = amountPaisa / 100L
@@ -348,7 +361,9 @@ class PartyLedgerViewModel(
             val repo = lendRepository ?: return@launch
             val useCase = LendTransactionUseCase(repo, { IdGenerator.newId() }, { Clock.System.now().toEpochMilliseconds() })
             val split = try {
-                useCase.repayWithInterest(lendId, paymentPaisa, interestPaisa, calculatedInterestPaisa, note, cashPartyId = partyId, paymentMode = paymentMode)
+                recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                    useCase.repayWithInterest(lendId, paymentPaisa, interestPaisa, calculatedInterestPaisa, note, cashPartyId = partyId, paymentMode = paymentMode)
+                }
             } catch (e: IllegalArgumentException) {
                 _events.emit(PartyLedgerEvent.Error("राशि दर्ज नहीं हो सकी"))
                 return@launch
@@ -434,30 +449,32 @@ class PartyLedgerViewModel(
 
             val now = Clock.System.now().toEpochMilliseconds()
             val newPaidPaisa = currentBuy.paidPaisa + applied
-            buyRepo.editBuyEntry(
-                currentBuy.copy(
-                    paidPaisa = newPaidPaisa,
-                    updatedAt = now,
-                    revision = currentBuy.revision + 1L
-                )
-            )
-
             val slipRef = currentBuy.slipNo?.let { "#$it" } ?: buyId.takeLast(5)
-            val tx = CashTransaction(
-                id = IdGenerator.newId(),
-                shopId = shopId,
-                partyId = partyId,
-                transactionType = TransactionType.UDHAR_GIVEN, // Farmer payout / cash out from galla
-                amountPaisa = applied,
-                paymentMode = PaymentMode.CASH,
-                transactionDate = now,
-                remarks = "खरीद पर्ची $slipRef भुगतान${if (!note.isNullOrBlank()) ": $note" else ""}",
-                createdAt = now,
-                updatedAt = now,
-                sourceEntryType = "BUY",
-                sourceEntryId = buyId
-            )
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                buyRepo.editBuyEntry(
+                    currentBuy.copy(
+                        paidPaisa = newPaidPaisa,
+                        updatedAt = now,
+                        revision = currentBuy.revision + 1L
+                    )
+                )
+
+                val tx = CashTransaction(
+                    id = IdGenerator.newId(),
+                    shopId = shopId,
+                    partyId = partyId,
+                    transactionType = TransactionType.UDHAR_GIVEN, // Farmer payout / cash out from galla
+                    amountPaisa = applied,
+                    paymentMode = PaymentMode.CASH,
+                    transactionDate = now,
+                    remarks = "खरीद पर्ची $slipRef भुगतान${if (!note.isNullOrBlank()) ": $note" else ""}",
+                    createdAt = now,
+                    updatedAt = now,
+                    sourceEntryType = "BUY",
+                    sourceEntryId = buyId
+                )
+                cashRepository.recordTransaction(tx)
+            }
             syncScheduler.scheduleOneTimeSync()
 
             val speechText = "पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(applied)} भुगतान किया गया।"
@@ -487,29 +504,31 @@ class PartyLedgerViewModel(
             val now = Clock.System.now().toEpochMilliseconds()
             val newReceivedPaisa = currentSell.receivedPaisa + applied
             val newBalanceDue = (currentSell.totalReceivablePaisa - newReceivedPaisa).coerceAtLeast(0L)
-            sellRepo.editSellEntry(currentSell.copy(
-                receivedPaisa = newReceivedPaisa,
-                balanceDuePaisa = newBalanceDue,
-                updatedAt = now,
-                revision = currentSell.revision + 1L
-            ))
-
             val slipRef = currentSell.slipNo?.let { "#$it" } ?: sellId.takeLast(5)
-            val tx = CashTransaction(
-                id = IdGenerator.newId(),
-                shopId = shopId,
-                partyId = partyId,
-                transactionType = TransactionType.JAMA_RECEIVED, // Cash receipt into galla
-                amountPaisa = applied,
-                paymentMode = PaymentMode.CASH,
-                transactionDate = now,
-                remarks = "बिक्री पर्ची $slipRef वसूली${if (!note.isNullOrBlank()) ": $note" else ""}",
-                createdAt = now,
-                updatedAt = now,
-                sourceEntryType = "SELL",
-                sourceEntryId = sellId
-            )
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                sellRepo.editSellEntry(currentSell.copy(
+                    receivedPaisa = newReceivedPaisa,
+                    balanceDuePaisa = newBalanceDue,
+                    updatedAt = now,
+                    revision = currentSell.revision + 1L
+                ))
+
+                val tx = CashTransaction(
+                    id = IdGenerator.newId(),
+                    shopId = shopId,
+                    partyId = partyId,
+                    transactionType = TransactionType.JAMA_RECEIVED, // Cash receipt into galla
+                    amountPaisa = applied,
+                    paymentMode = PaymentMode.CASH,
+                    transactionDate = now,
+                    remarks = "बिक्री पर्ची $slipRef वसूली${if (!note.isNullOrBlank()) ": $note" else ""}",
+                    createdAt = now,
+                    updatedAt = now,
+                    sourceEntryType = "SELL",
+                    sourceEntryId = sellId
+                )
+                cashRepository.recordTransaction(tx)
+            }
             syncScheduler.scheduleOneTimeSync()
 
             val speechText = "बिक्री पर्ची $slipRef, ₹${MandiMathEngine.paisaToRupeesString(applied)} जमा प्राप्त।"
@@ -552,7 +571,9 @@ class PartyLedgerViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepository.recordTransaction(tx)
+            }
             syncScheduler.scheduleOneTimeSync()
 
             val partyName = _uiState.value.party?.name ?: partyRepository.getPartyById(partyId)?.name ?: "खाता"
@@ -596,12 +617,14 @@ class PartyLedgerViewModel(
 
     fun voidEntry(item: LedgerItem, reason: VoidReason) {
         viewModelScope.launch {
-            when (item) {
-                is LedgerItem.DealItem -> dealRepository.voidDeal(item.deal.id, reason)
-                is LedgerItem.CashItem -> cashRepository.voidTransaction(item.transaction.id, reason)
-                is LedgerItem.BuyItem -> buyRepository?.voidBuyEntry(item.buy.id, reason)
-                is LedgerItem.SellItem -> sellRepository?.voidSellEntry(item.sell.id, reason)
-                is LedgerItem.LendItem -> lendRepository?.voidLendEntry(item.lend.id, reason)
+            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, viewModelScope) {
+                when (item) {
+                    is LedgerItem.DealItem -> dealRepository.voidDeal(item.deal.id, reason)
+                    is LedgerItem.CashItem -> cashRepository.voidTransaction(item.transaction.id, reason)
+                    is LedgerItem.BuyItem -> buyRepository?.voidBuyEntry(item.buy.id, reason)
+                    is LedgerItem.SellItem -> sellRepository?.voidSellEntry(item.sell.id, reason)
+                    is LedgerItem.LendItem -> lendRepository?.voidLendEntry(item.lend.id, reason)
+                }
             }
             syncScheduler.scheduleOneTimeSync()
             val speech = "प्रविष्टि रद्द की गई: ${reason.labelHi}"

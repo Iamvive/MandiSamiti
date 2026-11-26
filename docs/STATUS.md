@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-26 14:06 IST | Claude Code | Branch `feat/telemetry-pipeline`: clickstream telemetry. pytest 169 passed, jvmTest 660 passed, staging APK built. No device check, not deployed. |
 | 2026-11-26 13:20 IST | Antigravity | Consolidated `fix/hide-voided-entries-from-ui` (`198dc31`) and `appworx/android-sentry-crash-reporting` (`7400a47`) into PR #45, merged to `main` (`eb35ced`). `./gradlew jvmTest :composeApp:assembleStagingDebug` passed (`BUILD SUCCESSFUL`). Deleted merged local branches. |
 | 2026-11-25 IST | Claude Code (cloud) | Branch `appworx/android-sentry-crash-reporting`: opt-in Sentry crash reporting in the Android app. Backend pytest 140 passed. Gradle build and device check not run (no Android SDK in cloud). |
 | 2026-11-19 23:10 IST | Antigravity (Claude Sonnet) | Integration branch `integration/open-prs-november` created from `main` (236f2c7). PRs #4, #5, #9, #10, #11 merged cleanly. FEATURES.json: 47 features, 42 passing, 5 failing. PROGRESS.md: all chronological session entries preserved. Plan: `docs/superpowers/plans/2026-11-20-mandi-open-prs-integration.md`. |
@@ -19,6 +20,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
+| `feat/telemetry-pipeline` | this PR | Claude Code + Antigravity | Open for review. `clickstream-telemetry` failing until device check. |
 | `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
 
 ### Merged into integration/open-prs-november
@@ -35,6 +37,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Item | Owner | Link | Note |
 | --- | --- | --- | --- |
+| Clickstream telemetry | Vivek | `feat/telemetry-pipeline` | Review and merge the PR, deploy staging (runs migration `0002_analytics_events`), then check on Redmi `d93c743`. |
 | Android crash reporting check | Vivek | `main` (PR #45) | Create a Sentry Android project, set `mandi.sentryDsn` in `local.properties`, build, force one crash on Redmi `d93c743`, confirm it reaches Sentry with no phone numbers. Feature `android-crash-reporting` stays failing until then. |
 | Backend observability go-live | Vivek | [owner actions](product/observability-owner-actions.md) | Telegram ops bot, Sentry backend DSN, UptimeRobot monitor on `/health/ready`, digest cron, prod deploy. Code is on `main`, off until set. |
 | Merge integration branch to main | Vivek | `integration/open-prs-november` | Merge this branch to main. Contains PRs #4, #5, #9, #10, #11. All conflicts resolved. 42 passing / 5 failing. |
@@ -136,6 +139,8 @@ Done (all merged or on integration branch):
 ### Claude
 
 Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
+
+Done: 2026-11-26, clickstream telemetry on `feat/telemetry-pipeline`. Verify: `cd backend && pytest`, then `./gradlew jvmTest :composeApp:assembleStagingDebug`. Next: review, staging deploy, Redmi check. Open follow-ups: per-shop upload limit, 500 when the shop row is missing.
 
 ### Codex
 

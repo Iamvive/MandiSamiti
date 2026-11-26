@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.ui.udhaar
 
+import com.appwork.mandisamiti.analytics.recordAction
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.domain.id.IdGenerator
 import com.appwork.mandisamiti.domain.math.RepaymentEditPlan
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
@@ -68,6 +71,7 @@ class UdhaarPersonViewModel(
     private val partyRepository: PartyRepository,
     val udhaarUseCase: UdhaarUseCase? = null,
     coroutineScope: CoroutineScope? = null,
+    private val analytics: Analytics? = null,
 ) {
     private val scope = coroutineScope ?: CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val _uiState = MutableStateFlow<UdhaarPersonUiState?>(null)
@@ -183,13 +187,15 @@ class UdhaarPersonViewModel(
         val effectiveShopId = shopId ?: return Result.failure(IllegalStateException("No shop selected"))
         val useCase = udhaarUseCase ?: return Result.failure(IllegalStateException("UdhaarUseCase not available"))
         return try {
-            useCase.repay(
-                shopId = effectiveShopId,
-                partyId = partyId,
-                direction = direction,
-                paymentPaisa = paymentPaisa,
-                paidAt = paidAt,
-            )
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, scope) {
+                useCase.repay(
+                    shopId = effectiveShopId,
+                    partyId = partyId,
+                    direction = direction,
+                    paymentPaisa = paymentPaisa,
+                    paidAt = paidAt,
+                )
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -259,7 +265,9 @@ class UdhaarPersonViewModel(
 
     fun deleteLoan(lendId: String) {
         scope.launch {
-            lendRepository.voidLendEntry(lendId, VoidReason.WRONG_ENTRY)
+            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, scope) {
+                lendRepository.voidLendEntry(lendId, VoidReason.WRONG_ENTRY)
+            }
         }
     }
 }

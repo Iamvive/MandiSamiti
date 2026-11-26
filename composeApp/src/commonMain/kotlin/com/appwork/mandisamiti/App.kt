@@ -1,5 +1,11 @@
 package com.appwork.mandisamiti
 
+import com.appwork.mandisamiti.analytics.AppOpenTracker
+import com.appwork.mandisamiti.analytics.recordAction
+import com.appwork.mandisamiti.analytics.toAnalyticsScreen
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
+import com.appwork.mandisamiti.data.analytics.AnalyticsScreen
 import com.appwork.mandisamiti.ui.buy.BuyEntryScreen
 import com.appwork.mandisamiti.ui.buy.BuyTransactionsListScreen
 import com.appwork.mandisamiti.ui.buy.BuyTransactionReceiptScreen
@@ -143,8 +149,13 @@ fun App(
     authApi: AuthApi,
     syncScheduler: SyncScheduler = remember { NoOpSyncScheduler() },
     receiptPrinter: ReceiptPrinter? = null,
+    appVersion: String = "2.0.0",
+    analytics: Analytics = remember(database, appVersion) { Analytics(database, appVersion) },
 ) {
     val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        AppOpenTracker.trackIfNeeded(analytics, this)
+    }
     val shopRepo = remember { OfflineFirstShopProfileRepository(database) }
     val partyRepo = remember { OfflineFirstPartyRepository(database) }
     val dealRepo = remember { OfflineFirstDealRepository(database) }
@@ -183,7 +194,8 @@ fun App(
     val syncEngine = remember {
         SyncEngine(
             database,
-            KtorMandiSyncApiClient(mandiHttpClient(), apiBaseUrl, sessionStore, authApi::refresh)
+            KtorMandiSyncApiClient(mandiHttpClient(), apiBaseUrl, sessionStore, authApi::refresh),
+            analytics = analytics,
         )
     }
     val logoutUseCase = remember {
@@ -206,6 +218,14 @@ fun App(
         val activeSession = session
         // Every shop-scoped screen needs a session; without one the only place to go is Register.
         val screen = if (activeSession == null) Screen.Register() else currentScreen
+        val visibleAnalyticsScreen = screen.toAnalyticsScreen(if (screen is Screen.Home) homeTab else null)
+        var lastRecordedScreen by remember { mutableStateOf<AnalyticsScreen?>(null) }
+        LaunchedEffect(visibleAnalyticsScreen) {
+            if (visibleAnalyticsScreen != lastRecordedScreen) {
+                lastRecordedScreen = visibleAnalyticsScreen
+                analytics.track(AnalyticsEventName.SCREEN_VIEW, screen = visibleAnalyticsScreen)
+            }
+        }
         val shopId = activeSession?.shopId
         val tradeSettings by tradeSettingsRepo.getTradeSettingsStream().collectAsState(initial = null)
         // Settings are seeded synchronously but the first composition still sees null: wait instead of flashing Hindi.
@@ -230,7 +250,10 @@ fun App(
                         session = newSession
                         syncScheduler.schedulePeriodicSync()
                         syncScheduler.scheduleOneTimeSync()
-                        coroutineScope.launch { syncEngine.setNeedsLogin(false) }
+                        coroutineScope.launch {
+                            syncEngine.setNeedsLogin(false)
+                            analytics.track(AnalyticsEventName.LOGIN_SUCCESS)
+                        }
                         currentScreen = Screen.FirstSync
                     },
                     onBack = if (screen.isReLogin || activeSession != null) {
@@ -280,6 +303,7 @@ fun App(
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
                         pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() },
                         initialTab = homeTab,
+                        analytics = analytics,
                     )
                 }
                 val homeState by homeViewModel.uiState.collectAsState()
@@ -299,6 +323,7 @@ fun App(
                         expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         drawerCountRepository = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database),
+                        analytics = analytics,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
                         onDayClosed = {
                             syncScheduler.scheduleOneTimeSync()
@@ -438,7 +463,8 @@ fun App(
                         lendRepository = lendRepo,
                         udhaarUseCase = udhaarUseCase,
                         syncScheduler = syncScheduler,
-                        viewModelScope = coroutineScope
+                        viewModelScope = coroutineScope,
+                        analytics = analytics,
                     )
                 }
                 PartyLedgerScreen(
@@ -476,6 +502,7 @@ fun App(
                             lendRepository = lendRepo,
                             partyRepository = partyRepo,
                             udhaarUseCase = udhaarUseCase,
+                            analytics = analytics,
                         )
                     }
                 )
@@ -497,6 +524,18 @@ fun App(
                                 val job = "सौदा_${screen.deal.id.takeLast(6)}"
                                 val html = ReceiptHtmlRenderer.renderDealReceiptHtml(screen.deal, profile, screen.farmer, screen.buyer)
                                 printer.printHtml(job, html)
+                                coroutineScope.launch {
+                                    try {
+                                        analytics.track(AnalyticsEventName.SLIP_PRINTED)
+                                    } catch (_: Throwable) {}
+                                }
+                            }
+                        },
+                        onShareSuccess = {
+                            coroutineScope.launch {
+                                try {
+                                    analytics.track(AnalyticsEventName.SLIP_SHARED)
+                                } catch (_: Throwable) {}
                             }
                         },
                         onNavigateBack = { currentScreen = Screen.Home }
@@ -519,6 +558,7 @@ fun App(
                         expenseRepository = expenseRepo,
                         viewModelScope = coroutineScope,
                         drawerCountRepository = com.appwork.mandisamiti.data.repository.OfflineFirstDrawerCountRepository(database),
+                        analytics = analytics,
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
                         onDayClosed = {
                             syncScheduler.scheduleOneTimeSync()
@@ -600,34 +640,36 @@ fun App(
                     },
                     onSaved = { entry, party ->
                         coroutineScope.launch {
-                            if (screen.existingId == null) {
-                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                                val advance = com.appwork.mandisamiti.domain.model.CashTransaction(
-                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                    shopId = entry.shopId,
-                                    partyId = entry.farmerId,
-                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                    amountPaisa = entry.advancePaidPaisa,
-                                    transactionDate = now,
-                                    createdAt = now,
-                                    updatedAt = now,
-                                )
-                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) {
-                                    buyRepo.saveBuyCheckout(
-                                        entry = entry,
-                                        party = party,
-                                        payments = if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
-                                        loanCutPaisa = if (entry.isKhaate) 0L else buyForm.loanCutPaisa(),
+                            recordAction(analytics, AnalyticsEventName.BUY_SAVED, coroutineScope) {
+                                if (screen.existingId == null) {
+                                    val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                    val advance = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = entry.shopId,
+                                        partyId = entry.farmerId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                        amountPaisa = entry.advancePaidPaisa,
+                                        transactionDate = now,
+                                        createdAt = now,
+                                        updatedAt = now,
                                     )
-                                }
+                                    com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) {
+                                        buyRepo.saveBuyCheckout(
+                                            entry = entry,
+                                            party = party,
+                                            payments = if (advance.amountPaisa > 0) listOf(advance) else emptyList(),
+                                            loanCutPaisa = if (entry.isKhaate) 0L else buyForm.loanCutPaisa(),
+                                        )
+                                    }
 
-                                val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
-                                val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
-                                val amountRs = com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)
-                                val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
-                                ttsManager.speak(speech, isSound)
-                            } else {
-                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) { buyRepo.editBuyEntry(entry) }
+                                    val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
+                                    val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
+                                    val amountRs = com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)
+                                    val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
+                                    ttsManager.speak(speech, isSound)
+                                } else {
+                                    com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "FARMER", partyRepo) { buyRepo.editBuyEntry(entry) }
+                                }
                             }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = if (entry.isKhaate) {
@@ -657,51 +699,52 @@ fun App(
                         isEnglish = tradeSettings?.isEnglish ?: false,
                         onSavePayment = { paidAmtPaisa ->
                             coroutineScope.launch {
-                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                                if (paidAmtPaisa > 0L) {
-                                    val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
-                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                        shopId = entry.shopId,
-                                        partyId = entry.farmerId,
-                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                        amountPaisa = paidAmtPaisa,
-                                        transactionDate = now,
-                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                        remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
-                                        createdAt = now,
+                                recordAction(analytics.takeIf { paidAmtPaisa > 0L }, AnalyticsEventName.PAYMENT_SAVED, coroutineScope) {
+                                    val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                    if (paidAmtPaisa > 0L) {
+                                        val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                            id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                            shopId = entry.shopId,
+                                            partyId = entry.farmerId,
+                                            transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                            amountPaisa = paidAmtPaisa,
+                                            transactionDate = now,
+                                            paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                            remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
+                                            createdAt = now,
+                                            updatedAt = now,
+                                            sourceEntryType = "BUY",
+                                            sourceEntryId = entry.id,
+                                        )
+                                        cashRepo.recordTransaction(tx)
+                                    }
+                                    val updated = entry.copy(
+                                        paidPaisa = entry.paidPaisa + paidAmtPaisa,
                                         updatedAt = now,
-                                        sourceEntryType = "BUY",
-                                        sourceEntryId = entry.id,
+                                        revision = entry.revision + 1L
                                     )
-                                    cashRepo.recordTransaction(tx)
-                                }
-                                val updated = entry.copy(
-                                    paidPaisa = entry.paidPaisa + paidAmtPaisa,
-                                    updatedAt = now,
-                                    revision = entry.revision + 1L
-                                )
-                                buyRepo.editBuyEntry(updated)
+                                    buyRepo.editBuyEntry(updated)
 
-                                val finalPayable = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateFinalPayable(entry.netPayablePaisa, entry.paidPaisa)
-                                val unpaidCreditPaisa = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateRemainingLeft(finalPayable, paidAmtPaisa)
-                                if (unpaidCreditPaisa > 0L) {
-                                    val creditTx = com.appwork.mandisamiti.domain.model.CashTransaction(
-                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                        shopId = entry.shopId,
-                                        partyId = entry.farmerId,
-                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
-                                        amountPaisa = unpaidCreditPaisa,
-                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.BOOK_ENTRY,
-                                        transactionDate = now,
-                                        remarks = "${paymentParty?.name ?: "किसान"} • खरीद पर्ची #${entry.slipNo ?: ""} बाकी जमा (क्रेडिट)",
-                                        createdAt = now,
-                                        updatedAt = now,
-                                        sourceEntryType = "BUY_CREDIT",
-                                        sourceEntryId = entry.id,
-                                    )
-                                    cashRepo.recordTransaction(creditTx)
+                                    val finalPayable = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateFinalPayable(entry.netPayablePaisa, entry.paidPaisa)
+                                    val unpaidCreditPaisa = com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations.calculateRemainingLeft(finalPayable, paidAmtPaisa)
+                                    if (unpaidCreditPaisa > 0L) {
+                                        val creditTx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                            id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                            shopId = entry.shopId,
+                                            partyId = entry.farmerId,
+                                            transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                            amountPaisa = unpaidCreditPaisa,
+                                            paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.BOOK_ENTRY,
+                                            transactionDate = now,
+                                            remarks = "${paymentParty?.name ?: "किसान"} • खरीद पर्ची #${entry.slipNo ?: ""} बाकी जमा (क्रेडिट)",
+                                            createdAt = now,
+                                            updatedAt = now,
+                                            sourceEntryType = "BUY_CREDIT",
+                                            sourceEntryId = entry.id,
+                                        )
+                                        cashRepo.recordTransaction(creditTx)
+                                    }
                                 }
-
                                 syncScheduler.scheduleOneTimeSync()
                                 currentScreen = Screen.BuyReceipt(entry.id, screen.returnScreen)
                             }
@@ -746,7 +789,9 @@ fun App(
                     onBack = { currentScreen = screen.backTarget() },
                     onVoid = { id, reason ->
                         coroutineScope.launch {
-                            buyRepo.voidBuyEntry(id, reason)
+                            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, coroutineScope) {
+                                buyRepo.voidBuyEntry(id, reason)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                         }
                     }
@@ -793,47 +838,63 @@ fun App(
                         val entryToSettle = buyEntry ?: return@BuyTransactionReceiptScreen
                         val currentShop = shopId ?: return@BuyTransactionReceiptScreen
                         coroutineScope.launch {
-                            val newPaid = entryToSettle.paidPaisa + amountPaisa
-                            val updatedBuy = entryToSettle.copy(
-                                paidPaisa = newPaid,
-                                updatedAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
-                                revision = entryToSettle.revision + 1
-                            )
-                            buyRepo.editBuyEntry(updatedBuy)
+                            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, coroutineScope) {
+                                val newPaid = entryToSettle.paidPaisa + amountPaisa
+                                val updatedBuy = entryToSettle.copy(
+                                    paidPaisa = newPaid,
+                                    updatedAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+                                    revision = entryToSettle.revision + 1
+                                )
+                                buyRepo.editBuyEntry(updatedBuy)
 
-                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                            val slipRef = entryToSettle.slipNo?.let { "#$it" } ?: entryToSettle.id.takeLast(5)
-                            val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
-                                id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                shopId = currentShop,
-                                partyId = entryToSettle.farmerId,
-                                transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                amountPaisa = amountPaisa,
-                                paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                transactionDate = now,
-                                remarks = "खरीद पर्ची $slipRef भुगतान",
-                                createdAt = now,
-                                updatedAt = now,
-                                sourceEntryType = "BUY",
-                                sourceEntryId = entryToSettle.id
-                            )
-                            cashRepo.recordTransaction(tx)
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val slipRef = entryToSettle.slipNo?.let { "#$it" } ?: entryToSettle.id.takeLast(5)
+                                val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                    shopId = currentShop,
+                                    partyId = entryToSettle.farmerId,
+                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                    amountPaisa = amountPaisa,
+                                    paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                    transactionDate = now,
+                                    remarks = "खरीद पर्ची $slipRef भुगतान",
+                                    createdAt = now,
+                                    updatedAt = now,
+                                    sourceEntryType = "BUY",
+                                    sourceEntryId = entryToSettle.id
+                                )
+                                cashRepo.recordTransaction(tx)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                             buyEntry = buyRepo.getBuyEntryById(screen.id)
                         }
                     },
-                    onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onShareWhatsApp = { text ->
+                        whatsAppShareManager.shareText(text, null)
+                        coroutineScope.launch {
+                            try {
+                                analytics.track(AnalyticsEventName.SLIP_SHARED)
+                            } catch (_: Throwable) {}
+                        }
+                    },
                     onPrint = receiptPrinter?.let { printer ->
                         { html ->
                             val job = "पर्चा_${screen.id.takeLast(6)}"
                             printer.printHtml(job, html)
+                            coroutineScope.launch {
+                                try {
+                                    analytics.track(AnalyticsEventName.SLIP_PRINTED)
+                                } catch (_: Throwable) {}
+                            }
                         }
                     },
                     onEdit = { currentScreen = Screen.BuyEntry(it, returnScreen = screen.returnScreen) },
                     onDelete = {
                         val idToDelete = buyEntry?.id ?: return@BuyTransactionReceiptScreen
                         coroutineScope.launch {
-                            buyRepo.voidBuyEntry(idToDelete, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, coroutineScope) {
+                                buyRepo.voidBuyEntry(idToDelete, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = screen.backTarget()
                         }
@@ -898,39 +959,41 @@ fun App(
                     parties = parties,
                     onSaved = { entry, party ->
                         coroutineScope.launch {
-                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                            if (party != null) {
-                                partyRepo.saveParty(party)
-                            }
-                            if (screen.existingId == null) {
-                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) {
-                                    sellRepo.saveSellEntry(entry)
+                            recordAction(analytics, AnalyticsEventName.SELL_SAVED, coroutineScope) {
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                if (party != null) {
+                                    partyRepo.saveParty(party)
                                 }
-                                if (entry.receivedPaisa > 0L) {
-                                    val advanceTx = com.appwork.mandisamiti.domain.model.CashTransaction(
-                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                        shopId = entry.shopId,
-                                        partyId = entry.buyerId,
-                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
-                                        amountPaisa = entry.receivedPaisa,
-                                        transactionDate = now,
-                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                        remarks = "बिक्री अग्रिम: पर्ची #${entry.slipNo ?: ""}",
-                                        createdAt = now,
-                                        updatedAt = now,
-                                        sourceEntryType = "SELL",
-                                        sourceEntryId = entry.id,
-                                    )
-                                    cashRepo.recordTransaction(advanceTx)
-                                }
+                                if (screen.existingId == null) {
+                                    com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) {
+                                        sellRepo.saveSellEntry(entry)
+                                    }
+                                    if (entry.receivedPaisa > 0L) {
+                                        val advanceTx = com.appwork.mandisamiti.domain.model.CashTransaction(
+                                            id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                            shopId = entry.shopId,
+                                            partyId = entry.buyerId,
+                                            transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                            amountPaisa = entry.receivedPaisa,
+                                            transactionDate = now,
+                                            paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                            remarks = "बिक्री अग्रिम: पर्ची #${entry.slipNo ?: ""}",
+                                            createdAt = now,
+                                            updatedAt = now,
+                                            sourceEntryType = "SELL",
+                                            sourceEntryId = entry.id,
+                                        )
+                                        cashRepo.recordTransaction(advanceTx)
+                                    }
 
-                                val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
-                                val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
-                                val amountRs = com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)
-                                val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
-                                ttsManager.speak(speech, isSound)
-                            } else {
-                                com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) { sellRepo.editSellEntry(entry) }
+                                    val isSound = shopRepo.getShopProfileStream().first()?.isSoundEnabled ?: true
+                                    val weightQtl = com.appwork.mandisamiti.domain.math.MandiMathEngine.gramsToQuintals(entry.totalWeightGrams)
+                                    val amountRs = com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(entry.totalReceivablePaisa)
+                                    val speech = "कुल वजन $weightQtl क्विंटल, कुल राशि ₹$amountRs।"
+                                    ttsManager.speak(speech, isSound)
+                                } else {
+                                    com.appwork.mandisamiti.ui.khaate.saveKhaateAware(entry.isKhaate, entry.shopId, "BUYER", partyRepo) { sellRepo.editSellEntry(entry) }
+                                }
                             }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = if (entry.isKhaate) screen.backTarget() else Screen.SellReceipt(entry.id, screen.returnScreen)
@@ -952,7 +1015,9 @@ fun App(
                     onBack = { currentScreen = screen.backTarget() },
                     onVoid = { id, reason ->
                         coroutineScope.launch {
-                            sellRepo.voidSellEntry(id, reason)
+                            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, coroutineScope) {
+                                sellRepo.voidSellEntry(id, reason)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                         }
                     }
@@ -992,48 +1057,64 @@ fun App(
                             if (fresh.isVoid) return@launch
                             val applied = minOf(amountPaisa, fresh.balanceDuePaisa)
                             if (applied <= 0L) return@launch
-                            val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                            sellRepo.editSellEntry(
-                                fresh.copy(
-                                    receivedPaisa = fresh.receivedPaisa + applied,
-                                    balanceDuePaisa = fresh.balanceDuePaisa - applied,
-                                    updatedAt = now,
-                                    revision = fresh.revision + 1
+                            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, coroutineScope) {
+                                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                sellRepo.editSellEntry(
+                                    fresh.copy(
+                                        receivedPaisa = fresh.receivedPaisa + applied,
+                                        balanceDuePaisa = fresh.balanceDuePaisa - applied,
+                                        updatedAt = now,
+                                        revision = fresh.revision + 1
+                                    )
                                 )
-                            )
-                            val slipRef = fresh.slipNo?.let { "#$it" } ?: fresh.id.takeLast(5)
-                            cashRepo.recordTransaction(
-                                com.appwork.mandisamiti.domain.model.CashTransaction(
-                                    id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                    shopId = currentShop,
-                                    partyId = fresh.buyerId,
-                                    transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
-                                    amountPaisa = applied,
-                                    paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                    transactionDate = now,
-                                    remarks = "बिक्री पर्ची $slipRef नकद प्राप्त",
-                                    createdAt = now,
-                                    updatedAt = now,
-                                    sourceEntryType = "SELL",
-                                    sourceEntryId = fresh.id
+                                val slipRef = fresh.slipNo?.let { "#$it" } ?: fresh.id.takeLast(5)
+                                cashRepo.recordTransaction(
+                                    com.appwork.mandisamiti.domain.model.CashTransaction(
+                                        id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                        shopId = currentShop,
+                                        partyId = fresh.buyerId,
+                                        transactionType = com.appwork.mandisamiti.domain.model.TransactionType.JAMA_RECEIVED,
+                                        amountPaisa = applied,
+                                        paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                        transactionDate = now,
+                                        remarks = "बिक्री पर्ची $slipRef नकद प्राप्त",
+                                        createdAt = now,
+                                        updatedAt = now,
+                                        sourceEntryType = "SELL",
+                                        sourceEntryId = fresh.id
+                                    )
                                 )
-                            )
+                            }
                             syncScheduler.scheduleOneTimeSync()
                             sellEntry = sellRepo.getSellEntryById(screen.id)
                         }
                     },
-                    onShareWhatsApp = { text -> whatsAppShareManager.shareText(text, null) },
+                    onShareWhatsApp = { text ->
+                        whatsAppShareManager.shareText(text, null)
+                        coroutineScope.launch {
+                            try {
+                                analytics.track(AnalyticsEventName.SLIP_SHARED)
+                            } catch (_: Throwable) {}
+                        }
+                    },
                     onPrint = receiptPrinter?.let { printer ->
                         { html ->
                             val job = "बिल_${screen.id.takeLast(6)}"
                             printer.printHtml(job, html)
+                            coroutineScope.launch {
+                                try {
+                                    analytics.track(AnalyticsEventName.SLIP_PRINTED)
+                                } catch (_: Throwable) {}
+                            }
                         }
                     },
                     onEdit = { currentScreen = Screen.SellEntry(it, returnScreen = screen.returnScreen) },
                     onDelete = {
                         val idToDelete = sellEntry?.id ?: return@SellTransactionReceiptScreen
                         coroutineScope.launch {
-                            sellRepo.voidSellEntry(idToDelete, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, coroutineScope) {
+                                sellRepo.voidSellEntry(idToDelete, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = screen.backTarget()
                         }
@@ -1057,8 +1138,10 @@ fun App(
                     grainOnly = true,
                     onSaved = { entry, party ->
                         coroutineScope.launch {
-                            if (party != null) partyRepo.saveParty(party)
-                            lendRepo.saveLendEntry(entry)
+                            recordAction(analytics, AnalyticsEventName.UDHAAR_SAVED, coroutineScope) {
+                                if (party != null) partyRepo.saveParty(party)
+                                lendRepo.saveLendEntry(entry)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                             currentScreen = Screen.LendList
                         }
@@ -1069,7 +1152,7 @@ fun App(
             is Screen.LendList -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 val udhaarViewModel = remember(shopId) {
-                    UdhaarLandingViewModel(shopId, lendRepo, partyRepo, udhaarUseCase)
+                    UdhaarLandingViewModel(shopId, lendRepo, partyRepo, udhaarUseCase, analytics = analytics)
                 }
                 UdhaarLandingScreen(
                     viewModel = udhaarViewModel,
@@ -1093,6 +1176,7 @@ fun App(
                         lendRepository = lendRepo,
                         partyRepository = partyRepo,
                         udhaarUseCase = udhaarUseCase,
+                        analytics = analytics,
                     )
                 }
                 UdhaarPersonScreen(
@@ -1118,29 +1202,31 @@ fun App(
                     onOpenList = { currentScreen = Screen.ExpenseList },
                     onSaved = { entry ->
                         coroutineScope.launch {
-                            val expenseDetails = entry.remarks?.trim().orEmpty()
-                            val expenseLabel = expenseDetails.substringBefore('\n').ifBlank { entry.category.labelHi() }
-                            val note = expenseDetails.substringAfter('\n', "").trim()
-                            val baseRem = "खर्च: $expenseLabel${if (note.isBlank()) "" else " - $note"}"
-                            if (screen.existingId != null) {
-                                expenseRepo.editExpense(entry, baseRem)
-                            } else {
-                                expenseRepo.saveExpense(entry)
-                                if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
-                                    cashRepo.recordTransaction(
-                                        com.appwork.mandisamiti.domain.model.CashTransaction(
-                                            id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
-                                            shopId = shopId ?: "",
-                                            partyId = "EXPENSE_${entry.category.name}",
-                                            transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
-                                            amountPaisa = entry.amountPaisa,
-                                            paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                            transactionDate = entry.entryDate,
-                                            remarks = "$baseRem [EXPENSE:${entry.id}]",
-                                            createdAt = entry.createdAt,
-                                            updatedAt = entry.updatedAt,
+                            recordAction(analytics, AnalyticsEventName.EXPENSE_SAVED, coroutineScope) {
+                                val expenseDetails = entry.remarks?.trim().orEmpty()
+                                val expenseLabel = expenseDetails.substringBefore('\n').ifBlank { entry.category.labelHi() }
+                                val note = expenseDetails.substringAfter('\n', "").trim()
+                                val baseRem = "खर्च: $expenseLabel${if (note.isBlank()) "" else " - $note"}"
+                                if (screen.existingId != null) {
+                                    expenseRepo.editExpense(entry, baseRem)
+                                } else {
+                                    expenseRepo.saveExpense(entry)
+                                    if (entry.paymentMode == com.appwork.mandisamiti.domain.model.ExpensePaymentMode.CASH) {
+                                        cashRepo.recordTransaction(
+                                            com.appwork.mandisamiti.domain.model.CashTransaction(
+                                                id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
+                                                shopId = shopId ?: "",
+                                                partyId = "EXPENSE_${entry.category.name}",
+                                                transactionType = com.appwork.mandisamiti.domain.model.TransactionType.UDHAR_GIVEN,
+                                                amountPaisa = entry.amountPaisa,
+                                                paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
+                                                transactionDate = entry.entryDate,
+                                                remarks = "$baseRem [EXPENSE:${entry.id}]",
+                                                createdAt = entry.createdAt,
+                                                updatedAt = entry.updatedAt,
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             }
                             syncScheduler.scheduleOneTimeSync()
@@ -1159,7 +1245,9 @@ fun App(
                     onOpen = { id -> currentScreen = Screen.ExpenseEntry(id) },
                     onDeleteExpense = { id ->
                         coroutineScope.launch {
-                            expenseRepo.voidExpense(id, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, coroutineScope) {
+                                expenseRepo.voidExpense(id, com.appwork.mandisamiti.domain.model.VoidReason.WRONG_ENTRY)
+                            }
                             syncScheduler.scheduleOneTimeSync()
                         }
                     },

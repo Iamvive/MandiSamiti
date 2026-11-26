@@ -59,6 +59,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.appwork.mandisamiti.analytics.recordAction
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.model.KhataPartyPhoneException
 import com.appwork.mandisamiti.domain.model.LendDirection
@@ -112,6 +115,7 @@ class UdhaarLandingViewModel(
     private val partyRepository: PartyRepository,
     val udhaarUseCase: UdhaarUseCase? = null,
     coroutineScope: CoroutineScope? = null,
+    private val analytics: Analytics? = null,
 ) {
     private val scope = coroutineScope ?: CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val _uiState = MutableStateFlow<UdhaarLandingUiState?>(null)
@@ -205,7 +209,9 @@ class UdhaarLandingViewModel(
             }
 
             val loanForm = state.toForm(effectiveShopId, resolvedPartyId)
-            useCase.createLoan(loanForm)
+            recordAction(analytics, AnalyticsEventName.UDHAAR_SAVED, scope) {
+                useCase.createLoan(loanForm)
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

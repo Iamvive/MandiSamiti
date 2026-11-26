@@ -48,7 +48,8 @@ class MainActivity : ComponentActivity() {
                 sessionStore = sessionStore,
                 authApi = authApi,
                 syncScheduler = syncScheduler,
-                receiptPrinter = receiptPrinter
+                receiptPrinter = receiptPrinter,
+                appVersion = BuildConfig.VERSION_NAME
             )
         }
     }
