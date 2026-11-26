@@ -314,6 +314,12 @@
       "description": "Android crash reporting via Sentry (off unless DSN set via local.properties mandi.sentryDsn or env SENTRY_DSN); phone numbers masked, no PII, no UI breadcrumbs",
       "status": "failing",
       "evidence": "2026-11-25 (Claude Code, Sonnet 5.5). Code written on branch appworx/android-sentry-crash-reporting. Regex checked in Python only. Not built: no Android SDK or Google Maven in cloud container. Unverified: gradle build, PiiScrubberTest, forced crash on d93c743 appearing in Sentry with environment=debug and no phone numbers, app starting normally with empty DSN."
+    },
+    {
+      "id": "clickstream-telemetry",
+      "description": "Clickstream to our own backend: app records screen views, actions and sync results offline, uploads them to POST /api/v1/events, ops digest shows them; no names, amounts or text",
+      "status": "failing",
+      "evidence": "2026-11-26 (Claude Code with Antigravity workers). Branch feat/telemetry-pipeline: backend pytest 169 passed; jvmTest core-database 13, core-data 207, composeApp 440 passed; assembleStagingDebug built. Unverified: Redmi d93c743 check, staging deploy, migration 0002 on a real Postgres."
     }
   ]
 }
