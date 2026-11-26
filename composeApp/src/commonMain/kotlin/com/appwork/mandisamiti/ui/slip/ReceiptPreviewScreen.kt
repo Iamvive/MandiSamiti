@@ -61,6 +61,7 @@ fun ReceiptPreviewScreen(
     whatsAppShareManager: WhatsAppShareManager,
     ttsManager: SoundboxTtsManager,
     onPrint: (() -> Unit)? = null,
+    onShareSuccess: (() -> Unit)? = null,
     onNavigateBack: () -> Unit
 ) {
     val formattedSlipText = DigitalSlipRenderer.formatWhatsAppReceiptText(
@@ -134,6 +135,7 @@ fun ReceiptPreviewScreen(
                                     text = formattedSlipText,
                                     phoneNumber = recipientPhone
                                 )
+                                onShareSuccess?.invoke()
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -164,6 +166,7 @@ fun ReceiptPreviewScreen(
                                 text = formattedSlipText,
                                 phoneNumber = recipientPhone
                             )
+                            onShareSuccess?.invoke()
                         },
                         modifier = Modifier
                             .fillMaxWidth()

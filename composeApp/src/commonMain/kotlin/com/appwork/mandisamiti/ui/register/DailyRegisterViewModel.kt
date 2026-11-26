@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.ui.register
 
+import com.appwork.mandisamiti.analytics.recordAction
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.domain.cash.CashDrawer
 import com.appwork.mandisamiti.domain.bahi.BahiDayEntry
 import com.appwork.mandisamiti.domain.bahi.BahiDayPage
@@ -165,6 +168,7 @@ class DailyRegisterViewModel(
     private val onLocalWrite: () -> Unit = {},
     private val drawerCountRepository: DrawerCountRepository? = null,
     private val onDayClosed: () -> Unit = {},
+    private val analytics: Analytics? = null,
 ) {
 
     private val todayDate: LocalDate get() = clock.now().toLocalDateTime(timeZone).date
@@ -490,7 +494,9 @@ class DailyRegisterViewModel(
                 createdAt = now,
                 updatedAt = now
             )
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepository.recordTransaction(tx)
+            }
             onLocalWrite()
 
             val party = partyRepository.getPartyById(partyId)
@@ -527,7 +533,9 @@ class DailyRegisterViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             try {
-                cashRepository.voidTransaction(transactionId, VoidReason.WRONG_ENTRY)
+                recordAction(analytics, AnalyticsEventName.ENTRY_DELETED, viewModelScope) {
+                    cashRepository.voidTransaction(transactionId, VoidReason.WRONG_ENTRY)
+                }
                 onLocalWrite()
             } finally {
                 _uiState.value = _uiState.value.copy(isSaving = false)
@@ -569,7 +577,9 @@ class DailyRegisterViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepository.recordTransaction(tx)
+            }
             onLocalWrite()
             _uiState.value = _uiState.value.copy(isSaving = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)
@@ -597,7 +607,9 @@ class DailyRegisterViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepository.recordTransaction(tx)
+            }
             onLocalWrite()
             _uiState.value = _uiState.value.copy(isSaving = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)
@@ -628,7 +640,9 @@ class DailyRegisterViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            cashRepository.recordTransaction(tx)
+            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
+                cashRepository.recordTransaction(tx)
+            }
             onLocalWrite()
             _uiState.value = _uiState.value.copy(isSaving = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)
