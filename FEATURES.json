@@ -318,8 +318,8 @@
     {
       "id": "clickstream-telemetry",
       "description": "Clickstream to our own backend: app records screen views, actions and sync results offline, uploads them to POST /api/v1/events, ops digest shows them; no names, amounts or text",
-      "status": "failing",
-      "evidence": "2026-11-26 (Claude Code with Antigravity workers). Branch feat/telemetry-pipeline: backend pytest 169 passed; jvmTest core-database 13, core-data 207, composeApp 440 passed; assembleStagingDebug built. Unverified: Redmi d93c743 check, staging deploy, migration 0002 on a real Postgres."
+      "status": "passing",
+      "evidence": "2026-11-26 (Claude Code with Antigravity workers). Branch feat/telemetry-pipeline: backend pytest 169 passed; jvmTest core-database 13, core-data 207, composeApp 440 passed; assembleStagingDebug built. 2026-11-26 Redmi d93c743 against staging (main d4eec34, throwaway shop 'QA Telemetry Dummy'): migration 0002 applied on staging Postgres; all 13 event names stored (51 rows, 51 distinct ids, 1 shop at the main count); entry saved with mobile data off uploaded after reconnect; manual backup offline recorded sync_failed; a search of all rows for the typed names and phone numbers found 0 matches; digest text built in the staging container (not sent to Telegram) showed the shop. slip_shared and slip_printed are recorded when the share or print screen opens, even if cancelled. Not checked: home screen delete and settle, digest cron and Telegram delivery, production."
     }
   ]
 }

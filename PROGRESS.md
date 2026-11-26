@@ -1206,3 +1206,11 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: backend pytest 169 passed; `./gradlew :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest :composeApp:assembleStagingDebug` exit 0 (13 + 207 + 440 tests); Postgres DDL rendered offline.
 - NOT VERIFIED: Redmi `d93c743`, staging deploy, migration on a real Postgres, nginx limits. `clickstream-telemetry` stays failing.
 - Next: Vivek reviews the PR, deploys staging, then the device check.
+
+## 2026-11-26 15:05 IST - Claude Code (Sonnet 5.5) - clickstream telemetry staging deploy and Redmi check
+- Changes: staging deploy of `main` `d4eec34` (database backup first); installed the staging build on Redmi `d93c743` beside the existing app. No app code changed.
+- Deploy: `deploy_staging.sh` passed 169 tests, then failed at migration because rsync copies the local macOS `venv/` and `migrate.sh` picks its alembic. Finished by hand with the image's alembic (`0001_baseline` to `0002_analytics_events`), restarted, smoke tests passed.
+- Evidence: all 13 event names in staging Postgres from a throwaway shop; offline entry uploaded after reconnect; `sync_failed` recorded from manual backup with data off; no typed names or phone numbers in any row; digest text built, not sent. `clickstream-telemetry` is passing.
+- Observed: `slip_shared` and `slip_printed` count opening the share or print screen, even when cancelled.
+- NOT VERIFIED: home screen delete and settle, digest cron and Telegram delivery, Sentry crash check, production.
+- Next: fix the deploy excludes and add `backend/.dockerignore`.
