@@ -1206,3 +1206,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: backend pytest 169 passed; `./gradlew :core-database:jvmTest :core-data:jvmTest :composeApp:jvmTest :composeApp:assembleStagingDebug` exit 0 (13 + 207 + 440 tests); Postgres DDL rendered offline.
 - NOT VERIFIED: Redmi `d93c743`, staging deploy, migration on a real Postgres, nginx limits. `clickstream-telemetry` stays failing.
 - Next: Vivek reviews the PR, deploys staging, then the device check.
+
+## 2026-11-26 15:24 IST - Claude Code (Sonnet 5.5) - deploy packaging fix on fix/deploy-local-files
+- Changes: both deploy scripts exclude `venv` from the sync; new `backend/.dockerignore` keeps virtualenvs and local-only files out of the image; regression test `backend/tests/test_deploy_packaging.py`.
+- Evidence: new test 3 failed before the change; backend pytest 172 passed after it; local rsync dry run listed no virtualenv files.
+- NOT VERIFIED: image build and staging deploy. `deploy-excludes-local-venv` stays failing.
+- Next: review the PR, then run `deploy_staging.sh` end to end and mark the feature.

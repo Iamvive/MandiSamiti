@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-26 15:24 IST | Claude Code | Branch `fix/deploy-local-files`: backend deploy packaging fix. pytest 172 passed. Image build and staging deploy not run. |
 | 2026-11-26 14:06 IST | Claude Code | Branch `feat/telemetry-pipeline`: clickstream telemetry. pytest 169 passed, jvmTest 660 passed, staging APK built. No device check, not deployed. |
 | 2026-11-26 13:20 IST | Antigravity | Consolidated `fix/hide-voided-entries-from-ui` (`198dc31`) and `appworx/android-sentry-crash-reporting` (`7400a47`) into PR #45, merged to `main` (`eb35ced`). `./gradlew jvmTest :composeApp:assembleStagingDebug` passed (`BUILD SUCCESSFUL`). Deleted merged local branches. |
 | 2026-11-25 IST | Claude Code (cloud) | Branch `appworx/android-sentry-crash-reporting`: opt-in Sentry crash reporting in the Android app. Backend pytest 140 passed. Gradle build and device check not run (no Android SDK in cloud). |
@@ -20,6 +21,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
+| `fix/deploy-local-files` | this PR | Claude Code | Open for review. `deploy-excludes-local-venv` failing until a staging deploy runs clean. |
 | `feat/telemetry-pipeline` | this PR | Claude Code + Antigravity | Open for review. `clickstream-telemetry` failing until device check. |
 | `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
 
@@ -141,6 +143,8 @@ Done (all merged or on integration branch):
 Done: 2026-11-18, Task 12. Udhaar direction, kind, receiver, and cash `lend_id` sync both ways (`0008_udhaar_fields`). Tests passed. Not deployed. `udhaar-sync-and-backend-schema` stays failing until Vivek deploys and a device sync is checked.
 
 Done: 2026-11-26, clickstream telemetry on `feat/telemetry-pipeline`. Verify: `cd backend && pytest`, then `./gradlew jvmTest :composeApp:assembleStagingDebug`. Next: review, staging deploy, Redmi check. Open follow-ups: per-shop upload limit, 500 when the shop row is missing.
+
+Done: 2026-11-26, deploy packaging fix on `fix/deploy-local-files`. Verify: `cd backend && pytest`, then `deploy_staging.sh` end to end.
 
 ### Codex
 

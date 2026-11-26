@@ -320,6 +320,12 @@
       "description": "Clickstream to our own backend: app records screen views, actions and sync results offline, uploads them to POST /api/v1/events, ops digest shows them; no names, amounts or text",
       "status": "failing",
       "evidence": "2026-11-26 (Claude Code with Antigravity workers). Branch feat/telemetry-pipeline: backend pytest 169 passed; jvmTest core-database 13, core-data 207, composeApp 440 passed; assembleStagingDebug built. Unverified: Redmi d93c743 check, staging deploy, migration 0002 on a real Postgres."
+    },
+    {
+      "id": "deploy-excludes-local-venv",
+      "description": "Backend deploy sync and image build leave local virtualenvs and local-only files out, so migrations on the server use the image's own Alembic",
+      "status": "failing",
+      "evidence": "2026-11-26 (Claude Code). Branch fix/deploy-local-files: new tests/test_deploy_packaging.py failed 3 of 3 before the change; backend pytest 172 passed after it; local rsync dry run with the staging script's excludes listed no virtualenv files. Unverified: Docker image build with the new ignore file and a deploy_staging.sh run."
     }
   ]
 }
