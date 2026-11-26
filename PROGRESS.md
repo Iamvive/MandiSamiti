@@ -1233,3 +1233,8 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Verified forced test crash on physical Redmi `d93c743` landed as `MANDISAMITI-ANDROID-1` (`https://appworkx.sentry.io/issues/163909355/`) with `environment=staging-debug`, `release=com.appwork.mandisamiti.staging@2.0.0`, and phone number scrubbed to `[phone]`.
 - Removed temporary crash trigger and ran `./gradlew :composeApp:jvmTest :composeApp:installStagingDebug` (`BUILD SUCCESSFUL`).
 - Next: review/merge `fix/sentry-flavor-env`, optionally wire Sentry ProGuard mapping upload for `prodRelease` builds, and set `SENTRY_DSN` + `SENTRY_ENVIRONMENT=prod` on the backend when deploying prod.
+
+## 2026-11-26 18:17 - manager task 2
+- Check passed: `cd backend && {main}/backend/.venv/bin/python -m pytest -q`
+- Review: pass (claude-sonnet-5-5)
+- Branch: `mgr/2-backend-only-harden-post-api-v`
