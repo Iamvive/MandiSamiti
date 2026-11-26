@@ -324,8 +324,8 @@
     {
       "id": "deploy-excludes-local-venv",
       "description": "Backend deploy sync and image build leave local virtualenvs and local-only files out, so migrations on the server use the image's own Alembic",
-      "status": "failing",
-      "evidence": "2026-11-26 (Claude Code). Branch fix/deploy-local-files: new tests/test_deploy_packaging.py failed 3 of 3 before the change; backend pytest 172 passed after it; local rsync dry run with the staging script's excludes listed no virtualenv files. Unverified: Docker image build with the new ignore file and a deploy_staging.sh run."
+      "status": "passing",
+      "evidence": "2026-11-26 (Claude Code). Branch fix/deploy-local-files: new tests/test_deploy_packaging.py failed 3 of 3 before the change; backend pytest 172 passed after it; local rsync dry run with the staging script's excludes listed no virtualenv files. Staging (c26af63): database backed up first; deploy_staging.sh exited 0 with 172 tests, image build, migration and smoke tests; new image has no virtualenv folder and no database files; alembic resolves to /usr/local/bin/alembic; schema 0002_analytics_events and 51 stored events unchanged; health and ready 200, events without login 401. Production not deployed."
     }
   ]
 }

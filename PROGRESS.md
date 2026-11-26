@@ -1212,3 +1212,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: new test 3 failed before the change; backend pytest 172 passed after it; local rsync dry run listed no virtualenv files.
 - NOT VERIFIED: image build and staging deploy. `deploy-excludes-local-venv` stays failing.
 - Next: review the PR, then run `deploy_staging.sh` end to end and mark the feature.
+
+## 2026-11-26 15:49 IST - Claude Code (Sonnet 5.5) - staging deploy of fix/deploy-local-files
+- Changes: none to code. Staging now runs `c26af63`.
+- Evidence: database backed up first (15 tables, gzip check, restore not tested); `deploy_staging.sh` exit 0 with 172 tests, image build, migration and smoke tests; image has no virtualenv folder or database files; schema `0002_analytics_events` and 51 events unchanged; health and ready 200, events without login 401.
+- NOT VERIFIED: production deploy. No device check, since app code did not change.
+- Next: review and merge. `deploy-excludes-local-venv` is passing.
