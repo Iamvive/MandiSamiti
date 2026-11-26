@@ -320,6 +320,12 @@
       "description": "Clickstream to our own backend: app records screen views, actions and sync results offline, uploads them to POST /api/v1/events, ops digest shows them; no names, amounts or text",
       "status": "passing",
       "evidence": "2026-11-26 (Claude Code with Antigravity workers). Branch feat/telemetry-pipeline: backend pytest 169 passed; jvmTest core-database 13, core-data 207, composeApp 440 passed; assembleStagingDebug built. 2026-11-26 Redmi d93c743 against staging (main d4eec34, throwaway shop 'QA Telemetry Dummy'): migration 0002 applied on staging Postgres; all 13 event names stored (51 rows, 51 distinct ids, 1 shop at the main count); entry saved with mobile data off uploaded after reconnect; manual backup offline recorded sync_failed; a search of all rows for the typed names and phone numbers found 0 matches; digest text built in the staging container (not sent to Telegram) showed the shop. slip_shared and slip_printed are recorded when the share or print screen opens, even if cancelled. Not checked: home screen delete and settle, digest cron and Telegram delivery, production."
+    },
+    {
+      "id": "deploy-excludes-local-venv",
+      "description": "Backend deploy sync and image build leave local virtualenvs and local-only files out, so migrations on the server use the image's own Alembic",
+      "status": "passing",
+      "evidence": "2026-11-26 (Claude Code). Branch fix/deploy-local-files: new tests/test_deploy_packaging.py failed 3 of 3 before the change; backend pytest 172 passed after it; local rsync dry run with the staging script's excludes listed no virtualenv files. Staging (c26af63): database backed up first; deploy_staging.sh exited 0 with 172 tests, image build, migration and smoke tests; new image has no virtualenv folder and no database files; alembic resolves to /usr/local/bin/alembic; schema 0002_analytics_events and 51 stored events unchanged; health and ready 200, events without login 401. Production not deployed."
     }
   ]
 }

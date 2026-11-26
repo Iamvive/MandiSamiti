@@ -23,6 +23,7 @@ rsync -avz --delete \
   --exclude '.pytest_cache' \
   --exclude '*.db' \
   --exclude '.venv' \
+  --exclude 'venv' \
   --exclude '.env*' \
   "$BACKEND_DIR/" appworx-core-vps:/opt/mandisamiti-staging/
 
