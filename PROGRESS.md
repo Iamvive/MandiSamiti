@@ -1335,3 +1335,19 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - **Cheque Flow Verified**: Recorded ₹7,500 Cheque (`CHQ8899`, `HDFC`, `KisanRam`, `ChanaFasal`). Committed atomically to `cashTransactionEntity`. Renders as `चेक #CHQ8899 · HDFC · (KisanRam) · ChanaFasal` with zero raw tags.
   - **RTGS Flow Verified**: Recorded ₹12,000 RTGS (`5010045678912`, `RamKishan`, `SBI`, `SBIN0004567`, `UTR334455`, `SarsonAdvance`). Committed atomically to `cashTransactionEntity`. Renders as `संदर्भ/UTR: UTR334455 · SBI · खाता: 5010045678912 (RamKishan) · IFSC: SBIN0004567 · SarsonAdvance`.
   - **Drawer Independence**: Galla Rokad cash-in-hand balance remained untouched at `₹30,128` (zero drawer drift).
+
+
+## 2026-11-26 23:51 IST, Antigravity / Gemini 3.8 Flash (Galla Rokad Non-Cash Summary & Direct Flow Test)
+- **Non-Cash Summary Strip in Galla Rokad (`DailyCashRegisterScreen.kt`)**:
+  - Added dedicated compact summary chip strip below `DrawerSummaryCard` displaying aggregated non-cash movements:
+    `बैंक / डिजिटल लेन-देन: | चेक: ₹... | RTGS: ₹... | ऑनलाइन: ₹...`.
+  - Maintains strict physical cash separation (Takkar balance remains accurate with physical drawer cash).
+- **Physical Device Live Verification on Redmi Note 7 (`d93c743`)**:
+  - Recorded direct Galla entry with RTGS ₹16,000 (A/c: `60201122334`, Holder: `KisanSuraj`, Bank: `BankOfBaroda`, UTR: `UTR998877`, Note: `DirectGallaAdvance`).
+  - Verified SQLite persistence: ID `983ee302-da3e-4d31-8f8c-65bc97826885`, `payment_mode=RTGS`, `amount_paisa=1600000`, metadata formatted correctly.
+  - Verified live UI: Non-cash summary strip automatically updated to show `RTGS: ₹40,000` (adding previous ₹24k + new ₹16k) and `चेक: ₹44,500`.
+  - Drawer physical cash-in-hand remained strictly unchanged at `₹30,128`.
+  - Verified Edit Entry dialog (`showEdit`) on Galla screen: opens pre-populated with mode-specific banking fields when toggled.
+- **Evidence**:
+  - `./gradlew jvmTest` passing cleanly (BUILD SUCCESSFUL in 12s).
+  - Built and deployed `composeApp-staging-debug.apk` directly to Redmi Note 7.

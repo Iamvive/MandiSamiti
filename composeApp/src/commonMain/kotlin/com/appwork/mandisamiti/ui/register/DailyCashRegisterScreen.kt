@@ -346,6 +346,84 @@ fun DailyCashRegisterScreen(
                 },
             )
 
+            // Non-cash digital / bank transactions summary strip (चेक, RTGS, ऑनलाइन)
+            val hasNonCash = uiState.todayChequePaisa > 0L || uiState.todayRtgsPaisa > 0L || uiState.todayOnlinePaisa > 0L
+            if (hasNonCash) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Bank / Digital (Non-Cash):" else "बैंक / डिजिटल लेन-देन:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MandiTextSecondary
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (uiState.todayChequePaisa > 0L) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MandiNeutralLight,
+                                    border = BorderStroke(1.dp, MandiBorder)
+                                ) {
+                                    Text(
+                                        text = "${if (isEnglish) "Cheque" else "चेक"}: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayChequePaisa)}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MandiTextPrimary,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            if (uiState.todayRtgsPaisa > 0L) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MandiNeutralLight,
+                                    border = BorderStroke(1.dp, MandiBorder)
+                                ) {
+                                    Text(
+                                        text = "RTGS: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayRtgsPaisa)}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MandiTextPrimary,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            if (uiState.todayOnlinePaisa > 0L) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MandiNeutralLight,
+                                    border = BorderStroke(1.dp, MandiBorder)
+                                ) {
+                                    Text(
+                                        text = "${if (isEnglish) "Online" else "ऑनलाइन"}: ₹${MandiMathEngine.paisaToRupeesString(uiState.todayOnlinePaisa)}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MandiTextPrimary,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (uiState.isReadOnly) {
                 Text(if (isEnglish) "View only" else "सिर्फ देखने के लिए", color = MandiTextSecondary,
                     fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp))
