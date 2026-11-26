@@ -1250,3 +1250,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Vivek approved moving the branch to `main`.
 - Evidence: `cd backend && pytest` 178 passed at `0c3b989`.
 - Not verified: staging, device, production redis-py version. Nothing deployed.
+
+
+## 2026-11-26 (Claude Code): chore: record PR #51 merge and refresh code graph
+- Changes: Synchronized project state.
+- Evidence: backend pytest 178 passed on main b69db66; PR #51 merged. Not deployed, no staging or device check.
+- Next: Delete merged branches and worktrees (pending); staging check of the events upload limit.
