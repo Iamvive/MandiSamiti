@@ -5,6 +5,7 @@ import com.appwork.mandisamiti.domain.model.receiptDateShort
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BuyTransactionReceiptTest {
@@ -66,6 +67,8 @@ class BuyTransactionReceiptTest {
 
         // Also verify the WhatsApp share slip text
         val slipText = buildFarmerSlipText(entry, "TEST Ramesh")
+        assertFalse(slipText.contains("फसल"), "Share text must NOT contain crop line")
+        assertTrue(slipText.contains("कुल वजन: 10.00 क्विंटल"), "Share text must contain total weight with 2 decimals")
         assertTrue(slipText.contains("उधार कटौती: -₹1,000"), "Share text must contain 'उधार कटौती: -₹1,000'")
         assertTrue(slipText.contains("अंतिम देय राशि: ₹19,630"), "Share text must contain 'अंतिम देय राशि: ₹19,630'")
         assertTrue(slipText.contains("नकद भुगतान") && slipText.contains("-₹19,630"), "Share text must contain cash payment (-₹19,630)")

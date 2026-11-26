@@ -310,6 +310,12 @@
       "evidence": "2026-11-24 (Claude Code, Sonnet 5.5). Implemented via 4 screen agents + lab slip. :composeApp:compileDebugKotlinAndroid passes. No tests or device run (owner asked impl only). Unverified: device check light+dark at 390px, lab slip formula units (kg) and edit-restore, buy slip print/share, tests for lab slip math."
     },
     {
+      "id": "galla-dialog-scroll-and-bill-jinse-cleanup",
+      "description": "Galla Rokad entry and edit dialogs are vertically scrollable so notes and buttons are accessible on compact screens; Buy and Sell bill details (PDF HTML and WhatsApp text) omit jinse/crop template line/column and format quintals to 2 decimals",
+      "status": "passing",
+      "evidence": "2026-11-26 (Antigravity, Gemini 3.8 Flash). Added verticalScroll(rememberScrollState()) to DailyCashRegisterScreen dialogs (direct cash, opening cash, cash to home, edit). Updated BuyTransactionReceiptScreen, SellTransactionReceiptScreen, and ReceiptHtmlRenderer to omit crop/jinse lines and columns from in-app bill details, WhatsApp sharing text, and A5 PDF HTML while formatting quintals to 2 decimal places. Unit tests pass: ReceiptHtmlRendererTest, SellTransactionReceiptTest, BuyTransactionReceiptTest. Built and installed staging debug build on Redmi Note 7 (d93c743)."
+    },
+    {
       "id": "android-crash-reporting",
       "description": "Android crash reporting via Sentry (off unless DSN set via local.properties mandi.sentryDsn or env SENTRY_DSN); phone numbers masked, no PII, no UI breadcrumbs",
       "status": "passing",

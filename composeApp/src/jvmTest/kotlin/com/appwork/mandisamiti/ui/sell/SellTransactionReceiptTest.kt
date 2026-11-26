@@ -4,6 +4,7 @@ import com.appwork.mandisamiti.domain.model.BillMode
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SellTransactionReceiptTest {
@@ -36,6 +37,9 @@ class SellTransactionReceiptTest {
         )
 
         val billText = buildSellBillText(entry, "Suresh Trader")
+        assertFalse(billText.contains("जिंस:"), "Must NOT contain jinse line")
+        assertFalse(billText.contains("गेहूं"), "Must NOT contain crop name")
+        assertTrue(billText.contains("कुल वजन: 5.21 क्विंटल"), "Must contain total weight in 2 decimals")
         assertTrue(billText.contains("10 × 50 + 21 = 5.21 क्विंटल × ₹2,000"), "Must contain slip equation with extra weight")
         assertTrue(billText.contains("मंडी शुल्क एवं उपकर: +₹156.30"), "Must contain mandi tax")
         assertTrue(billText.contains("तुलाई: +₹5.21"), "Must contain tulak")
