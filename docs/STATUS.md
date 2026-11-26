@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-26 13:20 IST | Antigravity | Consolidated `fix/hide-voided-entries-from-ui` (`198dc31`) and `appworx/android-sentry-crash-reporting` (`7400a47`) into PR #45, merged to `main` (`eb35ced`). `./gradlew jvmTest :composeApp:assembleStagingDebug` passed (`BUILD SUCCESSFUL`). Deleted merged local branches. |
 | 2026-11-25 IST | Claude Code (cloud) | Branch `appworx/android-sentry-crash-reporting`: opt-in Sentry crash reporting in the Android app. Backend pytest 140 passed. Gradle build and device check not run (no Android SDK in cloud). |
 | 2026-11-19 23:10 IST | Antigravity (Claude Sonnet) | Integration branch `integration/open-prs-november` created from `main` (236f2c7). PRs #4, #5, #9, #10, #11 merged cleanly. FEATURES.json: 47 features, 42 passing, 5 failing. PROGRESS.md: all chronological session entries preserved. Plan: `docs/superpowers/plans/2026-11-20-mandi-open-prs-integration.md`. |
 | 2026-11-19 21:05 IST | Gemini 3.8 Flash, Antigravity | Staging verification: main 236f2c7 deployed with deploy_staging.sh (pytest 140 passed, migrations and smoke tests passed), alembic current stamped 0001_baseline (head), health/ready confirmed ok. PR #3 (6ed6866) and PR #6 (29170e2) merged. Features alembic-single-baseline and staging-deploy-main-baseline marked passing. |
@@ -18,7 +19,6 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
-| `appworx/android-sentry-crash-reporting` | none yet | Claude Code (cloud) | Sentry Android, off unless DSN set. Unbuilt: needs Vivek's Redmi check. |
 | `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
 
 ### Merged into integration/open-prs-november
@@ -35,7 +35,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Item | Owner | Link | Note |
 | --- | --- | --- | --- |
-| Android crash reporting check | Vivek | `appworx/android-sentry-crash-reporting` | Create a Sentry Android project, set `mandi.sentryDsn` in `local.properties`, build, force one crash on Redmi `d93c743`, confirm it reaches Sentry with no phone numbers. Feature `android-crash-reporting` stays failing until then. |
+| Android crash reporting check | Vivek | `main` (PR #45) | Create a Sentry Android project, set `mandi.sentryDsn` in `local.properties`, build, force one crash on Redmi `d93c743`, confirm it reaches Sentry with no phone numbers. Feature `android-crash-reporting` stays failing until then. |
 | Backend observability go-live | Vivek | [owner actions](product/observability-owner-actions.md) | Telegram ops bot, Sentry backend DSN, UptimeRobot monitor on `/health/ready`, digest cron, prod deploy. Code is on `main`, off until set. |
 | Merge integration branch to main | Vivek | `integration/open-prs-november` | Merge this branch to main. Contains PRs #4, #5, #9, #10, #11. All conflicts resolved. 42 passing / 5 failing. |
 | Close PRs #4, #5, #9, #10, #11 on GitHub | Vivek | — | Once integration branch merges to main, close the individual PRs. |
