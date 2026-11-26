@@ -21,6 +21,8 @@ import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.PaymentMetadata
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.domain.usecase.CashSide
@@ -1168,6 +1170,113 @@ class PartyLedgerViewModelTest {
         assertEquals(1_000_000L, cashItem.transaction.amountPaisa)
         assertEquals("buy-1", cashItem.transaction.sourceEntryId)
         assertTrue(cashItem.tag is LedgerTag.Slip)
+    }
+
+    @Test
+    fun recordContraTransferCreatesTwoLinkedNonCashTransactions() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1", partyId = "farmer-1", partyRepository = partyRepo, cashRepository = cashRepo,
+            dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+
+        viewModel.events.test {
+            viewModel.recordContraTransfer(
+                targetPartyId = "farmer-1",
+                amountPaisa = 500_000L,
+                paymentMode = PaymentMode.RTGS,
+                bankName = "Zila Sahakari Bank",
+                checkNumber = null,
+                userRemarks = "RTGS receipt"
+            )
+            val event = awaitItem()
+            assertTrue(event is PartyLedgerEvent.TransactionRecorded)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val txList = cashRepo.getTransactionsByPartyStream("farmer-1").first()
+        assertEquals(2, txList.size)
+
+        val udharLeg = txList.first { it.transactionType == TransactionType.UDHAR_GIVEN }
+        val jamaLeg = txList.first { it.transactionType == TransactionType.JAMA_RECEIVED }
+
+        // Both must be non-CASH (zero drawer impact)
+        assertFalse(udharLeg.paymentMode == PaymentMode.CASH)
+        assertFalse(jamaLeg.paymentMode == PaymentMode.CASH)
+        assertEquals(PaymentMode.RTGS, udharLeg.paymentMode)
+        assertEquals(PaymentMode.RTGS, jamaLeg.paymentMode)
+
+        // Both must carry the same [CONTRA:xxx] tag
+        val contraTagRegex = Regex("""\[CONTRA:([^\]]+)]""")
+        val udharContra = contraTagRegex.find(udharLeg.remarks ?: "")?.groupValues?.get(1)
+        val jamaContra = contraTagRegex.find(jamaLeg.remarks ?: "")?.groupValues?.get(1)
+        assertNotNull(udharContra)
+        assertEquals(udharContra, jamaContra)
+
+        // Bank metadata must be present
+        val meta = PaymentMetadata.parse(udharLeg.remarks)
+        assertEquals("Zila Sahakari Bank", meta.bankName)
+        assertEquals("RTGS receipt", meta.userRemarks)
+
+        // Equal amounts
+        assertEquals(500_000L, udharLeg.amountPaisa)
+        assertEquals(500_000L, jamaLeg.amountPaisa)
+    }
+
+    @Test
+    fun editCashRoundTripPreservesPaymentModeAndBankMetadata() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        cashRepo.recordTransaction(
+            CashTransaction(
+                id = "tx-edit-1", shopId = "shop-1", partyId = "farmer-1",
+                transactionType = TransactionType.JAMA_RECEIVED,
+                amountPaisa = 100_000L, paymentMode = PaymentMode.CASH,
+                transactionDate = 1L, createdAt = 1L, updatedAt = 1L
+            )
+        )
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1", partyId = "farmer-1", partyRepository = partyRepo, cashRepository = cashRepo,
+            dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+
+        val item = viewModel.uiState.first { it.ledgerItems.isNotEmpty() }
+            .ledgerItems.filterIsInstance<LedgerItem.CashItem>().single()
+
+        viewModel.events.test {
+            viewModel.editCash(
+                item = item,
+                amountPaisa = 150_000L,
+                paymentMode = PaymentMode.CHEQUE,
+                bankName = "PNB",
+                checkNumber = "223344",
+                userRemarks = "cheque received"
+            )
+            val event = awaitItem()
+            assertTrue(event is PartyLedgerEvent.TransactionRecorded)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val updated = cashRepo.getTransactionsByPartyStream("farmer-1").first().single()
+        assertEquals(150_000L, updated.amountPaisa)
+        assertEquals(PaymentMode.CHEQUE, updated.paymentMode)
+        val meta = PaymentMetadata.parse(updated.remarks)
+        assertEquals("PNB", meta.bankName)
+        assertEquals("223344", meta.checkNumber)
+        assertEquals("cheque received", meta.userRemarks)
     }
 }
 

@@ -13,6 +13,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
+import com.appwork.mandisamiti.domain.model.PaymentMetadata
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.LendEntry
 import com.appwork.mandisamiti.domain.model.LendSettlement
@@ -593,12 +594,69 @@ class PartyLedgerViewModel(
         }
     }
 
-    fun editCash(item: LedgerItem.CashItem, amountPaisa: Long, remarks: String?) {
+    fun editCash(
+        item: LedgerItem.CashItem,
+        amountPaisa: Long,
+        paymentMode: PaymentMode,
+        bankName: String?,
+        checkNumber: String?,
+        userRemarks: String?
+    ) {
         viewModelScope.launch {
             val t = item.transaction
-            cashRepository.editTransaction(t.id, amountPaisa, t.paymentMode, t.transactionDate, remarks)
+            val remarks = PaymentMetadata.format(bankName, checkNumber, userRemarks)
+            cashRepository.editTransaction(t.id, amountPaisa, paymentMode, t.transactionDate, remarks)
             syncScheduler.scheduleOneTimeSync()
             _events.emit(PartyLedgerEvent.TransactionRecorded("प्रविष्टि सुधारी गई"))
+        }
+    }
+
+    fun recordContraTransfer(
+        targetPartyId: String,
+        amountPaisa: Long,
+        paymentMode: PaymentMode,
+        bankName: String?,
+        checkNumber: String?,
+        userRemarks: String?
+    ) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            val contraId = IdGenerator.newId()
+            val contraTag = "[CONTRA:$contraId]"
+            val metaStr = PaymentMetadata.format(bankName, checkNumber, userRemarks)
+            val fullRemarks = listOfNotNull(contraTag, metaStr).joinToString(" ")
+            // Credit leg: source/bank side — UDHAR_GIVEN on current party
+            cashRepository.recordTransaction(
+                CashTransaction(
+                    id = IdGenerator.newId(),
+                    shopId = shopId,
+                    partyId = partyId,
+                    transactionType = TransactionType.UDHAR_GIVEN,
+                    amountPaisa = amountPaisa,
+                    paymentMode = paymentMode,
+                    transactionDate = now,
+                    remarks = fullRemarks,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+            // Debit leg: target farmer — JAMA_RECEIVED on targetPartyId
+            cashRepository.recordTransaction(
+                CashTransaction(
+                    id = IdGenerator.newId(),
+                    shopId = shopId,
+                    partyId = targetPartyId,
+                    transactionType = TransactionType.JAMA_RECEIVED,
+                    amountPaisa = amountPaisa,
+                    paymentMode = paymentMode,
+                    transactionDate = now,
+                    remarks = fullRemarks,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+            syncScheduler.scheduleOneTimeSync()
+            _events.emit(PartyLedgerEvent.TransactionRecorded("बैंक ट्रांसफर दर्ज किया गया"))
         }
     }
 

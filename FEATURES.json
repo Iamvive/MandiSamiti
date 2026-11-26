@@ -2,6 +2,12 @@
   "_rules": "Agents may change only `status` and `evidence` of existing entries. Never delete or reword an entry. Add new entries at the end. Mark `passing` only with evidence: a test run, or a device check on the Redmi (d93c743) with the date. Source of this seed: vaults/Vivek-K/wiki/hot.md handoffs up to 2026-11-11.",
   "features": [
     {
+      "id": "receipt-and-ui-polish-gate-1",
+      "description": "Gate 1 Receipt and UI Polish (GAP-05 to GAP-08): Quintal weights formatted strictly to 2 decimals (0.00); customer-facing Bill/Parcha No stripped from shared receipts and PDF HTML; receipt timestamp formatted to 12-hour AM/PM; Galla Rokad entry and edit dialogs equipped with vertical scrolling and imePadding() for smooth keyboard UX",
+      "status": "passing",
+      "evidence": "2026-11-26 (Antigravity, Gemini 3.8 Flash). Implemented GAP-05 (2-decimal quintal weights), GAP-06 (removed customer-facing Bill/Parcha No from WhatsApp text & PDF HTML), GAP-07 (12-hour AM/PM timestamp in ReceiptDateTime.kt & ReceiptHtmlRenderer.kt), and GAP-08 (added imePadding() and verticalScroll to DailyCashRegisterScreen dialogs). Unit tests passing in ReceiptHtmlRendererTest, SellTransactionReceiptTest, BuyTransactionReceiptTest. Built and verified on Redmi Note 7 (d93c743)."
+    },
+    {
       "id": "godown-tab",
       "description": "Godown tab: 3-way ledger, crop packing, custody split, reconcile sheet",
       "status": "passing",
@@ -338,6 +344,12 @@
       "description": "POST /api/v1/events accepts at most 60 uploads per shop per hour (429 over the limit, accepted if Redis fails) and returns 409 when the token's shop has no profile row",
       "status": "passing",
       "evidence": "2026-11-26 (Claude Code). Branch mgr/2-backend-only-harden-post-api-v: backend pytest 178 passed on a scratch copy; removing expire, nx=True, the shop check, the fail-open handler or changing the limit, window, key or status code each fails a test in tests/test_events.py. Rerun 2026-11-26 at 0c3b989: 178 passed; sent to main by pull request. Not deployed, no staging check."
+    },
+    {
+      "id": "track-2-double-entry-and-ledger-edit",
+      "description": "Track 2 Gate 2 (GAP-01 to GAP-04 and GAP-09): Register payment mode breakdown (RTGS/CHEQUE/online separate totals); PaymentMetadata utility with structured remarks tags; contra transfer double-entry via recordContraTransfer(); Bank/Contra Transfer dialog in ledger; Edit buttons on FintechCashCard and FintechLendCard; enhanced editCash with paymentMode + bank/check metadata; CONTRA tag stripping in PaymentMetadata.parse()",
+      "status": "failing",
+      "evidence": "2026-11-26 (Claude Code, session 2). Branch feat/double-entry-and-ledger-edit. All 61 jvmTest passing for *Ledger* and *Register* tests including 3 new tests (recordContraTransferCreatesTwoLinkedNonCashTransactions, editCashRoundTripPreservesPaymentModeAndBankMetadata, rtgsChequesAndOnlineTotalsAreComputedSeparatelyFromCash). Not yet device-tested. UI needs owner-level staging test before passing."
     }
   ]
 }

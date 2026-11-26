@@ -93,6 +93,9 @@ data class DailyRegisterUiState(
     val todayCashInPaisa: Long = 0L,
     val todayCreditInPaisa: Long = 0L,
     val todayCashOutPaisa: Long = 0L,
+    val todayRtgsPaisa: Long = 0L,
+    val todayChequePaisa: Long = 0L,
+    val todayOnlinePaisa: Long = 0L,
     val inHandCashDrawerPaisa: Long = 0L,
     val physicalCountPaisa: Long? = null,
     val physicalCountReason: String? = null,
@@ -287,8 +290,21 @@ class DailyRegisterViewModel(
                     buys = inputs.buys.filter { it.entryDate in window.startMs until window.endMs },
                     sells = inputs.sells.filter { it.entryDate in window.startMs until window.endMs },
                 )
-                val creditInPaisa = allTx
-                    .filter { !it.isDeleted && !it.isVoid && it.transactionDate >= window.startMs && it.transactionDate < window.endMs && it.paymentMode == PaymentMode.BOOK_ENTRY && it.transactionType == TransactionType.JAMA_RECEIVED }
+                val windowTx = allTx.filter {
+                    !it.isDeleted && !it.isVoid &&
+                        it.transactionDate >= window.startMs && it.transactionDate < window.endMs
+                }
+                val creditInPaisa = windowTx
+                    .filter { it.paymentMode == PaymentMode.BOOK_ENTRY && it.transactionType == TransactionType.JAMA_RECEIVED }
+                    .sumOf { it.amountPaisa }
+                val rtgsPaisa = windowTx
+                    .filter { it.paymentMode == PaymentMode.RTGS }
+                    .sumOf { it.amountPaisa }
+                val chequePaisa = windowTx
+                    .filter { it.paymentMode == PaymentMode.CHEQUE }
+                    .sumOf { it.amountPaisa }
+                val onlinePaisa = windowTx
+                    .filter { it.paymentMode in setOf(PaymentMode.UPI, PaymentMode.ONLINE, PaymentMode.NEFT, PaymentMode.BANK) }
                     .sumOf { it.amountPaisa }
 
                 _uiState.value = _uiState.value.copy(
@@ -301,6 +317,9 @@ class DailyRegisterViewModel(
                     todayCashInPaisa = summary.cashInPaisa,
                     todayCreditInPaisa = creditInPaisa,
                     todayCashOutPaisa = summary.cashOutPaisa,
+                    todayRtgsPaisa = rtgsPaisa,
+                    todayChequePaisa = chequePaisa,
+                    todayOnlinePaisa = onlinePaisa,
                     inHandCashDrawerPaisa = summary.closingPaisa,
                     physicalCountPaisa = count?.countedPaisa,
                     physicalCountReason = count?.reason,
