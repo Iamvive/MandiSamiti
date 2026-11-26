@@ -1,6 +1,7 @@
 package com.appwork.mandisamiti.data.sync
 
 import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.data.analytics.AnalyticsEventsPushRequestDto
 import com.appwork.mandisamiti.data.analytics.AnalyticsEventsPushResponseDto
 import com.appwork.mandisamiti.data.sync.model.SyncPullResponseDto
@@ -56,6 +57,45 @@ class SyncEngineAnalyticsTest {
             gstin = null,
             licence_no = null,
         )
+    }
+
+    @Test
+    fun pushThenPull_successTracksSyncOkAndFlushes() = runTest {
+        val io = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        seedShop(db)
+        val analytics = Analytics(db, "1.0", clock = { 1000L }, idGenerator = { "e1" }, sessionId = "s1", ioDispatcher = io)
+        val client = FakeSyncApiClient()
+        val engine = SyncEngine(db, client, ioDispatcher = io, analytics = analytics)
+
+        assertTrue(engine.pushThenPull("shop-1").isSuccess)
+
+        assertEquals("sync_ok", client.pushedEventBatches.single().events.single().name)
+    }
+
+    @Test
+    fun pushThenPull_failureQueuesSyncFailedWithoutASecondNetworkWait() = runTest {
+        val io = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        val analytics = Analytics(db, "1.0", clock = { 1000L }, idGenerator = { "e1" }, sessionId = "s1", ioDispatcher = io)
+        val client = FakeSyncApiClient(pullResult = Result.failure(IOException("network down")))
+        val engine = SyncEngine(db, client, ioDispatcher = io, analytics = analytics)
+
+        assertTrue(engine.pushThenPull("shop-1").isFailure)
+
+        assertEquals(0, client.pushedEventBatches.size)
+        assertEquals("sync_failed", db.appDatabaseQueries.getOldestAnalyticsEvents(10).executeAsList().single().name)
+    }
+
+    @Test
+    fun track_negativeDurationIsStoredAsZeroSoTheBatchIsNotRejected() = runTest {
+        val io = StandardTestDispatcher(testScheduler)
+        val db = createTestDatabase()
+        val analytics = Analytics(db, "1.0", ioDispatcher = io)
+
+        analytics.track(AnalyticsEventName.SYNC_OK, durationMs = -5L)
+
+        assertEquals(0L, db.appDatabaseQueries.getOldestAnalyticsEvents(10).executeAsList().single().duration_ms)
     }
 
     @Test

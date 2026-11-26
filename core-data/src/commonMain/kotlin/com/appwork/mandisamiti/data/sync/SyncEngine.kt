@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 @Serializable
@@ -606,8 +607,13 @@ class SyncEngine(
     }
 
     /** Pending local edits go up first, so a pull can't leave a stale local copy that a later push wrongly acks. */
-    suspend fun pushThenPull(shopId: String, onProgress: ((Int) -> Unit)? = null): Result<Int> =
-        pushPendingChanges().fold(onSuccess = { pullRemoteChanges(shopId, onProgress) }, onFailure = { Result.failure(it) })
+    suspend fun pushThenPull(shopId: String, onProgress: ((Int) -> Unit)? = null): Result<Int> {
+        val startedAt = TimeSource.Monotonic.markNow()
+        val result = pushPendingChanges().fold(onSuccess = { pullRemoteChanges(shopId, onProgress) }, onFailure = { Result.failure(it) })
+        // The user is waiting on this one: after a failure, don't add a second network timeout for telemetry.
+        recordSync(startedAt, result.exceptionOrNull(), upload = result.isSuccess)
+        return result
+    }
 
     suspend fun syncFull(shopId: String): SyncResult = withContext(ioDispatcher) {
         val startedAt = TimeSource.Monotonic.markNow()
@@ -619,23 +625,24 @@ class SyncEngine(
         } catch (t: Throwable) {
             SyncResult.Failure(t)
         }
-        val client = apiClient
-        if (analytics != null && client != null && (result !is SyncResult.Failure || result.error !is CancellationException)) {
-            val durationMs = startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0L)
-            val event = when (result) {
-                is SyncResult.Success -> AnalyticsEventName.SYNC_OK
-                is SyncResult.Failure -> AnalyticsEventName.SYNC_FAILED
-            }
-            try {
-                analytics.track(event, durationMs = durationMs)
-                analytics.flush(client)
-            } catch (c: CancellationException) {
-                throw c
-            } catch (_: Throwable) {
-                // Telemetry must never change the SyncResult.
-            }
-        }
+        recordSync(startedAt, (result as? SyncResult.Failure)?.error, upload = true)
         result
+    }
+
+    /** Telemetry only: never changes a sync result. */
+    private suspend fun recordSync(startedAt: TimeMark, error: Throwable?, upload: Boolean) {
+        val tracker = analytics ?: return
+        val client = apiClient ?: return
+        if (error is CancellationException) return
+        val durationMs = startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0L)
+        val event = if (error == null) AnalyticsEventName.SYNC_OK else AnalyticsEventName.SYNC_FAILED
+        try {
+            tracker.track(event, durationMs = durationMs)
+            if (upload) tracker.flush(client)
+        } catch (c: CancellationException) {
+            throw c
+        } catch (_: Throwable) {
+        }
     }
 
     suspend fun markAllBatchSynced(partyIds: List<String>, deals: List<Pair<String, Int>>, txs: List<Pair<String, Int>>) = withContext(ioDispatcher) {

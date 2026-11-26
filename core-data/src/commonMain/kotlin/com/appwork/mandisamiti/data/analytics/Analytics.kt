@@ -40,7 +40,7 @@ class Analytics(
                         screen = screen?.wire,
                         session_id = sanitizedSessionId,
                         occurred_at_ms = occurredAtMs,
-                        duration_ms = durationMs,
+                        duration_ms = durationMs?.coerceAtLeast(0L),
                         app_version = sanitizedAppVersion,
                     )
                     queries.trimAnalyticsEvents()

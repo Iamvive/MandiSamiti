@@ -577,9 +577,7 @@ class DailyRegisterViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
-                cashRepository.recordTransaction(tx)
-            }
+            cashRepository.recordTransaction(tx)
             onLocalWrite()
             _uiState.value = _uiState.value.copy(isSaving = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)
@@ -607,9 +605,7 @@ class DailyRegisterViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
-                cashRepository.recordTransaction(tx)
-            }
+            cashRepository.recordTransaction(tx)
             onLocalWrite()
             _uiState.value = _uiState.value.copy(isSaving = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)
@@ -640,9 +636,7 @@ class DailyRegisterViewModel(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, viewModelScope) {
-                cashRepository.recordTransaction(tx)
-            }
+            cashRepository.recordTransaction(tx)
             onLocalWrite()
             _uiState.value = _uiState.value.copy(isSaving = false)
             _events.emit(DailyRegisterEvent.EntryRecorded)

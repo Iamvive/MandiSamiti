@@ -251,10 +251,8 @@ fun App(
                         syncScheduler.schedulePeriodicSync()
                         syncScheduler.scheduleOneTimeSync()
                         coroutineScope.launch {
-                            try {
-                                analytics.track(AnalyticsEventName.LOGIN_SUCCESS)
-                            } catch (_: Throwable) {}
                             syncEngine.setNeedsLogin(false)
+                            analytics.track(AnalyticsEventName.LOGIN_SUCCESS)
                         }
                         currentScreen = Screen.FirstSync
                     },
@@ -305,6 +303,7 @@ fun App(
                         onLocalWrite = { syncScheduler.scheduleOneTimeSync() },
                         pendingSyncCountProvider = { syncEngine.getPendingEntryCount().toInt() },
                         initialTab = homeTab,
+                        analytics = analytics,
                     )
                 }
                 val homeState by homeViewModel.uiState.collectAsState()
@@ -700,7 +699,7 @@ fun App(
                         isEnglish = tradeSettings?.isEnglish ?: false,
                         onSavePayment = { paidAmtPaisa ->
                             coroutineScope.launch {
-                                recordAction(analytics, AnalyticsEventName.PAYMENT_SAVED, coroutineScope) {
+                                recordAction(analytics.takeIf { paidAmtPaisa > 0L }, AnalyticsEventName.PAYMENT_SAVED, coroutineScope) {
                                     val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                                     if (paidAmtPaisa > 0L) {
                                         val tx = com.appwork.mandisamiti.domain.model.CashTransaction(

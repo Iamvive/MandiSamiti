@@ -6,12 +6,23 @@ import com.appwork.mandisamiti.data.analytics.Analytics
 import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.data.analytics.AnalyticsScreen
 import com.appwork.mandisamiti.database.AppDatabase
+import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.ui.navigation.NavigationTab
+import com.appwork.mandisamiti.ui.home.HomeViewModel
+import com.appwork.mandisamiti.data.repository.OfflineFirstBuyRepository
+import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
+import com.appwork.mandisamiti.data.repository.OfflineFirstShopProfileRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -143,6 +154,43 @@ class TelemetryAppHooksTest {
         val eventsAfterSuccess = database.appDatabaseQueries.getOldestAnalyticsEvents(10).executeAsList()
         assertEquals(1, eventsAfterSuccess.size)
         assertEquals(AnalyticsEventName.ENTRY_DELETED.wire, eventsAfterSuccess.first().name)
+    }
+
+    @Test
+    fun testHomeSlipDeleteRecordsEntryDeleted() = runBlocking {
+        val database = createTestDatabase()
+        val analytics = Analytics(database = database, appVersion = "2.0.0", ioDispatcher = Dispatchers.Unconfined)
+        // This thread's dispatcher, like Main: the view model finishes constructing before its coroutines run.
+        val scope = CoroutineScope(coroutineContext + SupervisorJob())
+        val buyRepository = OfflineFirstBuyRepository(database)
+        buyRepository.saveBuyEntry(
+            BuyEntry(
+                id = "buy_1", shopId = "shop_1", farmerId = "party_1", commodityId = "comm_1", entryDate = 1_000L,
+                bagsCount = 1L, weightPerBagGrams = 100_000L, extraWeightGrams = 0L, totalWeightGrams = 100_000L,
+                ratePaisaPerQuintal = 200_000L, commissionBps = 0L, labourPerBagPaisa = 0L, advancePaidPaisa = 0L,
+                grossPaisa = 200_000L, commissionPaisa = 0L, labourPaisa = 0L, netPayablePaisa = 200_000L,
+                createdAt = 1_000L, updatedAt = 1_000L,
+            )
+        )
+        val viewModel = HomeViewModel(
+            shopId = "shop_1",
+            shopProfileRepository = OfflineFirstShopProfileRepository(database),
+            partyRepository = OfflineFirstPartyRepository(database),
+            buyRepository = buyRepository,
+            viewModelScope = scope,
+            analytics = analytics,
+        )
+
+        viewModel.deleteBuySlip("buy_1")
+
+        withTimeout(5_000) {
+            while (database.appDatabaseQueries.getOldestAnalyticsEvents(10).executeAsList().isEmpty()) delay(10)
+        }
+        assertEquals(
+            AnalyticsEventName.ENTRY_DELETED.wire,
+            database.appDatabaseQueries.getOldestAnalyticsEvents(10).executeAsList().single().name,
+        )
+        scope.cancel()
     }
 
     @Test
