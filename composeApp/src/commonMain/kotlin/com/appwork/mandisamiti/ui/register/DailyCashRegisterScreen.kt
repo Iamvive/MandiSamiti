@@ -141,6 +141,13 @@ fun DailyCashRegisterScreen(
     var directAmountInput by remember { mutableStateOf("") }
     var directRemarksInput by remember { mutableStateOf("") }
     var directPaymentMode by remember { mutableStateOf(PaymentMode.CASH) }
+    var directBankName by remember { mutableStateOf("") }
+    var directAccountNumber by remember { mutableStateOf("") }
+    var directAccountHolder by remember { mutableStateOf("") }
+    var directIfsc by remember { mutableStateOf("") }
+    var directCheckNumber by remember { mutableStateOf("") }
+    var directUtrNumber by remember { mutableStateOf("") }
+    var directUpiId by remember { mutableStateOf("") }
     var partyQuery by remember { mutableStateOf("") }
     var addingNewKisan by remember { mutableStateOf(false) }
     var newPartyType by remember { mutableStateOf(PartyType.FARMER) }
@@ -152,6 +159,13 @@ fun DailyCashRegisterScreen(
         directRemarksInput = ""
         selectedPartyId = ""
         directPaymentMode = PaymentMode.CASH
+        directBankName = ""
+        directAccountNumber = ""
+        directAccountHolder = ""
+        directIfsc = ""
+        directCheckNumber = ""
+        directUtrNumber = ""
+        directUpiId = ""
         partyQuery = ""
         addingNewKisan = false
         newPartyType = PartyType.FARMER
@@ -823,6 +837,88 @@ fun DailyCashRegisterScreen(
                             }
                         }
                     }
+
+                    if (directPaymentMode == PaymentMode.RTGS || directPaymentMode == PaymentMode.NEFT) {
+                        OutlinedTextField(
+                            value = directAccountNumber,
+                            onValueChange = { directAccountNumber = it },
+                            label = { Text(if (isEnglish) "Account Number *" else "खाता संख्या *") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directAccountHolder,
+                            onValueChange = { directAccountHolder = it },
+                            label = { Text(if (isEnglish) "Account Holder Name *" else "खाता धारक का नाम *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directBankName,
+                            onValueChange = { directBankName = it },
+                            label = { Text(if (isEnglish) "Bank Name *" else "बैंक का नाम *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directIfsc,
+                            onValueChange = { directIfsc = it.uppercase() },
+                            label = { Text(if (isEnglish) "IFSC Code (Optional)" else "आईएफएससी कोड (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directUtrNumber,
+                            onValueChange = { directUtrNumber = it },
+                            label = { Text(if (isEnglish) "Ref / UTR Number (Optional)" else "बैंक रसीद / यूटीआर नंबर (वैकल्पिक)") },
+                            supportingText = { Text(if (isEnglish) "Ref number from bank slip or SMS" else "मैसेज या पर्ची में आया संदर्भ नंबर", fontSize = 11.sp, color = MandiTextMuted) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (directPaymentMode == PaymentMode.CHEQUE) {
+                        OutlinedTextField(
+                            value = directCheckNumber,
+                            onValueChange = { directCheckNumber = it },
+                            label = { Text(if (isEnglish) "Cheque Number *" else "चेक संख्या *") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directBankName,
+                            onValueChange = { directBankName = it },
+                            label = { Text(if (isEnglish) "Bank Name *" else "बैंक का नाम *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directAccountHolder,
+                            onValueChange = { directAccountHolder = it },
+                            label = { Text(if (isEnglish) "Payee / Account Owner Name *" else "खाता धारक / किसके नाम चेक है *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (directPaymentMode == PaymentMode.UPI) {
+                        OutlinedTextField(
+                            value = directUpiId,
+                            onValueChange = { directUpiId = it },
+                            label = { Text(if (isEnglish) "UPI ID / Mobile Number *" else "यूपीआई आईडी या मोबाइल *") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = directUtrNumber,
+                            onValueChange = { directUtrNumber = it },
+                            label = { Text(if (isEnglish) "UTR / Ref Number (Optional)" else "यूटीआर / लेन-देन नंबर (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     OutlinedTextField(
                         keyboardOptions = MandiKeyboard.Note,
                         value = directRemarksInput,
@@ -834,9 +930,19 @@ fun DailyCashRegisterScreen(
                 }
             },
             confirmButton = {
+                val amount = directAmountInput.toLongOrNull() ?: 0L
+                val isDirectFormValid = when (directPaymentMode) {
+                    PaymentMode.RTGS, PaymentMode.NEFT ->
+                        amount > 0L && directAccountNumber.isNotBlank() && directAccountHolder.isNotBlank() && directBankName.isNotBlank()
+                    PaymentMode.CHEQUE ->
+                        amount > 0L && directCheckNumber.isNotBlank() && directBankName.isNotBlank() && directAccountHolder.isNotBlank()
+                    PaymentMode.UPI ->
+                        amount > 0L && directUpiId.isNotBlank()
+                    else -> amount > 0L
+                }
                 Button(
+                    enabled = isDirectFormValid,
                     onClick = {
-                        val amount = directAmountInput.toLongOrNull() ?: 0L
                         if (amount > 0L) {
                             val target = cashEntryTarget(
                                 selectedPartyId = uiState.availableParties.firstOrNull { it.id == selectedPartyId }?.id,
@@ -847,12 +953,26 @@ fun DailyCashRegisterScreen(
                                 note = directRemarksInput,
                                 partyType = newPartyType,
                             )
+                            val finalRemarks = if (directPaymentMode != PaymentMode.CASH) {
+                                com.appwork.mandisamiti.domain.model.PaymentMetadata.format(
+                                    bankName = directBankName.trim().ifBlank { null },
+                                    accountNumber = directAccountNumber.trim().ifBlank { null },
+                                    accountHolder = directAccountHolder.trim().ifBlank { null },
+                                    ifsc = directIfsc.trim().ifBlank { null },
+                                    checkNumber = directCheckNumber.trim().ifBlank { null },
+                                    utrNumber = directUtrNumber.trim().ifBlank { null },
+                                    upiId = directUpiId.trim().ifBlank { null },
+                                    userRemarks = target.remarks
+                                )
+                            } else {
+                                target.remarks
+                            }
                             viewModel.recordDailyEntry(
                                 partyId = target.partyId,
                                 transactionType = showDirectCashDialog!!,
                                 amountRs = amount,
                                 paymentMode = directPaymentMode,
-                                remarks = target.remarks,
+                                remarks = finalRemarks,
                                 newKisan = target.newKisan,
                             )
                             closeDirectCashDialog()
@@ -1093,7 +1213,12 @@ private fun BahiTransactionItem(
     onEdit: ((amountRs: Long, mode: PaymentMode, remarks: String?) -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
-    val remarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(item.transaction.remarks)
+    val parsedMeta = com.appwork.mandisamiti.domain.model.PaymentMetadata.parse(item.transaction.remarks)
+    val remarks = if (item.transaction.paymentMode != PaymentMode.CASH) {
+        parsedMeta.displaySummary(isEnglish)
+    } else {
+        com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(item.transaction.remarks)
+    }
     val isVoid = item.transaction.isVoid
     val isBookEntry = item.transaction.paymentMode == PaymentMode.BOOK_ENTRY
     val amountStr = MandiMathEngine.paisaToRupeesString(item.transaction.amountPaisa)
@@ -1121,6 +1246,13 @@ private fun BahiTransactionItem(
     var editAmount by remember { mutableStateOf("") }
     var editNote by remember { mutableStateOf("") }
     var editMode by remember { mutableStateOf(item.transaction.paymentMode) }
+    var editBankName by remember { mutableStateOf("") }
+    var editAccountNumber by remember { mutableStateOf("") }
+    var editAccountHolder by remember { mutableStateOf("") }
+    var editIfsc by remember { mutableStateOf("") }
+    var editCheckNumber by remember { mutableStateOf("") }
+    var editUtrNumber by remember { mutableStateOf("") }
+    var editUpiId by remember { mutableStateOf("") }
     // Rows owned by a lend, expense or settlement are edited from their own screen.
     val rawRemarks = item.transaction.remarks.orEmpty()
     val canEdit = onEdit != null && !isVoid &&
@@ -1221,8 +1353,15 @@ private fun BahiTransactionItem(
                     if (canEdit) {
                         TextButton(onClick = {
                             editAmount = (item.transaction.amountPaisa / 100L).toString()
-                            editNote = remarks.orEmpty()
+                            editNote = parsedMeta.userRemarks.orEmpty()
                             editMode = item.transaction.paymentMode
+                            editBankName = parsedMeta.bankName.orEmpty()
+                            editAccountNumber = parsedMeta.accountNumber.orEmpty()
+                            editAccountHolder = parsedMeta.accountHolder.orEmpty()
+                            editIfsc = parsedMeta.ifsc.orEmpty()
+                            editCheckNumber = parsedMeta.checkNumber.orEmpty()
+                            editUtrNumber = parsedMeta.utrNumber.orEmpty()
+                            editUpiId = parsedMeta.upiId.orEmpty()
                             showDetails = false
                             showEdit = true
                         }) { Text(if (isEnglish) "Edit" else "बदलें") }
@@ -1236,6 +1375,15 @@ private fun BahiTransactionItem(
     }
     if (showEdit) {
         val amountRs = editAmount.trim().toLongOrNull()
+        val isEditFormValid = when (editMode) {
+            PaymentMode.RTGS, PaymentMode.NEFT ->
+                amountRs != null && amountRs > 0L && editAccountNumber.isNotBlank() && editAccountHolder.isNotBlank() && editBankName.isNotBlank()
+            PaymentMode.CHEQUE ->
+                amountRs != null && amountRs > 0L && editCheckNumber.isNotBlank() && editBankName.isNotBlank() && editAccountHolder.isNotBlank()
+            PaymentMode.UPI ->
+                amountRs != null && amountRs > 0L && editUpiId.isNotBlank()
+            else -> amountRs != null && amountRs > 0L
+        }
         AlertDialog(
             modifier = Modifier.imePadding(),
             onDismissRequest = { showEdit = false },
@@ -1271,19 +1419,115 @@ private fun BahiTransactionItem(
                             }
                         }
                     }
+
+                    if (editMode == PaymentMode.RTGS || editMode == PaymentMode.NEFT) {
+                        OutlinedTextField(
+                            value = editAccountNumber,
+                            onValueChange = { editAccountNumber = it },
+                            label = { Text(if (isEnglish) "Account Number *" else "खाता संख्या *") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editAccountHolder,
+                            onValueChange = { editAccountHolder = it },
+                            label = { Text(if (isEnglish) "Account Holder Name *" else "खाता धारक का नाम *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editBankName,
+                            onValueChange = { editBankName = it },
+                            label = { Text(if (isEnglish) "Bank Name *" else "बैंक का नाम *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editIfsc,
+                            onValueChange = { editIfsc = it.uppercase() },
+                            label = { Text(if (isEnglish) "IFSC Code (Optional)" else "आईएफएससी कोड (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editUtrNumber,
+                            onValueChange = { editUtrNumber = it },
+                            label = { Text(if (isEnglish) "Ref / UTR Number (Optional)" else "बैंक रसीद / यूटीआर नंबर (वैकल्पिक)") },
+                            supportingText = { Text(if (isEnglish) "Ref number from bank slip or SMS" else "मैसेज या पर्ची में आया संदर्भ नंबर", fontSize = 11.sp, color = MandiTextMuted) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (editMode == PaymentMode.CHEQUE) {
+                        OutlinedTextField(
+                            value = editCheckNumber,
+                            onValueChange = { editCheckNumber = it },
+                            label = { Text(if (isEnglish) "Cheque Number *" else "चेक संख्या *") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editBankName,
+                            onValueChange = { editBankName = it },
+                            label = { Text(if (isEnglish) "Bank Name *" else "बैंक का नाम *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editAccountHolder,
+                            onValueChange = { editAccountHolder = it },
+                            label = { Text(if (isEnglish) "Payee / Account Owner Name *" else "खाता धारक / किसके नाम चेक है *") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (editMode == PaymentMode.UPI) {
+                        OutlinedTextField(
+                            value = editUpiId,
+                            onValueChange = { editUpiId = it },
+                            label = { Text(if (isEnglish) "UPI ID / Mobile Number *" else "यूपीआई आईडी या मोबाइल *") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editUtrNumber,
+                            onValueChange = { editUtrNumber = it },
+                            label = { Text(if (isEnglish) "UTR / Ref Number (Optional)" else "यूटीआर / लेन-देन नंबर (वैकल्पिक)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     OutlinedTextField(
                         value = editNote,
                         onValueChange = { editNote = it },
-                        label = { Text(if (isEnglish) "Note" else "नोट") },
+                        label = { Text(if (isEnglish) "Note (optional)" else "नोट (वैकल्पिक)") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = amountRs != null && amountRs > 0L,
+                    enabled = isEditFormValid,
                     onClick = {
-                        onEdit?.invoke(amountRs!!, editMode, editNote.trim().ifBlank { null })
+                        val finalNote = if (editMode != PaymentMode.CASH) {
+                            com.appwork.mandisamiti.domain.model.PaymentMetadata.format(
+                                bankName = editBankName.trim().ifBlank { null },
+                                accountNumber = editAccountNumber.trim().ifBlank { null },
+                                accountHolder = editAccountHolder.trim().ifBlank { null },
+                                ifsc = editIfsc.trim().ifBlank { null },
+                                checkNumber = editCheckNumber.trim().ifBlank { null },
+                                utrNumber = editUtrNumber.trim().ifBlank { null },
+                                upiId = editUpiId.trim().ifBlank { null },
+                                userRemarks = editNote.trim().ifBlank { null }
+                            )
+                        } else {
+                            editNote.trim().ifBlank { null }
+                        }
+                        onEdit?.invoke(amountRs!!, editMode, finalNote)
                         showEdit = false
                     },
                 ) { Text(if (isEnglish) "Save" else "सहेजें") }

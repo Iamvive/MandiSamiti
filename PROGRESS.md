@@ -1316,3 +1316,22 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - **Evidence**:
   - Full test suite `./gradlew jvmTest` passed cleanly (BUILD SUCCESSFUL in 20s).
   - Live UI hierarchy confirmed via `adb shell uiautomator dump`.
+
+
+## 2026-11-26 23:38 IST, Antigravity / Gemini 3.8 Flash (On-The-Fly Banking Fields for Payment Modes)
+- **On-The-Fly Mode-Specific Banking Fields**:
+  - Implemented dynamic field rendering across `PartyLedgerScreen` (Contra Transfer and Edit entry sheets) and `DailyCashRegisterScreen` (Direct Entry and Edit sheets).
+  - **RTGS / NEFT / Bank**: `खाता संख्या *` (Account Number), `खाता धारक का नाम *` (Account Holder), `बैंक का नाम *` (Bank Name), `आईएफएससी कोड (वैकल्पिक)` (IFSC Code - Optional), `बैंक रसीद / यूटीआर नंबर (वैकल्पिक)` (Ref / UTR Number - Optional with helper text: "मैसेज या पर्ची में आया संदर्भ नंबर"), and `विवरण / नोट (वैकल्पिक)`.
+  - **Cheque (चेक)**: `चेक संख्या *` (Cheque Number), `बैंक का नाम *` (Bank Name), `खाता धारक / किसके नाम चेक है *` (Payee Name), and `विवरण / नोट (वैकल्पिक)`.
+  - **UPI (यूपीआई)**: `यूपीआई आईडी या मोबाइल *` (UPI ID / Mobile), `यूटीआर / लेन-देन नंबर (वैकल्पिक)` (UTR / Ref Number - Optional), and `विवरण / नोट (वैकल्पिक)`.
+- **PaymentMetadata & RemarksFormatter Architecture**:
+  - Extended `PaymentMeta` with `bankName`, `accountNumber`, `accountHolder`, `ifsc`, `checkNumber`, `utrNumber`, `upiId`, and `userRemarks`.
+  - Created `PaymentMeta.displaySummary()` to replace raw regex tags on UI cards with clean single-line badges (e.g. `चेक #CHQ8899 · HDFC · (KisanRam) · ChanaFasal` and `संदर्भ/UTR: UTR334455 · SBI · खाता: 5010045678912 (RamKishan) · IFSC: SBIN0004567 · SarsonAdvance`).
+  - Updated `RemarksFormatter.TAG_REGEX` to strip all internal metadata tags cleanly.
+- **Automated Verification**:
+  - `./gradlew jvmTest` across all modules: 100% pass (BUILD SUCCESSFUL in 30s).
+- **Physical Device Check on Redmi Note 7 (`d93c743`)**:
+  - Installed `:composeApp:installStagingDebug` (APK size verified, installed on physical device).
+  - **Cheque Flow Verified**: Recorded ₹7,500 Cheque (`CHQ8899`, `HDFC`, `KisanRam`, `ChanaFasal`). Committed atomically to `cashTransactionEntity`. Renders as `चेक #CHQ8899 · HDFC · (KisanRam) · ChanaFasal` with zero raw tags.
+  - **RTGS Flow Verified**: Recorded ₹12,000 RTGS (`5010045678912`, `RamKishan`, `SBI`, `SBIN0004567`, `UTR334455`, `SarsonAdvance`). Committed atomically to `cashTransactionEntity`. Renders as `संदर्भ/UTR: UTR334455 · SBI · खाता: 5010045678912 (RamKishan) · IFSC: SBIN0004567 · SarsonAdvance`.
+  - **Drawer Independence**: Galla Rokad cash-in-hand balance remained untouched at `₹30,128` (zero drawer drift).

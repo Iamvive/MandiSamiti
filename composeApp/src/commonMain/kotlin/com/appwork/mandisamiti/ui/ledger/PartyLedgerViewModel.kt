@@ -598,13 +598,27 @@ class PartyLedgerViewModel(
         item: LedgerItem.CashItem,
         amountPaisa: Long,
         paymentMode: PaymentMode,
-        bankName: String?,
-        checkNumber: String?,
-        userRemarks: String?
+        bankName: String? = null,
+        accountNumber: String? = null,
+        accountHolder: String? = null,
+        ifsc: String? = null,
+        checkNumber: String? = null,
+        utrNumber: String? = null,
+        upiId: String? = null,
+        userRemarks: String? = null
     ) {
         viewModelScope.launch {
             val t = item.transaction
-            val remarks = PaymentMetadata.format(bankName, checkNumber, userRemarks)
+            val remarks = PaymentMetadata.format(
+                bankName = bankName,
+                accountNumber = accountNumber,
+                accountHolder = accountHolder,
+                ifsc = ifsc,
+                checkNumber = checkNumber,
+                utrNumber = utrNumber,
+                upiId = upiId,
+                userRemarks = userRemarks
+            )
             cashRepository.editTransaction(t.id, amountPaisa, paymentMode, t.transactionDate, remarks)
             syncScheduler.scheduleOneTimeSync()
             _events.emit(PartyLedgerEvent.TransactionRecorded("प्रविष्टि सुधारी गई"))
@@ -615,15 +629,29 @@ class PartyLedgerViewModel(
         targetPartyId: String,
         amountPaisa: Long,
         paymentMode: PaymentMode,
-        bankName: String?,
-        checkNumber: String?,
-        userRemarks: String?
+        bankName: String? = null,
+        accountNumber: String? = null,
+        accountHolder: String? = null,
+        ifsc: String? = null,
+        checkNumber: String? = null,
+        utrNumber: String? = null,
+        upiId: String? = null,
+        userRemarks: String? = null
     ) {
         viewModelScope.launch {
             val now = Clock.System.now().toEpochMilliseconds()
             val contraId = IdGenerator.newId()
             val contraTag = "[CONTRA:$contraId]"
-            val metaStr = PaymentMetadata.format(bankName, checkNumber, userRemarks)
+            val metaStr = PaymentMetadata.format(
+                bankName = bankName,
+                accountNumber = accountNumber,
+                accountHolder = accountHolder,
+                ifsc = ifsc,
+                checkNumber = checkNumber,
+                utrNumber = utrNumber,
+                upiId = upiId,
+                userRemarks = userRemarks
+            )
             val fullRemarks = listOfNotNull(contraTag, metaStr).joinToString(" ")
             // Credit leg: source/bank side — UDHAR_GIVEN on current party
             cashRepository.recordTransaction(

@@ -348,8 +348,8 @@
     {
       "id": "track-2-double-entry-and-ledger-edit",
       "description": "Track 2 Gate 2 (GAP-01 to GAP-04 and GAP-09): Register payment mode breakdown (RTGS/CHEQUE/online separate totals); PaymentMetadata utility with structured remarks tags; contra transfer double-entry via recordContraTransfer(); Bank/Contra Transfer dialog in ledger; Edit buttons on FintechCashCard and FintechLendCard; enhanced editCash with paymentMode + bank/check metadata; CONTRA tag stripping in PaymentMetadata.parse()",
-      "status": "failing",
-      "evidence": "2026-11-26 (Claude Code, session 2). Branch feat/double-entry-and-ledger-edit. All 61 jvmTest passing for *Ledger* and *Register* tests including 3 new tests (recordContraTransferCreatesTwoLinkedNonCashTransactions, editCashRoundTripPreservesPaymentModeAndBankMetadata, rtgsChequesAndOnlineTotalsAreComputedSeparatelyFromCash). Not yet device-tested. UI needs owner-level staging test before passing."
+      "status": "passing",
+      "evidence": "2026-11-26 (Antigravity / Gemini 3.8 Flash). Merged to main at d436612. On-the-fly banking fields implemented across PartyLedgerScreen and DailyCashRegisterScreen (RTGS: account number, account holder, bank name, optional IFSC, optional UTR; Cheque: cheque number, bank name, payee name; UPI: UPI ID, optional UTR). All automated tests passing (./gradlew jvmTest). Device-verified on physical Redmi Note 7 (d93c743) on stagingDebug: Cheque (#CHQ8899) and RTGS (A/c 5010045678912) recorded atomically in mandisamiti.db with clean UI card display and zero cash drawer drift."
     }
   ]
 }
