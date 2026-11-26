@@ -1416,8 +1416,14 @@ private fun BahiTransactionItem(
                 }
             }
         }
-        val meta = listOfNotNull(item.village?.takeIf { it.isNotBlank() },
-            mode.takeIf { item.transaction.paymentMode != PaymentMode.CASH }).joinToString(" · ")
+        val metaList = mutableListOf<String>()
+        if (!item.village.isNullOrBlank()) {
+            metaList.add(item.village)
+        }
+        if (!remarks.isNullOrBlank() && remarks != displayName) {
+            metaList.add(remarks)
+        }
+        val meta = metaList.joinToString(" · ")
         if (meta.isNotBlank()) Text(meta, fontSize = 11.sp, lineHeight = 15.sp, color = MandiTextSecondary,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (isVoid) Text(if (isEnglish) "VOID" else "रद्द", color = MandiTextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
