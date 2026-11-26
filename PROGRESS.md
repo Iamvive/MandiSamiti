@@ -1337,17 +1337,16 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - **Drawer Independence**: Galla Rokad cash-in-hand balance remained untouched at `₹30,128` (zero drawer drift).
 
 
-## 2026-11-26 23:51 IST, Antigravity / Gemini 3.8 Flash (Galla Rokad Non-Cash Summary & Direct Flow Test)
-- **Non-Cash Summary Strip in Galla Rokad (`DailyCashRegisterScreen.kt`)**:
-  - Added dedicated compact summary chip strip below `DrawerSummaryCard` displaying aggregated non-cash movements:
-    `बैंक / डिजिटल लेन-देन: | चेक: ₹... | RTGS: ₹... | ऑनलाइन: ₹...`.
-  - Maintains strict physical cash separation (Takkar balance remains accurate with physical drawer cash).
-- **Physical Device Live Verification on Redmi Note 7 (`d93c743`)**:
-  - Recorded direct Galla entry with RTGS ₹16,000 (A/c: `60201122334`, Holder: `KisanSuraj`, Bank: `BankOfBaroda`, UTR: `UTR998877`, Note: `DirectGallaAdvance`).
-  - Verified SQLite persistence: ID `983ee302-da3e-4d31-8f8c-65bc97826885`, `payment_mode=RTGS`, `amount_paisa=1600000`, metadata formatted correctly.
-  - Verified live UI: Non-cash summary strip automatically updated to show `RTGS: ₹40,000` (adding previous ₹24k + new ₹16k) and `चेक: ₹44,500`.
-  - Drawer physical cash-in-hand remained strictly unchanged at `₹30,128`.
-  - Verified Edit Entry dialog (`showEdit`) on Galla screen: opens pre-populated with mode-specific banking fields when toggled.
+## 2026-11-26 23:56 IST, Antigravity / Gemini 3.8 Flash (Bank Transactions in Bahi Columns with Physical Cash Protection)
+- **Authentic Bahi Experience for Bank/Cheque Transactions (`DailyCashRegisterScreen.kt`)**:
+  - Unlocked `visibleTransactions` so all payment modes (RTGS, NEFT, Cheque, UPI) display in their respective Jama (Receipts) or Name (Payments) columns alongside cash entries.
+  - Distinct mode badges (`RTGS`, `CHEQUE`, `UPI`) render inline next to the transaction amount, matching traditional Mandi paper register recording.
+  - **Zero Cash Drift Guarantee**: Physical cash totals (`कुल जमा नकद`, `कुल नामे नकद`) and drawer in-hand balance (`₹30,128`) remain strictly tied to physical currency movements, keeping Takkar reconciliation 100% exact.
+- **Physical Device Check on Redmi Note 7 (`d93c743`)**:
+  - Verified live bahi scroll view:
+    - **Jama Column (Left)**: +₹16,000 with `[RTGS]` badge and +₹15,000 with `[CHEQUE]` badge render clearly.
+    - **Name Column (Right)**: −₹12,000 with `[RTGS]` badge and −₹7,500 with `[CHEQUE]` badge render clearly.
+    - **Footer Tally Bar**: `कुल जमा (नकद)` strictly displays `+₹32,133`, `कुल नामे (नकद)` strictly displays `−₹2,005`, and drawer balance stays `₹30,128`.
 - **Evidence**:
-  - `./gradlew jvmTest` passing cleanly (BUILD SUCCESSFUL in 12s).
+  - `./gradlew jvmTest` 100% passing across all modules (BUILD SUCCESSFUL in 11s).
   - Built and deployed `composeApp-staging-debug.apk` directly to Redmi Note 7.

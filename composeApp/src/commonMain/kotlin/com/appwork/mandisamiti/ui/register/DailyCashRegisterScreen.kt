@@ -186,15 +186,14 @@ fun DailyCashRegisterScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var pendingDeleteTxId by remember { mutableStateOf<String?>(null) }
     val visibleTransactions = uiState.todayTransactions.filter {
-        it.transaction.transactionType in drawerMovementTypes &&
-            (it.transaction.paymentMode == PaymentMode.CASH || it.transaction.paymentMode == PaymentMode.BOOK_ENTRY)
+        it.transaction.transactionType in drawerMovementTypes
     }
 
     val jamaList = remember(visibleTransactions) {
         visibleTransactions.filter { it.transaction.transactionType == TransactionType.JAMA_RECEIVED || it.transaction.transactionType == TransactionType.INTEREST_RECEIVED }
     }
     val nameList = remember(visibleTransactions) {
-        visibleTransactions.filter { it.transaction.transactionType == TransactionType.UDHAR_GIVEN && it.transaction.paymentMode == PaymentMode.CASH }
+        visibleTransactions.filter { it.transaction.transactionType == TransactionType.UDHAR_GIVEN }
     }
     val totalJamaSidePaisa = uiState.totalJamaSidePaisa
 
@@ -1395,6 +1394,20 @@ private fun BahiTransactionItem(
                 ) {
                     Text(
                         text = if (isEnglish) "Credit" else "क्रेडिट",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiTextSecondary,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            } else if (item.transaction.paymentMode != PaymentMode.CASH) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Text(
+                        text = mode,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MandiTextSecondary,
