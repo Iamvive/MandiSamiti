@@ -4,12 +4,17 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.redis_client import get_redis
 from app.core.security import get_current_user_payload
 from app.database import get_db
 from app.models.analytics_event import AnalyticsEvent
+from app.models.user import ShopProfile
 from app.schemas.events import EventsBatchRequest, EventsBatchResponse
 
 router = APIRouter()
+
+EVENTS_RATE_LIMIT = 60
+EVENTS_RATE_WINDOW_S = 3600
 
 
 @router.post("", response_model=EventsBatchResponse, summary="Batch ingest app telemetry events")
@@ -17,10 +22,25 @@ async def ingest_events(
     payload: EventsBatchRequest,
     current_user: dict = Depends(get_current_user_payload),
     db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
 ):
     shop_id = current_user.get("shop_id")
     if not shop_id:
         raise HTTPException(status_code=400, detail="User is not associated with a Shop")
+
+    key = f"events_rl:{shop_id}"
+    try:
+        count = await redis.incr(key)
+        await redis.expire(key, EVENTS_RATE_WINDOW_S, nx=True)
+    except Exception:
+        count = None
+
+    if count is not None and count > EVENTS_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    shop = await db.get(ShopProfile, shop_id)
+    if not shop:
+        raise HTTPException(status_code=409, detail="Shop not found")
 
     if not payload.events:
         return EventsBatchResponse(accepted=0)
