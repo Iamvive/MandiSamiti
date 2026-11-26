@@ -1,7 +1,10 @@
+import fakeredis.aioredis
 import pytest
 from sqlalchemy import select
 
+from app.core.redis_client import get_redis
 from app.core.security import create_access_token
+from app.main import app
 from app.models.analytics_event import AnalyticsEvent
 from app.models.user import ShopProfile
 
@@ -191,3 +194,144 @@ async def test_batch_size_limit(client, db_sessionmaker):
     empty_res = await client.post("/api/v1/events", headers=headers, json={"events": []})
     assert empty_res.status_code == 200
     assert empty_res.json() == {"accepted": 0}
+
+
+@pytest.mark.asyncio
+async def test_under_limit_accepted(client, db_sessionmaker):
+    async with db_sessionmaker() as s:
+        s.add(ShopProfile(id="shop-a", shop_name="Shop A"))
+        await s.commit()
+
+    headers = _bearer("shop-a")
+    for i in range(60):
+        res = await client.post(
+            "/api/v1/events",
+            headers=headers,
+            json={"events": [_event(event_id=f"ev-{i}")]},
+        )
+        assert res.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_over_limit_returns_429(client, db_sessionmaker):
+    async with db_sessionmaker() as s:
+        s.add(ShopProfile(id="shop-a", shop_name="Shop A"))
+        await s.commit()
+
+    headers = _bearer("shop-a")
+    for i in range(60):
+        res = await client.post(
+            "/api/v1/events",
+            headers=headers,
+            json={"events": [_event(event_id=f"ev-{i}")]},
+        )
+        assert res.status_code == 200
+
+    res_61 = await client.post(
+        "/api/v1/events",
+        headers=headers,
+        json={"events": [_event(event_id="ev-61")]},
+    )
+    assert res_61.status_code == 429
+
+    async with db_sessionmaker() as s:
+        stored = (await s.execute(select(AnalyticsEvent).where(AnalyticsEvent.id == "ev-61"))).scalars().first()
+    assert stored is None
+
+
+@pytest.mark.asyncio
+async def test_limits_are_per_shop(client, db_sessionmaker):
+    async with db_sessionmaker() as s:
+        s.add_all([
+            ShopProfile(id="shop-a", shop_name="Shop A"),
+            ShopProfile(id="shop-b", shop_name="Shop B"),
+        ])
+        await s.commit()
+
+    headers_a = _bearer("shop-a")
+    for i in range(60):
+        res = await client.post(
+            "/api/v1/events",
+            headers=headers_a,
+            json={"events": [_event(event_id=f"ev-a-{i}")]},
+        )
+        assert res.status_code == 200
+
+    res_61 = await client.post(
+        "/api/v1/events",
+        headers=headers_a,
+        json={"events": [_event(event_id="ev-a-61")]},
+    )
+    assert res_61.status_code == 429
+
+    headers_b = _bearer("shop-b")
+    res_b = await client.post(
+        "/api/v1/events",
+        headers=headers_b,
+        json={"events": [_event(event_id="ev-b-1")]},
+    )
+    assert res_b.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_redis_failure_accepts_upload(client, db_sessionmaker):
+    async with db_sessionmaker() as s:
+        s.add(ShopProfile(id="shop-a", shop_name="Shop A"))
+        await s.commit()
+
+    class _DownRedis:
+        async def incr(self, *args, **kwargs):
+            raise ConnectionError("redis down")
+
+        async def expire(self, *args, **kwargs):
+            raise ConnectionError("redis down")
+
+    app.dependency_overrides[get_redis] = lambda: _DownRedis()
+
+    res = await client.post(
+        "/api/v1/events",
+        headers=_bearer("shop-a"),
+        json={"events": [_event(event_id="ev-down-1")]},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"accepted": 1}
+
+    async with db_sessionmaker() as s:
+        stored = (await s.execute(select(AnalyticsEvent).where(AnalyticsEvent.id == "ev-down-1"))).scalars().first()
+    assert stored is not None
+    assert stored.shop_id == "shop-a"
+
+
+@pytest.mark.asyncio
+async def test_missing_shop_returns_409(client, db_sessionmaker):
+    res = await client.post(
+        "/api/v1/events",
+        headers=_bearer("shop-missing"),
+        json={"events": [_event(event_id="ev-missing-1")]},
+    )
+    assert res.status_code == 409
+    assert res.json() == {"detail": "Shop not found"}
+
+    async with db_sessionmaker() as s:
+        rows = (await s.execute(select(AnalyticsEvent))).scalars().all()
+    assert len(rows) == 0
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_key_expires_within_window(client, db_sessionmaker):
+    async with db_sessionmaker() as s:
+        s.add(ShopProfile(id="shop-a", shop_name="Shop A"))
+        await s.commit()
+
+    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    app.dependency_overrides[get_redis] = lambda: fake
+
+    res = await client.post(
+        "/api/v1/events",
+        headers=_bearer("shop-a"),
+        json={"events": [_event(event_id="ev-ttl-1")]},
+    )
+    assert res.status_code == 200
+
+    ttl = await fake.ttl("events_rl:shop-a")
+    assert 0 < ttl <= 3600

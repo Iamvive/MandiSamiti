@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-26 18:15 IST | Antigravity | Branch `mgr/2-backend-only-harden-post-api-v`: hardened `POST /api/v1/events` with per-shop rate limit (429) and shop existence check (409). Pytest was not run by me. |
 | 2026-11-26 16:17 IST | Antigravity | Branch `fix/sentry-flavor-env`: flavor-tagged Sentry `environment` (`staging`/`prod`). Verified test crash on Redmi `d93c743` (`MANDISAMITI-ANDROID-1`), phone scrubbed, `:composeApp:jvmTest` and `:composeApp:installStagingDebug` passed. |
 | 2026-11-26 15:24 IST | Claude Code | Branch `fix/deploy-local-files`: backend deploy packaging fix. pytest 172 passed. Staging deploy of `c26af63` ran clean. Production not deployed. |
 | 2026-11-26 15:05 IST | Claude Code | PR #47 merged (`d4eec34`), deployed to staging, checked on Redmi `d93c743`. `clickstream-telemetry` passing. Deploy script needs a fix. |
@@ -23,6 +24,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
+| `mgr/2-backend-only-harden-post-api-v` | — | Antigravity | Hardened `POST /api/v1/events` with rate limit and shop existence check. Unverified until pytest runs. |
 | `fix/sentry-flavor-env` | — | Antigravity | Ready for review. `android-crash-reporting` passing on Redmi `d93c743`. |
 | `fix/deploy-local-files` | this PR | Claude Code | Open for review. `deploy-excludes-local-venv` passing; on staging. |
 | `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
@@ -152,6 +154,8 @@ Done: 2026-11-26, deploy packaging fix on `fix/deploy-local-files`. Verify: `cd 
 Done: 2026-11-16, udhaar rewrite Tasks 0 and 1. No open Codex PRs. Udhaar model in `docs/decisions/2026-11-16-udhaar-model.md`.
 
 ### Antigravity
+
+Done: 2026-11-26, on `mgr/2-backend-only-harden-post-api-v`: per-shop upload limit and the missing-shop 500 follow-ups from clickstream telemetry are addressed and unverified until `cd backend && pytest` runs.
 
 Done: 2026-11-19, Tasks 1-4 complete.
 - PR #9 fixup: void dialog screenshot retaken, per-PR Redmi evidence organized, docs corrected (commit `ea5632d`).
