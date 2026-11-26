@@ -14,6 +14,7 @@ import com.appwork.mandisamiti.platform.ReceiptPrinter
 import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -119,7 +120,7 @@ class ReceiptPrintIntegrationTest {
         assertNotNull(printedHtml)
         assertTrue(printedHtml.contains("@page { size: A5 portrait;"))
         assertTrue(printedHtml.contains("अग्रवाल ऑइल मिल"))
-        assertTrue(printedHtml.contains("सरसों"))
+        assertFalse(printedHtml.contains("सरसों"), "Must NOT contain crop column/name in bill")
         assertTrue(printedHtml.contains("बिक्री पर्चा (Mandi Sale Bill)"))
     }
 
