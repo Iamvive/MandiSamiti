@@ -207,6 +207,9 @@ fun App(
     // The stored session alone decides the start screen, synchronously: no async lookup, no Register flash.
     var session by remember { mutableStateOf(sessionStore.current()) }
     var currentScreen by remember { mutableStateOf<Screen>(if (session != null) Screen.Home else Screen.Register()) }
+    LaunchedEffect(currentScreen) {
+        com.appwork.mandisamiti.platform.CrashContext.setScreen(currentScreen::class.simpleName ?: "Unknown")
+    }
     var signOutInFlight by remember { mutableStateOf(false) }
     var lendListSelectedTab by rememberSaveable { mutableStateOf(0) }
     var homeTab by rememberSaveable { mutableStateOf(com.appwork.mandisamiti.ui.navigation.NavigationTab.DASHBOARD) }

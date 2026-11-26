@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.sentry.android.gradle)
 }
 
 // Opt-in side-by-side review APK. Its manifest has no network permission or production launcher.
@@ -133,11 +134,13 @@ android {
             resValue("string", "app_name", "मंडी समिति (Staging)")
             val stagingUrl = localProps.getProperty("mandi.stagingApiBaseUrl") ?: "http://64.227.142.180:8060"
             buildConfigField("String", "API_BASE_URL", "\"$stagingUrl\"")
+            buildConfigField("String", "SENTRY_ENV", "\"staging\"")
         }
         create("prod") {
             dimension = "env"
             resValue("string", "app_name", "मंडी समिति")
             buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
+            buildConfigField("String", "SENTRY_ENV", "\"prod\"")
         }
     }
 
@@ -186,6 +189,20 @@ tasks.register<JavaExec>("runDemo") {
 
 tasks.withType<Test>().configureEach {
     systemProperty("mandi.sound.disabled", "true")
+}
+
+sentry {
+    org.set("appworkx")
+    projectName.set("mandisamiti-android")
+    autoUploadProguardMapping.set(!System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank())
+    includeProguardMapping.set(true)
+    autoUploadSourceContext.set(false)
+    tracingInstrumentation {
+        enabled.set(false)
+    }
+    autoInstallation {
+        enabled.set(false)
+    }
 }
 
 gradle.taskGraph.whenReady {

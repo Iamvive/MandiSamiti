@@ -11,7 +11,7 @@ class MandiApp : Application() {
         if (BuildConfig.SENTRY_DSN.isBlank()) return
         SentryAndroid.init(this) { o ->
             o.dsn = BuildConfig.SENTRY_DSN
-            o.environment = if (BuildConfig.DEBUG) "debug" else "prod"
+            o.environment = if (BuildConfig.DEBUG) "${BuildConfig.SENTRY_ENV}-debug" else BuildConfig.SENTRY_ENV
             o.release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}"
             o.isSendDefaultPii = false
             o.tracesSampleRate = 0.0
