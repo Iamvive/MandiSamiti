@@ -637,7 +637,10 @@ fun DailyCashRegisterScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
                         if (directPaymentMode == PaymentMode.CASH) {
                             if (isEnglish) "Cash payment: changes the physical drawer."
@@ -882,7 +885,10 @@ fun DailyCashRegisterScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
                         text = if (isEnglish) {
                             "Set opening cash float in drawer. Current: ₹${MandiMathEngine.paisaToRupeesString(uiState.openingCashPaisa)}"
@@ -960,7 +966,10 @@ fun DailyCashRegisterScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
                         text = if (isEnglish) {
                             "Record cash taken home from drawer. Current in drawer: ₹${MandiMathEngine.paisaToRupeesString(uiState.inHandCashDrawerPaisa)}"
@@ -1192,7 +1201,10 @@ private fun BahiTransactionItem(
             onDismissRequest = { showDetails = false },
             title = { Text(displayName, color = MandiTextPrimary) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("${if (isDeposit) "+" else "−"}₹$amountStr", color = MandiTextPrimary, fontWeight = FontWeight.Bold)
                     Text(secondaryText, color = MandiTextSecondary)
                     Text("$mode · $time", color = MandiTextSecondary)
@@ -1224,7 +1236,10 @@ private fun BahiTransactionItem(
             onDismissRequest = { showEdit = false },
             title = { Text(if (isEnglish) "Edit entry" else "प्रविष्टि बदलें", color = MandiTextPrimary) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = editAmount,
                         onValueChange = { v -> editAmount = v.filter { it.isDigit() } },

@@ -131,7 +131,7 @@ fun SellTransactionReceiptScreen(
                 lots.forEachIndexed { i, lot ->
                     ReceiptLotRow(
                         ReceiptLot(
-                            title = "${i + 1}. ${lot.cropName}",
+                            title = if (lots.size > 1) "${i + 1}" else "",
                             detail = slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal),
                             amount = "₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}"
                         )
@@ -140,7 +140,7 @@ fun SellTransactionReceiptScreen(
             } else {
                 ReceiptLotRow(
                     ReceiptLot(
-                        title = entry.commodityId,
+                        title = "",
                         detail = slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal),
                         amount = "₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
                     )
@@ -229,10 +229,11 @@ fun buildSellBillText(
 
     val lotsText = if (!lots.isNullOrEmpty()) {
         lots.mapIndexed { i, lot ->
-            "${i + 1}. ${lot.cropName}\n${slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}"
+            val prefix = if (lots.size > 1) "${i + 1}. " else ""
+            "${prefix}${slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}"
         }.joinToString("\n")
     } else {
-        "जिंस: ${entry.commodityId}\n${slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
+        "${slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal)}\nरकम: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}"
     }
 
     val amounts = sellSlipAmounts(entry)

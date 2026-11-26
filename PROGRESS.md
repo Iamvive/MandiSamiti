@@ -1256,3 +1256,17 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Changes: Synchronized project state.
 - Evidence: backend pytest 178 passed on main b69db66; PR #51 merged. Not deployed, no staging or device check.
 - Next: Delete merged branches and worktrees (pending); staging check of the events upload limit.
+
+## 2026-11-26 20:56 IST, Antigravity / Gemini 3.8 Flash (Galla dialog scrolling & bill jinse removal)
+- **Galla Rokad Dialog Scrolling**: Added `Modifier.verticalScroll(rememberScrollState())` to the dialog content columns in `DailyCashRegisterScreen.kt` (direct cash deposit/withdrawal, opening float, cash-to-home, and edit entry). Resolves small-screen and keyboard-covered overflow where users could not view or edit the Note/Remarks field.
+- **Bill Details Crop/Jinse Omission**:
+  - Removed crop/jinse label lines and headers from both Buy Slip and Sell Bill in:
+    - In-app receipt screens (`BuyTransactionReceiptScreen.kt`, `SellTransactionReceiptScreen.kt`)
+    - WhatsApp share text (`buildFarmerSlipText`, `buildSellBillText`)
+    - A5 print/PDF HTML tables (`ReceiptHtmlRenderer.renderBuyReceiptHtml`, `renderSellReceiptHtml`)
+  - Guaranteed 2-decimal quintal formatting across all equations and summary rows (`slipQuintalText`, `formatQuintals2`).
+- **Evidence**:
+  - Unit tests `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.slip.ReceiptHtmlRendererTest" --tests "com.appwork.mandisamiti.ui.sell.SellTransactionReceiptTest" --tests "com.appwork.mandisamiti.ui.buy.BuyTransactionReceiptTest"` passed (BUILD SUCCESSFUL).
+  - Staging debug APK assembled and installed on physical Redmi Note 7 (`d93c743`) via `./gradlew :composeApp:installStagingDebug`.
+  - App launched on device with active scrcpy mirror.
+

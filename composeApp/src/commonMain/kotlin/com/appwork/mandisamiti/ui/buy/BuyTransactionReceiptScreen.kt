@@ -370,14 +370,15 @@ fun BuyTransactionReceiptScreen(
             MandiLinesCard {
                 if (lots.isNotEmpty()) {
                     lots.forEachIndexed { idx, lot ->
+                        val prefix = if (lots.size > 1) "${if (isEnglish) "Lot" else "लॉट"} #${idx + 1}\n" else ""
                         Line(
-                            label = "${if (isEnglish) "Lot" else "फसल"} #${idx + 1}: ${lot.cropName}\n${slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal)}",
+                            label = "$prefix${slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal)}",
                             amountText = MandiMathEngine.formatRupees(lot.grossPaisa)
                         )
                     }
                 } else {
                     Line(
-                        label = "${if (isEnglish) "Crop" else "फसल"}: ${entry.commodityId}\n${slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal)}",
+                        label = slipEquation(entry.bagsCount, entry.weightPerBagGrams, entry.totalWeightGrams, entry.ratePaisaPerQuintal),
                         amountText = MandiMathEngine.formatRupees(entry.grossPaisa)
                     )
                 }
@@ -527,7 +528,9 @@ fun buildFarmerSlipText(
     appendLine("--------------------")
     if (lots.isNotEmpty()) {
         lots.forEachIndexed { i, lot ->
-            appendLine("फसल ${i + 1}: ${lot.cropName}")
+            if (lots.size > 1) {
+                appendLine("${i + 1}.")
+            }
             appendLine(slipEquation(lot.bags, lot.weightPerBagGrams, lot.totalWeightGrams, lot.ratePaisaPerQuintal))
             appendLine("रकम: ₹${MandiMathEngine.paisaToRupeesString(lot.grossPaisa)}")
             appendLine()
@@ -538,6 +541,7 @@ fun buildFarmerSlipText(
         appendLine("रकम: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
         appendLine("--------------------")
     }
+    appendLine("कुल वजन: ${formatQuintals2(entry.totalWeightGrams)} क्विंटल")
     appendLine("कुल राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.grossPaisa)}")
     appendLine("--------------------")
     appendLine("*पर्ची राशि: ₹${MandiMathEngine.paisaToRupeesString(entry.netPayablePaisa)}*")

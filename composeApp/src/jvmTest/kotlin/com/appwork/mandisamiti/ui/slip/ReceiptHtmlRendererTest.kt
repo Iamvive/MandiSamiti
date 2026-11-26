@@ -8,6 +8,7 @@ import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.SellPartyKind
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ReceiptHtmlRendererTest {
@@ -132,8 +133,9 @@ class ReceiptHtmlRendererTest {
             lots = lots
         )
 
-        assertTrue(html.contains("गेहूं शरबती"), "Must list first lot crop name")
-        assertTrue(html.contains("सरसों"), "Must list second lot crop name")
+        assertFalse(html.contains("गेहूं शरबती"), "Must NOT list crop name")
+        assertFalse(html.contains("सरसों"), "Must NOT list crop name")
+        assertFalse(html.contains("<th>फसल</th>"), "Must NOT contain crop column header")
         assertTrue(html.contains("12 × 50 + 0 = 6.00 क्विंटल × ₹2,200"), "Must contain first lot equation")
         assertTrue(html.contains("8 × 50 + 0 = 4.00 क्विंटल × ₹5,000"), "Must contain second lot equation")
     }
@@ -176,7 +178,8 @@ class ReceiptHtmlRendererTest {
         assertTrue(html.contains("बिक्री पर्चा (Mandi Sale Bill)"), "Must contain sale bill title")
         assertTrue(html.contains("गुप्ता ट्रेडर्स"), "Must contain buyer name")
         assertTrue(html.contains("09BBBBB1111B1Z9"), "Must contain buyer GSTIN")
-        assertTrue(html.contains("धान 1509"), "Must contain crop name")
+        assertFalse(html.contains("धान 1509"), "Must NOT contain crop name")
+        assertFalse(html.contains("<th>फसल</th>"), "Must NOT contain crop column header")
         assertTrue(html.contains("75,000"), "Must contain gross amount")
         assertTrue(html.contains("76,250"), "Must contain total receivable")
     }
