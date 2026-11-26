@@ -1316,3 +1316,37 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - **Evidence**:
   - Full test suite `./gradlew jvmTest` passed cleanly (BUILD SUCCESSFUL in 20s).
   - Live UI hierarchy confirmed via `adb shell uiautomator dump`.
+
+
+## 2026-11-26 23:38 IST, Antigravity / Gemini 3.8 Flash (On-The-Fly Banking Fields for Payment Modes)
+- **On-The-Fly Mode-Specific Banking Fields**:
+  - Implemented dynamic field rendering across `PartyLedgerScreen` (Contra Transfer and Edit entry sheets) and `DailyCashRegisterScreen` (Direct Entry and Edit sheets).
+  - **RTGS / NEFT / Bank**: `खाता संख्या *` (Account Number), `खाता धारक का नाम *` (Account Holder), `बैंक का नाम *` (Bank Name), `आईएफएससी कोड (वैकल्पिक)` (IFSC Code - Optional), `बैंक रसीद / यूटीआर नंबर (वैकल्पिक)` (Ref / UTR Number - Optional with helper text: "मैसेज या पर्ची में आया संदर्भ नंबर"), and `विवरण / नोट (वैकल्पिक)`.
+  - **Cheque (चेक)**: `चेक संख्या *` (Cheque Number), `बैंक का नाम *` (Bank Name), `खाता धारक / किसके नाम चेक है *` (Payee Name), and `विवरण / नोट (वैकल्पिक)`.
+  - **UPI (यूपीआई)**: `यूपीआई आईडी या मोबाइल *` (UPI ID / Mobile), `यूटीआर / लेन-देन नंबर (वैकल्पिक)` (UTR / Ref Number - Optional), and `विवरण / नोट (वैकल्पिक)`.
+- **PaymentMetadata & RemarksFormatter Architecture**:
+  - Extended `PaymentMeta` with `bankName`, `accountNumber`, `accountHolder`, `ifsc`, `checkNumber`, `utrNumber`, `upiId`, and `userRemarks`.
+  - Created `PaymentMeta.displaySummary()` to replace raw regex tags on UI cards with clean single-line badges (e.g. `चेक #CHQ8899 · HDFC · (KisanRam) · ChanaFasal` and `संदर्भ/UTR: UTR334455 · SBI · खाता: 5010045678912 (RamKishan) · IFSC: SBIN0004567 · SarsonAdvance`).
+  - Updated `RemarksFormatter.TAG_REGEX` to strip all internal metadata tags cleanly.
+- **Automated Verification**:
+  - `./gradlew jvmTest` across all modules: 100% pass (BUILD SUCCESSFUL in 30s).
+- **Physical Device Check on Redmi Note 7 (`d93c743`)**:
+  - Installed `:composeApp:installStagingDebug` (APK size verified, installed on physical device).
+  - **Cheque Flow Verified**: Recorded ₹7,500 Cheque (`CHQ8899`, `HDFC`, `KisanRam`, `ChanaFasal`). Committed atomically to `cashTransactionEntity`. Renders as `चेक #CHQ8899 · HDFC · (KisanRam) · ChanaFasal` with zero raw tags.
+  - **RTGS Flow Verified**: Recorded ₹12,000 RTGS (`5010045678912`, `RamKishan`, `SBI`, `SBIN0004567`, `UTR334455`, `SarsonAdvance`). Committed atomically to `cashTransactionEntity`. Renders as `संदर्भ/UTR: UTR334455 · SBI · खाता: 5010045678912 (RamKishan) · IFSC: SBIN0004567 · SarsonAdvance`.
+  - **Drawer Independence**: Galla Rokad cash-in-hand balance remained untouched at `₹30,128` (zero drawer drift).
+
+
+## 2026-11-26 23:56 IST, Antigravity / Gemini 3.8 Flash (Bank Transactions in Bahi Columns with Physical Cash Protection)
+- **Authentic Bahi Experience for Bank/Cheque Transactions (`DailyCashRegisterScreen.kt`)**:
+  - Unlocked `visibleTransactions` so all payment modes (RTGS, NEFT, Cheque, UPI) display in their respective Jama (Receipts) or Name (Payments) columns alongside cash entries.
+  - Distinct mode badges (`RTGS`, `CHEQUE`, `UPI`) render inline next to the transaction amount, matching traditional Mandi paper register recording.
+  - **Zero Cash Drift Guarantee**: Physical cash totals (`कुल जमा नकद`, `कुल नामे नकद`) and drawer in-hand balance (`₹30,128`) remain strictly tied to physical currency movements, keeping Takkar reconciliation 100% exact.
+- **Physical Device Check on Redmi Note 7 (`d93c743`)**:
+  - Verified live bahi scroll view:
+    - **Jama Column (Left)**: +₹16,000 with `[RTGS]` badge and +₹15,000 with `[CHEQUE]` badge render clearly.
+    - **Name Column (Right)**: −₹12,000 with `[RTGS]` badge and −₹7,500 with `[CHEQUE]` badge render clearly.
+    - **Footer Tally Bar**: `कुल जमा (नकद)` strictly displays `+₹32,133`, `कुल नामे (नकद)` strictly displays `−₹2,005`, and drawer balance stays `₹30,128`.
+- **Evidence**:
+  - `./gradlew jvmTest` 100% passing across all modules (BUILD SUCCESSFUL in 11s).
+  - Built and deployed `composeApp-staging-debug.apk` directly to Redmi Note 7.

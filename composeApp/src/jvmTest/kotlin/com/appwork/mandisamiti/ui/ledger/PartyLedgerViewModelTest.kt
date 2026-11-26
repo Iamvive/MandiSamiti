@@ -1278,5 +1278,50 @@ class PartyLedgerViewModelTest {
         assertEquals("223344", meta.checkNumber)
         assertEquals("cheque received", meta.userRemarks)
     }
+
+    @Test
+    fun recordContraTransferSavesAllOnTheFlyBankingFields() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val dealRepo = OfflineFirstDealRepository(database, ioDispatcher = ioDispatcher)
+        partyRepo.saveParty(Party(id = "farmer-1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+        val viewModel = PartyLedgerViewModel(
+            shopId = "shop-1", partyId = "farmer-1", partyRepository = partyRepo, cashRepository = cashRepo,
+            dealRepository = dealRepo, shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope
+        )
+
+        viewModel.events.test {
+            viewModel.recordContraTransfer(
+                targetPartyId = "farmer-1",
+                amountPaisa = 750_000L,
+                paymentMode = PaymentMode.RTGS,
+                bankName = "Punjab National Bank",
+                accountNumber = "123456789012",
+                accountHolder = "रामवीर सिंह",
+                ifsc = "PUNB0123456",
+                checkNumber = null,
+                utrNumber = "UTR99887766",
+                upiId = null,
+                userRemarks = "ऑन-द-फ्लाई आरटीजीएस"
+            )
+            val event = awaitItem()
+            assertTrue(event is PartyLedgerEvent.TransactionRecorded)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val txList = cashRepo.getTransactionsByPartyStream("farmer-1").first()
+        val udharLeg = txList.first { it.transactionType == TransactionType.UDHAR_GIVEN }
+        val meta = PaymentMetadata.parse(udharLeg.remarks)
+        assertEquals("Punjab National Bank", meta.bankName)
+        assertEquals("123456789012", meta.accountNumber)
+        assertEquals("रामवीर सिंह", meta.accountHolder)
+        assertEquals("PUNB0123456", meta.ifsc)
+        assertEquals("UTR99887766", meta.utrNumber)
+        assertEquals("ऑन-द-फ्लाई आरटीजीएस", meta.userRemarks)
+    }
 }
 
