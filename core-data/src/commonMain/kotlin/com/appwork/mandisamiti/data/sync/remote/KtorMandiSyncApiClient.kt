@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.data.sync.remote
 
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventsPushRequestDto
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventsPushResponseDto
+import com.appwork.mandisamiti.data.analytics.EventsPushHttpException
 import com.appwork.mandisamiti.data.sync.model.SyncPushRequestDto
 import com.appwork.mandisamiti.data.sync.model.SyncPushResponseDto
 import com.appwork.mandisamiti.data.sync.model.SyncPullResponseDto
@@ -67,6 +70,40 @@ class KtorMandiSyncApiClient(
             } else {
                 val errorBody = response.bodyAsText()
                 throw RuntimeException("Sync pull failed (HTTP ${response.status.value}): $errorBody")
+            }
+        }
+
+    override suspend fun pushEvents(request: AnalyticsEventsPushRequestDto): Result<AnalyticsEventsPushResponseDto> =
+        safeCall {
+            val url = "$baseUrl/api/v1/events"
+            val response: HttpResponse = send { token ->
+                http.post(url) {
+                    contentType(ContentType.Application.Json)
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    setBody(request)
+                }
+            }
+            if (response.status.value in 200..299) {
+                if (response.status == HttpStatusCode.NoContent) {
+                    AnalyticsEventsPushResponseDto(accepted = request.events.size)
+                } else {
+                    try {
+                        response.body<AnalyticsEventsPushResponseDto>()
+                    } catch (c: CancellationException) {
+                        throw c
+                    } catch (_: Throwable) {
+                        AnalyticsEventsPushResponseDto(accepted = request.events.size)
+                    }
+                }
+            } else {
+                val errorBody = try {
+                    response.bodyAsText()
+                } catch (c: CancellationException) {
+                    throw c
+                } catch (_: Throwable) {
+                    ""
+                }
+                throw EventsPushHttpException(response.status.value, errorBody)
             }
         }
 

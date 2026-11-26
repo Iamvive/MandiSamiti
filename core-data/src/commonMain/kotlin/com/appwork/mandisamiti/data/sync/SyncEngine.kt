@@ -1,13 +1,17 @@
 package com.appwork.mandisamiti.data.sync
 
+import com.appwork.mandisamiti.data.analytics.Analytics
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventName
 import com.appwork.mandisamiti.data.sync.model.*
 import com.appwork.mandisamiti.domain.model.normalizePhone
 import com.appwork.mandisamiti.data.sync.remote.MandiSyncApiClient
 import com.appwork.mandisamiti.database.AppDatabase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlin.time.TimeSource
 
 @Serializable
 data class SyncPayload(
@@ -28,7 +32,8 @@ sealed interface SyncResult {
 class SyncEngine(
     private val database: AppDatabase,
     private val apiClient: MandiSyncApiClient? = null,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val analytics: Analytics? = null,
 ) {
     private val queries = database.appDatabaseQueries
 
@@ -605,7 +610,8 @@ class SyncEngine(
         pushPendingChanges().fold(onSuccess = { pullRemoteChanges(shopId, onProgress) }, onFailure = { Result.failure(it) })
 
     suspend fun syncFull(shopId: String): SyncResult = withContext(ioDispatcher) {
-        try {
+        val startedAt = TimeSource.Monotonic.markNow()
+        val result = try {
             val pushed = pushPendingChanges().getOrThrow()
             val pulled = pullRemoteChanges(shopId).getOrThrow()
             setNeedsLogin(false)
@@ -613,6 +619,23 @@ class SyncEngine(
         } catch (t: Throwable) {
             SyncResult.Failure(t)
         }
+        val client = apiClient
+        if (analytics != null && client != null && (result !is SyncResult.Failure || result.error !is CancellationException)) {
+            val durationMs = startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0L)
+            val event = when (result) {
+                is SyncResult.Success -> AnalyticsEventName.SYNC_OK
+                is SyncResult.Failure -> AnalyticsEventName.SYNC_FAILED
+            }
+            try {
+                analytics.track(event, durationMs = durationMs)
+                analytics.flush(client)
+            } catch (c: CancellationException) {
+                throw c
+            } catch (_: Throwable) {
+                // Telemetry must never change the SyncResult.
+            }
+        }
+        result
     }
 
     suspend fun markAllBatchSynced(partyIds: List<String>, deals: List<Pair<String, Int>>, txs: List<Pair<String, Int>>) = withContext(ioDispatcher) {

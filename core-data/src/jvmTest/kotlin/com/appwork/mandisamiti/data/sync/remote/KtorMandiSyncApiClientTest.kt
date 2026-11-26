@@ -1,5 +1,8 @@
 package com.appwork.mandisamiti.data.sync.remote
 
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventDto
+import com.appwork.mandisamiti.data.analytics.AnalyticsEventsPushRequestDto
+import com.appwork.mandisamiti.data.analytics.EventsPushHttpException
 import com.appwork.mandisamiti.data.auth.AuthError
 import com.appwork.mandisamiti.data.auth.InMemorySessionStore
 import com.appwork.mandisamiti.data.auth.Session
@@ -14,8 +17,15 @@ import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -127,5 +137,91 @@ class KtorMandiSyncApiClientTest {
         val client = KtorMandiSyncApiClient(mandiHttpClient(engine), "http://x", store) { Result.failure(RuntimeException("offline")) }
         val err = client.pullSync(0, 500).exceptionOrNull()
         assertTrue(err != null && err !is SyncAuthExpired)
+    }
+
+    @Test
+    fun pushEvents_sendsExactWireJsonAndBearerToken() = runTest {
+        val reqs = mutableListOf<HttpRequestData>()
+        val api = client(captured = reqs) {
+            json(HttpStatusCode.OK, """{"accepted":1}""")
+        }
+
+        val res = api.pushEvents(
+            AnalyticsEventsPushRequestDto(
+                events = listOf(
+                    AnalyticsEventDto(
+                        id = "e1",
+                        name = "screen_view",
+                        screen = "buy_list",
+                        sessionId = "s1",
+                        occurredAtMs = 1764140000000L,
+                        durationMs = null,
+                        appVersion = "1.0",
+                    )
+                )
+            )
+        )
+
+        assertTrue(res.isSuccess)
+        assertEquals(1, res.getOrThrow().accepted)
+
+        val req = reqs.single()
+        assertEquals("$base/api/v1/events", req.url.toString())
+        assertEquals(HttpMethod.Post, req.method)
+        assertEquals("Bearer test-token", req.headers[HttpHeaders.Authorization])
+
+        val bodyText = (req.body as TextContent).text
+        val parsed = Json.parseToJsonElement(bodyText).jsonObject
+        val events = parsed["events"]!!.jsonArray
+        assertEquals(1, events.size)
+        val obj = events[0].jsonObject
+        assertEquals(
+            setOf("id", "name", "screen", "session_id", "occurred_at_ms", "duration_ms", "app_version"),
+            obj.keys
+        )
+        assertEquals("e1", obj["id"]!!.jsonPrimitive.content)
+        assertEquals("screen_view", obj["name"]!!.jsonPrimitive.content)
+        assertEquals("buy_list", obj["screen"]!!.jsonPrimitive.content)
+        assertEquals("s1", obj["session_id"]!!.jsonPrimitive.content)
+        assertEquals(1764140000000L, obj["occurred_at_ms"]!!.jsonPrimitive.long)
+        assertEquals(JsonNull, obj["duration_ms"])
+        assertEquals("1.0", obj["app_version"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun pushEvents_on401RefreshesOnceAndRetries() = runTest {
+        val seen = mutableListOf<String?>()
+        val engine = MockEngine { req ->
+            seen += req.headers[HttpHeaders.Authorization]
+            if (req.headers[HttpHeaders.Authorization] == "Bearer old") respond("", HttpStatusCode.Unauthorized)
+            else respond("""{"accepted":1}""", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        val store = InMemorySessionStore().apply { save(Session("shop-1", "old", "r-old")) }
+        val api = KtorMandiSyncApiClient(mandiHttpClient(engine), "http://x", store) { Result.success("new" to "r-new") }
+
+        val res = api.pushEvents(
+            AnalyticsEventsPushRequestDto(
+                listOf(AnalyticsEventDto("e1", "app_open", null, "s1", 10L, null, "1.0"))
+            )
+        )
+        assertTrue(res.isSuccess)
+        assertEquals(listOf<String?>("Bearer old", "Bearer new"), seen)
+    }
+
+    @Test
+    fun pushEvents_non2xxThrowsEventsPushHttpExceptionWithStatusCode() = runTest {
+        val api422 = client { json(HttpStatusCode.UnprocessableEntity, """{"detail":"bad"}""") }
+        val err422 = api422.pushEvents(
+            AnalyticsEventsPushRequestDto(listOf(AnalyticsEventDto("e1", "app_open", null, "s1", 10L, null, "1.0")))
+        ).exceptionOrNull()
+        val ex422 = assertIs<EventsPushHttpException>(err422)
+        assertEquals(422, ex422.statusCode)
+
+        val api404 = client { json(HttpStatusCode.NotFound, "not found") }
+        val err404 = api404.pushEvents(
+            AnalyticsEventsPushRequestDto(listOf(AnalyticsEventDto("e1", "app_open", null, "s1", 10L, null, "1.0")))
+        ).exceptionOrNull()
+        val ex404 = assertIs<EventsPushHttpException>(err404)
+        assertEquals(404, ex404.statusCode)
     }
 }

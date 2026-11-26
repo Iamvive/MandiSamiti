@@ -131,6 +131,44 @@ class PilotSchemaMigrationTest {
         }
     }
 
+    @Test
+    fun migrationTo16AddsAnalyticsEventTableWithoutDataLoss() {
+        val snapshot = committedSnapshot(8)
+        val database = Files.createTempFile("mandisamiti-v15-", ".db")
+        Files.copy(snapshot, database, StandardCopyOption.REPLACE_EXISTING)
+        val driver = JdbcSqliteDriver("jdbc:sqlite:${database.toAbsolutePath()}")
+
+        try {
+            AppDatabase.Schema.migrate(driver, 8, 15)
+            driver.execute(
+                null,
+                """INSERT INTO shopProfileEntity
+                    (id, shop_name, owner_name, mandi_name, phone_number, pin_hash, created_at, updated_at)
+                    VALUES ('shop-analytics', 'Shop', 'Owner', 'Mandi', '9000000000', 'hash', 1, 1)""".trimIndent(),
+                0
+            )
+
+            AppDatabase.Schema.migrate(driver, 15, CURRENT_SCHEMA_VERSION)
+
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM shopProfileEntity WHERE id = 'shop-analytics'"))
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'AnalyticsEvent'"))
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_analytics_event_occurred_at'"))
+            assertEquals(0L, driver.scalarLong("SELECT COUNT(*) FROM AnalyticsEvent"))
+
+            driver.execute(
+                null,
+                """INSERT INTO AnalyticsEvent
+                    (id, name, screen, session_id, occurred_at_ms, duration_ms, app_version)
+                    VALUES ('evt-1', 'screen_view', 'buy_list', 'sess-1', 1764140000000, NULL, '1.0')""".trimIndent(),
+                0
+            )
+            assertEquals(1L, driver.scalarLong("SELECT COUNT(*) FROM AnalyticsEvent WHERE id = 'evt-1' AND name = 'screen_view'"))
+        } finally {
+            driver.close()
+            database.deleteIfExists()
+        }
+    }
+
     private fun committedV1Snapshot(): Path {
         return committedSnapshot(1)
     }
@@ -212,7 +250,7 @@ class PilotSchemaMigrationTest {
 
     private companion object {
         const val PRE_PILOT_VERSION = 6L
-        const val CURRENT_SCHEMA_VERSION = 15L
+        const val CURRENT_SCHEMA_VERSION = 16L
 
         val TABLES = listOf(
             "shopProfileEntity",

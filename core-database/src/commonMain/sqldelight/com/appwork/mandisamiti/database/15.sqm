@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS AnalyticsEvent (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    screen TEXT,
+    session_id TEXT NOT NULL,
+    occurred_at_ms INTEGER NOT NULL,
+    duration_ms INTEGER,
+    app_version TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_analytics_event_occurred_at ON AnalyticsEvent(occurred_at_ms);

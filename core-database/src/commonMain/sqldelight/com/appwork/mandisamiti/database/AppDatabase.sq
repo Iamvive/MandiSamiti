@@ -926,3 +926,39 @@ WHERE shop_id = ?;
 wipeShopQuota:
 DELETE FROM shopQuotaEntity;
 
+-- Offline analytics event queue (max 5000, oldest dropped)
+CREATE TABLE AnalyticsEvent (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    screen TEXT,
+    session_id TEXT NOT NULL,
+    occurred_at_ms INTEGER NOT NULL,
+    duration_ms INTEGER,
+    app_version TEXT NOT NULL
+);
+CREATE INDEX idx_analytics_event_occurred_at ON AnalyticsEvent(occurred_at_ms);
+
+insertAnalyticsEvent:
+INSERT OR IGNORE INTO AnalyticsEvent(id, name, screen, session_id, occurred_at_ms, duration_ms, app_version)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getOldestAnalyticsEvents:
+SELECT * FROM AnalyticsEvent
+ORDER BY occurred_at_ms ASC, id ASC
+LIMIT ?;
+
+deleteAnalyticsEventsByIds:
+DELETE FROM AnalyticsEvent
+WHERE id IN ?;
+
+trimAnalyticsEvents:
+DELETE FROM AnalyticsEvent
+WHERE id NOT IN (
+    SELECT id FROM AnalyticsEvent
+    ORDER BY occurred_at_ms DESC, id DESC
+    LIMIT 5000
+);
+
+wipeAnalyticsEvents:
+DELETE FROM AnalyticsEvent;
+
