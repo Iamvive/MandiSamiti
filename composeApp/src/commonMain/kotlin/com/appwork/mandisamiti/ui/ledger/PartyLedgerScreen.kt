@@ -90,6 +90,7 @@ import kotlinx.coroutines.launch
 import com.appwork.mandisamiti.domain.math.RuralInterestEngine
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.PaymentMetadata
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
@@ -197,6 +198,12 @@ fun PartyLedgerScreen(
     var cashEditTarget by remember { mutableStateOf<LedgerItem.CashItem?>(null) }
     var cashEditAmount by remember { mutableStateOf("") }
     var cashEditRemarks by remember { mutableStateOf("") }
+    var showContraDialog by remember { mutableStateOf(false) }
+    var contraAmountInput by remember { mutableStateOf("") }
+    var contraMode by remember { mutableStateOf(PaymentMode.RTGS) }
+    var contraBankName by remember { mutableStateOf("") }
+    var contraCheckNumber by remember { mutableStateOf("") }
+    var contraRemarks by remember { mutableStateOf("") }
 
     var showEditPartyDialog by remember { mutableStateOf(false) }
     var editNameInput by remember { mutableStateOf("") }
@@ -563,6 +570,25 @@ fun PartyLedgerScreen(
                         )
                     }
 
+                    OutlinedButton(
+                        onClick = { showContraDialog = true },
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, MandiBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MandiSurface,
+                            contentColor = MandiTextSecondary
+                        )
+                    ) {
+                        Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            if (isEnglish) "Bank / Contra Transfer" else "बैंक / खाता ट्रांसफर",
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
+
                     val activeParty = party
                     val tradeCallback = if (activeParty != null && !activeParty.isDeleted && activeParty.id != com.appwork.mandisamiti.domain.model.Khaate.partyId(activeParty.shopId)) {
                         when (activeParty.partyType) {
@@ -670,7 +696,12 @@ fun PartyLedgerScreen(
                                 onEditRepayment = { editingSettlement = it },
                                 onShowRepaymentHistory = { historySettlement = it },
                                 onLongPress = { voidTarget = item },
-                                onDelete = { voidTarget = item }
+                                onDelete = { voidTarget = item },
+                                onEdit = {
+                                    cashEditAmount = (item.lend.amountPaisa / 100).toString()
+                                    cashEditRemarks = item.lend.notes ?: ""
+                                    lendEditTarget = item
+                                }
                             )
                         }
                         is LedgerItem.DealItem -> {
@@ -692,7 +723,13 @@ fun PartyLedgerScreen(
                                 tag = item.tag,
                                 slipNo = (item.tag as? com.appwork.mandisamiti.domain.ledger.LedgerTag.Slip)?.let { slipNoById[it.slipId] },
                                 onLongPress = { voidTarget = item },
-                                onDelete = { voidTarget = item }
+                                onDelete = { voidTarget = item },
+                                onEdit = {
+                                    val meta = PaymentMetadata.parse(item.transaction.remarks)
+                                    cashEditAmount = (item.transaction.amountPaisa / 100).toString()
+                                    cashEditRemarks = meta.userRemarks ?: ""
+                                    cashEditTarget = item
+                                }
                             )
                         }
                     }
@@ -938,6 +975,7 @@ fun PartyLedgerScreen(
 
     cashEditTarget?.let { target ->
         val newAmount = cashEditAmount.toLongOrNull() ?: 0L
+        val meta = PaymentMetadata.parse(target.transaction.remarks)
         AlertDialog(
             onDismissRequest = { cashEditTarget = null },
             title = { Text(if (isEnglish) "Edit entry" else "प्रविष्टि सुधारें", fontWeight = FontWeight.Bold, color = MandiTextPrimary) },
@@ -958,13 +996,39 @@ fun PartyLedgerScreen(
                         label = { Text(if (isEnglish) "Note" else "नोट") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Text(
+                        text = if (isEnglish) "Mode: ${target.transaction.paymentMode.name}" else "भुगतान: ${target.transaction.paymentMode.name}",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    if (!meta.bankName.isNullOrBlank()) {
+                        Text(
+                            text = if (isEnglish) "Bank: ${meta.bankName}" else "बैंक: ${meta.bankName}",
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary
+                        )
+                    }
+                    if (!meta.checkNumber.isNullOrBlank()) {
+                        Text(
+                            text = if (isEnglish) "Cheque #: ${meta.checkNumber}" else "चेक #: ${meta.checkNumber}",
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     enabled = newAmount > 0,
                     onClick = {
-                        viewModel.editCash(target, newAmount * 100L, cashEditRemarks.trim().ifEmpty { null })
+                        viewModel.editCash(
+                            target,
+                            newAmount * 100L,
+                            target.transaction.paymentMode,
+                            meta.bankName,
+                            meta.checkNumber,
+                            cashEditRemarks.trim().ifEmpty { null }
+                        )
                         cashEditTarget = null
                     },
                     modifier = Modifier.heightIn(min = 48.dp)
@@ -1058,6 +1122,128 @@ fun PartyLedgerScreen(
                 }) {
                     Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary)
                 }
+            }
+        )
+    }
+
+    // Contra / Bank Transfer Dialog
+    if (showContraDialog) {
+        val contraAmount = contraAmountInput.toLongOrNull() ?: 0L
+        val showBankFields = contraMode == PaymentMode.RTGS || contraMode == PaymentMode.NEFT ||
+            contraMode == PaymentMode.CHEQUE || contraMode == PaymentMode.BANK
+        AlertDialog(
+            onDismissRequest = {
+                showContraDialog = false
+                contraAmountInput = ""
+                contraMode = PaymentMode.RTGS
+                contraBankName = ""
+                contraCheckNumber = ""
+                contraRemarks = ""
+            },
+            title = {
+                Text(
+                    if (isEnglish) "Bank / Contra Transfer" else "बैंक / खाता ट्रांसफर",
+                    fontWeight = FontWeight.Bold,
+                    color = MandiTextPrimary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = contraAmountInput,
+                        onValueChange = { contraAmountInput = it.filter(Char::isDigit) },
+                        label = { Text(if (isEnglish) "Amount (₹)" else "राशि (₹)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        if (isEnglish) "Payment Mode" else "भुगतान माध्यम",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MandiTextPrimary
+                    )
+                    listOf(PaymentMode.RTGS, PaymentMode.NEFT, PaymentMode.CHEQUE, PaymentMode.UPI).forEach { mode ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { contraMode = mode }
+                        ) {
+                            RadioButton(selected = contraMode == mode, onClick = { contraMode = mode })
+                            Text(mode.name, fontSize = 14.sp, color = MandiTextPrimary)
+                        }
+                    }
+                    if (showBankFields) {
+                        OutlinedTextField(
+                            value = contraBankName,
+                            onValueChange = { contraBankName = it },
+                            label = { Text(if (isEnglish) "Bank Name" else "बैंक का नाम") },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = contraCheckNumber,
+                            onValueChange = { contraCheckNumber = it },
+                            label = { Text(if (isEnglish) "Cheque / Ref No." else "चेक / संदर्भ संख्या") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    OutlinedTextField(
+                        value = contraRemarks,
+                        onValueChange = { contraRemarks = it },
+                        label = { Text(if (isEnglish) "Note (optional)" else "नोट (वैकल्पिक)") },
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        if (isEnglish) "This entry will not affect the cash drawer." else "यह प्रविष्टि नकद रजिस्टर को प्रभावित नहीं करेगी।",
+                        fontSize = 11.sp,
+                        color = MandiTextSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = contraAmount > 0,
+                    onClick = {
+                        val currentPartyId = party?.id
+                        if (currentPartyId != null) {
+                            viewModel.recordContraTransfer(
+                                targetPartyId = currentPartyId,
+                                amountPaisa = contraAmount * 100L,
+                                paymentMode = contraMode,
+                                bankName = contraBankName.trim().ifBlank { null },
+                                checkNumber = contraCheckNumber.trim().ifBlank { null },
+                                userRemarks = contraRemarks.trim().ifBlank { null }
+                            )
+                        }
+                        showContraDialog = false
+                        contraAmountInput = ""
+                        contraMode = PaymentMode.RTGS
+                        contraBankName = ""
+                        contraCheckNumber = ""
+                        contraRemarks = ""
+                    },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) { Text(if (isEnglish) "Save" else "सेव करें") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showContraDialog = false
+                        contraAmountInput = ""
+                        contraMode = PaymentMode.RTGS
+                        contraBankName = ""
+                        contraCheckNumber = ""
+                        contraRemarks = ""
+                    },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) { Text(if (isEnglish) "Cancel" else "रद्द करें", color = MandiTextSecondary) }
             }
         )
     }
@@ -1809,7 +1995,8 @@ private fun FintechCashCard(
     tag: com.appwork.mandisamiti.domain.ledger.LedgerTag?,
     slipNo: Long?,
     onLongPress: () -> Unit,
-    onDelete: () -> Unit = onLongPress
+    onDelete: () -> Unit = onLongPress,
+    onEdit: () -> Unit = {}
 ) {
     val isVoid = transaction.isVoid
     val isDeposit = transaction.transactionType == TransactionType.JAMA_RECEIVED ||
@@ -1914,6 +2101,17 @@ private fun FintechCashCard(
                     textDecoration = if (isVoid) TextDecoration.LineThrough else null
                 )
                 if (!isVoid) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = if (isEnglish) "Edit" else "सुधारें",
+                            tint = MandiTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                     IconButton(
                         onClick = onDelete,
                         modifier = Modifier.size(28.dp)
@@ -2330,7 +2528,8 @@ private fun FintechLendCard(
     onEditRepayment: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onShowRepaymentHistory: (com.appwork.mandisamiti.domain.model.LendSettlement) -> Unit = {},
     onLongPress: () -> Unit,
-    onDelete: () -> Unit = onLongPress
+    onDelete: () -> Unit = onLongPress,
+    onEdit: () -> Unit = {}
 ) {
     val shape = RoundedCornerShape(10.dp)
     val isVoid = lend.isVoid
@@ -2390,6 +2589,17 @@ private fun FintechLendCard(
                         textDecoration = if (isVoid) TextDecoration.LineThrough else null
                     )
                     if (!isVoid) {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = if (isEnglish) "Edit" else "सुधारें",
+                                tint = MandiTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         IconButton(
                             onClick = onDelete,
                             modifier = Modifier.size(28.dp)

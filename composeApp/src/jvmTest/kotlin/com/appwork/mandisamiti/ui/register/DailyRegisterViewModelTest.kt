@@ -10,6 +10,7 @@ import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.model.VoidReason
 import com.appwork.mandisamiti.platform.SoundboxTtsManager
@@ -454,5 +455,52 @@ class DailyRegisterViewModelTest {
 
         assertTrue(dayClosedCalled)
         assertTrue(localWriteCalled)
+    }
+
+    @Test
+    fun rtgsChequesAndOnlineTotalsAreComputedSeparatelyFromCash() = runTest {
+        val database = createTestDatabase()
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val shopRepo = OfflineFirstShopProfileRepository(database, ioDispatcher = ioDispatcher)
+        val partyRepo = OfflineFirstPartyRepository(database, ioDispatcher = ioDispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(database, ioDispatcher = ioDispatcher)
+        val now = Instant.parse("2026-11-26T05:30:00Z") // today (IST morning)
+        val clock = object : Clock { override fun now() = now }
+        val todayMs = Instant.parse("2026-11-26T04:00:00Z").toEpochMilliseconds()
+
+        partyRepo.saveParty(Party(id = "p1", shopId = "shop-1", name = "रामवीर सिंह", village = "राया", partyType = PartyType.FARMER, createdAt = 1L, updatedAt = 1L))
+
+        fun cash(id: String, type: TransactionType, rupees: Long, mode: PaymentMode) = CashTransaction(
+            id = id, shopId = "shop-1", partyId = "p1", transactionType = type,
+            amountPaisa = rupees * 100L, paymentMode = mode,
+            transactionDate = todayMs, createdAt = todayMs, updatedAt = todayMs
+        )
+        // CASH in: ₹10,000
+        cashRepo.recordTransaction(cash("c1", TransactionType.JAMA_RECEIVED, 10_000, PaymentMode.CASH))
+        // RTGS in: ₹5,000
+        cashRepo.recordTransaction(cash("c2", TransactionType.JAMA_RECEIVED, 5_000, PaymentMode.RTGS))
+        // CHEQUE in: ₹3,000
+        cashRepo.recordTransaction(cash("c3", TransactionType.JAMA_RECEIVED, 3_000, PaymentMode.CHEQUE))
+        // UPI in: ₹2,000 (counts as "online")
+        cashRepo.recordTransaction(cash("c4", TransactionType.JAMA_RECEIVED, 2_000, PaymentMode.UPI))
+        // NEFT in: ₹1,000 (also "online")
+        cashRepo.recordTransaction(cash("c5", TransactionType.JAMA_RECEIVED, 1_000, PaymentMode.NEFT))
+
+        val viewModel = DailyRegisterViewModel(
+            shopId = "shop-1", cashRepository = cashRepo, partyRepository = partyRepo,
+            shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
+            viewModelScope = backgroundScope, clock = clock, timeZone = TimeZone.of("Asia/Kolkata")
+        )
+
+        val state = viewModel.uiState.first { s -> s.todayTransactions.size == 5 }
+
+        // CASH drawer only counts CASH
+        assertEquals(1_000_000L, state.todayCashInPaisa)  // ₹10,000
+        assertEquals(0L, state.todayCashOutPaisa)
+
+        // Non-cash breakdown
+        assertEquals(500_000L, state.todayRtgsPaisa)    // ₹5,000
+        assertEquals(300_000L, state.todayChequePaisa)  // ₹3,000
+        assertEquals(300_000L, state.todayOnlinePaisa)  // ₹2,000 UPI + ₹1,000 NEFT
     }
 }
