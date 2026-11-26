@@ -1270,3 +1270,13 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Staging debug APK assembled and installed on physical Redmi Note 7 (`d93c743`) via `./gradlew :composeApp:installStagingDebug`.
   - App launched on device with active scrcpy mirror.
 
+
+## 2026-11-26 21:18 IST, Antigravity / Gemini 3.8 Flash (Receipt & UI Polish - Gate 1: GAP-05 to GAP-08)
+- **GAP-05 (Receipt weight formatting)**: Enforced 2-decimal formatting (0.00, e.g. 6.60 quintals) across all receipt lot equations, totals, and WhatsApp share builders (`formatQuintals2`, `slipQuintalText`).
+- **GAP-06 (Receipt decluttering)**: Removed customer-facing Bill No. (`बिल #: ...`) and Parcha No. (`पर्चा #: ...` and `<td class="meta-label">पर्चा सं.:</td>`) from generated WhatsApp share text and A5 PDF HTML while preserving database indexing and internal search.
+- **GAP-07 (Receipt timestamp format)**: Converted receipt timestamps from 24-hour format to 12-hour AM/PM format (`dd MMM yyyy, hh:mm a`, e.g. `26 Nov 2026, 09:15 PM`) in `ReceiptDateTime.kt` and `ReceiptHtmlRenderer.kt`.
+- **GAP-08 (UI / Keyboard UX)**: Added `Modifier.imePadding()` alongside `Modifier.verticalScroll(rememberScrollState())` to `DailyCashRegisterScreen` dialogs so soft keyboard does not cover remarks, party picker, or action buttons.
+- **Evidence**:
+  - Unit tests `./gradlew :composeApp:jvmTest --tests "com.appwork.mandisamiti.ui.slip.*" --tests "com.appwork.mandisamiti.ui.buy.*" --tests "com.appwork.mandisamiti.ui.sell.*"` passed cleanly.
+  - Staging debug APK installed and launched on physical Redmi Note 7 (`d93c743`).
+- **Next**: Claude Code executes Gate 2 / Track 2 (GAP-01 to GAP-04 and GAP-09 double-entry ledger engine and editing).
