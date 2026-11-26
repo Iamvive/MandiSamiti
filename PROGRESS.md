@@ -1226,3 +1226,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: database backed up first (15 tables, gzip check, restore not tested); `deploy_staging.sh` exit 0 with 172 tests, image build, migration and smoke tests; image has no virtualenv folder or database files; schema `0002_analytics_events` and 51 events unchanged; health and ready 200, events without login 401.
 - NOT VERIFIED: production deploy. No device check, since app code did not change.
 - Next: review and merge. `deploy-excludes-local-venv` is passing.
+
+## 2026-11-26 16:17 IST, Antigravity / Gemini 4 Hydrogen (Sentry onboarding & flavor environment)
+- Completed Sentry CLI onboarding for org `appworkx`: created `mandisamiti-android` (`android`) and `mandisamiti-backend` (`python-fastapi`), and set `mandi.sentryDsn` in `local.properties` (gitignored).
+- Updated `composeApp/build.gradle.kts` (`SENTRY_ENV` buildConfigField per flavor) and `MandiApp.kt` (`environment = "${BuildConfig.SENTRY_ENV}-debug"` vs `BuildConfig.SENTRY_ENV`) on branch `fix/sentry-flavor-env`.
+- Verified forced test crash on physical Redmi `d93c743` landed as `MANDISAMITI-ANDROID-1` (`https://appworkx.sentry.io/issues/163909355/`) with `environment=staging-debug`, `release=com.appwork.mandisamiti.staging@2.0.0`, and phone number scrubbed to `[phone]`.
+- Removed temporary crash trigger and ran `./gradlew :composeApp:jvmTest :composeApp:installStagingDebug` (`BUILD SUCCESSFUL`).
+- Next: review/merge `fix/sentry-flavor-env`, optionally wire Sentry ProGuard mapping upload for `prodRelease` builds, and set `SENTRY_DSN` + `SENTRY_ENVIRONMENT=prod` on the backend when deploying prod.

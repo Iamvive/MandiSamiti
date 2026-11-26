@@ -312,8 +312,8 @@
     {
       "id": "android-crash-reporting",
       "description": "Android crash reporting via Sentry (off unless DSN set via local.properties mandi.sentryDsn or env SENTRY_DSN); phone numbers masked, no PII, no UI breadcrumbs",
-      "status": "failing",
-      "evidence": "2026-11-25 (Claude Code, Sonnet 5.5). Code written on branch appworx/android-sentry-crash-reporting. Regex checked in Python only. Not built: no Android SDK or Google Maven in cloud container. Unverified: gradle build, PiiScrubberTest, forced crash on d93c743 appearing in Sentry with environment=debug and no phone numbers, app starting normally with empty DSN."
+      "status": "passing",
+      "evidence": "2026-11-26 (Antigravity, Gemini 4 Hydrogen). Created Sentry projects appworkx/mandisamiti-android and appworkx/mandisamiti-backend; wired flavor-based SENTRY_ENV in build.gradle.kts and MandiApp.kt (staging-debug / prod-debug / staging / prod). Verified forced crash on Redmi d93c743 landed as MANDISAMITI-ANDROID-1 (https://appworkx.sentry.io/issues/163909355/) with environment=staging-debug, release=com.appwork.mandisamiti.staging@2.0.0, phone number scrubbed to [phone], and readable stack frame (MainActivity.kt:onCreate). Removed temporary trigger; :composeApp:jvmTest and :composeApp:installStagingDebug passed."
     },
     {
       "id": "clickstream-telemetry",

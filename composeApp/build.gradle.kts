@@ -133,11 +133,13 @@ android {
             resValue("string", "app_name", "मंडी समिति (Staging)")
             val stagingUrl = localProps.getProperty("mandi.stagingApiBaseUrl") ?: "http://64.227.142.180:8060"
             buildConfigField("String", "API_BASE_URL", "\"$stagingUrl\"")
+            buildConfigField("String", "SENTRY_ENV", "\"staging\"")
         }
         create("prod") {
             dimension = "env"
             resValue("string", "app_name", "मंडी समिति")
             buildConfigField("String", "API_BASE_URL", "\"https://mandi-api.appworx.co.in\"")
+            buildConfigField("String", "SENTRY_ENV", "\"prod\"")
         }
     }
 

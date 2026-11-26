@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-26 16:17 IST | Antigravity | Branch `fix/sentry-flavor-env`: flavor-tagged Sentry `environment` (`staging`/`prod`). Verified test crash on Redmi `d93c743` (`MANDISAMITI-ANDROID-1`), phone scrubbed, `:composeApp:jvmTest` and `:composeApp:installStagingDebug` passed. |
 | 2026-11-26 15:24 IST | Claude Code | Branch `fix/deploy-local-files`: backend deploy packaging fix. pytest 172 passed. Staging deploy of `c26af63` ran clean. Production not deployed. |
 | 2026-11-26 15:05 IST | Claude Code | PR #47 merged (`d4eec34`), deployed to staging, checked on Redmi `d93c743`. `clickstream-telemetry` passing. Deploy script needs a fix. |
 | 2026-11-26 14:06 IST | Claude Code | Branch `feat/telemetry-pipeline`: clickstream telemetry. pytest 169 passed, jvmTest 660 passed, staging APK built. No device check, not deployed. |
@@ -22,6 +23,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
+| `fix/sentry-flavor-env` | — | Antigravity | Ready for review. `android-crash-reporting` passing on Redmi `d93c743`. |
 | `fix/deploy-local-files` | this PR | Claude Code | Open for review. `deploy-excludes-local-venv` passing; on staging. |
 | `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
 
@@ -40,8 +42,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 | Item | Owner | Link | Note |
 | --- | --- | --- | --- |
 | Staging deploy script | Vivek | `backend/scripts/deploy_staging.sh` | Fails at migration: exclude `venv/` and add `backend/.dockerignore`. |
-| Android crash reporting check | Vivek | `main` (PR #45) | Create a Sentry Android project, set `mandi.sentryDsn` in `local.properties`, build, force one crash on Redmi `d93c743`, confirm it reaches Sentry with no phone numbers. Feature `android-crash-reporting` stays failing until then. |
-| Backend observability go-live | Vivek | [owner actions](product/observability-owner-actions.md) | Telegram ops bot, Sentry backend DSN, UptimeRobot monitor on `/health/ready`, digest cron, prod deploy. Code is on `main`, off until set. |
+| Backend observability go-live | Vivek | [owner actions](product/observability-owner-actions.md) | Telegram ops bot, Sentry backend DSN (`appworkx/mandisamiti-backend`), UptimeRobot monitor on `/health/ready`, digest cron, prod deploy. Code is on `main`, off until set. |
 | Merge integration branch to main | Vivek | `integration/open-prs-november` | Merge this branch to main. Contains PRs #4, #5, #9, #10, #11. All conflicts resolved. 42 passing / 5 failing. |
 | Close PRs #4, #5, #9, #10, #11 on GitHub | Vivek | — | Once integration branch merges to main, close the individual PRs. |
 | Khata filter chips | Vivek | `khata-chips-explained`, `khata-filter-explainer-card` | Both stay failing. The screen is unreachable since Parchi replaced Khata. No product decision yet. |
