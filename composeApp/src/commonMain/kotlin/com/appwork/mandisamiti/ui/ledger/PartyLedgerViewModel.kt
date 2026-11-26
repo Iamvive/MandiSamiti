@@ -278,22 +278,24 @@ class PartyLedgerViewModel(
 
             // 1. Cash transactions (skip BOOK_ENTRY BUY_CREDIT mirror rows; the Buy slip already shows unpaid due)
             cashList
+                .filter { !it.isVoid && !it.isDeleted }
                 .filterNot { it.sourceEntryType == "BUY_CREDIT" && it.paymentMode == PaymentMode.BOOK_ENTRY }
                 .forEach { allItems.add(LedgerItem.CashItem(it)) }
 
             // 2. Buy entries (farmer purchases)
-            buysList.filter { it.farmerId == partyId || (partyName != null && it.farmerId.equals(partyName, ignoreCase = true)) }
+            buysList.filter { !it.isVoid && (it.farmerId == partyId || (partyName != null && it.farmerId.equals(partyName, ignoreCase = true))) }
                 .forEach { allItems.add(LedgerItem.BuyItem(it)) }
 
             // 3. Sell entries (buyer sales)
-            sellsList.filter { it.buyerId == partyId || (partyName != null && it.buyerId.equals(partyName, ignoreCase = true)) }
+            sellsList.filter { !it.isVoid && (it.buyerId == partyId || (partyName != null && it.buyerId.equals(partyName, ignoreCase = true))) }
                 .forEach { allItems.add(LedgerItem.SellItem(it)) }
 
             // 4. Lend entries (advances / loans)
-            partyLends.forEach { allItems.add(LedgerItem.LendItem(it)) }
+            partyLends.filter { !it.isVoid }
+                .forEach { allItems.add(LedgerItem.LendItem(it)) }
 
             // 5. Legacy deals
-            dealsList.filter { it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true))) }
+            dealsList.filter { !it.isVoid && !it.isDeleted && (it.farmerId == partyId || it.buyerId == partyId || (partyName != null && (it.farmerId.equals(partyName, ignoreCase = true) || it.buyerId.equals(partyName, ignoreCase = true)))) }
                 .forEach { allItems.add(LedgerItem.DealItem(it)) }
 
             allItems.sortedByDescending { it.timestamp } to (openLends to allLoansInfo)

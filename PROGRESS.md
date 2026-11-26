@@ -1180,3 +1180,16 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: `:core-domain:jvmTest` (`UP-TO-DATE`) and filtered `:composeApp:jvmTest` (`PartyPrefillTest` 2/2, `BuyPartyResolverTest` 12/12, `ScreenRoutingTest` 3/3, `PartyLedgerBalanceF01Test` 4/4, `PartyLedgerViewModelTest` 18/18, `HomeViewModelTest` 16/16, `HomeViewModelSettlementTest` 1/1, `HomeViewModelSellSettlementTest` 6/6 — 0 failures, 0 skipped), `:composeApp:assembleDebug`, and live on Redmi `d93c743` (`Vivek` Farmer Khata -> `नई खरीद पर्ची` prefilled `9058666306`, `Vivek`, `NMS`; `Dharmendra` Vyapari Khata -> `नई बिक्री बिल` & `SellReceipt` -> `नई बिक्री` prefilled `9997661012`, `Dharmendra`, `Visawar`, `व्यापारी (Merchant)`).
 - NOT VERIFIED: Dark mode rendering on `d93c743` (read-only form checks only, nothing saved); unrelated pre-existing tests excluded from the filtered run (`ReceiptHtmlRendererTest` / `SlipEquationTest` from prior branch WIP).
 
+
+## 2026-11-25 IST - Claude Code (cloud) - Android crash reporting (Sentry), branch appworx/android-sentry-crash-reporting
+- Why: backend observability (Phases A/B) exists; the app had no crash reporting while shops run it on their own phones. Sentry Android chosen over Crashlytics: needs only a DSN, no google-services.json, one dashboard with the backend.
+- Changes: `gradle/libs.versions.toml` (sentry-android 7.20.1), `composeApp/build.gradle.kts` (SENTRY_DSN BuildConfig from local.properties `mandi.sentryDsn` or env, empty by default), `AndroidManifest.xml` (`MandiApp`, Sentry auto-init off), new `MandiApp.kt`, `PiiScrubber.kt` (+ `PiiScrubberTest`).
+- Evidence: scrubber regex outputs checked in Python (same regex as backend).
+- NOT VERIFIED: Gradle build and `PiiScrubberTest` (cloud container cannot reach Google Maven); real crash on d93c743 reaching Sentry with no phone numbers; app boots normally with empty DSN.
+- Next: Vivek builds on device, creates Sentry Android project, sets `mandi.sentryDsn` in local.properties, forces one test crash.
+
+## 2026-11-25 IST - Claude Code (cloud) - Observability follow-up on branch appworx/android-sentry-crash-reporting
+- Changes: `docs/STATUS.md` rows (in flight, two Waiting on Vivek items), `docs/product/feature-status.md` Observability row (was stale "Design").
+- Evidence: `backend` pytest in a fresh venv: 140 passed, 4 warnings (pydantic deprecation, unrelated).
+- NOT VERIFIED: Android build, `PiiScrubberTest`, Sentry crash on Redmi `d93c743`. `android-crash-reporting` stays failing.
+- Next: Vivek runs the device check; then flip the feature status. PR not opened yet.

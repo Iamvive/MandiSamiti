@@ -225,7 +225,7 @@ class DailyRegisterViewModel(
                 val fingerprint = drawerCashFingerprint(allTx, window.endMs)
                 val partyMap = parties.associateBy { it.id }
                 val todays = allTx
-                    .filter { !it.isDeleted && it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
+                    .filter { !it.isDeleted && !it.isVoid && it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                     .map { tx ->
                         val party = partyMap[tx.partyId]
                         val cleanRemarks = com.appwork.mandisamiti.domain.util.RemarksFormatter.cleanForDisplay(tx.remarks)

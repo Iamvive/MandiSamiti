@@ -308,6 +308,12 @@
       "description": "Parchi list/detail/print/share show party mobile when present; sell parchi shows total kharcha (arat + majoori); quintals shown to 2 decimals; buy lab slip mode (lab value / base value, no bags)",
       "status": "failing",
       "evidence": "2026-11-24 (Claude Code, Sonnet 5.5). Implemented via 4 screen agents + lab slip. :composeApp:compileDebugKotlinAndroid passes. No tests or device run (owner asked impl only). Unverified: device check light+dark at 390px, lab slip formula units (kg) and edit-restore, buy slip print/share, tests for lab slip math."
+    },
+    {
+      "id": "android-crash-reporting",
+      "description": "Android crash reporting via Sentry (off unless DSN set via local.properties mandi.sentryDsn or env SENTRY_DSN); phone numbers masked, no PII, no UI breadcrumbs",
+      "status": "failing",
+      "evidence": "2026-11-25 (Claude Code, Sonnet 5.5). Code written on branch appworx/android-sentry-crash-reporting. Regex checked in Python only. Not built: no Android SDK or Google Maven in cloud container. Unverified: gradle build, PiiScrubberTest, forced crash on d93c743 appearing in Sentry with environment=debug and no phone numbers, app starting normally with empty DSN."
     }
   ]
 }

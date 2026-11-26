@@ -138,7 +138,7 @@ class DailyRegisterViewModelTest {
             shopProfileRepository = shopRepo, ttsManager = SoundboxTtsManager(),
             viewModelScope = backgroundScope, clock = clock, timeZone = TimeZone.of("Asia/Kolkata")
         )
-        val expectedIds = setOf("t1", "t2", "t3")
+        val expectedIds = setOf("t1", "t2")
         val state = viewModel.uiState.first { s ->
             s.todayTransactions.map { it.transaction.id }.toSet() == expectedIds && s.openingCashPaisa != 0L
         }
@@ -147,7 +147,7 @@ class DailyRegisterViewModelTest {
         assertEquals(2_000_000L, state.todayCashInPaisa)
         assertEquals(500_000L, state.todayCashOutPaisa)
         assertEquals(2_500_000L, state.inHandCashDrawerPaisa)
-        assertEquals(expectedIds, state.todayTransactions.map { it.transaction.id }.toSet()) // voided stays visible
+        assertEquals(expectedIds, state.todayTransactions.map { it.transaction.id }.toSet()) // voided hidden from UI
     }
 
     @Test
