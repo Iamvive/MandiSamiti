@@ -1193,3 +1193,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: `backend` pytest in a fresh venv: 140 passed, 4 warnings (pydantic deprecation, unrelated).
 - NOT VERIFIED: Android build, `PiiScrubberTest`, Sentry crash on Redmi `d93c743`. `android-crash-reporting` stays failing.
 - Next: Vivek runs the device check; then flip the feature status. PR not opened yet.
+
+## 2026-11-26 13:20 IST - Antigravity - PR #45 branch consolidation & cleanup
+- Consolidated `fix/hide-voided-entries-from-ui` (`198dc31`) and `appworx/android-sentry-crash-reporting` (`7400a47`) onto `feat/consolidated-wip` (`71ab79d`, resolved `composeApp/build.gradle.kts` conflict keeping `productFlavors`, release signing/minification, and `SENTRY_DSN` `buildConfigField`).
+- Evidence: `./gradlew jvmTest :composeApp:assembleStagingDebug` passed (`BUILD SUCCESSFUL`, 119 tasks).
+- Merged PR #45 into `main` (`eb35ced`, Vivek approved). Synced local `main` to `origin/main`, deleted merged local branches (`feat/consolidated-wip`, `fix/hide-voided-entries-from-ui`, `appworx/android-sentry-crash-reporting`), and pruned stale remote tracking refs.
+- Open: Step 3 Sentry live crash verification on Redmi `d93c743` still awaits `mandi.sentryDsn` in `local.properties` (`android-crash-reporting` stays `failing`).
