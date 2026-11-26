@@ -1,0 +1,7 @@
+# Local-only files that must not be copied into the image.
+venv
+.venv
+**/.env*
+**/*.db
+**/__pycache__
+**/.pytest_cache

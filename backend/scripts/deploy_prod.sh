@@ -12,7 +12,7 @@ ssh appworx-core-vps "bash /opt/mandisamiti-staging/scripts/smoke_test.sh http:/
 
 # 2. Sync to VPS Prod directory
 echo "📦 Promoting verified code to /opt/mandisamiti-prod on VPS..."
-rsync -avz --delete --exclude '__pycache__' --exclude '.pytest_cache' --exclude '*.db' --exclude '.venv' --exclude '.env*' "$(cd "$(dirname "$0")/.." && pwd)/" appworx-core-vps:/opt/mandisamiti-prod/
+rsync -avz --delete --exclude '__pycache__' --exclude '.pytest_cache' --exclude '*.db' --exclude '.venv' --exclude 'venv'--exclude '.env*' "$(cd "$(dirname "$0")/.." && pwd)/" appworx-core-vps:/opt/mandisamiti-prod/
 
 # 3. Build & Recreate Prod Containers with zero-downtime rolling restart
 echo "🐳 Rebuilding Production containers on VPS..."
