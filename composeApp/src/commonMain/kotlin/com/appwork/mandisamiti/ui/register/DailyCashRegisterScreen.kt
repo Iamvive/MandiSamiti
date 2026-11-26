@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -627,6 +628,7 @@ fun DailyCashRegisterScreen(
     if (showDirectCashDialog != null) {
         val isDeposit = showDirectCashDialog == TransactionType.JAMA_RECEIVED
         AlertDialog(
+            modifier = Modifier.imePadding(),
             onDismissRequest = { showDirectCashDialog = null },
             title = {
                 Text(
@@ -638,7 +640,7 @@ fun DailyCashRegisterScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
@@ -875,6 +877,7 @@ fun DailyCashRegisterScreen(
     // Opening Balance Setup Dialog
     if (showOpeningBalanceDialog) {
         AlertDialog(
+            modifier = Modifier.imePadding(),
             onDismissRequest = { showOpeningBalanceDialog = false },
             title = {
                 Text(
@@ -886,7 +889,7 @@ fun DailyCashRegisterScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
@@ -956,6 +959,7 @@ fun DailyCashRegisterScreen(
     // Cash to Home (Owner Drawings) Dialog
     if (showCashHomeDialog) {
         AlertDialog(
+            modifier = Modifier.imePadding(),
             onDismissRequest = { showCashHomeDialog = false },
             title = {
                 Text(
@@ -967,7 +971,7 @@ fun DailyCashRegisterScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
@@ -1233,11 +1237,12 @@ private fun BahiTransactionItem(
     if (showEdit) {
         val amountRs = editAmount.trim().toLongOrNull()
         AlertDialog(
+            modifier = Modifier.imePadding(),
             onDismissRequest = { showEdit = false },
             title = { Text(if (isEnglish) "Edit entry" else "प्रविष्टि बदलें", color = MandiTextPrimary) },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedTextField(
