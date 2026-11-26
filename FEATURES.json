@@ -331,7 +331,7 @@
       "id": "events-upload-guard",
       "description": "POST /api/v1/events accepts at most 60 uploads per shop per hour (429 over the limit, accepted if Redis fails) and returns 409 when the token's shop has no profile row",
       "status": "passing",
-      "evidence": "2026-11-26 (Claude Code). Branch mgr/2-backend-only-harden-post-api-v: backend pytest 178 passed on a scratch copy; removing expire, nx=True, the shop check, the fail-open handler or changing the limit, window, key or status code each fails a test in tests/test_events.py. Not pushed, not deployed, no staging check."
+      "evidence": "2026-11-26 (Claude Code). Branch mgr/2-backend-only-harden-post-api-v: backend pytest 178 passed on a scratch copy; removing expire, nx=True, the shop check, the fail-open handler or changing the limit, window, key or status code each fails a test in tests/test_events.py. Rerun 2026-11-26 at 0c3b989: 178 passed; sent to main by pull request. Not deployed, no staging check."
     }
   ]
 }

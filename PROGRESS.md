@@ -1245,3 +1245,8 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: `cd backend && pytest` 178 passed on a scratch copy; with `nx=True` removed the expiry test fails (`assert 3600 <= 100`).
 - Not verified: staging, device, production redis-py version.
 - Next: Vivek accepts or lists changes; push and PR only with his approval.
+
+## 2026-11-26 - merge of manager task 2 (Claude Code)
+- Vivek approved moving the branch to `main`.
+- Evidence: `cd backend && pytest` 178 passed at `0c3b989`.
+- Not verified: staging, device, production redis-py version. Nothing deployed.

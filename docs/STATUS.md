@@ -25,7 +25,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
-| `mgr/2-backend-only-harden-post-api-v` | — | Antigravity | Hardened `POST /api/v1/events` with rate limit and shop existence check. Backend pytest 178 passed (Claude Code, 2026-11-26). Local only: not pushed, not deployed. |
+| `mgr/2-backend-only-harden-post-api-v` | — | Antigravity | Hardened `POST /api/v1/events` with rate limit and shop existence check. Backend pytest 178 passed (Claude Code, 2026-11-26). Merged to main by pull request; not deployed. |
 | `fix/sentry-flavor-env` | — | Antigravity | Ready for review. `android-crash-reporting` passing on Redmi `d93c743`. |
 | `fix/deploy-local-files` | this PR | Claude Code | Open for review. `deploy-excludes-local-venv` passing; on staging. |
 | `integration/open-prs-november` | — | Antigravity | Integration branch containing PRs #4, #5, #9, #10, #11. Ready for Vivek's review and merge to main. 42 passing / 5 failing. |
@@ -150,7 +150,7 @@ Done: 2026-11-26, clickstream telemetry on `feat/telemetry-pipeline`. Verify: `c
 
 Done: 2026-11-26, deploy packaging fix on `fix/deploy-local-files`. Verify: `cd backend && pytest`. `deploy_staging.sh` ran end to end on staging. Next: review and merge.
 
-Done: 2026-11-26, review fixes on `mgr/2-backend-only-harden-post-api-v`. Verify: `cd backend && pytest`. Next: Vivek accepts the commits, then push and PR.
+Done: 2026-11-26, review fixes on `mgr/2-backend-only-harden-post-api-v`. Verify: `cd backend && pytest`. Accepted by Vivek and sent to main by pull request. Next: staging check.
 
 ### Codex
 
