@@ -335,3 +335,13 @@ async def test_rate_limit_key_expires_within_window(client, db_sessionmaker):
 
     ttl = await fake.ttl("events_rl:shop-a")
     assert 0 < ttl <= 3600
+
+    # A later upload must not restart the window, or a busy shop would stay limited.
+    await fake.expire("events_rl:shop-a", 100)
+    res = await client.post(
+        "/api/v1/events",
+        headers=_bearer("shop-a"),
+        json={"events": [_event(event_id="ev-ttl-2")]},
+    )
+    assert res.status_code == 200
+    assert 0 < await fake.ttl("events_rl:shop-a") <= 100

@@ -326,6 +326,12 @@
       "description": "Backend deploy sync and image build leave local virtualenvs and local-only files out, so migrations on the server use the image's own Alembic",
       "status": "passing",
       "evidence": "2026-11-26 (Claude Code). Branch fix/deploy-local-files: new tests/test_deploy_packaging.py failed 3 of 3 before the change; backend pytest 172 passed after it; local rsync dry run with the staging script's excludes listed no virtualenv files. Staging (c26af63): database backed up first; deploy_staging.sh exited 0 with 172 tests, image build, migration and smoke tests; new image has no virtualenv folder and no database files; alembic resolves to /usr/local/bin/alembic; schema 0002_analytics_events and 51 stored events unchanged; health and ready 200, events without login 401. Production not deployed."
+    },
+    {
+      "id": "events-upload-guard",
+      "description": "POST /api/v1/events accepts at most 60 uploads per shop per hour (429 over the limit, accepted if Redis fails) and returns 409 when the token's shop has no profile row",
+      "status": "passing",
+      "evidence": "2026-11-26 (Claude Code). Branch mgr/2-backend-only-harden-post-api-v: backend pytest 178 passed on a scratch copy; removing expire, nx=True, the shop check, the fail-open handler or changing the limit, window, key or status code each fails a test in tests/test_events.py. Not pushed, not deployed, no staging check."
     }
   ]
 }

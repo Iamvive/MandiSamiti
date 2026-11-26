@@ -1238,3 +1238,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Check passed: `cd backend && {main}/backend/.venv/bin/python -m pytest -q`
 - Review: pass (claude-sonnet-5-5)
 - Branch: `mgr/2-backend-only-harden-post-api-v`
+
+## 2026-11-26 18:21 - review fixes for manager task 2 (Claude Code)
+- Build under review: `dbe707e` (Antigravity, Gemini 3.8 Flash): 60 uploads per shop per hour (429), uploads accepted if Redis fails, 409 for a missing shop row.
+- Changed: `backend/tests/test_events.py` now checks that a later upload does not restart the window; `docs/STATUS.md` rows for this branch now record the pytest result; added `events-upload-guard` to `FEATURES.json`.
+- Evidence: `cd backend && pytest` 178 passed on a scratch copy; with `nx=True` removed the expiry test fails (`assert 3600 <= 100`).
+- Not verified: staging, device, production redis-py version.
+- Next: Vivek accepts or lists changes; push and PR only with his approval.
