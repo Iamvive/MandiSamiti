@@ -20,7 +20,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Warning
+import com.appwork.mandisamiti.ui.components.EditPartyDialog
+import com.appwork.mandisamiti.ui.components.PartyBlockState
+import com.appwork.mandisamiti.ui.components.SamePersonDialog
+import com.appwork.mandisamiti.ui.components.SavedPartyLine
+import com.appwork.mandisamiti.ui.components.isSelectionStale
+import com.appwork.mandisamiti.ui.components.partyBlockState
+import com.appwork.mandisamiti.ui.components.samePersonCandidate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -108,6 +114,7 @@ fun BuyEntryScreen(
     var showRateOutlierConfirmation by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
     var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
+    var sameCandidate by remember { mutableStateOf<Party?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var pendingEntryToSave by remember { mutableStateOf<BuyEntry?>(null) }
 
@@ -143,9 +150,14 @@ fun BuyEntryScreen(
     LaunchedEffect(existingEntry, parties) {
         val entry = existingEntry ?: return@LaunchedEffect
         val party = parties.firstOrNull { it.id == entry.farmerId } ?: return@LaunchedEffect
-        if (formState.farmerName == entry.farmerId) formState.farmerName = party.name
-        if (formState.phone.isBlank()) party.phone?.let(formState::updatePhone)
-        if (formState.village.isBlank()) formState.village = party.village.orEmpty()
+        // Only on first load: later party updates must not overwrite what the owner is editing.
+        if (formState.farmerName == entry.farmerId) {
+            val slipPhone = formState.phone
+            val slipVillage = formState.village
+            BuyPartyResolver.pick(formState, party)
+            if (formState.phone.isBlank()) formState.updatePhone(slipPhone)
+            if (formState.village.isBlank()) formState.village = slipVillage
+        }
     }
 
     val commit: (BuyEntry) -> Unit = { raw ->
@@ -191,8 +203,13 @@ fun BuyEntryScreen(
         buyEntryActions(
             formState = formState,
             onSaveTriggered = {
+                val candidate = if (formState.isKhaate) null else samePersonCandidate(
+                    parties, formState.selectedFarmerId, formState.phone, formState.farmerName, formState.village
+                )
                 val typedCheck = if (formState.isKhaate) null else checkTypedParty(formState.farmerName, formState.selectedFarmerId, parties)
-                if (typedCheck is TypedPartyCheck.NeedsConfirm) {
+                if (candidate != null) {
+                    sameCandidate = candidate
+                } else if (typedCheck is TypedPartyCheck.NeedsConfirm) {
                     newPartyCheck = typedCheck
                 } else {
                     performSave()
@@ -203,11 +220,19 @@ fun BuyEntryScreen(
 
     val uiState = formState.toUiState()
 
+    var newPartyRequested by remember(existingId) { mutableStateOf(false) }
+    var showEditParty by remember { mutableStateOf(false) }
+
     BuyEntryScreenContent(
         state = uiState,
         actions = actions,
         existingId = existingId,
         parties = parties,
+        formState = formState,
+        newPartyRequested = newPartyRequested,
+        onNewPartyRequestedChange = { newPartyRequested = it },
+        showEditParty = showEditParty,
+        onShowEditPartyChange = { showEditParty = it },
         isEnglish = isEnglish,
         isDirty = isDirty,
         onDiscardRequest = { showDiscardDialog = true },
@@ -216,6 +241,32 @@ fun BuyEntryScreen(
     )
 
     // Confirmation & Discard Dialogs
+    sameCandidate?.let { candidate ->
+        SamePersonDialog(
+            candidate = candidate,
+            isEnglish = isEnglish,
+            onSamePerson = {
+                sameCandidate = null
+                formState.selectedFarmerId = candidate.id
+                performSave()
+            },
+            onNewAccount = { sameCandidate = null; performSave() },
+            onDismiss = { sameCandidate = null },
+        )
+    }
+    if (showEditParty) {
+        EditPartyDialog(
+            name = formState.farmerName,
+            village = formState.village,
+            isEnglish = isEnglish,
+            onDone = { name, village ->
+                formState.farmerName = name
+                formState.village = village
+                showEditParty = false
+            },
+            onDismiss = { showEditParty = false },
+        )
+    }
     newPartyCheck?.let { check ->
         NewPartyConfirmDialog(
             check = check,
@@ -286,6 +337,7 @@ fun BuyEntryScreen(
             dismissText = if (isEnglish) "Continue" else "भरना जारी रखें",
             onConfirmDiscard = {
                 showDiscardDialog = false
+                newPartyRequested = false
                 formState.farmerName = ""
                 formState.phone = ""
                 formState.village = ""
@@ -306,6 +358,11 @@ fun BuyEntryScreenContent(
     actions: BuyEntryActions,
     existingId: String?,
     parties: List<Party>,
+    formState: BuyEntryFormState,
+    newPartyRequested: Boolean,
+    onNewPartyRequestedChange: (Boolean) -> Unit,
+    showEditParty: Boolean,
+    onShowEditPartyChange: (Boolean) -> Unit,
     isEnglish: Boolean,
     isDirty: Boolean,
     onDiscardRequest: () -> Unit,
@@ -378,7 +435,7 @@ fun BuyEntryScreenContent(
                     } else {
                         val disabledText = if (state.isKhaate) {
                             state.saveBlockedReason ?: if (isEnglish) "Save" else "सुरक्षित करें"
-                        } else if (state.party.needsPhonePrompt || state.party.phone.isBlank()) {
+                        } else if (state.party.needsPhonePrompt || state.party.phone.length < 10) {
                             if (isEnglish) "Add number to save" else "नंबर डालने पर सुरक्षित होगा"
                         } else if (state.party.name.isBlank() || state.party.village.isBlank()) {
                             if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
@@ -418,83 +475,85 @@ fun BuyEntryScreenContent(
                 )
             }
 
-            // Section 1: Farmer block (Flat inputs, order: Mobile/Name lookup, Farmer name, Village)
-            val existingParty = BuyPartyResolver.existing(parties, state.party.selectedPartyId, state.party.phone)
-            val isOldPartyWithoutPhone = state.party.selectedPartyId != null && state.party.phone.isBlank()
-
+            // Section 1: Farmer block
             if (!state.isKhaate) {
-            MandiPartyLookupField(
-                phoneValue = state.party.phone,
-                onPhoneChange = { actions.onPhoneChange(it) },
-                onPartySelected = { party ->
-                    actions.onPickParty(party.id)
-                    actions.onNameChange(party.name)
-                    actions.onPhoneChange(party.phone.orEmpty())
-                    actions.onVillageChange(party.village.orEmpty())
-                },
-                parties = parties,
-                label = if (isEnglish) "Mobile number" else "मोबाइल नंबर",
-                placeholder = if (isOldPartyWithoutPhone) (if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें") else null,
-                isError = state.party.phoneError != null,
-                errorMessage = state.party.phoneError
-            )
+                val block = partyBlockState(parties, state.party.selectedPartyId, state.party.phone, newPartyRequested)
 
-            MandiFlatTextField(
-                value = state.party.name,
-                onValueChange = { actions.onNameChange(it) },
-                label = if (isEnglish) "Farmer name" else "किसान का नाम",
-                placeholder = if (isEnglish) "Type name" else "नाम लिखें",
-                isError = state.party.nameError != null,
-                errorMessage = state.party.nameError,
-                isTall = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+                MandiPartyLookupField(
+                    phoneValue = state.party.phone,
+                    onPhoneChange = { phone ->
+                        if (isSelectionStale(parties, formState.selectedFarmerId, phone)) {
+                            formState.selectedFarmerId = null
+                            formState.farmerName = ""
+                            formState.village = ""
+                        }
+                        actions.onPhoneChange(phone)
+                    },
+                    onPartySelected = { party ->
+                        onNewPartyRequestedChange(false)
+                        BuyPartyResolver.pick(formState, party)
+                    },
+                    parties = parties,
+                    label = if (isEnglish) "Mobile number or name" else "मोबाइल नंबर या नाम",
+                    placeholder = if (block is PartyBlockState.Saved && block.party.phone.isNullOrBlank()) {
+                        if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें"
+                    } else null,
+                    isError = state.party.phoneError != null,
+                    errorMessage = state.party.phoneError,
+                    newPartyLabel = if (isEnglish) "New farmer" else "नया किसान",
+                    onNewParty = { typed ->
+                        formState.selectedFarmerId = null
+                        formState.updatePhone("")
+                        formState.village = ""
+                        formState.farmerName = typed
+                        onNewPartyRequestedChange(true)
+                    }
+                )
 
-            MandiFlatTextField(
-                value = state.party.village,
-                onValueChange = { actions.onVillageChange(it) },
-                label = if (isEnglish) "Village" else "गांव",
-                placeholder = if (isEnglish) "Type village" else "गांव लिखें",
-                isError = state.party.villageError != null,
-                errorMessage = state.party.villageError,
-                isTall = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Farmer Hint Line
-            if (isOldPartyWithoutPhone) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MandiAmberDark,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = if (isEnglish) "This account has no number. Add one before saving." else "इस खाते में नंबर नहीं है। सेव से पहले नंबर डालें।",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiTextPrimary
+                val villageField: @Composable () -> Unit = {
+                    MandiFlatTextField(
+                        value = state.party.village,
+                        onValueChange = { actions.onVillageChange(it) },
+                        label = if (isEnglish) "Village" else "गांव",
+                        placeholder = if (isEnglish) "Type village" else "गांव लिखें",
+                        isError = state.party.villageError != null,
+                        errorMessage = state.party.villageError,
+                        isTall = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-            } else if (existingParty != null && state.party.phone.isNotBlank()) {
-                Text(
-                    text = if (isEnglish) "Filled from the saved number. Changing them updates this account everywhere." else "सेव नंबर से नाम और गांव भरे। बदलने पर यह खाते में हर जगह बदलेगा।",
-                    fontSize = 12.sp,
-                    color = MandiTextSecondary
-                )
-            } else if (existingParty == null && state.party.phone.isNotBlank()) {
-                Text(
-                    text = if (isEnglish) "New number. The account is created when the entry is saved." else "नया नंबर। एंट्री सेव होते ही खाता बन जाएगा।",
-                    fontSize = 12.sp,
-                    color = MandiTextSecondary
-                )
-            }
 
+                when (block) {
+                    is PartyBlockState.Saved -> {
+                        SavedPartyLine(
+                            name = state.party.name,
+                            // A missing village is typed in the box below, so the line does not echo it.
+                            village = if (block.party.village.isNullOrBlank()) "" else state.party.village,
+                            isEnglish = isEnglish,
+                            onEdit = { onShowEditPartyChange(true) },
+                        )
+                        if (block.party.village.isNullOrBlank()) villageField()
+                    }
+                    PartyBlockState.New -> {
+                        Text(
+                            text = if (isEnglish) "New account. It is created when the slip is saved." else "नया खाता। पर्ची सेव होते ही बन जाएगा।",
+                            fontSize = 12.sp,
+                            color = MandiTextSecondary
+                        )
+                        MandiFlatTextField(
+                            value = state.party.name,
+                            onValueChange = { actions.onNameChange(it) },
+                            label = if (isEnglish) "Farmer name" else "किसान का नाम",
+                            placeholder = if (isEnglish) "Type name" else "नाम लिखें",
+                            isError = state.party.nameError != null,
+                            errorMessage = state.party.nameError,
+                            isTall = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        villageField()
+                    }
+                    PartyBlockState.Lookup -> Unit
+                }
             }
 
             // Crop input lines
