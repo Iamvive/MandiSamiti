@@ -125,6 +125,9 @@ data class DailyRegisterUiState(
     val isDayClosed: Boolean
         get() = drawerCount?.closedAt != null && !needsRecount
 
+    val mohariBuyAsalPaisa: Long
+        get() = bahiDayPage?.mohariBuyAsalPaisa ?: 0L
+
     val discrepancyPaisa: Long
         get() = (physicalCountPaisa ?: inHandCashDrawerPaisa) - inHandCashDrawerPaisa
 

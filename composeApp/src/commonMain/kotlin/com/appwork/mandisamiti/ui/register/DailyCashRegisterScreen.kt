@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.appwork.mandisamiti.ui.buy.BuyPartyResolver
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -565,6 +566,19 @@ fun DailyCashRegisterScreen(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
                             verticalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
+                            val mohariPaisa = uiState.mohariBuyAsalPaisa
+                            if (mohariPaisa > 0L) {
+                                item(key = "mohari_buy_asal_row") {
+                                    BahiMohariRow(
+                                        title = if (isEnglish) "Mohari buy (Asal)" else "मोहरी खरीद (असल)",
+                                        subtitle = if (isEnglish) "Day procurement total" else "दिन का कुल खरीद असल (देय)",
+                                        amountPaisa = mohariPaisa,
+                                        isEnglish = isEnglish,
+                                        onClick = { viewModel.openDayClosingSummary() }
+                                    )
+                                }
+                            }
+
                             items(nameList, key = { it.transaction.id }) { item ->
                                 BahiTransactionItem(
                                     item = item,
@@ -576,7 +590,7 @@ fun DailyCashRegisterScreen(
                                 )
                             }
 
-                            if (nameList.isEmpty()) {
+                            if (nameList.isEmpty() && mohariPaisa == 0L) {
                                 item {
                                     Text(
                                         text = if (isEnglish) "No cash out" else "आज कोई निकासी नहीं",
@@ -625,6 +639,7 @@ fun DailyCashRegisterScreen(
                             }
                         }
 
+                        val mohariPaisa = uiState.mohariBuyAsalPaisa
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = if (isEnglish) "Total out (cash)" else "कुल नामे (नकद)",
@@ -637,6 +652,14 @@ fun DailyCashRegisterScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MandiRedPayable
                             )
+                            if (mohariPaisa > 0L) {
+                                Text(
+                                    text = if (isEnglish) "Mohari: ₹${MandiMathEngine.paisaToRupeesString(mohariPaisa)}"
+                                           else "मोहरी: ₹${MandiMathEngine.paisaToRupeesString(mohariPaisa)}",
+                                    fontSize = 9.sp,
+                                    color = MandiAmberDark
+                                )
+                            }
                         }
                     }
                 }
@@ -1667,6 +1690,91 @@ private fun BahiAnchorRow(
             IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
                 Icon(if (actionLabel == "Count" || actionLabel == "गिनती") Icons.Default.Calculate else Icons.Default.Edit,
                     contentDescription = actionLabel, tint = MandiTextPrimary)
+            }
+        }
+    }
+    HorizontalDivider(color = MandiBorder)
+}
+
+@Composable
+private fun BahiMohariRow(
+    title: String,
+    subtitle: String,
+    amountPaisa: Long,
+    isEnglish: Boolean,
+    onClick: (() -> Unit)? = null
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        color = MandiSurface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MandiTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Text(
+                        text = if (isEnglish) "Mohari" else "मोहरी",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiAmberDark,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "−${MandiCurrencyFormatter.formatRupees(amountPaisa)}",
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MandiRedPayable
+                )
+                if (onClick != null) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = if (isEnglish) "View Mohari details" else "मोहरी हिसाब देखें",
+                        tint = MandiTextMuted,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    fontSize = 10.sp,
+                    color = MandiTextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

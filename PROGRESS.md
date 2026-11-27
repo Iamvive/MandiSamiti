@@ -1484,3 +1484,18 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
     - "सीधे कुल रकम भरें" fits completely on screen without scrolling.
     - "नोट-सिक्के से गिनें" shows 6 full note denominations cleanly visible without scrolling.
     - Left sticky button ("गिनती सहेजें · दिन खुला रखें") renders cleanly without horizontal truncation or text clipping.
+
+## 2026-11-27 22:16 IST (Gemini / Antigravity): feat(ui): display Mohri single entry in Naame column of Daily Cash Register
+- Requirement: Display Mohri (day-end procurement total payable) under the Naame side (नामे पक्ष - निकासी) of the double-column daily register screen as well.
+- Implementation:
+  - Added `val mohariBuyAsalPaisa: Long get() = bahiDayPage?.mohariBuyAsalPaisa ?: 0L` convenience getter on `DailyRegisterUiState`.
+  - Created `BahiMohariRow` matching NGDL tokens and Bahi card styling with title ("मोहरी खरीद (असल)"), amber "मोहरी" badge, debit amount (`−₹...` in red), subtitle ("दिन का कुल खरीद असल (देय)"), and click action navigating to Day Closing Summary.
+  - Positioned `BahiMohariRow` at the top of the right column (नामे पक्ष) in `DailyCashRegisterScreen.kt`, aligning symmetrically with "बाकी निकाला" (opening balance) on the left column (जमा पक्ष).
+  - Updated the right footer summary to display the Mohari breakdown (`मोहरी: ₹...`) alongside physical cash out (`कुल नामे (नकद): −₹...`).
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 tests passing, 0 failures).
+  - Built and installed `:composeApp:installStagingDebug` on physical Xiaomi Redmi Note 7 (`d93c743`).
+  - Captured live device screenshots (`galla_mohari_naame_verified_2.png`, `mohari_row_click_verified_2.png`):
+    - Confirmed Mohri row appears under `नामे पक्ष (निकासी)` with correct total (₹9,93,24,300) and "मोहरी" badge.
+    - Confirmed tapping on the Mohri row opens the Day Closing / Hisaab details sheet directly.
+    - Confirmed footer shows both `कुल नामे (नकद)` and `मोहरी: ₹...`.
