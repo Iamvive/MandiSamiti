@@ -1528,3 +1528,10 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Live screenshots verified:
     - `sheet_perfect_fit_final.png`: Sheet expands to top, mode switcher pinned, input focused, sticky action dock pinned above keyboard.
     - `denomination_kb_scrolled.png`: Full scrollability verified with keyboard open; note denominations scroll smoothly while sticky buttons remain docked.
+
+## 2026-11-28 00:02 IST (Claude Code): check merged main after PR #56 and #57
+
+- Changes: none to app code.
+- Evidence: at `bf421f0`, `./gradlew :composeApp:jvmTest :composeApp:assembleStagingDebug` returned BUILD SUCCESSFUL. Both main tasks were UP-TO-DATE, so the results are those of the 00:00 run on 2026-11-28 with unchanged inputs: 454 tests, 0 failures, 0 errors, 0 skipped.
+- Not verified: no device check of the merged build. WhatsApp direct send rows 3 to 15 not run, row 1 partial. iOS compile not rechecked.
+- Next: device check on staging, then WhatsApp Task 6 (tests and tracking files).
