@@ -16,16 +16,15 @@ actual class WhatsAppShareManager {
         }
     }
 
+    // iOS opens whichever WhatsApp app owns the link, so there is nothing to choose.
+    actual fun installedApps(): List<WhatsAppApp> = emptyList()
+
     actual fun shareText(
         text: String,
-        phoneNumber: String?
+        phoneNumber: String?,
+        app: WhatsAppApp?
     ) {
-        val encodedText = text.replace(" ", "%20").replace("\n", "%0A")
-        val phoneParam = if (!phoneNumber.isNullOrEmpty()) "&phone=$phoneNumber" else ""
-        val urlString = "https://api.whatsapp.com/send?text=$encodedText$phoneParam"
-        val url = NSURL.URLWithString(urlString)
-        if (url != null && UIApplication.sharedApplication.canOpenURL(url)) {
-            UIApplication.sharedApplication.openURL(url)
-        }
+        val url = NSURL.URLWithString(whatsAppSendUrl(phoneNumber, text)) ?: return
+        UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
     }
 }

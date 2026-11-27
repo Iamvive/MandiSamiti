@@ -87,7 +87,7 @@ sealed interface Screen {
     data object Home : Screen
     data class DealEntry(val existingDealId: String? = null) : Screen
     data class PartyLedger(val partyId: String, val returnScreen: Screen? = null) : Screen
-    data class ReceiptPreview(val deal: Deal, val farmer: Party, val buyer: Party?) : Screen
+    data class ReceiptPreview(val deal: Deal, val farmer: Party, val buyer: Party?, val ledgerPartyId: String? = null) : Screen
     data object DailyRegister : Screen
 
     // Revamp Screens (Tasks 11-15)
@@ -480,7 +480,7 @@ fun App(
                                 val farmer = partyRepo.getPartyById(deal.farmerId)
                                 val buyer = deal.buyerId?.let { partyRepo.getPartyById(it) }
                                 if (farmer != null) {
-                                    currentScreen = Screen.ReceiptPreview(deal, farmer, buyer)
+                                    currentScreen = Screen.ReceiptPreview(deal, farmer, buyer, ledgerPartyId = screen.partyId)
                                 }
                             }
                         }
@@ -520,6 +520,8 @@ fun App(
                         farmer = screen.farmer,
                         buyer = screen.buyer,
                         deal = screen.deal,
+                        ledgerPartyId = screen.ledgerPartyId,
+                        isEnglish = tradeSettings?.isEnglish ?: false,
                         whatsAppShareManager = whatsAppShareManager,
                         ttsManager = ttsManager,
                         onPrint = receiptPrinter?.let { printer ->
@@ -805,7 +807,7 @@ fun App(
             is Screen.BuyReceipt -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 var buyEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.BuyEntry?>(null) }
-                var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+                var receiptParty by remember(screen.id) { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
                 val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
                 val allCashTransactions by cashRepo.getTransactionsByShopStream(shopId ?: "").collectAsState(initial = emptyList())
                 val allBuys by buyRepo.getBuyEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
@@ -838,6 +840,8 @@ fun App(
                     shopGstin = receiptShop?.gstin,
                     shopLicenceNo = receiptShop?.licenceNo,
                     partyVillage = receiptParty?.village,
+                    partyPhone = receiptParty?.phone,
+                    whatsAppApps = whatsAppShareManager::installedApps,
                     gallaCashPaisa = gallaCashPaisa,
                     payments = payments,
                     onSettleCash = { amountPaisa ->
@@ -877,8 +881,8 @@ fun App(
                             buyEntry = buyRepo.getBuyEntryById(screen.id)
                         }
                     },
-                    onShareWhatsApp = { text ->
-                        whatsAppShareManager.shareText(text, null)
+                    onShareWhatsApp = { text, phone, app ->
+                        whatsAppShareManager.shareText(text, phone, app)
                         coroutineScope.launch {
                             try {
                                 analytics.track(AnalyticsEventName.SLIP_SHARED)
@@ -1034,7 +1038,7 @@ fun App(
             is Screen.SellReceipt -> {
                 MandiBackHandler { currentScreen = screen.backTarget() }
                 var sellEntry by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.SellEntry?>(null) }
-                var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
+                var receiptParty by remember(screen.id) { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
                 val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
                 val sellCashTransactions by cashRepo.getTransactionsByShopStream(shopId ?: "").collectAsState(initial = emptyList())
                 val sellGallaCashPaisa = remember(sellCashTransactions) {
@@ -1046,6 +1050,7 @@ fun App(
                 }
                 SellTransactionReceiptScreen(
                     id = screen.id,
+                    whatsAppApps = whatsAppShareManager::installedApps,
                     entry = sellEntry,
                     buyerName = receiptParty?.name ?: sellEntry?.buyerId.orEmpty(),
                     shopName = receiptShop?.shopName.orEmpty(),
@@ -1097,8 +1102,8 @@ fun App(
                             sellEntry = sellRepo.getSellEntryById(screen.id)
                         }
                     },
-                    onShareWhatsApp = { text ->
-                        whatsAppShareManager.shareText(text, null)
+                    onShareWhatsApp = { text, phone, app ->
+                        whatsAppShareManager.shareText(text, phone, app)
                         coroutineScope.launch {
                             try {
                                 analytics.track(AnalyticsEventName.SLIP_SHARED)

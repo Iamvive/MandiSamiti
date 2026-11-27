@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Print
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +36,7 @@ import com.appwork.mandisamiti.domain.model.receiptDateShort
 import com.appwork.mandisamiti.domain.model.receiptDateTime
 import com.appwork.mandisamiti.domain.model.slipLabel
 import com.appwork.mandisamiti.platform.MandiBackHandler
+import com.appwork.mandisamiti.platform.WhatsAppApp
 import com.appwork.mandisamiti.ui.components.DeleteConfirmDialog
 import com.appwork.mandisamiti.ui.components.MandiLinesCard
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
@@ -44,6 +44,8 @@ import com.appwork.mandisamiti.ui.components.MandiScreenHeader
 import com.appwork.mandisamiti.ui.components.MandiSecondaryButton
 import com.appwork.mandisamiti.ui.parchi.FarmerSlipCashSettlementSheet
 import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
+import com.appwork.mandisamiti.ui.slip.SlipSendBar
+import com.appwork.mandisamiti.ui.slip.slipRecipientPhone
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiRedText
 import com.appwork.mandisamiti.ui.theme.MandiTextPrimary
@@ -84,7 +86,9 @@ fun BuyTransactionReceiptScreen(
     shopGstin: String? = null,
     shopLicenceNo: String? = null,
     partyVillage: String? = null,
-    onShareWhatsApp: ((String) -> Unit)? = null,
+    partyPhone: String? = null,
+    whatsAppApps: () -> List<WhatsAppApp> = { emptyList() },
+    onShareWhatsApp: ((text: String, phone: String?, app: WhatsAppApp?) -> Unit)? = null,
     onPrint: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
     gallaCashPaisa: Long = 0L,
@@ -120,6 +124,10 @@ fun BuyTransactionReceiptScreen(
     } ?: ""
 
     val slipNum = entry?.let { slipLabel(it.slipNo, it.id) } ?: ""
+
+    // buyFarmerPhone is null for khaate slips; the account number is ignored for them too.
+    val recipientPhone = if (entry == null || entry.isKhaate) null
+    else slipRecipientPhone(partyPhone, buyFarmerPhone(entry))
 
     val loanCutPaisa = extractLoanCut(entry?.remarks)
     val hasAdvance = (entry?.advancePaidPaisa ?: 0L) > 0L
@@ -204,6 +212,17 @@ fun BuyTransactionReceiptScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    if (onShareWhatsApp != null) {
+                        SlipSendBar(
+                            recipientName = displayName,
+                            recipientPhone = recipientPhone,
+                            isEnglish = isEnglish,
+                            installedApps = whatsAppApps,
+                            onSend = { phone, app -> onShareWhatsApp(slipText, phone, app) },
+                            primary = false
+                        )
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -220,18 +239,6 @@ fun BuyTransactionReceiptScreen(
                             )
                         }
 
-                        if (onShareWhatsApp != null) {
-                            MandiSecondaryButton(
-                                text = if (isEnglish) "Share" else "पर्ची भेजें",
-                                leadingIcon = Icons.Default.Share,
-                                height = 44.dp,
-                                fontSize = 13.sp,
-                                fullWidth = false,
-                                onClick = { onShareWhatsApp(slipText) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
                         MandiSecondaryButton(
                             text = if (isEnglish) "New" else "नई खरीद",
                             height = 44.dp,
@@ -242,43 +249,40 @@ fun BuyTransactionReceiptScreen(
                         )
                     }
                 } else {
-                    if (entry != null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            if (onPrint != null) {
-                                MandiSecondaryButton(
-                                    text = if (isEnglish) "Print" else "प्रिंट करें",
-                                    leadingIcon = Icons.Default.Print,
-                                    height = 56.dp,
-                                    fontSize = 15.sp,
-                                    fullWidth = false,
-                                    onClick = { onPrint(slipHtml) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            if (onShareWhatsApp != null) {
-                                MandiPrimaryButton(
-                                    text = if (isEnglish) "Share slip" else "पर्ची भेजें",
-                                    leadingIcon = Icons.Default.Share,
-                                    height = 56.dp,
-                                    fontSize = 15.sp,
-                                    onClick = { onShareWhatsApp(slipText) },
-                                    modifier = Modifier.weight(if (onPrint != null) 1f else 2f)
-                                )
-                            }
-                        }
+                    if (entry != null && onShareWhatsApp != null) {
+                        SlipSendBar(
+                            recipientName = displayName,
+                            recipientPhone = recipientPhone,
+                            isEnglish = isEnglish,
+                            installedApps = whatsAppApps,
+                            onSend = { phone, app -> onShareWhatsApp(slipText, phone, app) }
+                        )
                     }
 
-                    MandiSecondaryButton(
-                        text = if (isEnglish) "New purchase" else "नई खरीद",
-                        height = 48.dp,
-                        fontSize = 14.sp,
-                        onClick = { onNewBuy?.invoke() ?: onBack() },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (entry != null && onPrint != null) {
+                            MandiSecondaryButton(
+                                text = if (isEnglish) "Print" else "प्रिंट करें",
+                                leadingIcon = Icons.Default.Print,
+                                height = 48.dp,
+                                fontSize = 14.sp,
+                                fullWidth = false,
+                                onClick = { onPrint(slipHtml) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        MandiSecondaryButton(
+                            text = if (isEnglish) "New purchase" else "नई खरीद",
+                            height = 48.dp,
+                            fontSize = 14.sp,
+                            fullWidth = false,
+                            onClick = { onNewBuy?.invoke() ?: onBack() },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         },

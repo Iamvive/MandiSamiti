@@ -27,9 +27,12 @@ import com.appwork.mandisamiti.ui.components.ReceiptLot
 import com.appwork.mandisamiti.ui.components.ReceiptLotRow
 import com.appwork.mandisamiti.ui.components.MandiPrimaryButton
 import com.appwork.mandisamiti.ui.components.MandiSecondaryButton
+import com.appwork.mandisamiti.platform.WhatsAppApp
 import com.appwork.mandisamiti.ui.components.ReceiptScaffold
 import com.appwork.mandisamiti.ui.parchi.TraderSlipCashSettlementSheet
 import com.appwork.mandisamiti.ui.slip.ReceiptHtmlRenderer
+import com.appwork.mandisamiti.ui.slip.SlipSendBar
+import com.appwork.mandisamiti.ui.slip.slipRecipientPhone
 import kotlinx.serialization.json.Json
 
 @Composable
@@ -48,7 +51,8 @@ fun SellTransactionReceiptScreen(
     shopLicenceNo: String? = null,
     partyVillage: String? = null,
     partyPhone: String? = null,
-    onShareWhatsApp: ((String) -> Unit)? = null,
+    whatsAppApps: () -> List<WhatsAppApp> = { emptyList() },
+    onShareWhatsApp: ((text: String, phone: String?, app: WhatsAppApp?) -> Unit)? = null,
     onPrint: ((String) -> Unit)? = null,
     isEnglish: Boolean = false,
     gallaCashPaisa: Long = 0L,
@@ -89,12 +93,22 @@ fun SellTransactionReceiptScreen(
         },
         onBack = onBack,
         onEdit = if (entry != null && !entry.isVoid && onEdit != null) ({ onEdit(entry.id) }) else null,
-        shareLabel = if (isEnglish) "Share bill" else "बिल भेजें",
-        onShare = if (entry != null && onShareWhatsApp != null) ({ onShareWhatsApp(billText) }) else null,
         onPrint = if (entry != null && onPrint != null) ({ onPrint(billHtml) }) else null,
         printLabel = if (isEnglish) "Print bill" else "प्रिंट करें",
         onDelete = if (entry != null && !entry.isVoid && onDelete != null) ({ showDeleteConfirm = true }) else null,
         deleteContentDescription = if (isEnglish) "Delete bill" else "बिल हटाएं",
+        shareContent = if (entry != null && onShareWhatsApp != null) {
+            {
+                SlipSendBar(
+                    recipientName = name,
+                    recipientPhone = if (entry.isKhaate) null
+                    else slipRecipientPhone(partyPhone, entry.vehicleNumber),
+                    isEnglish = isEnglish,
+                    installedApps = whatsAppApps,
+                    onSend = { phone, app -> onShareWhatsApp(billText, phone, app) }
+                )
+            }
+        } else null,
         modifier = modifier
     ) {
         if (entry == null) {
