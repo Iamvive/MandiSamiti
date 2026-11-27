@@ -1499,3 +1499,17 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
     - Confirmed Mohri row appears under `नामे पक्ष (निकासी)` with correct total (₹9,93,24,300) and "मोहरी" badge.
     - Confirmed tapping on the Mohri row opens the Day Closing / Hisaab details sheet directly.
     - Confirmed footer shows both `कुल नामे (नकद)` and `मोहरी: ₹...`.
+
+## 2026-11-27 23:05 IST (Gemini / Antigravity): fix(ui): prevent keyboard from hiding DayClosingSheet content & action buttons
+- Problem:
+  - In `DayClosingSheet`, focusing any input field ("गिनी हुई नकदी ₹" or denomination counts) caused the Android software keyboard to cover the bottom half of the sheet, obscuring the active input, reason field, details accordion, and sticky action buttons.
+  - On Android 10 (API 29), `ModalBottomSheet`'s dialog window sets `WindowCompat.setDecorFitsSystemWindows(false)` which suppresses window resize, and `WindowInsetsCompat.Type.ime()` returns 0dp.
+- Solution:
+  - Created multiplatform `rememberImeOrKeyboardHeight()` utility (`KeyboardHeight.kt`, `KeyboardHeight.android.kt`, `KeyboardHeight.jvm.kt`, `KeyboardHeight.ios.kt`):
+    - On Android, queries `activity.window.decorView.getWindowVisibleDisplayFrame(rect)` through an `OnGlobalLayoutListener`, reliably determining keyboard presence and height in Dp even on API <= 29 where native Compose IME insets are zero.
+  - In `DayClosingSheet.kt`, consumed `rememberImeOrKeyboardHeight()` to dynamically push the sticky bottom dock ("दिन बंद करें" / "गिनती सहेजें · दिन खुला रखें") and scroll viewport directly above the soft keyboard when open.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 passing, 0 failures).
+  - Installed and tested live on Xiaomi Redmi Note 7 (`d93c743`):
+    - `keyboard_lift_success_check.png`: When cash field is focused, the entire sheet shifts up and sticky buttons sit directly above the keyboard; no fields or buttons are hidden.
+    - `denomination_with_keyboard.png` & `denomination_scrolled_with_kb.png`: In note calculator mode, focused note inputs and sticky buttons remain pinned above keyboard, and note cards scroll freely without clipping.

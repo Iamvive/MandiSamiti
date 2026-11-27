@@ -63,6 +63,8 @@ internal fun DayClosingSheet(
         containerColor = MandiSurface,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
+        val imeBottomDp = com.appwork.mandisamiti.platform.rememberImeOrKeyboardHeight()
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -435,7 +437,7 @@ internal fun DayClosingSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .navigationBarsPadding(),
+                        .then(if (imeBottomDp == 0.dp) Modifier.navigationBarsPadding() else Modifier),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Row(
@@ -487,6 +489,10 @@ internal fun DayClosingSheet(
                         }
                     }
                 }
+            }
+
+            if (imeBottomDp > 0.dp) {
+                Spacer(modifier = Modifier.height(imeBottomDp))
             }
         }
     }
