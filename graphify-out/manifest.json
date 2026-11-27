@@ -450,10 +450,10 @@
     "semantic_hash": "50584f9626e7f2d90cb8c20bb078ee04"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerScreen.kt": {
-    "mtime": 1795717862.5374851,
-    "seen": 1795718094.547568,
-    "ast_hash": "91315abf1879724bfb4fe40b0167289b",
-    "semantic_hash": "91315abf1879724bfb4fe40b0167289b"
+    "mtime": 1795776348.735086,
+    "seen": 1795776431.730241,
+    "ast_hash": "8cfd1640bcd25950c1b8d4dc05233121",
+    "semantic_hash": "8cfd1640bcd25950c1b8d4dc05233121"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/ledger/PartyLedgerViewModel.kt": {
     "mtime": 1795717862.5379734,
@@ -462,10 +462,10 @@
     "semantic_hash": "5f85422209db981152f89692c7d433c2"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyCashRegisterScreen.kt": {
-    "mtime": 1795717862.5382915,
-    "seen": 1795718094.547916,
-    "ast_hash": "afbeb789c5a0b70153f0453798d6de07",
-    "semantic_hash": "afbeb789c5a0b70153f0453798d6de07"
+    "mtime": 1795776348.7836862,
+    "seen": 1795776431.7306209,
+    "ast_hash": "d18f61993548e8526982cf6130e9134c",
+    "semantic_hash": "d18f61993548e8526982cf6130e9134c"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DailyRegisterViewModel.kt": {
     "mtime": 1795713393.9691567,
@@ -1920,8 +1920,8 @@
     "semantic_hash": "d7583c829e50a3347129d039aff1169a"
   },
   "FEATURES.json": {
-    "mtime": 1795718086.0262935,
-    "seen": 1795718094.542963,
+    "mtime": 1795776424.547692,
+    "seen": 1795776431.725268,
     "ast_hash": "830da2ee9d0a411ffbdefb990d22dd27",
     "semantic_hash": "830da2ee9d0a411ffbdefb990d22dd27"
   },
@@ -2160,10 +2160,10 @@
     "semantic_hash": "b54731f749a8563693c40c21fdc6b4cd"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/parchi/FarmerSlipCashSettlementSheet.kt": {
-    "mtime": 1794583167.0925756,
-    "seen": 1794590681.593848,
-    "ast_hash": "fb07a04219d74c9450638a21517d474d",
-    "semantic_hash": "fb07a04219d74c9450638a21517d474d"
+    "mtime": 1795775608.8159783,
+    "seen": 1795776431.730526,
+    "ast_hash": "1399199d037042c562eeca46c6983322",
+    "semantic_hash": "1399199d037042c562eeca46c6983322"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/parchi/ParchiListScreen.kt": {
     "mtime": 1795679440.7386706,
@@ -2178,10 +2178,10 @@
     "semantic_hash": "53b387a6d0865191ddfa01a9cea487b2"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DayClosingSheet.kt": {
-    "mtime": 1794937158.7661064,
-    "seen": 1794938569.973611,
-    "ast_hash": "12c2cfd8fe34974f98a9cd377213b4cf",
-    "semantic_hash": "12c2cfd8fe34974f98a9cd377213b4cf"
+    "mtime": 1795776348.8146873,
+    "seen": 1795776431.7306528,
+    "ast_hash": "1695100ca02da7a9705d755c67ac1f03",
+    "semantic_hash": "1695100ca02da7a9705d755c67ac1f03"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/register/DrawerDatePickerSheet.kt": {
     "mtime": 1794332561.411445,
@@ -2208,10 +2208,10 @@
     "semantic_hash": "7b25f49cd17cea5bf5ab003b53fa9ded"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/stock/StockRegisterScreen.kt": {
-    "mtime": 1795110534.191124,
-    "seen": 1795179992.851608,
-    "ast_hash": "82d88f34c41f8cd3afdc69a79b17e376",
-    "semantic_hash": "82d88f34c41f8cd3afdc69a79b17e376"
+    "mtime": 1795776348.8769476,
+    "seen": 1795776431.731117,
+    "ast_hash": "13c494b9ab57babf00ccc71a30b11964",
+    "semantic_hash": "13c494b9ab57babf00ccc71a30b11964"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/theme/Spacing.kt": {
     "mtime": 1793958491.047709,
@@ -2808,10 +2808,10 @@
     "semantic_hash": "681c156dab0b66f9c8ead3274375f6cc"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/udhaar/UdhaarAddSheet.kt": {
-    "mtime": 1795080028.5382512,
-    "seen": 1795179992.8519008,
-    "ast_hash": "cfc5f9fe5b606342bab6e8bd358ce255",
-    "semantic_hash": "cfc5f9fe5b606342bab6e8bd358ce255"
+    "mtime": 1795775837.7991517,
+    "seen": 1795776431.7314298,
+    "ast_hash": "6510602d8fe179e7d49e6c58a80d891c",
+    "semantic_hash": "6510602d8fe179e7d49e6c58a80d891c"
   },
   "composeApp/src/commonMain/kotlin/com/appwork/mandisamiti/ui/udhaar/UdhaarLandingScreen.kt": {
     "mtime": 1795684302.2454143,

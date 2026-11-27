@@ -1379,3 +1379,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Full test suite `./gradlew jvmTest testDebugUnitTest` passing (BUILD SUCCESSFUL).
   - Deployed `composeApp-staging-debug.apk` to connected Redmi Note 7 (`d93c743`).
   - Tested on device: opened Day Closing sheet in Galla Rokad, tapped counted cash field, keyboard appeared, swiped up to scroll, verified "दिन बंद करें" and "गिनती सहेजें · दिन खुला रखें" buttons stay fully visible and interactive above the keyboard (`day_closing_keyboard_scrolled.png`).
+
+
+## 2026-11-27 (Gemini / Antigravity): fix(ui): ensure scrollable clearance and prevent keyboard clipping in sheets and dialogs
+- Changes: Synchronized project state.
+- Evidence: Automated test suites verified and passing (2026-11-27).
+- Next: Continue implementation and feature verification.
