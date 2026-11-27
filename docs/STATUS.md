@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-27 18:45 IST | Antigravity | Branch `feat/slip-party-block`: implemented smart party block for Buy and Sell slips. All 13 device checks passed on physical Redmi Note 7 (`d93c743`). PR opened against main. |
 | 2026-11-26 18:21 IST | Claude Code | Branch `mgr/2-backend-only-harden-post-api-v`: added a fixed-window assertion to the upload-limit expiry test. Backend pytest 178 passed. Not pushed, not deployed. |
 | 2026-11-26 18:15 IST | Antigravity | Branch `mgr/2-backend-only-harden-post-api-v`: hardened `POST /api/v1/events` with per-shop rate limit (429) and shop existence check (409). Pytest was not run by me. |
 | 2026-11-26 16:17 IST | Antigravity | Branch `fix/sentry-flavor-env`: flavor-tagged Sentry `environment` (`staging`/`prod`). Verified test crash on Redmi `d93c743` (`MANDISAMITI-ANDROID-1`), phone scrubbed, `:composeApp:jvmTest` and `:composeApp:installStagingDebug` passed. |
@@ -25,6 +26,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | Branch | PR | Agent | State |
 | --- | --- | --- | --- |
+| `feat/slip-party-block` | this PR | Antigravity | Smart party block on Buy & Sell slips. Device verified on Redmi `d93c743`. Ready for Claude Code review. |
 | `mgr/2-backend-only-harden-post-api-v` | — | Antigravity | Hardened `POST /api/v1/events` with rate limit and shop existence check. Backend pytest 178 passed (Claude Code, 2026-11-26). Merged to main by pull request; not deployed. |
 | `fix/sentry-flavor-env` | — | Antigravity | Ready for review. `android-crash-reporting` passing on Redmi `d93c743`. |
 | `fix/deploy-local-files` | this PR | Claude Code | Open for review. `deploy-excludes-local-venv` passing; on staging. |

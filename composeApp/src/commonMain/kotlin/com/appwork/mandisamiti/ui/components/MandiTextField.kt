@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -166,7 +167,9 @@ fun MandiPartyLookupField(
     modifier: Modifier = Modifier,
     placeholder: String? = null,
     isError: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    newPartyLabel: String? = null,
+    onNewParty: ((typedName: String) -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -180,6 +183,9 @@ fun MandiPartyLookupField(
 
     val showDropdown = expanded && matches.isNotEmpty() &&
         !matches.any { (it.phone == trimmed || it.name.equals(trimmed, ignoreCase = true)) && matches.size == 1 }
+    val typedName = searchQuery.trim()
+    val showNewRow = onNewParty != null && newPartyLabel != null && expanded &&
+        typedName.length >= 2 && typedName.any { !it.isDigit() }
 
     Column(modifier = modifier.fillMaxWidth()) {
         MandiFlatTextField(
@@ -228,7 +234,7 @@ fun MandiPartyLookupField(
             isTall = true
         )
 
-        if (showDropdown) {
+        if (showDropdown || showNewRow) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -238,7 +244,7 @@ fun MandiPartyLookupField(
                 colors = CardDefaults.cardColors(containerColor = MandiSurface)
             ) {
                 Column {
-                    matches.forEachIndexed { index, party ->
+                    (if (showDropdown) matches else emptyList()).forEachIndexed { index, party ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -282,6 +288,30 @@ fun MandiPartyLookupField(
                             HorizontalDivider(
                                 color = MandiBorder,
                                 thickness = 1.dp
+                            )
+                        }
+                    }
+
+                    if (showNewRow) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    expanded = false
+                                    searchQuery = ""
+                                    textMode = false
+                                    onNewParty?.invoke(typedName)
+                                }
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MandiTextPrimary)
+                            Text(
+                                text = "$newPartyLabel: $typedName",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MandiTextPrimary
                             )
                         }
                     }

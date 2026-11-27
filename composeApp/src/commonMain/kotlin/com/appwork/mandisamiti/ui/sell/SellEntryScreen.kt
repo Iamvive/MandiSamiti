@@ -58,6 +58,13 @@ import com.appwork.mandisamiti.domain.model.TradeSettings
 import com.appwork.mandisamiti.domain.repository.SellRepository
 import com.appwork.mandisamiti.platform.MandiBackHandler
 import com.appwork.mandisamiti.ui.buy.BuyPartyResolver
+import com.appwork.mandisamiti.ui.components.EditPartyDialog
+import com.appwork.mandisamiti.ui.components.PartyBlockState
+import com.appwork.mandisamiti.ui.components.SamePersonDialog
+import com.appwork.mandisamiti.ui.components.SavedPartyLine
+import com.appwork.mandisamiti.ui.components.isSelectionStale
+import com.appwork.mandisamiti.ui.components.partyBlockState
+import com.appwork.mandisamiti.ui.components.samePersonCandidate
 import com.appwork.mandisamiti.ui.components.DiscardDraftDialog
 import com.appwork.mandisamiti.ui.components.DuplicateEntryDialog
 import com.appwork.mandisamiti.ui.components.MandiCard
@@ -113,6 +120,9 @@ fun SellEntryScreen(
     var confirmedStockWarning by remember { mutableStateOf(false) }
     var stockWarningDetails by remember { mutableStateOf<List<Pair<String, Pair<Long, Long>>>>(emptyList()) }
     var newPartyCheck by remember { mutableStateOf<TypedPartyCheck.NeedsConfirm?>(null) }
+    var newPartyRequested by remember(existingId) { mutableStateOf(false) }
+    var showEditParty by remember { mutableStateOf(false) }
+    var sameCandidate by remember { mutableStateOf<Party?>(null) }
     var pendingEntryToSave by remember { mutableStateOf<SellEntry?>(null) }
 
     val recentSells by (sellRepository?.getSellEntriesStream(shopId) ?: kotlinx.coroutines.flow.emptyFlow()).collectAsState(initial = emptyList())
@@ -147,16 +157,22 @@ fun SellEntryScreen(
     LaunchedEffect(existingEntry, parties) {
         val entry = existingEntry ?: return@LaunchedEffect
         val party = parties.firstOrNull { it.id == entry.buyerId } ?: return@LaunchedEffect
-        if (formState.buyerName == entry.buyerId) formState.buyerName = party.name
-        if (formState.phone.isBlank()) party.phone?.let(formState::updatePhone)
-        if (formState.village.isBlank()) formState.village = party.village.orEmpty()
-        if (formState.gstin.isBlank()) {
-            val cleanGstin = party.gstin.orEmpty().trim().uppercase()
-            if (cleanGstin.isNotBlank()) {
-                formState.gstin = cleanGstin
-                if (cleanGstin.length >= 2 && cleanGstin.take(2).all { it.isDigit() }) {
-                    formState.stateCode = cleanGstin.take(2)
-                }
+        if (formState.buyerName == entry.buyerId) {
+            val slipPhone = formState.phone
+            val slipVillage = formState.village
+            val slipGstin = formState.gstin
+            val slipKind = formState.partyKind
+            val slipStateCode = formState.stateCode
+            val slipCommission = formState.commissionPercent
+            SellPartyResolver.pick(formState, party)
+            // The slip's own category, rate and tax fields win over what pick() derives.
+            formState.partyKind = slipKind
+            formState.commissionPercent = slipCommission
+            if (formState.phone.isBlank()) formState.updatePhone(slipPhone)
+            if (formState.village.isBlank()) formState.village = slipVillage
+            if (slipGstin.isNotBlank()) {
+                formState.gstin = slipGstin
+                formState.stateCode = slipStateCode
             }
         }
     }
@@ -213,8 +229,13 @@ fun SellEntryScreen(
     }
 
     val triggerSave: () -> Unit = {
+        val candidate = if (formState.isKhaate) null else samePersonCandidate(
+            parties, formState.selectedBuyerId, formState.phone, formState.buyerName, formState.village
+        )
         val typedCheck = if (formState.isKhaate) null else checkTypedParty(formState.buyerName, formState.selectedBuyerId, parties)
-        if (typedCheck is TypedPartyCheck.NeedsConfirm) {
+        if (candidate != null) {
+            sameCandidate = candidate
+        } else if (typedCheck is TypedPartyCheck.NeedsConfirm) {
             newPartyCheck = typedCheck
         } else {
             performSave()
@@ -286,12 +307,12 @@ fun SellEntryScreen(
                         )
                     }
 
-                    val saveButtonHint = if (!formState.isKhaate && (formState.buyerName.isBlank() || formState.village.isBlank())) {
-                        if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
-                    } else if (!formState.isKhaate && formState.phone.length < 10) {
+                    val saveButtonHint = if (!formState.isKhaate && formState.phone.length < 10) {
                         if (isEnglish) "Enter 10-digit mobile number" else "10 अंकों का मोबाइल नंबर डालें"
+                    } else if (!formState.isKhaate && (formState.buyerName.isBlank() || formState.village.isBlank())) {
+                        if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा"
                     } else {
-                        validationReason ?: (if (isEnglish) "Add name and village to save" else "नाम और गांव डालने पर सुरक्षित होगा")
+                        validationReason ?: (if (isEnglish) "Save" else "सुरक्षित करें")
                     }
 
                     val buttonText = if (canSave) {
@@ -397,86 +418,90 @@ fun SellEntryScreen(
                 }
             }
 
-            // Section 1: Buyer block (Phone-first lookup, Name, Village, and BOS fields)
+    // Section 1: Buyer block
+            val block = partyBlockState(parties, formState.selectedBuyerId, formState.phone, newPartyRequested)
+
             MandiPartyLookupField(
                 phoneValue = formState.phone,
-                onPhoneChange = { formState.updatePhone(it) },
+                onPhoneChange = { phone ->
+                    if (isSelectionStale(parties, formState.selectedBuyerId, phone)) {
+                        formState.selectedBuyerId = null
+                        formState.buyerName = ""
+                        formState.village = ""
+                        formState.gstin = ""
+                        formState.stateCode = "23"
+                    }
+                    formState.updatePhone(phone)
+                },
                 onPartySelected = { party ->
+                    newPartyRequested = false
                     SellPartyResolver.pick(formState, party)
                 },
                 parties = parties,
-                label = if (isEnglish) "Mobile number" else "मोबाइल नंबर",
-                placeholder = if (isOldPartyWithoutPhone) (if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें") else null,
+                label = if (isEnglish) "Mobile number or name" else "मोबाइल नंबर या नाम",
+                placeholder = if (block is PartyBlockState.Saved && block.party.phone.isNullOrBlank()) {
+                    if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें"
+                } else null,
                 isError = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull) != null,
-                errorMessage = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull)
-            )
-
-            MandiFlatTextField(
-                value = formState.buyerName,
-                onValueChange = { formState.buyerName = it },
-                label = if (isEnglish) {
-                    "Buyer Name"
-                } else if (formState.partyKind == SellPartyKind.MERCHANT) {
-                    "व्यापारी / फर्म का नाम"
-                } else {
-                    "ग्राहक का नाम"
-                },
-                isError = formState.buyerName.errorIfFilled(formState.buyerNameValidation.errorOrNull) != null,
-                errorMessage = formState.buyerName.errorIfFilled(formState.buyerNameValidation.errorOrNull),
-                isTall = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            MandiFlatTextField(
-                value = formState.village,
-                onValueChange = { formState.village = it },
-                label = if (isEnglish) "Village / City" else "गाँव / शहर",
-                isError = formState.village.errorIfFilled(formState.villageValidation.errorOrNull) != null,
-                errorMessage = formState.village.errorIfFilled(formState.villageValidation.errorOrNull),
-                isTall = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Buyer Source Hint Line
-            if (isOldPartyWithoutPhone) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MandiAmberDark,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = if (isEnglish) "10-digit mobile number required before saving" else "सुरक्षित करने से पहले 10 अंकों का नंबर दर्ज करें",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MandiTextPrimary
-                    )
+                errorMessage = formState.phone.errorIfFilled(formState.phoneValidation.errorOrNull),
+                newPartyLabel = if (isEnglish) "New buyer" else "नया खरीदार",
+                onNewParty = { typed ->
+                    formState.selectedBuyerId = null
+                    formState.updatePhone("")
+                    formState.village = ""
+                    formState.gstin = ""
+                    formState.stateCode = "23"
+                    formState.buyerName = typed
+                    newPartyRequested = true
                 }
-            } else if (existingParty != null && formState.phone.isNotBlank()) {
-                Text(
-                    text = if (isEnglish) {
-                        "Filled from the saved number. Changing them updates this account everywhere."
-                    } else {
-                        "सेव नंबर से नाम और गांव भरे। बदलने पर यह खाते में हर जगह बदलेगा।"
-                    },
-                    fontSize = 12.sp,
-                    color = MandiTextSecondary
+            )
+
+            val villageField: @Composable () -> Unit = {
+                MandiFlatTextField(
+                    value = formState.village,
+                    onValueChange = { formState.village = it },
+                    label = if (isEnglish) "Village / City" else "गाँव / शहर",
+                    isError = formState.village.errorIfFilled(formState.villageValidation.errorOrNull) != null,
+                    errorMessage = formState.village.errorIfFilled(formState.villageValidation.errorOrNull),
+                    isTall = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-            } else if (existingParty == null && formState.phone.isNotBlank()) {
-                Text(
-                    text = if (isEnglish) {
-                        "New number. The account is created when the entry is saved."
-                    } else {
-                        "नया नंबर। एंट्री सेव होते ही खाता बन जाएगा।"
-                    },
-                    fontSize = 12.sp,
-                    color = MandiTextSecondary
-                )
+            }
+
+            when (block) {
+                is PartyBlockState.Saved -> {
+                    SavedPartyLine(
+                        name = formState.buyerName,
+                        village = if (block.party.village.isNullOrBlank()) "" else formState.village,
+                        isEnglish = isEnglish,
+                        onEdit = { showEditParty = true },
+                    )
+                    if (block.party.village.isNullOrBlank()) villageField()
+                }
+                PartyBlockState.New -> {
+                    Text(
+                        text = if (isEnglish) "New account. It is created when the slip is saved." else "नया खाता। पर्ची सेव होते ही बन जाएगा।",
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    MandiFlatTextField(
+                        value = formState.buyerName,
+                        onValueChange = { formState.buyerName = it },
+                        label = if (isEnglish) {
+                            "Buyer Name"
+                        } else if (formState.partyKind == SellPartyKind.MERCHANT) {
+                            "व्यापारी / फर्म का नाम"
+                        } else {
+                            "ग्राहक का नाम"
+                        },
+                        isError = formState.buyerName.errorIfFilled(formState.buyerNameValidation.errorOrNull) != null,
+                        errorMessage = formState.buyerName.errorIfFilled(formState.buyerNameValidation.errorOrNull),
+                        isTall = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    villageField()
+                }
+                PartyBlockState.Lookup -> Unit
             }
 
             // BOS specific details
@@ -889,6 +914,32 @@ fun SellEntryScreen(
     }
 
     // Confirmation & Discard Dialogs
+    sameCandidate?.let { candidate ->
+        SamePersonDialog(
+            candidate = candidate,
+            isEnglish = isEnglish,
+            onSamePerson = {
+                sameCandidate = null
+                formState.selectedBuyerId = candidate.id
+                performSave()
+            },
+            onNewAccount = { sameCandidate = null; performSave() },
+            onDismiss = { sameCandidate = null },
+        )
+    }
+    if (showEditParty) {
+        EditPartyDialog(
+            name = formState.buyerName,
+            village = formState.village,
+            isEnglish = isEnglish,
+            onDone = { name, village ->
+                formState.buyerName = name
+                formState.village = village
+                showEditParty = false
+            },
+            onDismiss = { showEditParty = false },
+        )
+    }
     newPartyCheck?.let { check ->
         NewPartyConfirmDialog(
             check = check,

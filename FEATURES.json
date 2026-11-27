@@ -350,6 +350,12 @@
       "description": "Track 2 Gate 2 (GAP-01 to GAP-04 and GAP-09): Register payment mode breakdown (RTGS/CHEQUE/online separate totals); PaymentMetadata utility with structured remarks tags; contra transfer double-entry via recordContraTransfer(); Bank/Contra Transfer dialog in ledger; Edit buttons on FintechCashCard and FintechLendCard; enhanced editCash with paymentMode + bank/check metadata; CONTRA tag stripping in PaymentMetadata.parse()",
       "status": "passing",
       "evidence": "2026-11-26 (Antigravity / Gemini 3.8 Flash). On-the-fly banking fields implemented across PartyLedgerScreen and DailyCashRegisterScreen (RTGS: account number, account holder, bank name, optional IFSC, optional UTR; Cheque: cheque number, bank name, payee name; UPI: UPI ID, optional UTR). Non-cash summary strip added to DailyCashRegisterScreen below DrawerSummaryCard. All automated tests passing (./gradlew jvmTest). Device-verified on physical Redmi Note 7 (d93c743) on stagingDebug: Cheque (#CHQ8899), Ledger RTGS (A/c 5010045678912), and direct Galla RTGS (A/c 60201122334, UTR998877) recorded in mandisamiti.db with clean UI card display, dynamic non-cash summary strip, and zero drawer drift (Takkar preserved at Rs 30,128)."
+    },
+    {
+      "id": "slip-party-block",
+      "description": "Smart party block on Buy and Sell slips: collapsed SavedPartyLine for saved accounts, Name and Village fields shown only for new accounts, in-place edit dialog, and same-person new number prompt",
+      "status": "passing",
+      "evidence": "2026-11-27 (Antigravity, Gemini). Branch feat/slip-party-block. PartyBlock state rules with 7 unit tests (PartyBlockTest). Verified all 13 checks on physical Redmi Note 7 (d93c743) against staging: 1 search box on new slip; 10-digit saved phone collapses to SavedPartyLine; 1-digit delete reverts; new number shows Name and Village; '+ New' dropdown pre-fills name and activates numeric keyboard; missing village account shows single village input; Edit dialog updates account and slip; same-person detection prompts dialog and re-links account mobile cleanly; Khaate slip hides party block; keyboard interaction has zero clipping."
     }
   ]
 }
