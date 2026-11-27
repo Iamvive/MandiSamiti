@@ -36,7 +36,7 @@ internal fun DayClosingGaddiCounter(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // Denomination Strip (5 x 2 chips, all ten denominations)
+        // Denomination Strip (7 chips in two rows)
         DenominationStrip(
             selected = draft.selected,
             counts = draft.counts,
@@ -48,7 +48,6 @@ internal fun DayClosingGaddiCounter(
         val currentCount = draft.counts[draft.selected] ?: GaddiCount(0, 0)
         val pieces = currentCount.pieces
         val totalRs = pieces.toLong() * draft.selected
-        val isCoin = draft.selected <= 5
 
         Row(
             modifier = Modifier
@@ -58,7 +57,7 @@ internal fun DayClosingGaddiCounter(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "₹${draft.selected}" + if (isCoin) " (${if (isEnglish) "Coin" else "सिक्का"})" else "",
+                text = "₹${draft.selected}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MandiTextPrimary,
@@ -72,27 +71,70 @@ internal fun DayClosingGaddiCounter(
         }
 
         // Entry Boxes: गड्डी (bundle of 100) and खुले (loose)
-        // For coins (<= 5): single box labelled "गिनती" / "Count", no bundle box
-        if (isCoin) {
-            val spokenLoose = "${draft.selected} के सिक्के, ${currentCount.loose} गिनती"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // Bundles Box (गड्डी 100 की)
+            val isBundleActive = draft.field == GaddiField.BUNDLES
+            val spokenBundle = "${draft.selected} के नोट, ${currentCount.bundles} गड्डी"
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .weight(1f)
                     .height(64.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MandiSurfaceElevated)
-                    .border(2.dp, MandiBorderActive, RoundedCornerShape(8.dp))
+                    .border(
+                        if (isBundleActive) 2.dp else 1.dp,
+                        if (isBundleActive) MandiBorderActive else MandiBorder,
+                        RoundedCornerShape(8.dp),
+                    )
+                    .clickable { onDraftChange(draft.focus(GaddiField.BUNDLES)) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .semantics { contentDescription = spokenBundle },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (isEnglish) "Bundles (of 100)" else "गड्डी (100 की)",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isBundleActive) MandiTextPrimary else MandiTextSecondary,
+                    )
+                    Text(
+                        text = currentCount.bundles.toString(),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MandiTextPrimary,
+                    )
+                }
+            }
+
+            // Loose Box (खुले)
+            val isLooseActive = draft.field == GaddiField.LOOSE
+            val spokenLoose = "${draft.selected} के नोट, ${currentCount.loose} खुले"
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MandiSurfaceElevated)
+                    .border(
+                        if (isLooseActive) 2.dp else 1.dp,
+                        if (isLooseActive) MandiBorderActive else MandiBorder,
+                        RoundedCornerShape(8.dp),
+                    )
                     .clickable { onDraftChange(draft.focus(GaddiField.LOOSE)) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
                     .semantics { contentDescription = spokenLoose },
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (isEnglish) "Count" else "गिनती",
-                        fontSize = 11.sp,
+                        text = if (isEnglish) "Loose" else "खुले",
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MandiTextSecondary,
+                        color = if (isLooseActive) MandiTextPrimary else MandiTextSecondary,
                     )
                     Text(
                         text = currentCount.loose.toString(),
@@ -100,81 +142,6 @@ internal fun DayClosingGaddiCounter(
                         fontWeight = FontWeight.Bold,
                         color = MandiTextPrimary,
                     )
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Bundles Box (गड्डी 100 की)
-                val isBundleActive = draft.field == GaddiField.BUNDLES
-                val spokenBundle = "${draft.selected} के नोट, ${currentCount.bundles} गड्डी"
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MandiSurfaceElevated)
-                        .border(
-                            if (isBundleActive) 2.dp else 1.dp,
-                            if (isBundleActive) MandiBorderActive else MandiBorder,
-                            RoundedCornerShape(8.dp),
-                        )
-                        .clickable { onDraftChange(draft.focus(GaddiField.BUNDLES)) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                        .semantics { contentDescription = spokenBundle },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (isEnglish) "Bundles (of 100)" else "गड्डी (100 की)",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isBundleActive) MandiTextPrimary else MandiTextSecondary,
-                        )
-                        Text(
-                            text = currentCount.bundles.toString(),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary,
-                        )
-                    }
-                }
-
-                // Loose Box (खुले)
-                val isLooseActive = draft.field == GaddiField.LOOSE
-                val spokenLoose = "${draft.selected} के नोट, ${currentCount.loose} खुले"
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MandiSurfaceElevated)
-                        .border(
-                            if (isLooseActive) 2.dp else 1.dp,
-                            if (isLooseActive) MandiBorderActive else MandiBorder,
-                            RoundedCornerShape(8.dp),
-                        )
-                        .clickable { onDraftChange(draft.focus(GaddiField.LOOSE)) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                        .semantics { contentDescription = spokenLoose },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (isEnglish) "Loose" else "खुले",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isLooseActive) MandiTextPrimary else MandiTextSecondary,
-                        )
-                        Text(
-                            text = currentCount.loose.toString(),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MandiTextPrimary,
-                        )
-                    }
                 }
             }
         }
@@ -188,39 +155,30 @@ private fun DenominationStrip(
     isEnglish: Boolean,
     onSelect: (Int) -> Unit,
 ) {
-    // 5 x 2 chips: 2000, 500, 200, 100, 50 in row 1; 20, 10, 5, 2, 1 in row 2
-    val row1 = listOf(2000, 500, 200, 100, 50)
-    val row2 = listOf(20, 10, 5, 2, 1)
+    // 7 chips: 2000, 500, 200, 100 in row 1; 50, 20, 10 in row 2.
+    // Row 2 gets an empty weighted slot so every chip has the same width.
+    val rows = listOf(listOf(2000, 500, 200, 100), listOf(50, 20, 10))
+    val slotsPerRow = rows.maxOf { it.size }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            row1.forEach { denom ->
-                DenominationChip(
-                    denomination = denom,
-                    isSelected = selected == denom,
-                    count = counts[denom],
-                    isEnglish = isEnglish,
-                    onSelect = { onSelect(denom) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            row2.forEach { denom ->
-                DenominationChip(
-                    denomination = denom,
-                    isSelected = selected == denom,
-                    count = counts[denom],
-                    isEnglish = isEnglish,
-                    onSelect = { onSelect(denom) },
-                    modifier = Modifier.weight(1f),
-                )
+        rows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                row.forEach { denom ->
+                    DenominationChip(
+                        denomination = denom,
+                        isSelected = selected == denom,
+                        count = counts[denom],
+                        isEnglish = isEnglish,
+                        onSelect = { onSelect(denom) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                repeat(slotsPerRow - row.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }

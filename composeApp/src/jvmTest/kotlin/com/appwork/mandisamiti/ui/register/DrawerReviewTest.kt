@@ -20,7 +20,7 @@ class DrawerReviewTest {
     )
 
     @Test fun denominationCounterRejectsMalformedAndOverflowingCounts() {
-        assertEquals(1_205L, denominationTotal(mapOf(500 to "2", 200 to "1", 5 to "1")))
+        assertEquals(1_250L, denominationTotal(mapOf(500 to "2", 200 to "1", 50 to "1")))
         assertEquals(0L, denominationTotal(emptyMap()))
         assertNull(denominationTotal(mapOf(500 to "-1")))
         assertNull(denominationTotal(mapOf(500 to "1.5")))

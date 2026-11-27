@@ -79,10 +79,10 @@ class GaddiCounterTest {
         assertEquals(2000, atStart.previous().selected)
         assertEquals(500, atStart.next().selected)
 
-        // Last denomination is 1; next should do nothing
-        val atEnd = GaddiDraft(selected = 1)
-        assertEquals(1, atEnd.next().selected)
-        assertEquals(2, atEnd.previous().selected)
+        // Last denomination is 10; next should do nothing
+        val atEnd = GaddiDraft(selected = 10)
+        assertEquals(10, atEnd.next().selected)
+        assertEquals(20, atEnd.previous().selected)
     }
 
     @Test
@@ -101,16 +101,16 @@ class GaddiCounterTest {
     }
 
     @Test
-    fun coinHasNoBundles() {
-        var draft = GaddiDraft(selected = 5)
-        draft = draft.focus(GaddiField.BUNDLES) // Should remain in LOOSE
-        assertEquals(GaddiField.LOOSE, draft.field)
+    fun smallestNoteHasBundlesAndLoose() {
+        var draft = GaddiDraft(selected = 10)
+        draft = draft.focus(GaddiField.BUNDLES)
+        assertEquals(GaddiField.BUNDLES, draft.field)
 
         draft = draft.digit(4).digit(0)
-        val count = draft.counts[5]
-        assertEquals(0, count?.bundles)
-        assertEquals(40, count?.loose)
-        assertEquals(200L, draft.totalRupees)
+        val count = draft.counts[10]
+        assertEquals(40, count?.bundles)
+        assertEquals(0, count?.loose)
+        assertEquals(40_000L, draft.totalRupees)
     }
 
     @Test

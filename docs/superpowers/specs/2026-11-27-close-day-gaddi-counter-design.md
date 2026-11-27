@@ -57,14 +57,15 @@ flowchart TD
 ### Counter
 
 - Opens on ₹500. ₹2000 is rarely present but stays in the strip.
-- ₹5, ₹2 and ₹1 are coins: one box labelled गिनती, no bundle box. ₹10 and ₹20 keep both boxes.
+- Seven denominations: ₹2000, 500, 200, 100, 50, 20, 10. The mandi does not deal in coins, so ₹5, ₹2 and ₹1 are gone. Every denomination has both गड्डी and खुले boxes.
+- The strip is two rows with equal chip widths: ₹2000, 500, 200, 100 on the first row and ₹50, 20, 10 on the second. The empty slot on row two keeps the widths equal.
 - The खुले box is selected after choosing a denomination.
 - The first digit after selecting a denomination or box replaces its value. Later digits append.
 - गड्डी accepts 0 to 999. खुले accepts 0 to 9999 and is never converted into bundles. A digit that would pass the limit is ignored.
 - Backspace removes the last digit. On an untouched denomination it does nothing.
 - `+1` adds one to the selected box.
 - `0 करें` sets the selected denomination to zero and marks it counted. It is also how an empty drawer is recorded.
-- `पिछला` and `अगला` move through `2000, 500, 200, 100, 50, 20, 10, 5, 2, 1`. They are disabled at the ends and do not mark anything as counted.
+- `पिछला` and `अगला` move through `2000, 500, 200, 100, 50, 20, 10`. They are disabled at the ends and do not mark anything as counted.
 - A chip shows `बाकी` until its denomination has an entry, then `× <pieces>`. The selected chip has a 2 dp border.
 - Untouched denominations count as zero in the total.
 
@@ -90,7 +91,8 @@ flowchart TD
 |---|---|---|
 | Not counted | पहले नकदी गिनें / Count the cash first | no |
 | Match | दिन बंद करें / Close day | yes |
-| Difference, reason blank | ₹X कमी (or बढ़त) के साथ बंद करें / Close with ₹X short (or over) | yes, opens the reason picker |
+| Gap under ₹10 (0 < abs diff < 1000 paisa) | ₹X कमी (or बढ़त) के साथ बंद करें / Close with ₹X short (or over) | yes, goes straight to the confirmation dialog with no picker. Saves an empty reason. The hero stays amber and the real counted value is saved. |
+| Gap of ₹10 or more, reason blank | same label as above | yes, opens the reason picker |
 | Picker open, nothing chosen | कारण चुनें / Choose a reason | no |
 | Difference, reason set | same label as row 3 | yes, opens the confirmation dialog |
 
@@ -184,7 +186,7 @@ var useDenominations by remember(uiState.selectedDate, uiState.isDayClosingSumma
 ## Differences from the mockup
 
 - The mockup keeps खुले below 100. The app must accept any value up to 9999.
-- The mockup shows गड्डी boxes for coins. The app does not.
+- The mockup shows गड्डी boxes for coins. The app does not, because the app has no coin denominations.
 - The mockup omits the mode switch, Details accordion, error line and the अन्य text field.
 - The mockup wraps from ₹1 to ₹2000. The app disables the key at the ends.
 - The mockup's "खाली करें" button is a demo control. Do not build it.
@@ -230,3 +232,7 @@ All device checks pass on the dated Redmi run, JVM tests and the staging build p
 ## Open question
 
 Resolved: the 6 local commits reached `origin/main` via PRs #56, #57, and #58.
+
+## Gap threshold (2026-11-28 revision)
+
+Vivek's decision overrides the table above. One function, `closeNeedsReason(diffPaisa)` in `DayClosingSheet.kt`, uses `CLOSE_REASON_THRESHOLD_PAISA = 1000`. It drives both the button's enabled state and the tap handling. A difference of 0 needs nothing. A gap of 999 paisa or less closes without a reason. A gap of 1000 paisa (₹10) or more needs one.

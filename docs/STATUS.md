@@ -6,6 +6,7 @@ One board for every agent. If this file and GitHub disagree, GitHub wins. No sec
 
 | When | Who | Basis |
 | --- | --- | --- |
+| 2026-11-28 01:05 IST | Claude Code (Haiku 5.5) | Branch `fix/gaddi-counter-notes-only`: coins removed from close-day counter; gaps under Rs 10 close without reason. jvmTest 473/0 fail, staging assemble OK, Redmi d93c743 light-theme and gap checks done. Dark theme NOT verified, so `close-day-gaddi-counter` is set to failing. Draft PR open, not merged. |
 | 2026-11-28 00:48 IST | Antigravity | PR #59 merged to `main`: close-day note counting revamp (Gaddi counter). 11 device checks passed on physical Redmi Note 7 (`d93c743`), contrast ≥ 5.8:1 verified, all jvmTests green. Branch deleted. |
 | 2026-11-27 18:49 IST | Antigravity | PR #55 merged to `main` (`8519607`): smart party block for Buy and Sell slips. All 13 device checks passed on physical Redmi Note 7 (`d93c743`). Branch deleted. |
 | 2026-11-27 18:49 IST | Antigravity | PR #55 merged to `main` (`8519607`): smart party block for Buy and Sell slips. All 13 device checks passed on physical Redmi Note 7 (`d93c743`). Branch deleted. |

@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import kotlin.math.abs
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -34,6 +35,13 @@ import com.appwork.mandisamiti.domain.math.MandiCurrencyFormatter
 import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.ui.components.MandiKeyboard
 import com.appwork.mandisamiti.ui.theme.*
+
+/** A gap of ₹10 (1000 paisa) or more needs a reason. Smaller gaps close without one. */
+internal const val CLOSE_REASON_THRESHOLD_PAISA = 1_000L
+
+/** True when closing with this difference must collect a reason first. Null (not counted) and zero never do. */
+internal fun closeNeedsReason(diffPaisa: Long?): Boolean =
+    diffPaisa != null && abs(diffPaisa) >= CLOSE_REASON_THRESHOLD_PAISA
 
 /**
  * Close Day Sheet (Gaddi counter & Direct total).
@@ -306,7 +314,7 @@ internal fun DayClosingSheet(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     // Reason Picker (shown when difference exists and user tapped close button)
-                    if (isReasonPickerOpen && diffPaisa != null && diffPaisa != 0L) {
+                    if (isReasonPickerOpen && diffPaisa != null && closeNeedsReason(diffPaisa)) {
                         ReasonPickerSection(
                             diffPaisa = diffPaisa,
                             reason = reason,
@@ -354,7 +362,7 @@ internal fun DayClosingSheet(
                         }
 
                         // Primary CTA: Close Day
-                        val isDiff = diffPaisa != null && diffPaisa != 0L
+                        val needsReason = closeNeedsReason(diffPaisa)
                         val isMatch = diffPaisa == 0L
 
                         val closeButtonLabel = when {
@@ -385,6 +393,7 @@ internal fun DayClosingSheet(
                         val closeButtonEnabled = when {
                             countedRs == null || state.isSaving -> false
                             isMatch -> true
+                            !needsReason -> true
                             !isReasonPickerOpen -> true
                             else -> reason.isNotBlank()
                         }
@@ -392,6 +401,10 @@ internal fun DayClosingSheet(
                         Button(
                             onClick = {
                                 if (isMatch) {
+                                    onCloseDay()
+                                } else if (!needsReason) {
+                                    // Small gap: close with an empty reason, no picker.
+                                    onReasonChange("")
                                     onCloseDay()
                                 } else if (!isReasonPickerOpen) {
                                     isReasonPickerOpen = true
