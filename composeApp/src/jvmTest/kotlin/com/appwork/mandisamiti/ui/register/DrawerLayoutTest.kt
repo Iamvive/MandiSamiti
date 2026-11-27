@@ -108,26 +108,34 @@ class DrawerLayoutTest {
             }
             fun click(label: String) {
                 val current = roots.flatMap { flatten(it.semanticsOwner.rootSemanticsNode) }
-                val action = current.last { it.texts().contains(label) && it.config.getOrNull(SemanticsActions.OnClick) != null }
-                assertEquals(true, action.config[SemanticsActions.OnClick].action?.invoke())
+                val match = current.lastOrNull { it.texts().contains(label) && it.config.getOrNull(SemanticsActions.OnClick) != null }
+                if (match == null) {
+                    val available = current.map { it.texts() to (it.config.getOrNull(SemanticsActions.OnClick) != null) }
+                    error("Cannot find clickable element with label: '$label'. Available nodes: $available")
+                }
+                assertEquals(true, match.config[SemanticsActions.OnClick].action?.invoke())
                 repeat(3) { frame() }
             }
             click(name)
             click(if (english) "Close details" else "विवरण बंद करें")
             click(countText)
-            click(if (english) "Count notes and coins" else "नोट-सिक्के से गिनें")
-            val input = roots.flatMap { flatten(it.semanticsOwner.rootSemanticsNode) }.first {
-                it.texts().any { text -> text.contains("₹500 ×") } && it.config.getOrNull(SemanticsActions.SetText) != null
-            }
-            assertEquals(true, input.config[SemanticsActions.SetText].action?.invoke(androidx.compose.ui.text.AnnotatedString("2")))
+            // If already in counter mode (useDenominations == true), clicking the active tab is disabled.
+            // Tap "2" on built-in pad for selected ₹500
+            click("2")
             repeat(3) { frame() }
             val dialogOutput = File(output.parentFile, "${width}-${if (dark) "dark" else "light"}-${if (english) "en" else "hi"}-count.png")
             surface.makeImageSnapshot().use { image -> dialogOutput.writeBytes(image.encodeToData(EncodedImageFormat.PNG)!!.bytes) }
-            click(if (english) "Save count · keep day open" else "गिनती सहेजें · दिन खुला रखें")
+            click(if (english) "Save count" else "गिनती सहेजें")
             assertEquals(100_000L, vm.uiState.value.physicalCountPaisa)
             assertFalse(vm.uiState.value.isDayClosed)
             click(countText)
-            click(if (english) "Close day" else "दिन बंद करें")
+            // Tap close with difference button -> opens reason picker
+            val closeWithDiffLabel = if (english) "Close with ₹1,57,500 short" else "₹1,57,500 कमी के साथ बंद करें"
+            click(closeWithDiffLabel)
+            // Pick reason
+            click(if (english) "Payment not entered" else "भुगतान बाकी")
+            // Tap close with difference again -> opens confirmation dialog
+            click(closeWithDiffLabel)
             click(if (english) "Close day" else "दिन बंद करें") // confirmation dialog
             assertTrue(vm.uiState.value.isDayClosed)
             assertEquals(-15_750_000L, vm.uiState.value.discrepancyPaisa)

@@ -1,5 +1,7 @@
 package com.appwork.mandisamiti.ui.register
 
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.rememberScrollState
@@ -174,6 +176,9 @@ fun DailyCashRegisterScreen(
         newKisanPhone = ""
         newKisanVillage = ""
     }
+    var gaddi by remember(uiState.selectedDate, uiState.cashFingerprint) { mutableStateOf(GaddiDraft()) }
+    var useDenominationsState by remember(uiState.selectedDate, uiState.cashFingerprint) { mutableStateOf<Boolean?>(null) }
+    val useDenominations = useDenominationsState ?: (uiState.physicalCountPaisa == null || gaddi.counts.isNotEmpty())
     var physicalCashInput by remember { mutableStateOf("") }
     var physicalCashReason by remember(uiState.selectedDate) { mutableStateOf("") }
     var showOpeningBalanceDialog by remember { mutableStateOf(false) }
@@ -182,8 +187,6 @@ fun DailyCashRegisterScreen(
     var showCashHomeDialog by remember { mutableStateOf(false) }
     var cashHomeInput by remember { mutableStateOf("") }
     var cashHomeRemarks by remember { mutableStateOf("") }
-    var useDenominations by remember(uiState.selectedDate, uiState.isDayClosingSummaryOpen) { mutableStateOf(false) }
-    var denominationQuantities by remember(uiState.selectedDate, uiState.isDayClosingSummaryOpen) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var showCloseConfirmation by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var pendingDeleteTxId by remember { mutableStateOf<String?>(null) }
@@ -331,7 +334,11 @@ fun DailyCashRegisterScreen(
                     onShareWhatsApp?.invoke(viewModel.generateDayClosingReportText(uiState.physicalCountPaisa?.let { it / 100L }))
                 },
                 onCount = {
-                    physicalCashInput = uiState.physicalCountPaisa?.let { (it / 100L).toString() }.orEmpty()
+                    physicalCashInput = if (gaddi.counts.isNotEmpty()) {
+                        gaddi.totalRupees?.toString().orEmpty()
+                    } else {
+                        uiState.physicalCountPaisa?.let { (it / 100L).toString() }.orEmpty()
+                    }
                     physicalCashReason = uiState.physicalCountReason.orEmpty()
                     viewModel.openDayClosingSummary()
                 },
@@ -689,21 +696,30 @@ fun DailyCashRegisterScreen(
             reason = physicalCashReason,
             onReasonChange = { physicalCashReason = it },
             useDenominations = useDenominations,
-            denominationQuantities = denominationQuantities,
+            draft = gaddi,
             onToggleDenominations = {
-                useDenominations = !useDenominations
-                if (useDenominations) physicalCashInput = denominationTotal(denominationQuantities)?.toString().orEmpty()
+                val nextMode = !useDenominations
+                useDenominationsState = nextMode
+                if (nextMode) {
+                    physicalCashInput = gaddi.totalRupees?.toString().orEmpty()
+                }
             },
-            onDenominationChange = { denomination, value ->
-                denominationQuantities = denominationQuantities + (denomination to value)
-                physicalCashInput = denominationTotal(denominationQuantities)?.toString().orEmpty()
+            onDraftChange = { newDraft ->
+                val countsChanged = newDraft.counts != gaddi.counts
+                gaddi = newDraft
+                physicalCashInput = newDraft.totalRupees?.toString().orEmpty()
+                if (countsChanged) {
+                    physicalCashReason = ""
+                }
             },
             onDismiss = { viewModel.closeDayClosingSummary() },
             onSaveCount = { rupees -> viewModel.setPhysicalCashCount(rupees, physicalCashReason) },
             onCloseDay = { showCloseConfirmation = true },
             onClearCount = {
                 viewModel.setPhysicalCashCount(null)
+                gaddi = GaddiDraft()
                 physicalCashInput = ""
+                physicalCashReason = ""
                 viewModel.closeDayClosingSummary()
             },
         )
