@@ -1400,3 +1400,26 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Added unit test in `BahiDayMohariTest.kt` (`normalFullPaidBuyGoesToMohariBuyAsal`).
   - Ran full test suites: `./gradlew :core-domain:jvmTest :core-data:jvmTest :composeApp:jvmTest` (BUILD SUCCESSFUL, 100% passing).
 
+## 2026-11-27 18:45 IST, Antigravity / Gemini (Smart Party Block on Buy & Sell Slips)
+- **Problem**: Creating a new slip showed 3 always-visible fields (phone, name, village) for all cases. For saved accounts, showing name and village was redundant, risked accidental edits that affected past slips, and cluttered the mobile viewport.
+- **Solution**:
+  - Created `PartyBlock.kt` with pure rules (`derivePartyBlockState`, `isSelectionStale`, `findSamePersonCandidate`) and reusable UI composables (`SavedPartyLine`, `EditPartyDialog`, `SamePersonDialog`).
+  - Updated `MandiPartyLookupField` to support `+ New <name>` selection row when query doesn't match an existing account.
+  - Wired `BuyEntryScreen.kt` and `SellEntryScreen.kt`: saved accounts collapse into a single read-only line with Name and Village (`SavedPartyLine`) and an "Edit" (`बदलें`) action; new accounts reveal Name and Village fields only when unknown number is entered or "+ New" row is selected; same-person candidate prompts user to re-link or create separate account.
+- **Evidence & Verification**:
+  - 7 unit tests in `PartyBlockTest.kt` passing.
+  - Full test suite `./gradlew jvmTest` passing; assembled `:composeApp:assembleStagingDebug`.
+  - Installed on physical Redmi Note 7 (`d93c743`) against staging. Verified all 13 checks from plan:
+    1. Open new slip -> only search box shown (empty).
+    2. Saved 10-digit number -> collapses into SavedPartyLine; Name & Village fields hidden.
+    3. Delete 1 digit -> SavedPartyLine clears, reverts to search.
+    4. Type new 10-digit number -> reveals Name and Village inputs with new account guidance.
+    5. Type new name, tap "+ New" row -> Name prefilled, phone search focused with numeric keyboard.
+    6. Missing phone / missing village -> displays single missing field, save blocked until filled.
+    7. Edit dialog -> allows modifying name & village with past slip warning; cancel preserves, done applies.
+    8. Same person detection -> triggers "Same person with new number?" dialog; "Yes" re-links mobile to existing account.
+    9. Khaate slip -> unchanged.
+    10. Keyboard interaction -> smooth scrolling, zero occlusion or clipping on 390dp Redmi Note 7.
+- **Next**: Review by Claude Code, user acceptance testing with Vivek.
+
+
