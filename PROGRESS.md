@@ -1469,3 +1469,18 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence:
   - JVM test suite passing (`:composeApp:jvmTest`, 455 tests passing).
   - Built and deployed `:composeApp:installStagingDebug` to Redmi Note 7 (`d93c743`), verified live layout via `scrcpy` and screenshot.
+
+## 2026-11-27 22:05 IST (Gemini / Antigravity): fix(ui): compact denomination rows & unclip sticky button text in DayClosingSheet
+- Problem:
+  - Denomination cards were excessively tall and bulky with large paddings and oversized controls, pushing most note rows below the fold.
+  - Sticky bottom action dock left button ("Save count · keep day open" / "गिनती सहेजें · दिन खुला रखें") was truncated / clipped on 390dp and mobile viewports.
+- Fix:
+  - Compacted Denomination Rows: Reduced vertical row padding, minimized card height (`heightIn(min = 36.dp)`), tightened count input field padding (`PaddingValues(horizontal = 4.dp, vertical = 2.dp)`), reduced typography size to 8-9sp labels and 16dp icon buttons. Now 6+ note rows fit simultaneously above the bottom dock.
+  - Sticky Dock Button Typography: Re-tuned left button content padding (`PaddingValues(horizontal = 6.dp, vertical = 4.dp)`), font size to `10.5.sp`, with `maxLines = 2`, `softWrap = true`, and centered text alignment.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 tests passing, 0 failures).
+  - Deployed to physical Redmi Note 7 (`d93c743`) via `./gradlew :composeApp:installStagingDebug`.
+  - Captured live device screenshots (`day_closing_sheet_compact_verified.png` and `day_closing_sheet_denominations_verified.png`):
+    - "सीधे कुल रकम भरें" fits completely on screen without scrolling.
+    - "नोट-सिक्के से गिनें" shows 6 full note denominations cleanly visible without scrolling.
+    - Left sticky button ("गिनती सहेजें · दिन खुला रखें") renders cleanly without horizontal truncation or text clipping.
