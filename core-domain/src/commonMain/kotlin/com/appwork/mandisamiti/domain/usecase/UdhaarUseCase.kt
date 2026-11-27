@@ -15,6 +15,9 @@ import com.appwork.mandisamiti.domain.model.LendType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
 import com.appwork.mandisamiti.domain.repository.LendRepository
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class UdhaarOverpaymentException(val totalDuePaisa: Long) : IllegalArgumentException("Payment is above the amount due")
 
@@ -37,6 +40,7 @@ data class UdhaarLoanForm(
     val receiverName: String? = null,
     val receiverPhone: String? = null,
     val notes: String? = null,
+    val paymentMode: PaymentMode = PaymentMode.CASH,
 )
 
 enum class CashSide { GAVE, GOT }
@@ -50,7 +54,19 @@ class UdhaarUseCase(
     private val repo: LendRepository,
     private val newId: () -> String,
     private val nowMillis: () -> Long,
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ) {
+    /** Returns true when [dateMs] falls on a calendar day strictly before [nowMs] in [tz]. */
+    fun isOlderThanToday(
+        dateMs: Long,
+        nowMs: Long = nowMillis(),
+        tz: TimeZone = timeZone,
+    ): Boolean {
+        val entryDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(tz).date
+        val todayDate = Instant.fromEpochMilliseconds(nowMs).toLocalDateTime(tz).date
+        return entryDate < todayDate
+    }
+
     suspend fun createLoan(form: UdhaarLoanForm): LendEntry {
         require(form.amountPaisa > 0L) { "Amount must be above zero" }
         require(form.monthlyRatePercent >= 0.0) { "Interest rate cannot be negative" }
@@ -77,6 +93,14 @@ class UdhaarUseCase(
             LendDirection.GIVEN -> TransactionType.UDHAR_GIVEN
             LendDirection.TAKEN -> TransactionType.JAMA_RECEIVED
         }
+        val effectivePaymentMode = if (
+            form.paymentMode == PaymentMode.BOOK_ENTRY ||
+            isOlderThanToday(form.date, now, timeZone)
+        ) {
+            PaymentMode.BOOK_ENTRY
+        } else {
+            form.paymentMode
+        }
         val cashRemarks = if (cleanNotes != null) "$cleanNotes [LEND:${loan.id}]" else "उधार [LEND:${loan.id}]"
         val cash = CashTransaction(
             id = newId(),
@@ -84,7 +108,7 @@ class UdhaarUseCase(
             partyId = form.partyId,
             transactionType = transactionType,
             amountPaisa = form.amountPaisa,
-            paymentMode = PaymentMode.CASH,
+            paymentMode = effectivePaymentMode,
             transactionDate = form.date,
             remarks = cashRemarks,
             createdAt = now,

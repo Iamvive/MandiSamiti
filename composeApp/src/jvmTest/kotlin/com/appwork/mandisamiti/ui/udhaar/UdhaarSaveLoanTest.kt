@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.ui.udhaar
 
+import com.appwork.mandisamiti.data.repository.OfflineFirstCashTransactionRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstLendRepository
 import com.appwork.mandisamiti.data.repository.OfflineFirstPartyRepository
 import com.appwork.mandisamiti.database.createTestDatabase
@@ -7,6 +8,7 @@ import com.appwork.mandisamiti.domain.model.KhataPartyPhoneException
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.usecase.UdhaarUseCase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -204,5 +206,36 @@ class UdhaarSaveLoanTest {
         val lends = lendRepo.getLendEntriesStream("shop1").first()
         assertEquals(1, lends.size)
         assertEquals("party-live-2", lends.first().partyId)
+    }
+
+    @Test
+    fun puranaHisaabSavesLoanWithBookEntryAndPersistsNewPartyVillage() = runTest {
+        val db = createTestDatabase()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val partyRepo = OfflineFirstPartyRepository(db, ioDispatcher = dispatcher)
+        val lendRepo = OfflineFirstLendRepository(db, ioDispatcher = dispatcher)
+        val cashRepo = OfflineFirstCashTransactionRepository(db, ioDispatcher = dispatcher)
+        val useCase = UdhaarUseCase(lendRepo, { "loan-${++idCounter}" }, { fixedNow })
+        val viewModel = UdhaarLandingViewModel("shop1", lendRepo, partyRepo, useCase, backgroundScope)
+
+        val formState = UdhaarAddFormState(direction = LendDirection.GIVEN, todayMs = fixedNow)
+        formState.updatePhone("9876500077")
+        formState.name = "Purana Party"
+        formState.village = "Bhopal"
+        formState.amountRupees = "5000"
+        formState.dateMs = fixedNow - 3L * 86_400_000L
+
+        assertTrue(formState.isPuranaHisaab)
+        val result = viewModel.saveLoan(formState)
+        assertTrue(result.isSuccess)
+
+        val savedParty = partyRepo.getPartiesStream("shop1").first().single { it.phone == "9876500077" }
+        assertEquals("Purana Party", savedParty.name)
+        assertEquals("Bhopal", savedParty.village)
+
+        val cashRows = cashRepo.getTransactionsByPartyStream(savedParty.id).first()
+        assertEquals(1, cashRows.size)
+        assertEquals(PaymentMode.BOOK_ENTRY, cashRows.single().paymentMode)
+        assertEquals(500_000L, cashRows.single().amountPaisa)
     }
 }

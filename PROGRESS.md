@@ -1429,3 +1429,102 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Changes: Updated `STATUS.md`.
 - Evidence: All 13 checks verified on physical Redmi Note 7 (d93c743) against staging; 7 PartyBlock unit tests passing; PR #55 merged
 - Next: Continue implementation and feature verification.
+
+## 2026-11-27 20:44 IST (Gemini / Antigravity): install latest main on Redmi Note 7
+- Build: `:composeApp:installStagingDebug` built from `main` (`3fac745`).
+- Device: Physical Xiaomi Redmi Note 7 (`d93c743`, Android 10).
+- Evidence: `installStagingDebug` BUILD SUCCESSFUL; `dumpsys package com.appwork.mandisamiti.staging` shows `lastUpdateTime=2026-11-27 20:44:43`; app launched and mirrored via `scrcpy`.
+
+
+## 2026-11-27 21:05 IST (Gemini / Antigravity): feat(ui): unified 12-hour time formatter utility
+- Changes:
+  - Created single common 12-hour time formatter `MandiTimeFormatter` in `core-domain` (`com.appwork.mandisamiti.domain.util.MandiTimeFormatter`).
+  - Added multiplatform functions `formatTime12Hour`, `formatDateTime12Hour`, `formatHtmlDateTime12Hour`, and `formatDateShort`.
+  - Refactored `ReceiptDateTime.kt` to delegate `receiptDateTime` to `MandiTimeFormatter.formatDateTime12Hour`.
+  - Updated `DailyCashRegisterScreen.kt` to use `MandiTimeFormatter.formatTime12Hour`.
+  - Updated `ReceiptHtmlRenderer.kt` to use `MandiTimeFormatter.formatHtmlDateTime12Hour`.
+  - Updated `DigitalSlipRenderer.kt` to use `MandiTimeFormatter.formatDateTime12Hour`.
+- Evidence:
+  - Added `MandiTimeFormatterTest.kt` in `core-domain/src/commonTest/` testing midnight (12:00 AM), noon (12:00 PM), AM/PM transitions, and padding.
+  - Updated `BuyTransactionReceiptTest.kt` for 12-hour format assertion.
+  - `./gradlew :core-domain:jvmTest :composeApp:jvmTest` passed (BUILD SUCCESSFUL).
+  - Built and installed `:composeApp:installStagingDebug` on connected physical Redmi Note 7 (`d93c743`), app launched and verified via `scrcpy`.
+
+## 2026-11-27 21:35 IST (Gemini / Antigravity): feat(udhaar): customer feedbacks 1, 2, and 3
+- Changes:
+  1. **Udhaar Screen Smart Party Block (Feedback 1)**: Integrated unified `PartyBlock` architecture into `UdhaarAddSheet.kt` (`partyBlockState`, `MandiPartyLookupField`, `SavedPartyLine`, `EditPartyDialog`, `SamePersonDialog`). Automatically reveals Name & Village fields for unknown 10-digit numbers, collapses into a single row for saved accounts, and allows editing or same-person confirmation.
+  2. **Day-End Mohari Single Entry (Feedback 2)**: Updated `BahiDayPageBuilder.kt` to aggregate `mohariBuyAsalPaisa` across ALL non-void buy slips for the day (`grossPaisa - commissionPaisa - labourPaisa`), regardless of whether slips are paid in full, partially paid, or unpaid.
+  3. **Purana Hisaab / Past-Date Loans (Feedback 3)**: Updated `UdhaarUseCase.kt` and `UdhaarAddFormState.kt` so that loans dated prior to today (or marked `PaymentMode.BOOK_ENTRY`) create linked transactions with `PaymentMode.BOOK_ENTRY`. Physical cash drawer (`CashDrawer.kt`) remains 100% untouched while party ledger and interest balance are updated. Added clear informational badge in `UdhaarAddSheet`: "पुराना हिसाब · गल्ले (रोकड़) से नकदी नहीं कटेगी".
+- Evidence:
+  - Unit tests added: `UdhaarUseCaseTest.kt` (4 tests), `CashDrawerTest.kt` (bookEntry check), `BahiDayMohariTest.kt` (all non-void buys aggregation check), `UdhaarAddFormStateTest.kt` (purana hisaab & saver roundtrip tests), `UdhaarSaveLoanTest.kt` (persists village & bookEntry).
+  - Multiplatform JVM tests passed across all modules (`:core-domain:jvmTest`, `:core-database:jvmTest`, `:core-data:jvmTest`, `:composeApp:jvmTest`).
+  - Built and deployed `:composeApp:installStagingDebug` onto physical Xiaomi Redmi Note 7 (`d93c743`), app launched and verified via `scrcpy`.
+
+## 2026-11-27 21:54 IST (Gemini / Antigravity): feat(ui): revamp DayClosingSheet with top hero card and sticky bottom action dock
+- Problem: The day closing / note count sheet was excessively tall (>1000dp), burying critical CTAs (Close Day and Save Count) below the fold and mixing direct input with denomination controls without clear hierarchy.
+- Solution:
+  - Top Hero Card: Side-by-side comparison of "Expected (Per Bahi)" vs "Actual Counted" with dynamic live delta badge (Exact match in green, Surplus/Shortage in amber with exact rupee difference).
+  - Segmented Switcher: Native toggle between "नोट-सिक्के से गिनें" (Calculator) and "सीधे कुल रकम भरें" (Direct Total).
+  - Sticky Bottom Action Dock: Placed "दिन बंद करें" (Primary green CTA) and "गिनती सहेजें · दिन खुला रखें" (Secondary outlined CTA) in an elevated dock pinned to the bottom of the sheet, completely eliminating the need to scroll to complete day closing.
+- Evidence:
+  - JVM test suite passing (`:composeApp:jvmTest`, 455 tests passing).
+  - Built and deployed `:composeApp:installStagingDebug` to Redmi Note 7 (`d93c743`), verified live layout via `scrcpy` and screenshot.
+
+## 2026-11-27 22:05 IST (Gemini / Antigravity): fix(ui): compact denomination rows & unclip sticky button text in DayClosingSheet
+- Problem:
+  - Denomination cards were excessively tall and bulky with large paddings and oversized controls, pushing most note rows below the fold.
+  - Sticky bottom action dock left button ("Save count · keep day open" / "गिनती सहेजें · दिन खुला रखें") was truncated / clipped on 390dp and mobile viewports.
+- Fix:
+  - Compacted Denomination Rows: Reduced vertical row padding, minimized card height (`heightIn(min = 36.dp)`), tightened count input field padding (`PaddingValues(horizontal = 4.dp, vertical = 2.dp)`), reduced typography size to 8-9sp labels and 16dp icon buttons. Now 6+ note rows fit simultaneously above the bottom dock.
+  - Sticky Dock Button Typography: Re-tuned left button content padding (`PaddingValues(horizontal = 6.dp, vertical = 4.dp)`), font size to `10.5.sp`, with `maxLines = 2`, `softWrap = true`, and centered text alignment.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 tests passing, 0 failures).
+  - Deployed to physical Redmi Note 7 (`d93c743`) via `./gradlew :composeApp:installStagingDebug`.
+  - Captured live device screenshots (`day_closing_sheet_compact_verified.png` and `day_closing_sheet_denominations_verified.png`):
+    - "सीधे कुल रकम भरें" fits completely on screen without scrolling.
+    - "नोट-सिक्के से गिनें" shows 6 full note denominations cleanly visible without scrolling.
+    - Left sticky button ("गिनती सहेजें · दिन खुला रखें") renders cleanly without horizontal truncation or text clipping.
+
+## 2026-11-27 22:16 IST (Gemini / Antigravity): feat(ui): display Mohri single entry in Naame column of Daily Cash Register
+- Requirement: Display Mohri (day-end procurement total payable) under the Naame side (नामे पक्ष - निकासी) of the double-column daily register screen as well.
+- Implementation:
+  - Added `val mohariBuyAsalPaisa: Long get() = bahiDayPage?.mohariBuyAsalPaisa ?: 0L` convenience getter on `DailyRegisterUiState`.
+  - Created `BahiMohariRow` matching NGDL tokens and Bahi card styling with title ("मोहरी खरीद (असल)"), amber "मोहरी" badge, debit amount (`−₹...` in red), subtitle ("दिन का कुल खरीद असल (देय)"), and click action navigating to Day Closing Summary.
+  - Positioned `BahiMohariRow` at the top of the right column (नामे पक्ष) in `DailyCashRegisterScreen.kt`, aligning symmetrically with "बाकी निकाला" (opening balance) on the left column (जमा पक्ष).
+  - Updated the right footer summary to display the Mohari breakdown (`मोहरी: ₹...`) alongside physical cash out (`कुल नामे (नकद): −₹...`).
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 tests passing, 0 failures).
+  - Built and installed `:composeApp:installStagingDebug` on physical Xiaomi Redmi Note 7 (`d93c743`).
+  - Captured live device screenshots (`galla_mohari_naame_verified_2.png`, `mohari_row_click_verified_2.png`):
+    - Confirmed Mohri row appears under `नामे पक्ष (निकासी)` with correct total (₹9,93,24,300) and "मोहरी" badge.
+    - Confirmed tapping on the Mohri row opens the Day Closing / Hisaab details sheet directly.
+    - Confirmed footer shows both `कुल नामे (नकद)` and `मोहरी: ₹...`.
+
+## 2026-11-27 23:05 IST (Gemini / Antigravity): fix(ui): prevent keyboard from hiding DayClosingSheet content & action buttons
+- Problem:
+  - In `DayClosingSheet`, focusing any input field ("गिनी हुई नकदी ₹" or denomination counts) caused the Android software keyboard to cover the bottom half of the sheet, obscuring the active input, reason field, details accordion, and sticky action buttons.
+  - On Android 10 (API 29), `ModalBottomSheet`'s dialog window sets `WindowCompat.setDecorFitsSystemWindows(false)` which suppresses window resize, and `WindowInsetsCompat.Type.ime()` returns 0dp.
+- Solution:
+  - Created multiplatform `rememberImeOrKeyboardHeight()` utility (`KeyboardHeight.kt`, `KeyboardHeight.android.kt`, `KeyboardHeight.jvm.kt`, `KeyboardHeight.ios.kt`):
+    - On Android, queries `activity.window.decorView.getWindowVisibleDisplayFrame(rect)` through an `OnGlobalLayoutListener`, reliably determining keyboard presence and height in Dp even on API <= 29 where native Compose IME insets are zero.
+  - In `DayClosingSheet.kt`, consumed `rememberImeOrKeyboardHeight()` to dynamically push the sticky bottom dock ("दिन बंद करें" / "गिनती सहेजें · दिन खुला रखें") and scroll viewport directly above the soft keyboard when open.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 passing, 0 failures).
+  - Installed and tested live on Xiaomi Redmi Note 7 (`d93c743`):
+    - `keyboard_lift_success_check.png`: When cash field is focused, the entire sheet shifts up and sticky buttons sit directly above the keyboard; no fields or buttons are hidden.
+    - `denomination_with_keyboard.png` & `denomination_scrolled_with_kb.png`: In note calculator mode, focused note inputs and sticky buttons remain pinned above keyboard, and note cards scroll freely without clipping.
+
+## 2026-11-27 23:25 IST (Gemini / Antigravity): fix(ui): expand DayClosingSheet to top and enable smooth scrolling with keyboard open
+- Problem:
+  - When the software keyboard opened on `DayClosingSheet`, the sheet remained half-collapsed with a large background gap above it, constraining the visible scrolling area for note denominations and input fields.
+- Solution:
+  - Dynamically applied `Modifier.fillMaxHeight()` to `DayClosingSheet`'s root Column whenever `imeBottomDp > 0.dp`, instantly expanding the sheet all the way to the top of the display and utilizing 100% of available vertical height.
+  - Pinned the segmented mode switcher ("नोट-सिक्के से गिनें" vs "सीधे कुल रकम भरें") directly below the header bar, keeping mode toggles immediately accessible.
+  - Moved the Top Hero Comparison Card inside the inner `verticalScroll` Column so it scrolls upward naturally when typing in fields or scrolling down denominations.
+  - Configured the inner content Column with `weight(1f).verticalScroll(rememberScrollState())` and pinned the Sticky Action Dock ("गिनती सहेजें · दिन खुला रखें" and "दिन बंद करें") directly above the software keyboard using `imeBottomDp`.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 tests passing, 0 failures).
+  - Installed on physical Xiaomi Redmi Note 7 (`d93c743`) on Android 10 (API 29).
+  - Live screenshots verified:
+    - `sheet_perfect_fit_final.png`: Sheet expands to top, mode switcher pinned, input focused, sticky action dock pinned above keyboard.
+    - `denomination_kb_scrolled.png`: Full scrollability verified with keyboard open; note denominations scroll smoothly while sticky buttons remain docked.

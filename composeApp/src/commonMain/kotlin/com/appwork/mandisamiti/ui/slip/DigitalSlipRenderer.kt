@@ -4,6 +4,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.Deal
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.ShopProfile
+import com.appwork.mandisamiti.domain.util.MandiTimeFormatter
 
 object DigitalSlipRenderer {
 
@@ -16,7 +17,7 @@ object DigitalSlipRenderer {
         buyer: Party?,
         deal: Deal
     ): String {
-        val dateStr = "दिनांक: ${kotlinx.datetime.Instant.fromEpochMilliseconds(deal.dealDate)}"
+        val dateStr = "दिनांक: ${MandiTimeFormatter.formatDateTime12Hour(deal.dealDate)}"
         val rateStr = deal.ratePaisaPerUnit?.let { "₹ ${MandiMathEngine.paisaToRupeesString(it)} / कुंतल" } ?: "बाजार भाव"
         val grossQ = slipQuintalText(deal.grossWeightGrams)
         val netQ = slipQuintalText(deal.netWeightGrams)

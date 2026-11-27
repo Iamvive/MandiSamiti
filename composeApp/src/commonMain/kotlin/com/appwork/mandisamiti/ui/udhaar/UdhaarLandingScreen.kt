@@ -162,10 +162,11 @@ class UdhaarLandingViewModel(
             val matchingParty = LendPartyResolver.existing(parties, state.selectedPartyId, state.phone)
             val nowMs = Clock.System.now().toEpochMilliseconds()
             val resolvedPartyId = if (matchingParty != null) {
+                val resolvedVillage = state.village.trim().takeIf { it.isNotEmpty() } ?: matchingParty.village
                 val partyToSave = LendPartyResolver.partyToSave(
                     name = state.name,
                     phone = state.phone,
-                    village = matchingParty.village,
+                    village = resolvedVillage,
                     shopId = effectiveShopId,
                     existing = matchingParty,
                     now = nowMs,
@@ -184,10 +185,11 @@ class UdhaarLandingViewModel(
                     if (anyParty.id.startsWith("khaate-")) {
                         throw KhataPartyPhoneException(anyParty)
                     }
+                    val resolvedVillage = state.village.trim().takeIf { it.isNotEmpty() } ?: anyParty.village
                     val restoredParty = anyParty.copy(
                         name = state.name.trim(),
                         phone = normPhone,
-                        village = anyParty.village,
+                        village = resolvedVillage,
                         isDeleted = false,
                         updatedAt = nowMs,
                         syncStatus = 0,
@@ -198,7 +200,7 @@ class UdhaarLandingViewModel(
                     val newParty = LendPartyResolver.partyToSave(
                         name = state.name,
                         phone = state.phone,
-                        village = null,
+                        village = state.village.trim().takeIf { it.isNotEmpty() },
                         shopId = effectiveShopId,
                         existing = null,
                         now = nowMs,

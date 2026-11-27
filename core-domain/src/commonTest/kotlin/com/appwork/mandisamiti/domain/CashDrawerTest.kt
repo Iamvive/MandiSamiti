@@ -160,4 +160,32 @@ class CashDrawerTest {
         assertEquals(100_000L, summary.cashOutPaisa)
         assertEquals(400_000L, summary.closingPaisa)
     }
+
+    @Test
+    fun bookEntryTransactionsDoNotTouchOpeningOrDailyCash() {
+        val window = DayWindow(startMs = 1_000L, endMs = 2_000L)
+        val summary = CashDrawer.summarize(
+            transactions = listOf(
+                tx(TransactionType.JAMA_RECEIVED, 5_000, at = 500L), // yesterday cash -> opening 500_000
+                tx(TransactionType.UDHAR_GIVEN, 20_000, at = 400L, mode = PaymentMode.BOOK_ENTRY), // purana hisaab -> ignored
+                tx(TransactionType.JAMA_RECEIVED, 15_000, at = 450L, mode = PaymentMode.BOOK_ENTRY), // prior book entry -> ignored
+                tx(TransactionType.UDHAR_GIVEN, 10_000, at = 1_200L, mode = PaymentMode.BOOK_ENTRY), // today book entry -> ignored
+                tx(TransactionType.JAMA_RECEIVED, 1_000, at = 1_300L), // today cash in -> 100_000
+            ),
+            window = window
+        )
+        assertEquals(500_000L, summary.openingPaisa)
+        assertEquals(100_000L, summary.cashInPaisa)
+        assertEquals(0L, summary.cashOutPaisa)
+        assertEquals(600_000L, summary.closingPaisa)
+
+        val balance = CashDrawer.balancePaisa(
+            listOf(
+                tx(TransactionType.JAMA_RECEIVED, 5_000, at = 500L),
+                tx(TransactionType.UDHAR_GIVEN, 20_000, at = 400L, mode = PaymentMode.BOOK_ENTRY),
+                tx(TransactionType.UDHAR_GIVEN, 10_000, at = 1_200L, mode = PaymentMode.BOOK_ENTRY),
+            )
+        )
+        assertEquals(500_000L, balance)
+    }
 }
