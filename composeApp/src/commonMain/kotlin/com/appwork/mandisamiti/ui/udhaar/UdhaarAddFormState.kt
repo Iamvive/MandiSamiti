@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendKind
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.usecase.UdhaarLoanForm
 import com.appwork.mandisamiti.ui.lend.parseLoanRate
 import kotlinx.datetime.Instant
@@ -23,6 +24,16 @@ internal fun isSameOrPastDay(
     return pickedDate <= todayDate
 }
 
+internal fun isOlderThanToday(
+    dateMs: Long,
+    todayMs: Long,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Boolean {
+    val pickedDate = Instant.fromEpochMilliseconds(dateMs).toLocalDateTime(timeZone).date
+    val todayDate = Instant.fromEpochMilliseconds(todayMs).toLocalDateTime(timeZone).date
+    return pickedDate < todayDate
+}
+
 class UdhaarAddFormState(
     val direction: LendDirection,
     val todayMs: Long,
@@ -36,6 +47,7 @@ class UdhaarAddFormState(
     }
 
     var name by mutableStateOf("")
+    var village by mutableStateOf("")
     var selectedPartyId by mutableStateOf<String?>(null)
     var amountRupees by mutableStateOf("")
     var dateMs by mutableStateOf(todayMs)
@@ -72,6 +84,9 @@ class UdhaarAddFormState(
 
     val isDateValid: Boolean
         get() = isSameOrPastDay(dateMs, todayMs)
+
+    val isPuranaHisaab: Boolean
+        get() = isOlderThanToday(dateMs, todayMs)
 
     val isRateValid: Boolean
         get() = !interestOn || parsedRate != null
@@ -139,6 +154,7 @@ class UdhaarAddFormState(
             monthlyRatePercent = effectiveRate,
             receiverName = if (isGivenWithOther) receiverName.trim().takeIf { it.isNotEmpty() } else null,
             receiverPhone = if (isGivenWithOther) receiverPhone.trim().takeIf { it.isNotEmpty() } else null,
+            paymentMode = if (isPuranaHisaab) PaymentMode.BOOK_ENTRY else PaymentMode.CASH,
         )
     }
 }

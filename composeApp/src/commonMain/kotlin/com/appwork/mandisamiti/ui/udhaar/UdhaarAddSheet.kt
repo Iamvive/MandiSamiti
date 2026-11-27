@@ -3,7 +3,6 @@ package com.appwork.mandisamiti.ui.udhaar
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,7 +35,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -70,8 +68,18 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendKind
 import com.appwork.mandisamiti.domain.model.Party
-import com.appwork.mandisamiti.ui.lend.LendPartyResolver
+import com.appwork.mandisamiti.ui.components.EditPartyDialog
+import com.appwork.mandisamiti.ui.components.MandiFlatTextField
+import com.appwork.mandisamiti.ui.components.MandiPartyLookupField
+import com.appwork.mandisamiti.ui.components.PartyBlockState
+import com.appwork.mandisamiti.ui.components.SamePersonDialog
+import com.appwork.mandisamiti.ui.components.SavedPartyLine
+import com.appwork.mandisamiti.ui.components.isSelectionStale
+import com.appwork.mandisamiti.ui.components.partyBlockState
+import com.appwork.mandisamiti.ui.components.samePersonCandidate
+import com.appwork.mandisamiti.ui.theme.MandiAmberBorder
 import com.appwork.mandisamiti.ui.theme.MandiAmberDark
+import com.appwork.mandisamiti.ui.theme.MandiAmberLight
 import com.appwork.mandisamiti.ui.theme.MandiBorder
 import com.appwork.mandisamiti.ui.theme.MandiBorderActive
 import com.appwork.mandisamiti.ui.theme.MandiGreenReceivable
@@ -103,6 +111,7 @@ internal object UdhaarAddFormStateSaver : Saver<UdhaarAddFormState, List<Any?>> 
         value.receiverName,
         value.receiverPhone,
         value.kind.name,
+        value.village,
     )
 
     override fun SaverScope.save(value: UdhaarAddFormState): List<Any?> = saveState(value)
@@ -123,6 +132,7 @@ internal object UdhaarAddFormStateSaver : Saver<UdhaarAddFormState, List<Any?>> 
         state.receiverPhone = value[11] as String
         val kindStr = value.getOrNull(12) as? String
         state.kind = kindStr?.let { runCatching { LendKind.valueOf(it) }.getOrNull() } ?: LendKind.LOAN
+        state.village = value.getOrNull(13) as? String ?: ""
         return state
     }
 }
@@ -151,34 +161,45 @@ fun UdhaarAddSheet(
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var newPartyRequested by rememberSaveable { mutableStateOf(false) }
+    var showEditParty by remember { mutableStateOf(false) }
+    var sameCandidate by remember { mutableStateOf<Party?>(null) }
 
     val imeBottomDp = with(LocalDensity.current) {
         WindowInsets.ime.getBottom(this).toDp()
     }
 
-    // Exact phone match lookup
-    val matchingParty = remember(state.phone, parties) {
-        if (state.phone.length == 10) {
-            LendPartyResolver.existing(parties, state.selectedPartyId, state.phone)
-        } else null
-    }
+    val block = partyBlockState(parties, state.selectedPartyId, state.phone, newPartyRequested)
 
-    // Auto-fill name if blank when phone matches 10 digits
-    LaunchedEffect(matchingParty) {
-        if (matchingParty != null) {
-            state.selectedPartyId = matchingParty.id
+    LaunchedEffect(block) {
+        if (block is PartyBlockState.Saved && state.selectedPartyId != block.party.id) {
+            state.selectedPartyId = block.party.id
             if (state.name.isBlank()) {
-                state.name = matchingParty.name
+                state.name = block.party.name
+            }
+            if (state.village.isBlank()) {
+                state.village = block.party.village.orEmpty()
             }
         }
     }
 
-    val willRename = matchingParty != null && state.name.trim().isNotBlank() && state.name.trim() != matchingParty.name
-
-    val suggestions = remember(state.phone, state.name, parties) {
-        if (matchingParty == null && (state.phone.length in 3..9 || (state.name.length >= 2 && state.selectedPartyId == null))) {
-            LendPartyResolver.matches(parties, state.phone, state.name).take(3)
-        } else emptyList()
+    val performSave: () -> Unit = {
+        errorMessage = null
+        isSaving = true
+        onSave(state) { result ->
+            isSaving = false
+            result.onFailure { e ->
+                errorMessage = when (e) {
+                    is com.appwork.mandisamiti.domain.model.KhataPartyPhoneException -> {
+                        if (isEnglish) "This number belongs to a Khata account" else "यह नंबर खाता (Khata) अकाउंट का है"
+                    }
+                    else -> {
+                        println("Failed to save udhaar loan: ${e.message}")
+                        if (isEnglish) "Failed to save loan. Please try again." else "उधार सेव करने में विफल। कृपया पुनः प्रयास करें।"
+                    }
+                }
+            }
+        }
     }
 
     ModalBottomSheet(
@@ -289,98 +310,102 @@ fun UdhaarAddSheet(
                 }
             }
 
-            // 1. Mobile Number Field
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(
-                    value = state.phone,
+            // 1. Unified Party Block (Lookup -> Saved / New)
+            MandiPartyLookupField(
+                phoneValue = state.phone,
+                onPhoneChange = { phone ->
+                    if (isSelectionStale(parties, state.selectedPartyId, phone)) {
+                        state.selectedPartyId = null
+                        state.name = ""
+                        state.village = ""
+                    }
+                    state.updatePhone(phone)
+                    errorMessage = null
+                },
+                onPartySelected = { party ->
+                    newPartyRequested = false
+                    state.selectedPartyId = party.id
+                    state.name = party.name
+                    state.updatePhone(party.phone.orEmpty())
+                    state.village = party.village.orEmpty()
+                    errorMessage = null
+                },
+                parties = parties,
+                label = if (isEnglish) "Mobile number or name *" else "मोबाइल नंबर या नाम *",
+                placeholder = if ((block is PartyBlockState.Saved && block.party.phone.isNullOrBlank()) ||
+                    (block is PartyBlockState.New && state.phone.isBlank())
+                ) {
+                    if (isEnglish) "Enter 10-digit number" else "10 अंकों का नंबर डालें"
+                } else null,
+                isError = state.phone.isNotBlank() && !state.isPhoneValid,
+                errorMessage = if (state.phone.isNotBlank() && !state.isPhoneValid) {
+                    if (isEnglish) "Must be exactly 10 digits" else "पूरे 10 अंक दर्ज करें"
+                } else null,
+                newPartyLabel = if (isEnglish) "New account" else "नया खाता",
+                onNewParty = { typed ->
+                    state.selectedPartyId = null
+                    state.updatePhone("")
+                    state.village = ""
+                    state.name = typed
+                    newPartyRequested = true
+                    errorMessage = null
+                }
+            )
+
+            val villageField: @Composable () -> Unit = {
+                MandiFlatTextField(
+                    value = state.village,
                     onValueChange = {
-                        state.updatePhone(it)
+                        state.village = it
                         errorMessage = null
                     },
-                    label = { Text(if (isEnglish) "Mobile number *" else "मोबाइल नंबर *") },
-                    placeholder = { Text(if (isEnglish) "10-digit mobile" else "10 अंकों का मोबाइल नंबर") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        if (matchingParty != null) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = "Contact found",
-                                tint = MandiGreenReceivable
-                            )
-                        }
-                    },
-                    isError = state.phone.isNotBlank() && !state.isPhoneValid,
-                    supportingText = if (state.phone.isNotBlank() && !state.isPhoneValid) {
-                        { Text(if (isEnglish) "Must be exactly 10 digits" else "पूरे 10 अंक दर्ज करें", color = MandiRedPayable) }
-                    } else null,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MandiBorderActive,
-                        unfocusedBorderColor = MandiBorder,
-                        focusedTextColor = MandiTextPrimary,
-                        unfocusedTextColor = MandiTextPrimary
-                    )
+                    label = if (isEnglish) "Village (optional)" else "गांव (वैकल्पिक)",
+                    placeholder = if (isEnglish) "Type village" else "गांव लिखें",
+                    isTall = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                // Suggestions chips
-                if (suggestions.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        suggestions.forEach { party ->
-                            SuggestionChip(
-                                onClick = {
-                                    state.selectedPartyId = party.id
-                                    state.name = party.name
-                                    state.updatePhone(party.phone.orEmpty())
-                                },
-                                label = {
-                                    Text(
-                                        text = "${party.name} (${party.phone.orEmpty()})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MandiTextPrimary
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
             }
 
-            // 2. Name Field
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(
-                    value = state.name,
-                    onValueChange = {
-                        state.name = it
-                        errorMessage = null
-                    },
-                    label = { Text(if (isEnglish) "Name *" else "नाम *") },
-                    placeholder = { Text(if (isEnglish) "Person name" else "व्यक्ति का नाम") },
-                    singleLine = false,
-                    maxLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = state.name.isNotBlank() && !state.isNameValid,
-                    supportingText = if (willRename) {
-                        {
-                            Text(
-                                text = if (isEnglish) "Name will be updated for saved contact" else "सुरक्षित संपर्क का नाम बदल जाएगा",
-                                color = MandiAmberDark,
-                                fontSize = 11.sp
-                            )
-                        }
-                    } else null,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MandiBorderActive,
-                        unfocusedBorderColor = MandiBorder,
-                        focusedTextColor = MandiTextPrimary,
-                        unfocusedTextColor = MandiTextPrimary
+            when (block) {
+                is PartyBlockState.Saved -> {
+                    SavedPartyLine(
+                        name = state.name.ifBlank { block.party.name },
+                        village = if (block.party.village.isNullOrBlank()) "" else state.village,
+                        isEnglish = isEnglish,
+                        onEdit = { showEditParty = true },
                     )
-                )
+                    if (block.party.village.isNullOrBlank()) {
+                        villageField()
+                    }
+                }
+                PartyBlockState.New -> {
+                    Text(
+                        text = if (isEnglish) {
+                            "New account. It will be created when the loan is saved."
+                        } else {
+                            "नया खाता। उधार सेव होते ही बन जाएगा।"
+                        },
+                        fontSize = 12.sp,
+                        color = MandiTextSecondary
+                    )
+                    MandiFlatTextField(
+                        value = state.name,
+                        onValueChange = {
+                            state.name = it
+                            errorMessage = null
+                        },
+                        label = if (isEnglish) "Name *" else "नाम *",
+                        placeholder = if (isEnglish) "Person name" else "व्यक्ति का नाम",
+                        isError = state.name.isNotBlank() && !state.isNameValid,
+                        errorMessage = if (state.name.isNotBlank() && !state.isNameValid) {
+                            if (isEnglish) "Enter name" else "नाम दर्ज करें"
+                        } else null,
+                        isTall = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    villageField()
+                }
+                PartyBlockState.Lookup -> Unit
             }
 
             // 3. Amount Field
@@ -461,6 +486,38 @@ fun UdhaarAddSheet(
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MandiGreenReceivable
                     )
+                }
+            }
+
+            if (state.isPuranaHisaab) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MandiAmberLight,
+                    border = BorderStroke(1.dp, MandiAmberBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MandiAmberDark,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = if (isEnglish) {
+                                "Past balance · Will not affect cash drawer"
+                            } else {
+                                "पुराना हिसाब · गल्ले (रोकड़) से नकदी नहीं कटेगी"
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = MandiTextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -640,21 +697,13 @@ fun UdhaarAddSheet(
                         errorMessage = state.validationReason(isEnglish)
                         return@Button
                     }
-                    errorMessage = null
-                    isSaving = true
-                    onSave(state) { result ->
-                        isSaving = false
-                        result.onFailure { e ->
-                            errorMessage = when (e) {
-                                is com.appwork.mandisamiti.domain.model.KhataPartyPhoneException -> {
-                                    if (isEnglish) "This number belongs to a Khata account" else "यह नंबर खाता (Khata) अकाउंट का है"
-                                }
-                                else -> {
-                                    println("Failed to save udhaar loan: ${e.message}")
-                                    if (isEnglish) "Failed to save loan. Please try again." else "उधार सेव करने में विफल। कृपया पुनः प्रयास करें।"
-                                }
-                            }
-                        }
+                    val candidate = samePersonCandidate(
+                        parties, state.selectedPartyId, state.phone, state.name, state.village
+                    )
+                    if (candidate != null) {
+                        sameCandidate = candidate
+                    } else {
+                        performSave()
                     }
                 },
                 enabled = !isSaving,
@@ -715,5 +764,36 @@ fun UdhaarAddSheet(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    sameCandidate?.let { candidate ->
+        SamePersonDialog(
+            candidate = candidate,
+            isEnglish = isEnglish,
+            onSamePerson = {
+                sameCandidate = null
+                state.selectedPartyId = candidate.id
+                performSave()
+            },
+            onNewAccount = {
+                sameCandidate = null
+                performSave()
+            },
+            onDismiss = { sameCandidate = null },
+        )
+    }
+
+    if (showEditParty) {
+        EditPartyDialog(
+            name = state.name,
+            village = state.village,
+            isEnglish = isEnglish,
+            onDone = { editedName, editedVillage ->
+                state.name = editedName
+                state.village = editedVillage
+                showEditParty = false
+            },
+            onDismiss = { showEditParty = false },
+        )
     }
 }

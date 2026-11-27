@@ -154,8 +154,8 @@ object BahiDayPageBuilder {
 
         val khaateBuyAsal = buys.filter { !it.isVoid && it.isKhaate }.sumOf { it.grossPaisa }
         val khaateSellAsal = sells.filter { !it.isVoid && it.isKhaate }.sumOf { it.grossPaisa }
-        val normalFullPaidBuyAsal = buys.filter { !it.isVoid && !it.isKhaate && it.paidPaisa >= it.netPayablePaisa && it.netPayablePaisa > 0L }.sumOf { it.grossPaisa }
-        val mohariBuyAsal = khaateBuyAsal + normalFullPaidBuyAsal
+        // Mohari is a single day-end entry: total payable excluding costs (commission + labour) across all non-void buys regardless of payment status.
+        val mohariBuyAsal = buys.filter { !it.isVoid }.sumOf { (it.grossPaisa - it.commissionPaisa - it.labourPaisa).coerceAtLeast(0L) }
         val farmerPayable = buys.filter { !it.isVoid && !it.isKhaate }.sumOf { (it.netPayablePaisa - it.paidPaisa).coerceAtLeast(0L) }
         val buyerReceivable = sells.filter { !it.isVoid && !it.isKhaate }.sumOf { it.balanceDuePaisa.coerceAtLeast(0L) }
         val cashIn = left.filter { it.kind != BahiEntryKind.OPENING_BALANCE && it.paymentMode.isCash && !it.isVoid }.sumOf { it.amountPaisa }

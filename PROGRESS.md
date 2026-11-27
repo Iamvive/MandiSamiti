@@ -1449,3 +1449,13 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Updated `BuyTransactionReceiptTest.kt` for 12-hour format assertion.
   - `./gradlew :core-domain:jvmTest :composeApp:jvmTest` passed (BUILD SUCCESSFUL).
   - Built and installed `:composeApp:installStagingDebug` on connected physical Redmi Note 7 (`d93c743`), app launched and verified via `scrcpy`.
+
+## 2026-11-27 21:35 IST (Gemini / Antigravity): feat(udhaar): customer feedbacks 1, 2, and 3
+- Changes:
+  1. **Udhaar Screen Smart Party Block (Feedback 1)**: Integrated unified `PartyBlock` architecture into `UdhaarAddSheet.kt` (`partyBlockState`, `MandiPartyLookupField`, `SavedPartyLine`, `EditPartyDialog`, `SamePersonDialog`). Automatically reveals Name & Village fields for unknown 10-digit numbers, collapses into a single row for saved accounts, and allows editing or same-person confirmation.
+  2. **Day-End Mohari Single Entry (Feedback 2)**: Updated `BahiDayPageBuilder.kt` to aggregate `mohariBuyAsalPaisa` across ALL non-void buy slips for the day (`grossPaisa - commissionPaisa - labourPaisa`), regardless of whether slips are paid in full, partially paid, or unpaid.
+  3. **Purana Hisaab / Past-Date Loans (Feedback 3)**: Updated `UdhaarUseCase.kt` and `UdhaarAddFormState.kt` so that loans dated prior to today (or marked `PaymentMode.BOOK_ENTRY`) create linked transactions with `PaymentMode.BOOK_ENTRY`. Physical cash drawer (`CashDrawer.kt`) remains 100% untouched while party ledger and interest balance are updated. Added clear informational badge in `UdhaarAddSheet`: "पुराना हिसाब · गल्ले (रोकड़) से नकदी नहीं कटेगी".
+- Evidence:
+  - Unit tests added: `UdhaarUseCaseTest.kt` (4 tests), `CashDrawerTest.kt` (bookEntry check), `BahiDayMohariTest.kt` (all non-void buys aggregation check), `UdhaarAddFormStateTest.kt` (purana hisaab & saver roundtrip tests), `UdhaarSaveLoanTest.kt` (persists village & bookEntry).
+  - Multiplatform JVM tests passed across all modules (`:core-domain:jvmTest`, `:core-database:jvmTest`, `:core-data:jvmTest`, `:composeApp:jvmTest`).
+  - Built and deployed `:composeApp:installStagingDebug` onto physical Xiaomi Redmi Note 7 (`d93c743`), app launched and verified via `scrcpy`.

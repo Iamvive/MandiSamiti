@@ -4,6 +4,7 @@ import com.appwork.mandisamiti.domain.model.LendDirection
 import com.appwork.mandisamiti.domain.model.LendKind
 import com.appwork.mandisamiti.domain.model.Party
 import com.appwork.mandisamiti.domain.model.PartyType
+import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.ui.lend.LendPartyResolver
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -349,10 +350,41 @@ class UdhaarAddFormStateTest {
     }
 
     @Test
+    fun puranaHisaabUsesBookEntryAndTodayUsesCash() {
+        val state = UdhaarAddFormState(direction = LendDirection.GIVEN, todayMs = todayMs)
+        state.updatePhone("9876543210")
+        state.name = "Ramesh Kumar"
+        state.amountRupees = "5000"
+
+        // Today's date -> not Purana Hisaab, CASH payment mode
+        state.dateMs = todayMs
+        assertFalse(state.isPuranaHisaab, "Today's date must not be marked as Purana Hisaab")
+        assertEquals(PaymentMode.CASH, state.toForm(shopId = "shop1", partyId = "party1").paymentMode)
+
+        // Older date (2 days ago) -> Purana Hisaab, BOOK_ENTRY payment mode
+        state.dateMs = todayMs - 2L * 86_400_000L
+        assertTrue(state.isPuranaHisaab, "Older date must be marked as Purana Hisaab")
+        assertEquals(PaymentMode.BOOK_ENTRY, state.toForm(shopId = "shop1", partyId = "party1").paymentMode)
+    }
+
+    @Test
+    fun isOlderThanTodayRespectsCalendarDayInTimezone() {
+        val kolkata = TimeZone.of("Asia/Kolkata")
+        val todayNoonKolkataMs = LocalDateTime(2026, 11, 12, 12, 0).toInstant(kolkata).toEpochMilliseconds()
+        val todayStartKolkataMs = LocalDateTime(2026, 11, 12, 0, 5).toInstant(kolkata).toEpochMilliseconds()
+        val yesterdayLateKolkataMs = LocalDateTime(2026, 11, 11, 23, 55).toInstant(kolkata).toEpochMilliseconds()
+
+        assertFalse(isOlderThanToday(todayNoonKolkataMs, todayNoonKolkataMs, kolkata))
+        assertFalse(isOlderThanToday(todayStartKolkataMs, todayNoonKolkataMs, kolkata))
+        assertTrue(isOlderThanToday(yesterdayLateKolkataMs, todayNoonKolkataMs, kolkata))
+    }
+
+    @Test
     fun saverRoundTripPreservesKindAndShortListRestoresLoan() {
         val state = UdhaarAddFormState(direction = LendDirection.GIVEN, todayMs = todayMs)
         state.phone = "9876543210"
         state.name = "Ramesh Kumar"
+        state.village = "Rampur"
         state.selectedPartyId = "p1"
         state.amountRupees = "3000"
         state.kind = LendKind.PESGI
@@ -362,13 +394,15 @@ class UdhaarAddFormStateTest {
         state.receiverName = "Sonu"
         state.receiverPhone = "9876543211"
 
-        // Round trip with kind
+        // Round trip with kind and village
         val saved: List<Any?> = UdhaarAddFormStateSaver.saveState(state)
-        assertEquals(13, saved.size)
+        assertEquals(14, saved.size)
         assertEquals(LendKind.PESGI.name, saved[12])
+        assertEquals("Rampur", saved[13])
 
         val restored = UdhaarAddFormStateSaver.restore(saved)
         assertEquals(LendKind.PESGI, restored.kind)
+        assertEquals("Rampur", restored.village)
         assertEquals(state.phone, restored.phone)
         assertEquals(state.name, restored.name)
         assertEquals(state.amountRupees, restored.amountRupees)
@@ -376,9 +410,16 @@ class UdhaarAddFormStateTest {
         assertEquals(state.rateInput, restored.rateInput)
         assertEquals(state.receiverName, restored.receiverName)
 
-        // Older short list (12 elements, without kind)
+        // Older short list (12 elements, without kind or village)
         val shortList = saved.take(12)
         val restoredFromShort = UdhaarAddFormStateSaver.restore(shortList)
         assertEquals(LendKind.LOAN, restoredFromShort.kind)
+        assertEquals("", restoredFromShort.village)
+
+        // Short list (13 elements, with kind, without village)
+        val shortList13 = saved.take(13)
+        val restoredFrom13 = UdhaarAddFormStateSaver.restore(shortList13)
+        assertEquals(LendKind.PESGI, restoredFrom13.kind)
+        assertEquals("", restoredFrom13.village)
     }
 }
