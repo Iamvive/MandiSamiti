@@ -1358,11 +1358,13 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Next: Continue implementation and feature verification.
 
 
-## 2026-11-27 15:53 IST, Antigravity / Gemini 3.8 Flash (Fix ModalBottomSheet Keyboard Double-Padding Collapse)
-- **Fix Keyboard Hiding Screen in Udhaar Add Sheet & Farmer Slip Cash Settlement Sheet**:
-  - Removed redundant manual `WindowInsets.ime` and `navigationBarsPadding` calculation (`imeBottomDp`) from `UdhaarAddSheet.kt` and `FarmerSlipCashSettlementSheet.kt`.
-  - Compose Material 3 `ModalBottomSheet` already consumes and handles bottom insets (`WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)`), so the manual `Modifier.padding(bottom = imeBottomDp)` double-counted the keyboard height and collapsed the available vertical height to 0, triggering an anchor reset to `SheetValue.Hidden`.
-  - Replaced double padding with clean `Modifier.padding(bottom = 16.dp)`, letting `ModalBottomSheet` handle IME window insets naturally and preserving scrollability when the soft keyboard is visible.
+## 2026-11-27 16:05 IST, Antigravity / Gemini 3.8 Flash (Fix ModalBottomSheet Keyboard Scrolling & Stability)
+- **Fix Keyboard Hiding & Add Keyboard-Aware Scroll Clearance in Udhaar Add Sheet & Farmer Slip Cash Settlement Sheet**:
+  - Removed viewport-level `Modifier.padding(bottom = imeBottomDp)` which previously collapsed `ModalBottomSheet` anchors and caused the sheet to dismiss on keyboard open.
+  - Placed dynamic `Spacer(modifier = Modifier.height(if (imeBottomDp > 0.dp) imeBottomDp else 16.dp))` at the end of the scrollable `Column` content.
+  - This preserves stable sheet viewport anchors while giving the scroll state full clearance to scroll all the way down to bottom options like "किसी और को दिया" (Give to someone else), Recipient Name, Recipient Mobile, and the Save button while the software keyboard is open.
 - **Evidence**:
-  - Ran `./gradlew jvmTest testDebugUnitTest` across all modules: BUILD SUCCESSFUL (23s, 63 actionable tasks passing).
+  - Full test suite `./gradlew jvmTest testDebugUnitTest` passing (BUILD SUCCESSFUL).
+  - Deployed `composeApp-staging-debug.apk` to physical Redmi Note 7 (`d93c743`).
+  - Manually tested on device: focused text field, keyboard popped up without dismissing the sheet, swiped up to scroll down, enabled "किसी और को दिया" toggle, filled recipient name ("Ramesh"), and verified all elements remain visible and interactive above the keyboard. Screenshot captured at `udhaar_scrolled_kisi_or_ko_dia.png`.
 

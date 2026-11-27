@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -118,6 +120,10 @@ private fun SlipCashSettlementSheet(
     val enteredPaisa = enteredRupees * 100L
     val isValid = enteredPaisa in 1L..remainingPaisa
 
+    val imeBottomDp = with(androidx.compose.ui.platform.LocalDensity.current) {
+        WindowInsets.ime.getBottom(this).toDp()
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -128,7 +134,6 @@ private fun SlipCashSettlementSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
-                .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -274,7 +279,7 @@ private fun SlipCashSettlementSheet(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(if (imeBottomDp > 0.dp) imeBottomDp else 24.dp))
         }
     }
 }
