@@ -1423,3 +1423,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - **Next**: Review by Claude Code, user acceptance testing with Vivek.
 
 
+
+
+## 2026-11-27 (Gemini / Antigravity): feat(slip): smart party block on buy and sell slips (PR #55)
+- Changes: Updated `STATUS.md`.
+- Evidence: All 13 checks verified on physical Redmi Note 7 (d93c743) against staging; 7 PartyBlock unit tests passing; PR #55 merged
+- Next: Continue implementation and feature verification.
