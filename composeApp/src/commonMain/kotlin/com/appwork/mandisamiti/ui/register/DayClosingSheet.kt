@@ -48,6 +48,7 @@ internal fun DayClosingSheet(
     val countedRs = parseDrawerRupees(cashInput)
     val diffPaisa = countedRs?.let { it * 100L - state.inHandCashDrawerPaisa }
     var detailsOpen by remember { mutableStateOf(false) }
+    val imeBottomDp = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -57,8 +58,7 @@ internal fun DayClosingSheet(
         Column(
             Modifier.fillMaxWidth().testTag("day-closing-sheet")
                 .verticalScroll(rememberScrollState())
-                .navigationBarsPadding().imePadding()
-                .padding(horizontal = 20.dp).padding(bottom = 16.dp),
+                .padding(horizontal = 20.dp).padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -265,6 +265,8 @@ internal fun DayClosingSheet(
                 Text(if (isEnglish) "Save count · keep day open" else "गिनती सहेजें · दिन खुला रखें", color = MandiTextPrimary,
                     fontWeight = FontWeight.SemiBold)
             }
+
+            Spacer(Modifier.height(if (imeBottomDp > 0.dp) imeBottomDp else 16.dp))
         }
     }
 }

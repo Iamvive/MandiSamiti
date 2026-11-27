@@ -1368,3 +1368,14 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Deployed `composeApp-staging-debug.apk` to physical Redmi Note 7 (`d93c743`).
   - Manually tested on device: focused text field, keyboard popped up without dismissing the sheet, swiped up to scroll down, enabled "किसी और को दिया" toggle, filled recipient name ("Ramesh"), and verified all elements remain visible and interactive above the keyboard. Screenshot captured at `udhaar_scrolled_kisi_or_ko_dia.png`.
 
+
+## 2026-11-27 16:15 IST, Antigravity / Gemini 3.8 Flash (Comprehensive App Audit for Keyboard Clearance in Sheets and Dialogs)
+- **Audited and Fixed Keyboard Clearance Across App Sheets and Dialogs**:
+  - `DayClosingSheet.kt`: Removed viewport-level `.navigationBarsPadding().imePadding()` which risked anchor collapse. Added dynamic end clearance `Spacer(Modifier.height(if (imeBottomDp > 0.dp) imeBottomDp else 16.dp))`, allowing total cash or note/coin denomination counts and "दिन बंद करें" / "गिनती सहेजें" action buttons to scroll completely above the keyboard.
+  - `StockRegisterScreen.kt`: Fixed Stock Audit & Adjustment sheet (`StockReconciliationSheet`). Replaced outer column `imePadding` with unconstrained vertical scroll and added dynamic end clearance `Spacer(Modifier.height(if (imeBottomDp > 0.dp) imeBottomDp else 32.dp))`.
+  - `DailyCashRegisterScreen.kt`: Removed redundant double `imePadding` on `AlertDialog` and inner columns across Direct Cash Dialog, Opening Balance Dialog, Cash to Home Dialog, and Edit Entry Dialog. Left clean `verticalScroll` ensuring dialog fields remain visible on low-height viewports with keyboard.
+  - `PartyLedgerScreen.kt`: Added missing `Modifier.fillMaxWidth().verticalScroll(rememberScrollState())` to Plain Cash Entry Dialog (`showPlainCashSide != null`) so amount and note inputs never get clipped when the keyboard opens.
+- **Evidence**:
+  - Full test suite `./gradlew jvmTest testDebugUnitTest` passing (BUILD SUCCESSFUL).
+  - Deployed `composeApp-staging-debug.apk` to connected Redmi Note 7 (`d93c743`).
+  - Tested on device: opened Day Closing sheet in Galla Rokad, tapped counted cash field, keyboard appeared, swiped up to scroll, verified "दिन बंद करें" and "गिनती सहेजें · दिन खुला रखें" buttons stay fully visible and interactive above the keyboard (`day_closing_keyboard_scrolled.png`).

@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -914,6 +916,8 @@ private fun StockReconciliationSheet(
     val bookBags = currentLine?.bookOnHandGrams?.let { if (defaultBagKg > 0) (it / (defaultBagKg * 1000.0)).toLong() else 0L } ?: 0L
     val diffBags = physicalBags - bookBags
 
+    val imeBottomDp = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -923,8 +927,6 @@ private fun StockReconciliationSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
-                .navigationBarsPadding()
-                .imePadding()
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -1184,7 +1186,7 @@ private fun StockReconciliationSheet(
                 )
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(if (imeBottomDp > 0.dp) imeBottomDp else 32.dp))
         }
     }
 }
