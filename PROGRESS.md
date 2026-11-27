@@ -1570,3 +1570,24 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Full JVM test suite passed: 471 tests passed, 0 failures.
   - Added feature `close-day-gaddi-counter` to `FEATURES.json` as passing. Updated `docs/STATUS.md`.
 - Next: Close day note counting revamp live on main.
+
+
+## 2026-11-28 01:05 IST (Claude Code / Haiku 5.5): Gaddi counter follow-up, notes only, small-gap close
+
+- Changes:
+  - `DrawerPresentation.kt`: `drawerDenominations` is now 2000, 500, 200, 100, 50, 20, 10. Coins removed.
+  - `GaddiCounter.kt`: removed the coin paths (`isCoin`, bundle guard, coin field override).
+  - `DayClosingGaddiCounter.kt`: strip is two rows (4 + 3) with equal chip widths; removed the single गिनती box and the सिक्का label.
+  - `DayClosingSheet.kt`: `CLOSE_REASON_THRESHOLD_PAISA = 1000` and `closeNeedsReason()` drive both the button state and the tap. A gap under ₹10 saves an empty reason and goes straight to the confirmation dialog.
+  - Tests updated: `DayClosingPresentationTest`, `GaddiCounterTest`, `DrawerReviewTest`. Added boundary tests in `DayClosingPresentationTest` (pure) and `DayClosingSheetTest` (Compose taps at 999 and 1000 paisa, short and surplus).
+- Evidence:
+  - `:composeApp:jvmTest --rerun`: 473 tests, 0 failures.
+  - `:composeApp:assembleStagingDebug`: BUILD SUCCESSFUL.
+  - Redmi Note 7 (`d93c743`), staging build, 2026-11-28 01:00 to 01:05 IST, light theme:
+    - Seven chips in two rows, no scroll.
+    - Direct total 127 (₹1 short): no picker; confirmation dialog opened; backed out with खुला रखें.
+    - Direct total 118 (₹10 short): picker opened; closed with the X button, nothing saved.
+    - Direct total with keyboard open: field and dock visible.
+  - Not done: Save count and the final Close day confirm were never tapped.
+- Unverified: dark theme. Setting the Android system to night mode did not change the app's theme, so the sheet stayed light. The app's own theme setting is still to be found.
+- Next: find the app's dark-theme toggle, check dark mode on the Redmi, then set `close-day-gaddi-counter` back to passing. Draft PR open against `main`. Waiting for Vivek to say "merge".

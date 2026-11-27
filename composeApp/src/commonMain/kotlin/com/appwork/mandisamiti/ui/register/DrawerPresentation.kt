@@ -28,7 +28,7 @@ internal fun drawerCashFingerprint(
 
 internal val drawerMovementTypes = setOf(TransactionType.JAMA_RECEIVED, TransactionType.INTEREST_RECEIVED, TransactionType.UDHAR_GIVEN)
 
-internal val drawerDenominations = listOf(2000, 500, 200, 100, 50, 20, 10, 5, 2, 1)
+internal val drawerDenominations = listOf(2000, 500, 200, 100, 50, 20, 10)
 
 internal fun parseDrawerRupees(value: String): Long? = value.trim().let { text ->
     if (text.isEmpty() || text.any { it !in '0'..'9' }) null

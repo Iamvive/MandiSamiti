@@ -2,6 +2,8 @@ package com.appwork.mandisamiti.ui.register
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DayClosingPresentationTest {
     @Test
@@ -22,6 +24,21 @@ class DayClosingPresentationTest {
     @Test
     fun drawerDenominationsIncludes2000() {
         assertEquals(2000, drawerDenominations.first())
-        assertEquals(listOf(2000, 500, 200, 100, 50, 20, 10, 5, 2, 1), drawerDenominations)
+        assertEquals(listOf(2000, 500, 200, 100, 50, 20, 10), drawerDenominations)
+    }
+
+    @Test
+    fun gapBelowTenRupeesNeedsNoReason() {
+        assertFalse(closeNeedsReason(-999L))
+        assertFalse(closeNeedsReason(999L))
+        assertFalse(closeNeedsReason(0L))
+        assertFalse(closeNeedsReason(null))
+    }
+
+    @Test
+    fun gapOfTenRupeesOrMoreNeedsReason() {
+        assertTrue(closeNeedsReason(-1_000L))
+        assertTrue(closeNeedsReason(1_000L))
+        assertTrue(closeNeedsReason(-157_500L))
     }
 }

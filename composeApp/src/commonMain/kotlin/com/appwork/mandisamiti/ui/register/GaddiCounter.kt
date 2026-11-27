@@ -17,29 +17,24 @@ internal data class GaddiDraft(
         get() = if (counts.isEmpty()) null
         else denominationTotal(counts.mapValues { it.value.pieces.toString() })
 
-    private fun isCoin(denomination: Int): Boolean = denomination <= 5
-
     fun select(denomination: Int): GaddiDraft {
         if (denomination !in drawerDenominations) return this
-        val targetField = if (isCoin(denomination)) GaddiField.LOOSE else GaddiField.LOOSE
         return copy(
             selected = denomination,
-            field = targetField,
+            field = GaddiField.LOOSE,
             replaceOnType = true,
         )
     }
 
     fun focus(newField: GaddiField): GaddiDraft {
-        if (isCoin(selected) && newField == GaddiField.BUNDLES) return this
         return copy(field = newField, replaceOnType = true)
     }
 
     fun digit(n: Int): GaddiDraft {
         if (n !in 0..9) return this
         val currentCount = counts[selected] ?: GaddiCount(0, 0)
-        val activeField = if (isCoin(selected)) GaddiField.LOOSE else field
 
-        val newCount = when (activeField) {
+        val newCount = when (field) {
             GaddiField.BUNDLES -> {
                 val newVal = if (replaceOnType) {
                     n
@@ -75,9 +70,8 @@ internal data class GaddiDraft(
     fun backspace(): GaddiDraft {
         if (selected !in counts) return this
         val currentCount = counts[selected] ?: GaddiCount(0, 0)
-        val activeField = if (isCoin(selected)) GaddiField.LOOSE else field
 
-        val newCount = when (activeField) {
+        val newCount = when (field) {
             GaddiField.BUNDLES -> {
                 val str = currentCount.bundles.toString()
                 val newVal = if (str.length <= 1) 0 else str.dropLast(1).toIntOrNull() ?: 0
@@ -98,9 +92,8 @@ internal data class GaddiDraft(
 
     fun addOne(): GaddiDraft {
         val currentCount = counts[selected] ?: GaddiCount(0, 0)
-        val activeField = if (isCoin(selected)) GaddiField.LOOSE else field
 
-        val newCount = when (activeField) {
+        val newCount = when (field) {
             GaddiField.BUNDLES -> {
                 val nextVal = (currentCount.bundles + 1).coerceAtMost(999)
                 currentCount.copy(bundles = nextVal)
