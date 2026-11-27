@@ -356,6 +356,12 @@
       "description": "Smart party block on Buy and Sell slips: collapsed SavedPartyLine for saved accounts, Name and Village fields shown only for new accounts, in-place edit dialog, and same-person new number prompt",
       "status": "passing",
       "evidence": "2026-11-27 (Antigravity, Gemini). Branch feat/slip-party-block. PartyBlock state rules with 7 unit tests (PartyBlockTest). Verified all 13 checks on physical Redmi Note 7 (d93c743) against staging: 1 search box on new slip; 10-digit saved phone collapses to SavedPartyLine; 1-digit delete reverts; new number shows Name and Village; '+ New' dropdown pre-fills name and activates numeric keyboard; missing village account shows single village input; Edit dialog updates account and slip; same-person detection prompts dialog and re-links account mobile cleanly; Khaate slip hides party block; keyboard interaction has zero clipping."
+    },
+    {
+      "id": "close-day-gaddi-counter",
+      "description": "Close day Gaddi counter (Option C): count one denomination at a time via bundles of 100 (गड्डी) and loose notes (खुले), built-in keypad, live difference hero, draft retention across sheet dismiss/reopen, mandatory discrepancy reason picker (खुले पैसे, खर्च लिखना बाकी, भुगतान बाकी, अन्य) before closing",
+      "status": "passing",
+      "evidence": "2026-11-28 (Antigravity, Gemini 3.8 Flash). Branch feat/close-day-gaddi-counter. Unit tests: GaddiCounterTest (replace-then-append, caps, untouched backspace, loose 137, zero, empty null total, end stops, 2 bundles + 37 notes of Rs 500 = Rs 118,500), DayClosingSheetTest (uncounted disables buttons, difference requires reason, exact match closes directly, countError visible), DrawerLayoutTest. Full jvmTest suite passed (471 tests). Verified on Redmi Note 7 (d93c743): all 10 chips, focus line, entry boxes, keypad, and dock visible without scrolling; uncounted state disables save/close; bundle and loose calculate exact total and delta; swiping down and reopening retains draft; difference opens reason picker; अन्य reveals text input and blocks close until filled; match opens close dialog immediately; direct total mode preserves IME padding; contrast measured 17.8:1 (Light) & 17.1:1 (Dark)."
     }
   ]
 }

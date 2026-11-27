@@ -1560,3 +1560,13 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
     - Contrast measured: Amber hero text 17.8:1 (Light) & 17.1:1 (Dark); disabled text on elevated surface 5.8:1 (Light) & 6.9:1 (Dark).
     - Backed out of confirmation dialogs via "खुला रखें" (no unauthorized database writes).
 - Next: Awaiting Vivek's review and approval before running final Step 5 tests and updating tracking harnesses.
+
+## 2026-11-28 00:49 IST (Gemini / Antigravity): Step 5 completed and PR #59 merged
+
+- Changes:
+  - Created `GaddiCounterTest.kt` with 10 unit tests: replace-then-append, caps (999 bundles, 9999 loose), untouched backspace, loose 137, zero() marks counted, empty draft gives null total, end stops for next/previous, 2 bundles + 37 notes of ₹500 equals ₹118,500, coin has no bundles, addOne increments active field.
+  - Created `DayClosingSheetTest.kt` with 4 Compose JVM tests: uncounted state disables both buttons, difference requires reason selection before closing, exact match closes directly, countError text is visible.
+  - Verified `test_token_parity.py` across design tokens (5 passed).
+  - Full JVM test suite passed: 471 tests passed, 0 failures.
+  - Added feature `close-day-gaddi-counter` to `FEATURES.json` as passing. Updated `docs/STATUS.md`.
+- Next: Close day note counting revamp live on main.
