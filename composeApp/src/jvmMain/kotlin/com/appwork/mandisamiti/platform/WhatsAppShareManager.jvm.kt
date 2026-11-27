@@ -9,9 +9,12 @@ actual class WhatsAppShareManager {
         // No-op on JVM desktop testing
     }
 
+    actual fun installedApps(): List<WhatsAppApp> = emptyList()
+
     actual fun shareText(
         text: String,
-        phoneNumber: String?
+        phoneNumber: String?,
+        app: WhatsAppApp?
     ) {
         // No-op on JVM desktop testing
     }
