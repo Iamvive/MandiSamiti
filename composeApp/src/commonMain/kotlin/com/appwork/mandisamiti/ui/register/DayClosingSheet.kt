@@ -213,7 +213,7 @@ internal fun DayClosingSheet(
                             (if (isEnglish) "Opening" else "पिछला शेष") to "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(state.openingCashPaisa)}",
                             (if (isEnglish) "Cash in (+)" else "नकद आवक (+)") to "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(state.todayCashInPaisa)}",
                             (if (isEnglish) "Cash out (−)" else "नकद निकासी (−)") to "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(state.todayCashOutPaisa)}",
-                            (if (isEnglish) "Mohari buy (Asal)" else "मोहरी खरीद (असल)") to "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(state.bahiDayPage?.khaateBuyAsalPaisa ?: 0L)}",
+                            (if (isEnglish) "Mohari buy (Asal)" else "मोहरी खरीद (असल)") to "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(state.bahiDayPage?.mohariBuyAsalPaisa ?: state.bahiDayPage?.khaateBuyAsalPaisa ?: 0L)}",
                             (if (isEnglish) "Mohari sell (Asal)" else "मोहरी बिक्री (असल)") to "₹${com.appwork.mandisamiti.domain.math.MandiMathEngine.paisaToRupeesString(state.bahiDayPage?.khaateSellAsalPaisa ?: 0L)}",
                         ).forEach { (label, value) ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

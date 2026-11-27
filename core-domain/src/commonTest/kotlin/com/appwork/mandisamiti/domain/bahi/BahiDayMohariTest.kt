@@ -73,4 +73,26 @@ class BahiDayMohariTest {
         assertEquals(0L, page.cashInPaisa)
         assertEquals(0L, page.cashOutPaisa)
     }
+
+    @Test
+    fun normalFullPaidBuyGoesToMohariBuyAsal() {
+        val page = BahiDayPageBuilder.build(
+            dateEpochDay = 1L,
+            openingPaisa = 0L,
+            closingPaisa = 0L,
+            entries = emptyList(),
+            buys = listOf(
+                buy(gross = 600_000L, isKhaate = true),
+                buy(gross = 1_000_000L, isKhaate = false, paid = 1_000_000L), // full paid normal buy
+                buy(gross = 500_000L, isKhaate = false, paid = 200_000L) // partial paid normal buy
+            ),
+            sells = listOf(sell(gross = 300_000L, isKhaate = true))
+        )
+        // Khaate buy asal is only khaate
+        assertEquals(600_000L, page.khaateBuyAsalPaisa)
+        // Mohari buy asal combines khaate (600k) + today's full-paid normal buy (1M) = 1.6M
+        assertEquals(1_600_000L, page.mohariBuyAsalPaisa)
+        // Farmer payable only has remaining due from partial buy (500k - 200k = 300k)
+        assertEquals(300_000L, page.farmerPayablePaisa)
+    }
 }

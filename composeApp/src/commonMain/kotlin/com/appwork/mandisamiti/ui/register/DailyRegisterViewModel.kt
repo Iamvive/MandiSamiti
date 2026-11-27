@@ -58,7 +58,8 @@ import kotlinx.datetime.toLocalDateTime
 data class TransactionWithParty(
     val transaction: CashTransaction,
     val partyName: String,
-    val village: String?
+    val village: String?,
+    val isMohari: Boolean = false
 )
 
 private data class DayInputs(
@@ -227,10 +228,11 @@ class DailyRegisterViewModel(
             .onEach { inputs ->
                 val (parties, allTx, date) = inputs
                 val window = CashDrawer.dayWindow(date, timeZone)
-                val summary = CashDrawer.summarize(allTx, window)
+                val summary = CashDrawer.summarize(allTx, window, inputs.buys, timeZone)
                 val count = drawerCountRepository?.load(shopId, date.toString()) ?: sessionCounts[date]
-                val fingerprint = drawerCashFingerprint(allTx, window.endMs)
+                val fingerprint = drawerCashFingerprint(allTx, window.endMs, inputs.buys, timeZone)
                 val partyMap = parties.associateBy { it.id }
+                val buysById = inputs.buys.associateBy { it.id }
                 val todays = allTx
                     .filter { !it.isDeleted && !it.isVoid && it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                     .map { tx ->
@@ -242,7 +244,13 @@ class DailyRegisterViewModel(
                             tx.transactionType == TransactionType.JAMA_RECEIVED -> "नकद जमा"
                             else -> "विविध निकासी"
                         }
-                        TransactionWithParty(transaction = tx, partyName = resolvedName, village = party?.village)
+                        val isMohari = CashDrawer.isMohariBuyTransaction(tx, buysById, timeZone)
+                        TransactionWithParty(
+                            transaction = tx,
+                            partyName = resolvedName,
+                            village = party?.village,
+                            isMohari = isMohari
+                        )
                     }
                 val currentToday = todayDate
                 val isCurrentToday = (date == currentToday)
@@ -250,6 +258,7 @@ class DailyRegisterViewModel(
                     allTx.filter { it.transactionDate >= window.startMs && it.transactionDate < window.endMs }
                         .filter { it.transactionType in drawerMovementTypes }
                         .filterNot { it.remarks?.contains("[EXPENSE:") == true || it.remarks?.contains("[SETTLE:") == true }
+                        .filterNot { CashDrawer.isMohariBuyTransaction(it, buysById, timeZone) }
                         .forEach { tx ->
                             add(BahiDayEntry(
                                 id = tx.id,

@@ -66,6 +66,7 @@ data class BahiDayPage(
     val changedAfterClosing: Boolean,
     val khaateBuyAsalPaisa: Long = 0L,
     val khaateSellAsalPaisa: Long = 0L,
+    val mohariBuyAsalPaisa: Long = 0L,
     val farmerPayablePaisa: Long = 0L,
     val buyerReceivablePaisa: Long = 0L,
     val cashInPaisa: Long = 0L,
@@ -153,6 +154,8 @@ object BahiDayPageBuilder {
 
         val khaateBuyAsal = buys.filter { !it.isVoid && it.isKhaate }.sumOf { it.grossPaisa }
         val khaateSellAsal = sells.filter { !it.isVoid && it.isKhaate }.sumOf { it.grossPaisa }
+        val normalFullPaidBuyAsal = buys.filter { !it.isVoid && !it.isKhaate && it.paidPaisa >= it.netPayablePaisa && it.netPayablePaisa > 0L }.sumOf { it.grossPaisa }
+        val mohariBuyAsal = khaateBuyAsal + normalFullPaidBuyAsal
         val farmerPayable = buys.filter { !it.isVoid && !it.isKhaate }.sumOf { (it.netPayablePaisa - it.paidPaisa).coerceAtLeast(0L) }
         val buyerReceivable = sells.filter { !it.isVoid && !it.isKhaate }.sumOf { it.balanceDuePaisa.coerceAtLeast(0L) }
         val cashIn = left.filter { it.kind != BahiEntryKind.OPENING_BALANCE && it.paymentMode.isCash && !it.isVoid }.sumOf { it.amountPaisa }
@@ -169,6 +172,7 @@ object BahiDayPageBuilder {
             changedAfterClosing = entries.any { it.savedAfterClose },
             khaateBuyAsalPaisa = khaateBuyAsal,
             khaateSellAsalPaisa = khaateSellAsal,
+            mohariBuyAsalPaisa = mohariBuyAsal,
             farmerPayablePaisa = farmerPayable,
             buyerReceivablePaisa = buyerReceivable,
             cashInPaisa = cashIn,

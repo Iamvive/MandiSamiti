@@ -1385,3 +1385,18 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Changes: Synchronized project state.
 - Evidence: Automated test suites verified and passing (2026-11-27).
 - Next: Continue implementation and feature verification.
+
+## 2026-11-27 16:55 IST, Antigravity / Gemini 3.8 Flash (Exclude Current Date Full-Paid Buy Slips from Galla Rokad into Mohari)
+- **Problem**: When a farmer buy slip created on the current date was marked fully paid, the cash transaction was deducted from Galla Rokad (`todayCashOutPaisa` and `inHandCashDrawerPaisa`), driving the drawer cash into an artificial negative deficit even though in Mandi accounting today's fully paid grain purchases are settled under Mohari at day end.
+- **Solution & Architecture**:
+  - `CashDrawer.kt`: Added `isSameDay()` and `isMohariBuyTransaction()`. Updated `CashDrawer.summarize()` and `balancePaisa()` to accept `buys: List<BuyEntry>` and exclude same-day full-paid buy payouts from drawer cash outflows.
+  - `BahiDayPageBuilder.kt`: Added `mohariBuyAsalPaisa` to `BahiDayPage` aggregating Khaate buy asal plus today's full-paid normal buy gross, and displayed it under "मोहरी खरीद (असल)" / "Mohari buy (Asal)" in `DayClosingSheet.kt`.
+  - `DailyRegisterViewModel.kt`: Passed `inputs.buys` to `CashDrawer.summarize()` and `drawerCashFingerprint()`, filtered out Mohari transactions from bahi entry cash movements, and tagged transactions with `isMohari = true`.
+  - `DailyCashRegisterScreen.kt`: Displayed a distinctive `[Mohari]` / `[मोहरी]` badge with neutral font coloring for Mohari transactions instead of marking them as negative cash withdrawals.
+  - `FarmerSlipCashSettlementSheet.kt`: Detected when a current-date slip is being paid in full and updated label to "मोहरी भुगतान (दिन के अंत में हिसाब)" with contextual guidance that the slip settles in Mohari and does not deduct from Galla Rokad.
+  - `HomeViewModel.kt` & `App.kt`: Passed `buys` to `balancePaisa()` so the Home screen and receipt liquidity headers reflect accurate drawer cash.
+- **Evidence**:
+  - Added 3 unit tests in `CashDrawerTest.kt` (`sameDayFullPaidBuyDoesNotDeductFromCashDrawer`, `sameDayPartialPaidBuyDeductsFromCashDrawer`, `previousDayBuyPaidTodayDeductsFromCashDrawer`).
+  - Added unit test in `BahiDayMohariTest.kt` (`normalFullPaidBuyGoesToMohariBuyAsal`).
+  - Ran full test suites: `./gradlew :core-domain:jvmTest :core-data:jvmTest :composeApp:jvmTest` (BUILD SUCCESSFUL, 100% passing).
+

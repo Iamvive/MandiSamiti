@@ -213,7 +213,7 @@ class HomeViewModel(
 
             val computedKpis = computeKpis(buys, sells, lends, expenses, settlements)
             val lines = stockUseCase?.lines(shopId) ?: emptyList()
-            val rokdi = com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(cashTxs)
+            val rokdi = com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(cashTxs, buys)
 
             val outlierBuy = buys.firstOrNull { buy ->
                 !buy.isVoid && buy.ratePaisaPerQuintal > com.appwork.mandisamiti.domain.validation.MandiValidators.RATE_OUTLIER_THRESHOLD_PAISA
@@ -565,6 +565,8 @@ class HomeViewModel(
             buyRepo.editBuyEntry(currentBuy.copy(paidPaisa = newPaidPaisa))
 
             val now = Clock.System.now().toEpochMilliseconds()
+            val isFullPaid = newPaidPaisa >= currentBuy.netPayablePaisa
+            val isTodaySlip = com.appwork.mandisamiti.domain.cash.CashDrawer.isSameDay(currentBuy.entryDate, now)
             val slipRef = currentBuy.slipNo?.let { "#$it" } ?: buyId.takeLast(5)
             val tx = CashTransaction(
                 id = IdGenerator.newId(),
@@ -574,7 +576,7 @@ class HomeViewModel(
                 amountPaisa = cashAmountPaisa,
                 paymentMode = PaymentMode.CASH,
                 transactionDate = now,
-                remarks = "खरीद पर्ची $slipRef भुगतान",
+                remarks = if (isFullPaid && isTodaySlip) "खरीद पर्ची $slipRef भुगतान (मोहरी)" else "खरीद पर्ची $slipRef भुगतान",
                 createdAt = now,
                 updatedAt = now,
                 sourceEntryType = "BUY",

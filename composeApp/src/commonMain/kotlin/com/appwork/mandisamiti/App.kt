@@ -705,6 +705,8 @@ fun App(
                                 recordAction(analytics.takeIf { paidAmtPaisa > 0L }, AnalyticsEventName.PAYMENT_SAVED, coroutineScope) {
                                     val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                                     if (paidAmtPaisa > 0L) {
+                                        val isFullPaid = (entry.paidPaisa + paidAmtPaisa) >= entry.netPayablePaisa
+                                        val isTodaySlip = com.appwork.mandisamiti.domain.cash.CashDrawer.isSameDay(entry.entryDate, now)
                                         val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
                                             id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
                                             shopId = entry.shopId,
@@ -713,7 +715,7 @@ fun App(
                                             amountPaisa = paidAmtPaisa,
                                             transactionDate = now,
                                             paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
-                                            remarks = "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
+                                            remarks = if (isFullPaid && isTodaySlip) "खरीद भुगतान (मोहरी): पर्ची #${entry.slipNo ?: ""}" else "खरीद भुगतान: पर्ची #${entry.slipNo ?: ""}",
                                             createdAt = now,
                                             updatedAt = now,
                                             sourceEntryType = "BUY",
@@ -806,8 +808,9 @@ fun App(
                 var receiptParty by remember { mutableStateOf<com.appwork.mandisamiti.domain.model.Party?>(null) }
                 val receiptShop by shopRepo.getShopProfileStream().collectAsState(initial = null)
                 val allCashTransactions by cashRepo.getTransactionsByShopStream(shopId ?: "").collectAsState(initial = emptyList())
-                val gallaCashPaisa = remember(allCashTransactions) {
-                    com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(allCashTransactions)
+                val allBuys by buyRepo.getBuyEntriesStream(shopId ?: "").collectAsState(initial = emptyList())
+                val gallaCashPaisa = remember(allCashTransactions, allBuys) {
+                    com.appwork.mandisamiti.domain.cash.CashDrawer.balancePaisa(allCashTransactions, allBuys)
                 }
                 LaunchedEffect(screen.id) {
                     buyEntry = buyRepo.getBuyEntryById(screen.id)
@@ -851,6 +854,8 @@ fun App(
                                 buyRepo.editBuyEntry(updatedBuy)
 
                                 val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                                val isFullPaid = newPaid >= entryToSettle.netPayablePaisa
+                                val isTodaySlip = com.appwork.mandisamiti.domain.cash.CashDrawer.isSameDay(entryToSettle.entryDate, now)
                                 val slipRef = entryToSettle.slipNo?.let { "#$it" } ?: entryToSettle.id.takeLast(5)
                                 val tx = com.appwork.mandisamiti.domain.model.CashTransaction(
                                     id = com.appwork.mandisamiti.domain.id.IdGenerator.newId(),
@@ -860,7 +865,7 @@ fun App(
                                     amountPaisa = amountPaisa,
                                     paymentMode = com.appwork.mandisamiti.domain.model.PaymentMode.CASH,
                                     transactionDate = now,
-                                    remarks = "खरीद पर्ची $slipRef भुगतान",
+                                    remarks = if (isFullPaid && isTodaySlip) "खरीद पर्ची $slipRef भुगतान (मोहरी)" else "खरीद पर्ची $slipRef भुगतान",
                                     createdAt = now,
                                     updatedAt = now,
                                     sourceEntryType = "BUY",

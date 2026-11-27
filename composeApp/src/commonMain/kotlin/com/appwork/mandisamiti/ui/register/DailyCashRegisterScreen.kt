@@ -1295,6 +1295,7 @@ private fun BahiTransactionItem(
     }
     val isVoid = item.transaction.isVoid
     val isBookEntry = item.transaction.paymentMode == PaymentMode.BOOK_ENTRY
+    val isMohari = item.isMohari
     val amountStr = MandiMathEngine.paisaToRupeesString(item.transaction.amountPaisa)
     val displayName = when {
         item.partyName.isNotBlank() && item.partyName != "खाता" -> item.partyName
@@ -1380,10 +1381,24 @@ private fun BahiTransactionItem(
             Text(
                 text = "${if (isDeposit) "+" else "−"}₹$amountStr",
                 fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold,
-                color = if (isBookEntry) MandiTextPrimary else if (isDeposit) MandiGreenReceivable else MandiRedPayable,
+                color = if (isBookEntry || isMohari) MandiTextPrimary else if (isDeposit) MandiGreenReceivable else MandiRedPayable,
                 textDecoration = if (isVoid) TextDecoration.LineThrough else null,
             )
-            if (isBookEntry) {
+            if (isMohari) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder)
+                ) {
+                    Text(
+                        text = if (isEnglish) "Mohari" else "मोहरी",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MandiAmberDark,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            } else if (isBookEntry) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
                     color = MandiNeutralLight,

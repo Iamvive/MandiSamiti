@@ -1,5 +1,6 @@
 package com.appwork.mandisamiti.domain.cash
 
+import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
@@ -32,16 +33,50 @@ object CashDrawer {
         )
     }
 
-    /** All-time drawer balance by the book: same rules as [summarize], no day window. */
-    fun balancePaisa(transactions: List<CashTransaction>): Long =
-        summarize(transactions, DayWindow(startMs = Long.MAX_VALUE, endMs = Long.MAX_VALUE)).openingPaisa
+    fun isSameDay(ms1: Long, ms2: Long, timeZone: TimeZone = TimeZone.currentSystemDefault()): Boolean {
+        val date1 = Instant.fromEpochMilliseconds(ms1).toLocalDateTime(timeZone).date
+        val date2 = Instant.fromEpochMilliseconds(ms2).toLocalDateTime(timeZone).date
+        return date1 == date2
+    }
 
-    fun summarize(transactions: List<CashTransaction>, window: DayWindow): DrawerSummary {
+    /**
+     * In Mandi accounting, a buy slip created on the current date that is fully paid
+     * is accounted for in Day-End Mohari (procurement settlement) and does not deduct
+     * physical currency from the daily cash drawer (Galla Rokad).
+     */
+    fun isMohariBuyTransaction(
+        tx: CashTransaction,
+        buysById: Map<String, BuyEntry>,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): Boolean {
+        if (tx.sourceEntryType != "BUY" || tx.sourceEntryId == null) return false
+        val buy = buysById[tx.sourceEntryId] ?: return false
+        if (buy.isVoid || buy.isKhaate || buy.netPayablePaisa <= 0L) return false
+        if (buy.paidPaisa < buy.netPayablePaisa) return false
+        return isSameDay(buy.entryDate, tx.transactionDate, timeZone)
+    }
+
+    /** All-time drawer balance by the book: same rules as [summarize], no day window. */
+    fun balancePaisa(
+        transactions: List<CashTransaction>,
+        buys: List<BuyEntry> = emptyList(),
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): Long =
+        summarize(transactions, DayWindow(startMs = Long.MAX_VALUE, endMs = Long.MAX_VALUE), buys, timeZone).openingPaisa
+
+    fun summarize(
+        transactions: List<CashTransaction>,
+        window: DayWindow,
+        buys: List<BuyEntry> = emptyList(),
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): DrawerSummary {
+        val buysById = if (buys.isEmpty()) emptyMap() else buys.associateBy { it.id }
         var opening = 0L
         var cashIn = 0L
         var cashOut = 0L
         transactions
             .filter { it.paymentMode == PaymentMode.CASH && !it.isVoid && !it.isDeleted }
+            .filterNot { buysById.isNotEmpty() && isMohariBuyTransaction(it, buysById, timeZone) }
             .forEach { tx ->
                 val signed = when (tx.transactionType) {
                     TransactionType.JAMA_RECEIVED, TransactionType.INTEREST_RECEIVED -> tx.amountPaisa

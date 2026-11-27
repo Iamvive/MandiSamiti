@@ -1,19 +1,30 @@
 package com.appwork.mandisamiti.ui.register
 
+import com.appwork.mandisamiti.domain.cash.CashDrawer
+import com.appwork.mandisamiti.domain.model.BuyEntry
 import com.appwork.mandisamiti.domain.model.CashTransaction
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
+import kotlinx.datetime.TimeZone
 
 /** Includes edits, voids, and prior-day carry-forward changes, even when the net balance is unchanged. */
-internal fun drawerCashFingerprint(transactions: List<CashTransaction>, endMs: Long): Long =
-    transactions.asSequence()
+internal fun drawerCashFingerprint(
+    transactions: List<CashTransaction>,
+    endMs: Long,
+    buys: List<BuyEntry> = emptyList(),
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Long {
+    val buysById = if (buys.isEmpty()) emptyMap() else buys.associateBy { it.id }
+    return transactions.asSequence()
         .filter { it.paymentMode == PaymentMode.CASH && it.transactionDate < endMs }
         .filter { it.transactionType in drawerMovementTypes }
+        .filterNot { buysById.isNotEmpty() && CashDrawer.isMohariBuyTransaction(it, buysById, timeZone) }
         .sortedBy { it.id }
         .fold(17L) { hash, tx ->
             listOf(tx.id, tx.amountPaisa, tx.transactionDate, tx.updatedAt, tx.revision, tx.isVoid, tx.isDeleted, tx.transactionType)
                 .fold(hash) { value, field -> value * 31 + field.toString().hashCode() }
         }
+}
 
 internal val drawerMovementTypes = setOf(TransactionType.JAMA_RECEIVED, TransactionType.INTEREST_RECEIVED, TransactionType.UDHAR_GIVEN)
 

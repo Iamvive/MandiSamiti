@@ -64,6 +64,12 @@ fun FarmerSlipCashSettlementSheet(
     onConfirmPayment: (amountPaisa: Long) -> Unit,
     isEnglish: Boolean = false
 ) {
+    val isTodaySlip = remember(buy.entryDate) {
+        com.appwork.mandisamiti.domain.cash.CashDrawer.isSameDay(
+            buy.entryDate,
+            kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        )
+    }
     SlipCashSettlementSheet(
         slipLabelText = slipLabel(buy.slipNo, buy.id),
         partyName = farmerName,
@@ -71,6 +77,7 @@ fun FarmerSlipCashSettlementSheet(
         settledPaisa = buy.paidPaisa,
         gallaCashPaisa = gallaCashPaisa,
         isReceiving = false,
+        isTodaySlip = isTodaySlip,
         onDismiss = onDismiss,
         onConfirmPayment = onConfirmPayment,
         isEnglish = isEnglish
@@ -93,6 +100,7 @@ fun TraderSlipCashSettlementSheet(
         settledPaisa = sell.receivedPaisa,
         gallaCashPaisa = gallaCashPaisa,
         isReceiving = true,
+        isTodaySlip = false,
         onDismiss = onDismiss,
         onConfirmPayment = onConfirmReceipt,
         isEnglish = isEnglish
@@ -108,6 +116,7 @@ private fun SlipCashSettlementSheet(
     settledPaisa: Long,
     gallaCashPaisa: Long,
     isReceiving: Boolean,
+    isTodaySlip: Boolean,
     onDismiss: () -> Unit,
     onConfirmPayment: (amountPaisa: Long) -> Unit,
     isEnglish: Boolean
@@ -119,6 +128,8 @@ private fun SlipCashSettlementSheet(
     val enteredRupees = inputRupeesText.toLongOrNull() ?: 0L
     val enteredPaisa = enteredRupees * 100L
     val isValid = enteredPaisa in 1L..remainingPaisa
+    val isFullSettle = enteredPaisa >= remainingPaisa
+    val isMohariSettle = !isReceiving && isTodaySlip && isFullSettle
 
     val imeBottomDp = with(androidx.compose.ui.platform.LocalDensity.current) {
         WindowInsets.ime.getBottom(this).toDp()
@@ -225,6 +236,8 @@ private fun SlipCashSettlementSheet(
                 Text(
                     text = if (isReceiving) {
                         if (isEnglish) "Cash amount received into Galla (₹):" else "आज गल्ले में आने वाला नकद (₹):"
+                    } else if (isMohariSettle) {
+                        if (isEnglish) "Mohari settlement (accounted at day end) (₹):" else "मोहरी भुगतान (दिन के अंत में हिसाब) (₹):"
                     } else {
                         if (isEnglish) "Cash amount to pay from Galla (₹):" else "आज गल्ला से दिया जाने वाला नकद (₹):"
                     },
@@ -249,6 +262,26 @@ private fun SlipCashSettlementSheet(
                 )
             }
 
+            if (isMohariSettle) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MandiSurfaceElevated,
+                    border = BorderStroke(1.dp, MandiBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (isEnglish) {
+                            "Today's fully paid slip is accounted in Mohari and will not be deducted from Galla Rokad."
+                        } else {
+                            "आज की पूरी चुकता पर्ची मोहरी में गिनी जाएगी, गल्ला रोकड़ से नहीं कटेगी।"
+                        },
+                        fontSize = 11.sp,
+                        color = MandiAmberDark,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+
             Spacer(Modifier.height(4.dp))
 
             // Primary Tactile CTA
@@ -271,6 +304,8 @@ private fun SlipCashSettlementSheet(
                 Text(
                     text = if (isReceiving) {
                         if (isEnglish) "Receive ₹${MandiMathEngine.formatIndianGrouping(enteredRupees)} Cash into Galla" else "गल्ले में ₹${MandiMathEngine.formatIndianGrouping(enteredRupees)} नकद लें →"
+                    } else if (isMohariSettle) {
+                        if (isEnglish) "Confirm ₹${MandiMathEngine.formatIndianGrouping(enteredRupees)} Mohari Payment →" else "₹${MandiMathEngine.formatIndianGrouping(enteredRupees)} मोहरी भुगतान दर्ज करें →"
                     } else {
                         if (isEnglish) "Pay ₹${MandiMathEngine.formatIndianGrouping(enteredRupees)} Cash from Galla" else "गल्ला से ₹${MandiMathEngine.formatIndianGrouping(enteredRupees)} नकद दें →"
                     },

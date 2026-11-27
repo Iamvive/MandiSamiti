@@ -65,4 +65,99 @@ class CashDrawerTest {
         )
         assertEquals(800_000L, balance)
     }
+
+    @Test
+    fun sameDayFullPaidBuyDoesNotDeductFromCashDrawer() {
+        val window = DayWindow(startMs = 1_000, endMs = 2_000)
+        val fullPaidBuy = com.appwork.mandisamiti.domain.model.BuyEntry(
+            id = "buy-1", shopId = "shop-1", farmerId = "f-1", commodityId = "c-1",
+            entryDate = 1_200L, bagsCount = 10, weightPerBagGrams = 50_000L, extraWeightGrams = 0L,
+            totalWeightGrams = 500_000L, ratePaisaPerQuintal = 200_000L, commissionBps = 0L,
+            labourPerBagPaisa = 0L, advancePaidPaisa = 0L, grossPaisa = 100_000L, commissionPaisa = 0L,
+            labourPaisa = 0L, netPayablePaisa = 100_000L, paidPaisa = 100_000L, createdAt = 1_200L,
+            updatedAt = 1_200L
+        )
+        val buyCashTx = tx(TransactionType.UDHAR_GIVEN, 1_000, at = 1_200).copy(
+            sourceEntryType = "BUY",
+            sourceEntryId = "buy-1"
+        )
+        val summary = CashDrawer.summarize(
+            transactions = listOf(
+                tx(TransactionType.JAMA_RECEIVED, 5_000, at = 1_100),
+                buyCashTx
+            ),
+            window = window,
+            buys = listOf(fullPaidBuy)
+        )
+        // Cash in is 500_000L; the 100_000L buy payout is Mohari (absorbed at day end), NOT deducted from Galla Rokad.
+        assertEquals(500_000L, summary.cashInPaisa)
+        assertEquals(0L, summary.cashOutPaisa)
+        assertEquals(500_000L, summary.closingPaisa)
+
+        // All-time balance also excludes it
+        val balance = CashDrawer.balancePaisa(listOf(buyCashTx), listOf(fullPaidBuy))
+        assertEquals(0L, balance)
+    }
+
+    @Test
+    fun sameDayPartialPaidBuyDeductsFromCashDrawer() {
+        val window = DayWindow(startMs = 1_000, endMs = 2_000)
+        val partialBuy = com.appwork.mandisamiti.domain.model.BuyEntry(
+            id = "buy-2", shopId = "shop-1", farmerId = "f-1", commodityId = "c-1",
+            entryDate = 1_200L, bagsCount = 10, weightPerBagGrams = 50_000L, extraWeightGrams = 0L,
+            totalWeightGrams = 500_000L, ratePaisaPerQuintal = 200_000L, commissionBps = 0L,
+            labourPerBagPaisa = 0L, advancePaidPaisa = 0L, grossPaisa = 100_000L, commissionPaisa = 0L,
+            labourPaisa = 0L, netPayablePaisa = 100_000L, paidPaisa = 40_000L, createdAt = 1_200L,
+            updatedAt = 1_200L
+        )
+        val partialCashTx = tx(TransactionType.UDHAR_GIVEN, 400, at = 1_200).copy(
+            sourceEntryType = "BUY",
+            sourceEntryId = "buy-2"
+        )
+        val summary = CashDrawer.summarize(
+            transactions = listOf(
+                tx(TransactionType.JAMA_RECEIVED, 5_000, at = 1_100),
+                partialCashTx
+            ),
+            window = window,
+            buys = listOf(partialBuy)
+        )
+        // Partial payment DOES deduct from Galla Rokad
+        assertEquals(500_000L, summary.cashInPaisa)
+        assertEquals(40_000L, summary.cashOutPaisa)
+        assertEquals(460_000L, summary.closingPaisa)
+    }
+
+    @Test
+    fun previousDayBuyPaidTodayDeductsFromCashDrawer() {
+        val dayMs = 86_400_000L
+        val yesterdayMs = 1_000_000L
+        val todayMs = yesterdayMs + dayMs
+        val window = DayWindow(startMs = todayMs - 1000L, endMs = todayMs + dayMs)
+        val oldBuy = com.appwork.mandisamiti.domain.model.BuyEntry(
+            id = "buy-old", shopId = "shop-1", farmerId = "f-1", commodityId = "c-1",
+            entryDate = yesterdayMs, // yesterday
+            bagsCount = 10, weightPerBagGrams = 50_000L, extraWeightGrams = 0L,
+            totalWeightGrams = 500_000L, ratePaisaPerQuintal = 200_000L, commissionBps = 0L,
+            labourPerBagPaisa = 0L, advancePaidPaisa = 0L, grossPaisa = 100_000L, commissionPaisa = 0L,
+            labourPaisa = 0L, netPayablePaisa = 100_000L, paidPaisa = 100_000L, createdAt = yesterdayMs,
+            updatedAt = todayMs
+        )
+        val settleTodayTx = tx(TransactionType.UDHAR_GIVEN, 1_000, at = todayMs).copy(
+            sourceEntryType = "BUY",
+            sourceEntryId = "buy-old"
+        )
+        val summary = CashDrawer.summarize(
+            transactions = listOf(
+                tx(TransactionType.JAMA_RECEIVED, 5_000, at = todayMs),
+                settleTodayTx
+            ),
+            window = window,
+            buys = listOf(oldBuy)
+        )
+        // Settling an old slip today is a drawer debt repayment, so it DOES deduct today
+        assertEquals(500_000L, summary.cashInPaisa)
+        assertEquals(100_000L, summary.cashOutPaisa)
+        assertEquals(400_000L, summary.closingPaisa)
+    }
 }

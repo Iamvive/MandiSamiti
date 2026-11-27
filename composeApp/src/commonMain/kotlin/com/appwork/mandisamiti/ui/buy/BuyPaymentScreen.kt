@@ -223,8 +223,16 @@ fun BuyPaymentScreen(
                             fontWeight = FontWeight.SemiBold,
                             color = MandiTextPrimary
                         )
+                        val isFullSettled = (entry.paidPaisa + amountToPayPaisa) >= entry.netPayablePaisa && amountToPayPaisa > 0L
+                        val isMohari = isFullSettled
                         Text(
-                            text = if (isEnglish) "${MandiMathEngine.formatRupees(amountToPayPaisa)} cash goes out of the galla" else "गल्ले से ${MandiMathEngine.formatRupees(amountToPayPaisa)} नकद निकलेगा",
+                            text = if (isEnglish) {
+                                if (isMohari) "${MandiMathEngine.formatRupees(amountToPayPaisa)} settled under Mohari at day end (not deducted from Galla)"
+                                else "${MandiMathEngine.formatRupees(amountToPayPaisa)} cash goes out of the galla"
+                            } else {
+                                if (isMohari) "दिन के अंत में मोहरी में जुड़ेगा (गल्ले से नहीं कटेगा): ${MandiMathEngine.formatRupees(amountToPayPaisa)}"
+                                else "गल्ले से ${MandiMathEngine.formatRupees(amountToPayPaisa)} नकद निकलेगा"
+                            },
                             fontSize = 12.sp,
                             color = MandiTextSecondary
                         )
