@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,7 +42,6 @@ import com.appwork.mandisamiti.platform.WhatsAppShareManager
 import com.appwork.mandisamiti.ui.components.SoundboxTopBar
 import com.appwork.mandisamiti.ui.theme.MandiBackground
 import com.appwork.mandisamiti.ui.theme.MandiBorder
-import com.appwork.mandisamiti.ui.theme.MandiBtnSuccessBg
 import com.appwork.mandisamiti.ui.theme.MandiNavy
 import com.appwork.mandisamiti.ui.theme.MandiSurface
 import com.appwork.mandisamiti.ui.theme.MandiSurfaceElevated
@@ -58,6 +54,8 @@ fun ReceiptPreviewScreen(
     farmer: Party,
     buyer: Party?,
     deal: Deal,
+    ledgerPartyId: String? = null,
+    isEnglish: Boolean = false,
     whatsAppShareManager: WhatsAppShareManager,
     ttsManager: SoundboxTtsManager,
     onPrint: (() -> Unit)? = null,
@@ -70,6 +68,7 @@ fun ReceiptPreviewScreen(
         buyer = buyer,
         deal = deal
     )
+    val recipient = receiptPreviewRecipient(farmer, buyer, ledgerPartyId)
 
     Scaffold(
         topBar = {
@@ -98,16 +97,21 @@ fun ReceiptPreviewScreen(
                     .navigationBarsPadding()
                     .padding(14.dp)
             ) {
-                if (onPrint != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SlipSendBar(
+                        recipientName = recipient.name,
+                        recipientPhone = whatsAppPhone(recipient.phone),
+                        isEnglish = isEnglish,
+                        installedApps = whatsAppShareManager::installedApps,
+                        onSend = { phone, app ->
+                            whatsAppShareManager.shareText(formattedSlipText, phone, app)
+                            onShareSuccess?.invoke()
+                        }
+                    )
+                    if (onPrint != null) {
                         Button(
                             onClick = onPrint,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MandiSurface,
@@ -121,72 +125,8 @@ fun ReceiptPreviewScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.size(6.dp))
-                            Text(
-                                text = "प्रिंट करें",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text(text = "प्रिंट करें", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         }
-
-                        Button(
-                            onClick = {
-                                val recipientPhone = farmer.phone ?: buyer?.phone
-                                whatsAppShareManager.shareText(
-                                    text = formattedSlipText,
-                                    phoneNumber = recipientPhone
-                                )
-                                onShareSuccess?.invoke()
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MandiBtnSuccessBg)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.size(6.dp))
-                            Text(
-                                text = "व्हाट्सएप",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            val recipientPhone = farmer.phone ?: buyer?.phone
-                            whatsAppShareManager.shareText(
-                                text = formattedSlipText,
-                                phoneNumber = recipientPhone
-                            )
-                            onShareSuccess?.invoke()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MandiBtnSuccessBg)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(
-                            text = "व्हाट्सएप पर पर्ची भेजें",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
                     }
                 }
             }
@@ -220,7 +160,7 @@ fun ReceiptPreviewScreen(
                         color = MandiNavy
                     )
                     Text(
-                        text = "यह संदेश सीधे किसान / व्यापारी के फोन पर भेजा जाएगा:",
+                        text = if (isEnglish) "Check the message before sending:" else "भेजने से पहले संदेश देख लें:",
                         fontSize = 12.sp,
                         color = MandiTextSecondary
                     )
