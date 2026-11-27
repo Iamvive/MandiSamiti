@@ -6,11 +6,7 @@ Mockup: `docs/mockups/close-day-concepts.html`, third phone ("C. Gaddi counter")
 
 ## Preconditions
 
-Check all three before editing code.
-
-1. This design is based on local `main` at `7950dfd`, which is 6 commits ahead of `origin/main`. Those commits contain the current version of `DayClosingSheet.kt`. A branch cut from `origin/main` has an older sheet.
-2. At 22:25 on 2026-11-27 `DayClosingSheet.kt` had an uncommitted change (`imePadding` on the sheet, conditional `navigationBarsPadding` on the dock), last written at 22:23. Another session may own it. Do not discard, stash or overwrite it. Build on it once it is committed.
-3. Vivek decides how those 6 commits reach `origin` (open question below). Never push to `main`.
+All preconditions are met. PRs #56, #57, and #58 were merged into `main` (commit `9729208` or later). The updated `DayClosingSheet.kt` keyboard handling (`rememberImeOrKeyboardHeight()`, full-height layout on open keyboard, bottom spacer, conditional `navigationBarsPadding`) is incorporated into `main`. Feature branch `feat/close-day-gaddi-counter` builds directly on this merged base.
 
 ## Problem
 
@@ -233,4 +229,4 @@ All device checks pass on the dated Redmi run, JVM tests and the staging build p
 
 ## Open question
 
-How should the 6 local `main` commits reach `origin`: as their own pull request first (recommended, keeps this change small), or inside this feature's pull request?
+Resolved: the 6 local commits reached `origin/main` via PRs #56, #57, and #58.

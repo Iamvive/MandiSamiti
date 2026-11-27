@@ -1535,3 +1535,28 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Evidence: at `bf421f0`, `./gradlew :composeApp:jvmTest :composeApp:assembleStagingDebug` returned BUILD SUCCESSFUL. Both main tasks were UP-TO-DATE, so the results are those of the 00:00 run on 2026-11-28 with unchanged inputs: 454 tests, 0 failures, 0 errors, 0 skipped.
 - Not verified: no device check of the merged build. WhatsApp direct send rows 3 to 15 not run, row 1 partial. iOS compile not rechecked.
 - Next: device check on staging, then WhatsApp Task 6 (tests and tracking files).
+
+## 2026-11-28 00:43 IST (Gemini / Antigravity): Close Day Gaddi counter implementation
+
+- Changes:
+  - Created `GaddiCounter.kt`: Pure data model (`GaddiCount`, `GaddiDraft`, `GaddiField`), denomination calculations, replace-then-append logic, limits, step navigation.
+  - Created `DayClosingGaddiCounter.kt`: 5x2 denomination chip strip, active denomination focus line, bundle (गड्डी) and loose (खुले) entry boxes (single box for coins), custom built-in numeric keypad with backspace, previous, next, 0 करें, +1.
+  - Overhauled `DayClosingSheet.kt`: Replaced legacy denomination stepper rows with `DayClosingGaddiCounter`, difference hero with polite live region semantics and progress bar, discrepancy reason picker (खुले पैसे, खर्च लिखना बाकी, भुगतान बाकी, अन्य), sticky action dock with difference label and countError display.
+  - Wired `DailyCashRegisterScreen.kt`: `gaddi` draft state retained across sheet close/reopen, mode toggles, total synchronization, `onCount` prefill, and clear draft handling.
+  - Cleaned `DrawerPresentation.kt`: Removed legacy unused `adjustDenomination` helper and its corresponding test in `DayClosingPresentationTest.kt`.
+  - Updated `docs/superpowers/specs/2026-11-27-close-day-gaddi-counter-design.md`: Marked preconditions and open question as resolved.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (454 tests passing, 0 failures).
+  - Staging debug APK built: `assembleStagingDebug` passed.
+  - Installed and verified on physical Xiaomi Redmi Note 7 (`d93c743`, Android 10):
+    - All 10 chips, focus line, entry boxes, number pad, and action dock visible with zero scroll.
+    - Fresh open shows अभी गिना नहीं with both dock buttons disabled.
+    - Bundle and loose entry produces accurate total and difference hero display.
+    - Swipe sheet down and reopen preserves active draft.
+    - Difference triggers mandatory reason picker; "अन्य" reveals text field and blocks close day until filled.
+    - Exact match goes directly to confirmation dialog without opening reason picker.
+    - Direct total mode preserves IME inset behavior and sticky dock visibility with open keyboard.
+    - Switching between counter mode and direct total with keyboard open cleanly hides software keyboard.
+    - Contrast measured: Amber hero text 17.8:1 (Light) & 17.1:1 (Dark); disabled text on elevated surface 5.8:1 (Light) & 6.9:1 (Dark).
+    - Backed out of confirmation dialogs via "खुला रखें" (no unauthorized database writes).
+- Next: Awaiting Vivek's review and approval before running final Step 5 tests and updating tracking harnesses.
