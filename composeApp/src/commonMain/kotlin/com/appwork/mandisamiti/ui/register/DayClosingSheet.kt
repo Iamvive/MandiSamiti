@@ -68,6 +68,7 @@ internal fun DayClosingSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (imeBottomDp > 0.dp) Modifier.fillMaxHeight() else Modifier)
                 .testTag("day-closing-sheet")
         ) {
             // Header Bar
@@ -100,104 +101,11 @@ internal fun DayClosingSheet(
                 }
             }
 
-            // Top Hero Card: Side-by-Side Comparison
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = MandiSurfaceElevated),
-                border = BorderStroke(1.dp, MandiBorder),
-            ) {
-                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isEnglish) "EXPECTED (PER BAHI)" else "बही अनुसार नकद",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MandiTextSecondary,
-                                letterSpacing = 0.5.sp,
-                            )
-                            Text(
-                                text = MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MandiTextPrimary,
-                            )
-                        }
-
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = if (isEnglish) "ACTUAL COUNTED" else "गिनी हुई नकदी",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MandiTextSecondary,
-                                letterSpacing = 0.5.sp,
-                            )
-                            Text(
-                                text = if (countedRs != null) "₹${MandiMathEngine.formatIndianGrouping(countedRs)}" else "—",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (countedRs != null) MandiTextPrimary else MandiTextSecondary,
-                            )
-                        }
-                    }
-
-                    // Delta Status Badge
-                    if (diffPaisa != null) {
-                        val isMatch = diffPaisa == 0L
-                        val isSurplus = diffPaisa > 0L
-                        val badgeBg = if (isMatch) MandiGreenLight else MandiAmberLight
-                        val badgeBorder = if (isMatch) MandiGreenBorder else MandiAmberBorder
-                        val badgeText = if (isMatch) MandiGreenText else MandiAmberDark
-                        val absDiff = if (diffPaisa < 0) -diffPaisa else diffPaisa
-                        val diffFormatted = MandiCurrencyFormatter.formatRupees(absDiff)
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(badgeBg)
-                                .border(1.dp, badgeBorder, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = when {
-                                    isMatch -> if (isEnglish) "✓ Exact match" else "✓ बिल्कुल बराबर"
-                                    isSurplus -> if (isEnglish) "Surplus (+)" else "फालतू नकदी (+)"
-                                    else -> if (isEnglish) "Shortage (−)" else "कमी नकदी (−)"
-                                },
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = badgeText,
-                            )
-                            if (!isMatch) {
-                                Text(
-                                    text = if (isSurplus) "+$diffFormatted" else "-$diffFormatted",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = badgeText,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
             // Segmented Switcher: [ नोट-सिक्के से गिनें ] vs [ सीधे कुल रकम भरें ]
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 2.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MandiSurfaceElevated)
                     .border(1.dp, MandiBorder, RoundedCornerShape(8.dp))
@@ -246,11 +154,99 @@ internal fun DayClosingSheet(
             // Scrollable Content Area (fills remaining vertical room above sticky dock)
             Column(
                 modifier = Modifier
-                    .weight(1f, fill = false)
+                    .then(if (imeBottomDp > 0.dp) Modifier.weight(1f) else Modifier.weight(1f, fill = false))
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                // Top Hero Card: Side-by-Side Comparison
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MandiSurfaceElevated),
+                    border = BorderStroke(1.dp, MandiBorder),
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isEnglish) "EXPECTED (PER BAHI)" else "बही अनुसार नकद",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MandiTextSecondary,
+                                    letterSpacing = 0.5.sp,
+                                )
+                                Text(
+                                    text = MandiCurrencyFormatter.formatRupees(state.inHandCashDrawerPaisa),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MandiTextPrimary,
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = if (isEnglish) "ACTUAL COUNTED" else "गिनी हुई नकदी",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MandiTextSecondary,
+                                    letterSpacing = 0.5.sp,
+                                )
+                                Text(
+                                    text = if (countedRs != null) "₹${MandiMathEngine.formatIndianGrouping(countedRs)}" else "—",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (countedRs != null) MandiTextPrimary else MandiTextSecondary,
+                                )
+                            }
+                        }
+
+                        // Delta Status Badge
+                        if (diffPaisa != null) {
+                            val isMatch = diffPaisa == 0L
+                            val isSurplus = diffPaisa > 0L
+                            val badgeBg = if (isMatch) MandiGreenLight else MandiAmberLight
+                            val badgeBorder = if (isMatch) MandiGreenBorder else MandiAmberBorder
+                            val badgeText = if (isMatch) MandiGreenText else MandiAmberDark
+                            val absDiff = if (diffPaisa < 0) -diffPaisa else diffPaisa
+                            val diffFormatted = MandiCurrencyFormatter.formatRupees(absDiff)
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(badgeBg)
+                                    .border(1.dp, badgeBorder, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = when {
+                                        isMatch -> if (isEnglish) "✓ Exact match" else "✓ बिल्कुल बराबर"
+                                        isSurplus -> if (isEnglish) "Surplus (+)" else "फालतू नकदी (+)"
+                                        else -> if (isEnglish) "Shortage (−)" else "कमी नकदी (−)"
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = badgeText,
+                                )
+                                if (!isMatch) {
+                                    Text(
+                                        text = if (isSurplus) "+$diffFormatted" else "-$diffFormatted",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = badgeText,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 if (!useDenominations) {
                     // Direct Total Input Mode
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

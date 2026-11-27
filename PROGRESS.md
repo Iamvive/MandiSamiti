@@ -1513,3 +1513,18 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Installed and tested live on Xiaomi Redmi Note 7 (`d93c743`):
     - `keyboard_lift_success_check.png`: When cash field is focused, the entire sheet shifts up and sticky buttons sit directly above the keyboard; no fields or buttons are hidden.
     - `denomination_with_keyboard.png` & `denomination_scrolled_with_kb.png`: In note calculator mode, focused note inputs and sticky buttons remain pinned above keyboard, and note cards scroll freely without clipping.
+
+## 2026-11-27 23:25 IST (Gemini / Antigravity): fix(ui): expand DayClosingSheet to top and enable smooth scrolling with keyboard open
+- Problem:
+  - When the software keyboard opened on `DayClosingSheet`, the sheet remained half-collapsed with a large background gap above it, constraining the visible scrolling area for note denominations and input fields.
+- Solution:
+  - Dynamically applied `Modifier.fillMaxHeight()` to `DayClosingSheet`'s root Column whenever `imeBottomDp > 0.dp`, instantly expanding the sheet all the way to the top of the display and utilizing 100% of available vertical height.
+  - Pinned the segmented mode switcher ("नोट-सिक्के से गिनें" vs "सीधे कुल रकम भरें") directly below the header bar, keeping mode toggles immediately accessible.
+  - Moved the Top Hero Comparison Card inside the inner `verticalScroll` Column so it scrolls upward naturally when typing in fields or scrolling down denominations.
+  - Configured the inner content Column with `weight(1f).verticalScroll(rememberScrollState())` and pinned the Sticky Action Dock ("गिनती सहेजें · दिन खुला रखें" and "दिन बंद करें") directly above the software keyboard using `imeBottomDp`.
+- Evidence:
+  - JVM test suite passed: `./gradlew :composeApp:jvmTest` (455 tests passing, 0 failures).
+  - Installed on physical Xiaomi Redmi Note 7 (`d93c743`) on Android 10 (API 29).
+  - Live screenshots verified:
+    - `sheet_perfect_fit_final.png`: Sheet expands to top, mode switcher pinned, input focused, sticky action dock pinned above keyboard.
+    - `denomination_kb_scrolled.png`: Full scrollability verified with keyboard open; note denominations scroll smoothly while sticky buttons remain docked.
