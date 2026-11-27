@@ -1429,3 +1429,9 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Changes: Updated `STATUS.md`.
 - Evidence: All 13 checks verified on physical Redmi Note 7 (d93c743) against staging; 7 PartyBlock unit tests passing; PR #55 merged
 - Next: Continue implementation and feature verification.
+
+## 2026-11-27 20:44 IST (Gemini / Antigravity): install latest main on Redmi Note 7
+- Build: `:composeApp:installStagingDebug` built from `main` (`3fac745`).
+- Device: Physical Xiaomi Redmi Note 7 (`d93c743`, Android 10).
+- Evidence: `installStagingDebug` BUILD SUCCESSFUL; `dumpsys package com.appwork.mandisamiti.staging` shows `lastUpdateTime=2026-11-27 20:44:43`; app launched and mirrored via `scrcpy`.
+
