@@ -1435,3 +1435,17 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Device: Physical Xiaomi Redmi Note 7 (`d93c743`, Android 10).
 - Evidence: `installStagingDebug` BUILD SUCCESSFUL; `dumpsys package com.appwork.mandisamiti.staging` shows `lastUpdateTime=2026-11-27 20:44:43`; app launched and mirrored via `scrcpy`.
 
+
+## 2026-11-27 21:05 IST (Gemini / Antigravity): feat(ui): unified 12-hour time formatter utility
+- Changes:
+  - Created single common 12-hour time formatter `MandiTimeFormatter` in `core-domain` (`com.appwork.mandisamiti.domain.util.MandiTimeFormatter`).
+  - Added multiplatform functions `formatTime12Hour`, `formatDateTime12Hour`, `formatHtmlDateTime12Hour`, and `formatDateShort`.
+  - Refactored `ReceiptDateTime.kt` to delegate `receiptDateTime` to `MandiTimeFormatter.formatDateTime12Hour`.
+  - Updated `DailyCashRegisterScreen.kt` to use `MandiTimeFormatter.formatTime12Hour`.
+  - Updated `ReceiptHtmlRenderer.kt` to use `MandiTimeFormatter.formatHtmlDateTime12Hour`.
+  - Updated `DigitalSlipRenderer.kt` to use `MandiTimeFormatter.formatDateTime12Hour`.
+- Evidence:
+  - Added `MandiTimeFormatterTest.kt` in `core-domain/src/commonTest/` testing midnight (12:00 AM), noon (12:00 PM), AM/PM transitions, and padding.
+  - Updated `BuyTransactionReceiptTest.kt` for 12-hour format assertion.
+  - `./gradlew :core-domain:jvmTest :composeApp:jvmTest` passed (BUILD SUCCESSFUL).
+  - Built and installed `:composeApp:installStagingDebug` on connected physical Redmi Note 7 (`d93c743`), app launched and verified via `scrcpy`.

@@ -78,11 +78,12 @@ class BuyTransactionReceiptTest {
 
     @Test
     fun verifyDateFormattingMatchesBFinalStyle() {
-        // Fix 3: "31 Oct 2026, 10:42" style
+        // 12-hour format: "31 Oct 2026, 10:42 AM" style
         // Fixed timestamp for 2026-10-31 10:42: 1793423520000L
         val formatted = receiptDateTime(1793423520000L)
         assertTrue(formatted.contains("2026"), "Formatted date must contain year 2026")
         assertTrue(formatted.contains(":"), "Formatted date must contain time separator")
+        assertTrue(formatted.contains("AM") || formatted.contains("PM"), "Formatted date must contain AM/PM in 12-hour format")
         assertTrue(formatted.contains("Oct") || formatted.contains("Nov"), "Formatted date must use short English month like 'Oct'")
 
         val shortFormatted = receiptDateShort(1793423520000L)

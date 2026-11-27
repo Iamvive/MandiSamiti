@@ -96,6 +96,7 @@ import com.appwork.mandisamiti.domain.math.MandiMathEngine
 import com.appwork.mandisamiti.domain.model.PartyType
 import com.appwork.mandisamiti.domain.model.PaymentMode
 import com.appwork.mandisamiti.domain.model.TransactionType
+import com.appwork.mandisamiti.domain.util.MandiTimeFormatter
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
@@ -1338,8 +1339,7 @@ private fun BahiTransactionItem(
         PaymentMode.BOOK_ENTRY -> if (isEnglish) "Credit / Non-Cash" else "क्रेडिट / गैर-नकद"
         else -> item.transaction.paymentMode.name
     }
-    val time = kotlinx.datetime.Instant.fromEpochMilliseconds(item.transaction.transactionDate)
-        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).time.toString().take(5)
+    val time = MandiTimeFormatter.formatTime12Hour(item.transaction.transactionDate)
     Column(
         Modifier.fillMaxWidth().clickable(onClickLabel = if (isEnglish) "Transaction details" else "प्रविष्टि विवरण") { showDetails = true }
             .padding(horizontal = 8.dp, vertical = 7.dp),

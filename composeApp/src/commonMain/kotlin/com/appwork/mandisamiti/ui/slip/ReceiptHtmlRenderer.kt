@@ -12,6 +12,7 @@ import com.appwork.mandisamiti.domain.model.SellCropLot
 import com.appwork.mandisamiti.domain.model.SellEntry
 import com.appwork.mandisamiti.domain.model.ShopProfile
 import com.appwork.mandisamiti.domain.model.receiptDateShort
+import com.appwork.mandisamiti.domain.util.MandiTimeFormatter
 import com.appwork.mandisamiti.ui.buy.BuyPaymentCalculations
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -29,14 +30,7 @@ object ReceiptHtmlRenderer {
 
     private fun formatDateTime(epochMillis: Long): String {
         return try {
-            val instant = Instant.fromEpochMilliseconds(epochMillis)
-            val ldt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-            val day = ldt.dayOfMonth.toString().padStart(2, '0')
-            val month = ldt.monthNumber.toString().padStart(2, '0')
-            val year = ldt.year
-            val hour = ldt.hour.toString().padStart(2, '0')
-            val minute = ldt.minute.toString().padStart(2, '0')
-            "$day/$month/$year $hour:$minute"
+            MandiTimeFormatter.formatHtmlDateTime12Hour(epochMillis)
         } catch (_: Exception) {
             epochMillis.toString()
         }
