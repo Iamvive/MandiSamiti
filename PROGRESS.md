@@ -1459,3 +1459,13 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
   - Unit tests added: `UdhaarUseCaseTest.kt` (4 tests), `CashDrawerTest.kt` (bookEntry check), `BahiDayMohariTest.kt` (all non-void buys aggregation check), `UdhaarAddFormStateTest.kt` (purana hisaab & saver roundtrip tests), `UdhaarSaveLoanTest.kt` (persists village & bookEntry).
   - Multiplatform JVM tests passed across all modules (`:core-domain:jvmTest`, `:core-database:jvmTest`, `:core-data:jvmTest`, `:composeApp:jvmTest`).
   - Built and deployed `:composeApp:installStagingDebug` onto physical Xiaomi Redmi Note 7 (`d93c743`), app launched and verified via `scrcpy`.
+
+## 2026-11-27 21:54 IST (Gemini / Antigravity): feat(ui): revamp DayClosingSheet with top hero card and sticky bottom action dock
+- Problem: The day closing / note count sheet was excessively tall (>1000dp), burying critical CTAs (Close Day and Save Count) below the fold and mixing direct input with denomination controls without clear hierarchy.
+- Solution:
+  - Top Hero Card: Side-by-side comparison of "Expected (Per Bahi)" vs "Actual Counted" with dynamic live delta badge (Exact match in green, Surplus/Shortage in amber with exact rupee difference).
+  - Segmented Switcher: Native toggle between "नोट-सिक्के से गिनें" (Calculator) and "सीधे कुल रकम भरें" (Direct Total).
+  - Sticky Bottom Action Dock: Placed "दिन बंद करें" (Primary green CTA) and "गिनती सहेजें · दिन खुला रखें" (Secondary outlined CTA) in an elevated dock pinned to the bottom of the sheet, completely eliminating the need to scroll to complete day closing.
+- Evidence:
+  - JVM test suite passing (`:composeApp:jvmTest`, 455 tests passing).
+  - Built and deployed `:composeApp:installStagingDebug` to Redmi Note 7 (`d93c743`), verified live layout via `scrcpy` and screenshot.
