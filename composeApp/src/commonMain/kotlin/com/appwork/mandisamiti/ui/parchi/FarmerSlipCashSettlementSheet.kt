@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -117,12 +114,6 @@ private fun SlipCashSettlementSheet(
     val remainingRupees = remainingPaisa / 100
     var inputRupeesText by remember { mutableStateOf(remainingRupees.toString()) }
 
-    // The sheet runs in its own dialog window and never receives IME insets, so read the keyboard
-    // height here, in the main window, and apply it as bottom padding inside the sheet.
-    val imeBottomDp = with(androidx.compose.ui.platform.LocalDensity.current) {
-        WindowInsets.ime.getBottom(this).toDp()
-    }
-
     val enteredRupees = inputRupeesText.toLongOrNull() ?: 0L
     val enteredPaisa = enteredRupees * 100L
     val isValid = enteredPaisa in 1L..remainingPaisa
@@ -137,7 +128,7 @@ private fun SlipCashSettlementSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
-                .then(if (imeBottomDp > 0.dp) Modifier.padding(bottom = imeBottomDp) else Modifier.navigationBarsPadding())
+                .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {

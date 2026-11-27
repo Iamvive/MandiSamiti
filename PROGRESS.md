@@ -1356,3 +1356,13 @@ Spec: `docs/superpowers/specs/2026-11-16-spare-crop-khaate-design.md` (status: B
 - Changes: Synchronized project state.
 - Evidence: Automated test suites verified and passing (2026-11-27).
 - Next: Continue implementation and feature verification.
+
+
+## 2026-11-27 15:53 IST, Antigravity / Gemini 3.8 Flash (Fix ModalBottomSheet Keyboard Double-Padding Collapse)
+- **Fix Keyboard Hiding Screen in Udhaar Add Sheet & Farmer Slip Cash Settlement Sheet**:
+  - Removed redundant manual `WindowInsets.ime` and `navigationBarsPadding` calculation (`imeBottomDp`) from `UdhaarAddSheet.kt` and `FarmerSlipCashSettlementSheet.kt`.
+  - Compose Material 3 `ModalBottomSheet` already consumes and handles bottom insets (`WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)`), so the manual `Modifier.padding(bottom = imeBottomDp)` double-counted the keyboard height and collapsed the available vertical height to 0, triggering an anchor reset to `SheetValue.Hidden`.
+  - Replaced double padding with clean `Modifier.padding(bottom = 16.dp)`, letting `ModalBottomSheet` handle IME window insets naturally and preserving scrollability when the soft keyboard is visible.
+- **Evidence**:
+  - Ran `./gradlew jvmTest testDebugUnitTest` across all modules: BUILD SUCCESSFUL (23s, 63 actionable tasks passing).
+
